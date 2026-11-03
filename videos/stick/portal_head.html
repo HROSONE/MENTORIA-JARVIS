@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portal do Gato</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --accent:#00E5FF; --s:1; }
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s));background:#000}
+  #c{display:block;width:1080px;height:1920px}
+  .ov{position:absolute;left:50px;right:50px;top:var(--y);text-align:center;color:#fff;font-family:'Montserrat',system-ui,sans-serif;font-weight:900;font-size:var(--fs);line-height:1;
+    opacity:0;transform:translateY(40px) scale(.92);transition:opacity .25s ease, transform .45s cubic-bezier(.2,.9,.3,1.25);
+    text-shadow:0 10px 40px rgba(0,0,0,.8),0 2px 8px rgba(0,0,0,.7);pointer-events:none}
+  .ov.on{opacity:1;transform:none}
+  .btn{display:inline-block;border:10px solid var(--accent);border-radius:999px;padding:.28em .75em;background:rgba(0,0,0,.45);box-shadow:0 0 60px rgba(0,229,255,.35)}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;font:800 54px 'Montserrat',sans-serif;background:rgba(0,0,0,.55);cursor:pointer;gap:30px;text-align:center}
+  #start small{font-size:30px;opacity:.6}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="texts"></div>
+  <div id="start">▶ CLIQUE ou ESPAÇO<small>com som · ESPAÇO pausa · R reinicia</small></div>
+</div>
+<!--AUDIO-->
+<!--SKIN-->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* ======== TEMPOS (segundos) — os mesmos usados para gerar o áudio ======== */
+const EV = {
+  jump: 2.4,          // gato pula do prédio
+  look: 3.2,          // stickman olha para cima
+  sign1: 4.8, sign2: 5.4, sign3: 6.0, // sinais do jutsu
+  portalG: 6.4,       // portal no chão abre
+  enter: 7.4,         // gato entra no portal
+  closeG: 7.8,        // portal do chão fecha
+  turn: 8.6,          // vira de costas
+  portalV: 9.6,       // portal em pé abre
+  exit: 10.3,         // gato sai do portal
+  catch: 11.0,        // cai nos braços
+  closeV: 11.3,       // portal em pé fecha
+  turnBack: 11.4,     // vira de frente segurando o gato
+  pet: 12.6,          // carinho na cabeça
+  meow2: 15.4,
+  end: 18.0,
+};
+const TEXTS = [
+  { from: 13.0, to: 18.0, y: 150, fs: 105, html: '<span class="btn">INSCREVA-SE</span>' },
+];

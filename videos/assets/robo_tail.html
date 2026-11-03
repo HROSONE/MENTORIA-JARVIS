@@ -1,0 +1,264 @@
+
+const TOTAL = EV.end;
+const params = new URLSearchParams(location.search);
+const TAU = Math.PI * 2;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const range = (t, a, b) => clamp((t - a) / (b - a));
+const smooth = x => { x = clamp(x); return x * x * (3 - 2 * x); };
+const easeInOut = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const easeOut = x => 1 - Math.pow(1 - clamp(x), 3);
+const lerp = (a, b, k) => a + (b - a) * k;
+const pulse = (t, a, b, f = .25) => Math.min(range(t, a, a + f), 1 - range(t, b - f, b));
+const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const R = THREE.MathUtils.degToRad;
+let seed = 23; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+/* ---------------- renderer ---------------- */
+const W = 1080, H = 1920;
+const canvasEl = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas: canvasEl, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H, false);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0c0a10);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), .04).texture;
+const camera = new THREE.PerspectiveCamera(40, W / H, .01, 200);
+const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: .7, ...o });
+const box = (w, h, d, mat, x = 0, y = 0, z = 0, parent = scene) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; parent.add(m); return m; };
+function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; return t; }
+
+/* ---------------- palco ---------------- */
+{
+  const wood = canvasTex(512, 512, (g, w, h) => { g.fillStyle = '#6b4226'; g.fillRect(0, 0, w, h); for (let i = 0; i < 16; i++) { g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(0, i * 32, w, 2); } for (let i = 0; i < 1200; i++) { g.fillStyle = `rgba(${rnd() > .5 ? '255,200,150' : '30,10,0'},.06)`; g.fillRect(rnd() * w, rnd() * h, 50 + rnd() * 100, 2); } }); wood.repeat.set(4, 3);
+  box(9, .4, 4.5, std(0xffffff, { map: wood, roughness: .45 }), 0, .2, -.6);               // palco
+  box(9, .05, 4, std(0x1a1418), 0, -.02, 3.4);                                              // plateia (chão)
+  const curtainTex = canvasTex(256, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, 0); for (let i = 0; i <= 8; i++) gr.addColorStop(i / 8, i % 2 ? '#7a0c18' : '#b8182a'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }); curtainTex.repeat.set(6, 1);
+  const cm = std(0xffffff, { map: curtainTex, roughness: .85 });
+  box(9, 5, .1, cm, 0, 2.9, -2.8);
+  for (const s of [-1, 1]) box(1.4, 5, .2, cm, s * 3.9, 2.9, -1.0);
+  box(9, .9, .2, cm, 0, 4.9, -.5);
+  // holofotes
+  const spot = new THREE.SpotLight(0xfff2dc, 260, 0, R(26), .45, 1.6); spot.position.set(1.2, 7, 4); spot.target.position.set(0, .4, -.6); spot.castShadow = true; spot.shadow.mapSize.set(2048, 2048); spot.shadow.bias = -.0004; scene.add(spot, spot.target);
+  const spot2 = new THREE.SpotLight(0xa8c8ff, 80, 0, R(35), .6, 1.6); spot2.position.set(-4, 6, 3); spot2.target.position.set(0, 1, -.6); scene.add(spot2, spot2.target);
+  scene.add(new THREE.HemisphereLight(0x6a6080, 0x201018, .5));
+  // plateia: poltronas + parede do fundo
+  box(12, 6, .2, std(0x2a0c14, { roughness: .9 }), 0, 3, 7.2);
+  box(.3, 6, 6, std(0x2a0c14, { roughness: .9 }), -4.6, 3, 4.2); box(.3, 6, 6, std(0x2a0c14, { roughness: .9 }), 4.6, 3, 4.2);
+  const seatM = std(0x8a1424, { roughness: .8 }), seatD = std(0x3a0a12, { roughness: .8 });
+  for (let r = 0; r < 4; r++) for (let c = -7; c <= 7; c++) { if (Math.abs(c) < 1) continue; const x = c * .55, z = 4.2 + r * .8, y = r * .18; box(.48, .14, .45, seatM, x, .42 + y, z); box(.48, .6, .1, seatM, x, .72 + y, z + .24); box(.06, .4, .45, seatD, x + .27, .3 + y, z); if (r) box(.55 * 15, .18, .8, seatD, 0, y - .09, z); }
+  const exitL = new THREE.Mesh(new THREE.PlaneGeometry(.6, .22), new THREE.MeshBasicMaterial({ color: 0x20ff70 })); exitL.position.set(2.6, 3.2, 7.08); exitL.rotation.y = Math.PI; scene.add(exitL);
+  const hall = new THREE.PointLight(0xff9a70, 6, 9, 1.5); hall.position.set(0, 3, 5); scene.add(hall);
+  const bulbM = new THREE.MeshBasicMaterial({ color: 0xffe2a0 });
+  for (let i = 0; i < 9; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(.05, 12, 8), bulbM); b.position.set(-4 + i, .35, 1.66); scene.add(b); }
+}
+
+/* ---------------- o robô ---------------- */
+const robot = { root: new THREE.Group(), mixer: null, actions: {}, head: null, faces: [] };
+const ROBOT_S = 1.6 / 4.77;
+const teen = new THREE.Group();     // o adolescente (o "humano de verdade")
+const mask = new THREE.Group();     // máscara de rosto humano
+const teenEyes = [], maskEyes = [];
+async function loadAll() {
+  const loader = new GLTFLoader();
+  const rb = Uint8Array.from(atob(window.ROBOT_B64), c => c.charCodeAt(0));
+  const g = await loader.parseAsync(rb.buffer, '');
+  robot.root.add(g.scene); robot.root.scale.setScalar(ROBOT_S); scene.add(robot.root);
+  g.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; if (o.morphTargetDictionary) robot.faces.push(o); } });
+  robot.mixer = new THREE.AnimationMixer(g.scene);
+  for (const a of g.animations) { const act = robot.mixer.clipAction(a); act.play(); act.setEffectiveWeight(0); robot.actions[a.name] = act; }
+  robot.head = null; robot.headMeshes = [];
+  g.scene.traverse(o => { if (o.isBone && o.name === 'Head') robot.head = o; if (o.isMesh && /^Head/.test(o.name)) robot.headMeshes.push(o); });
+  console.log('HEAD', robot.head && robot.head.type, robot.headMeshes.map(m => m.name).join(','));
+  // adolescente + máscara (cópia da cabeça dele)
+  const tb = Uint8Array.from(atob(window.GLB_B64), c => c.charCodeAt(0));
+  const tg = await loader.parseAsync(tb.buffer, '');
+  const MAT = {
+    skin: new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: .5, sheen: .5, sheenColor: new THREE.Color(0xff8a6a), envMapIntensity: .7 }),
+    shirt: new THREE.MeshPhysicalMaterial({ color: 0xc8202a, roughness: .88, sheen: 1, sheenColor: new THREE.Color(0xff7070) }),
+    pants: new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: .92 }),
+    shoe: new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: .45 }), sole: std(0xf0ede6),
+    hair: new THREE.MeshPhysicalMaterial({ color: 0x2a1a11, roughness: .58, sheen: 1, sheenColor: new THREE.Color(0x8a5a32) }),
+  };
+  const meshes = []; tg.scene.traverse(o => { if (o.isMesh) meshes.push(o); });
+  for (const o of meshes) {
+    const nm = o.name; o.geometry.computeVertexNormals();
+    o.material = nm.startsWith('shirt') ? MAT.shirt : nm.startsWith('pants') ? MAT.pants : nm.includes('upper') ? MAT.shoe : nm.includes('sole') ? MAT.sole : /hair|brows/.test(nm) ? MAT.hair : MAT.skin;
+    o.castShadow = true;
+    if (/skin_head|hair|brows/.test(nm)) { const c = o.clone(); c.position.y -= 1.53; mask.add(c); }
+    teen.attach(o);
+  }
+  const meta = window.TEEN_META;
+  for (const p of [meta.eyeL, meta.eyeR]) {
+    for (const [parent, list, dy] of [[teen, teenEyes, 0], [mask, maskEyes, -1.53]]) {
+      const e = makeEye(meta.eyeR0); e.position.set(p[0], p[1] + dy, p[2]); e.lookAt(e.position.clone().add(V(0, -.02, 1))); parent.add(e); list.push(e);
+    }
+  }
+  scene.add(teen, mask);
+}
+function makeEye(r) {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(r, 32, 24), new THREE.MeshPhysicalMaterial({ color: 0xf3efe9, roughness: .35 })));
+  const iris = new THREE.Mesh(new THREE.CircleGeometry(r * .5, 32), new THREE.MeshPhysicalMaterial({ color: 0x4a2c14, roughness: .3 })); iris.position.z = r * .98; g.add(iris);
+  const pupil = new THREE.Mesh(new THREE.CircleGeometry(r * .22, 24), new THREE.MeshBasicMaterial({ color: 0x050302 })); pupil.position.z = r * .99; g.add(pupil);
+  const gl = new THREE.Mesh(new THREE.CircleGeometry(r * .08, 12), new THREE.MeshBasicMaterial({ color: 0xffffff })); gl.position.set(r * .2, r * .2, r * 1.0); g.add(gl);
+  return g;
+}
+// pesos de animação: lista de [nome, início, fim, fade]
+function animate(schedule, t) {
+  for (const k in robot.actions) robot.actions[k].setEffectiveWeight(0);
+  let total = 0; const ws = [];
+  for (const [nm, a, b, f = .25, speed = 1] of schedule) {
+    if (t < a - f || t > b + f) continue;
+    const w = Math.min(range(t, a - f, a + .001), 1 - range(t, b, b + f)); if (w <= 0) continue;
+    const act = robot.actions[nm]; const d = act.getClip().duration;
+    const loop = !/Sitting|Standing|Death|Jump/.test(nm);
+    act.time = loop ? (((t - a) * speed) % d + d) % d : clamp((t - a) * speed, 0, d - .001);
+    ws.push([act, w]); total += w;
+  }
+  for (const [act, w] of ws) act.setEffectiveWeight(w / Math.max(1, total));
+  robot.mixer.update(0);
+}
+function face(name, k) { for (const m of robot.faces) { const i = m.morphTargetDictionary[name]; if (i !== undefined) m.morphTargetInfluences[i] = k; } }
+
+/* ---------------- plateia (stickmen) ---------------- */
+const crowd = ['#e8322f', '#2f6ff0', '#2fbf5a', '#f5c021', '#ff7a1f'].map((c, i) => { const s = makeStickman(c); s.halo.visible = false; scene.add(s.root); s.root.traverse(o => { if (o.isMesh) o.castShadow = true; }); s.root.scale.setScalar(.85); s.seat = V([-.8, -.4, .45, .85, .05][i], 0, [2.7, 3.2, 2.75, 3.2, 3.6][i]); return s; });
+function resetPose(J) { for (const k in J) J[k].rotation.set(0, 0, 0); J.hips.position.y = M.hip; }
+function crowdPose(t, mode, k = 1) {
+  crowd.forEach((m, i) => {
+    const J = m.J; resetPose(J); m.eyes.forEach(e => e.scale.set(1, 1, 1));
+    let p = m.seat.clone(), ry = Math.PI;
+    if (mode === 'scream' || mode === 'flee') {
+      J.shoulderL.rotation.z = R(150 + 10 * Math.sin(t * 20 + i)); J.shoulderR.rotation.z = R(-150 - 10 * Math.sin(t * 19 + i)); J.elbowL.rotation.z = R(-20); J.elbowR.rotation.z = R(20);
+      m.eyes.forEach(e => e.scale.set(1.3, 1.6, 1)); J.head.rotation.x = R(-10);
+      if (mode === 'flee') { const f = easeOut(range(t, EV.flee + i * .08, EV.flee + 1.3)); p.add(V((i - 2) * .6 * f, 0, 3.5 * f)); ry = Math.PI + (i - 2) * .3; const ph = t * 14 + i; J.hipL.rotation.x = R(-40 * Math.sin(ph)) * f; J.hipR.rotation.x = R(40 * Math.sin(ph)) * f; J.kneeL.rotation.x = R(50) * f; J.kneeR.rotation.x = R(50) * f; }
+      p.y += .04 * Math.abs(Math.sin(t * 18 + i));
+    } else if (mode === 'clap') {
+      const c = Math.max(0, Math.sin(t * 16 + i * 1.3));
+      J.shoulderL.rotation.set(R(-60), 0, R(30 - 22 * c)); J.shoulderR.rotation.set(R(-60), 0, R(-30 + 22 * c)); J.elbowL.rotation.set(R(-50), 0, 0); J.elbowR.rotation.set(R(-50), 0, 0);
+      p.y += .03 * Math.abs(Math.sin(t * 8 + i)); J.head.rotation.z = R(6 * Math.sin(t * 4 + i));
+    } else { J.chest.rotation.x = R(1.5 * Math.sin(t * 2 + i)); J.shoulderL.rotation.z = R(6); J.shoulderR.rotation.z = R(-6); }
+    m.root.position.copy(p); m.root.rotation.set(0, ry, 0); m.aura(t + i, .5);
+  });
+}
+
+/* ---------------- textos / overlays ---------------- */
+const textHost = document.getElementById('texts'), flashEl = document.getElementById('flash'), vhsEl = document.getElementById('vhs'), alarmEl = document.getElementById('alarm');
+const graphEl = document.getElementById('graph'), gcurve = document.getElementById('gcurve'), gdot = document.getElementById('gdot'), gvale = document.getElementById('gvale');
+const GLEN = gcurve.getTotalLength();
+for (const x of TEXTS) { const el = document.createElement('div'); el.className = 'ov'; el.innerHTML = x.html; el.style.setProperty('--y', x.y + 'px'); el.style.setProperty('--fs', x.fs + 'px'); textHost.appendChild(el); x.el = el; }
+function graphAt(u) { const p = gcurve.getPointAtLength(GLEN * u); gdot.setAttribute('cx', p.x); gdot.setAttribute('cy', p.y); }
+
+/* ---------------- quadro ---------------- */
+const STAGE = V(0, .4, -.6);
+const hq = new THREE.Quaternion();
+function frame(t) {
+  let camP, camT, fov = 40, flash = 0, shake = 0, filter = '', zoom = 1, vhs = 0, alarm = 0, graph = 0, maskOn = 0, teenOn = false, gU = 0, vale = 0;
+  robot.root.position.copy(STAGE); robot.root.rotation.set(0, 0, 0); face('Surprised', 0); face('Sad', 0); face('Angry', 0);
+  // ===== 1. o absurdo
+  if (t < EV.cute) {
+    maskOn = 1;
+    animate([['Wave', 0, EV.scream + .4], ['Idle', EV.scream + .4, 99]], t);
+    crowdPose(t, t < EV.scream ? 'idle' : t < EV.flee ? 'scream' : 'flee');
+    if (t > EV.scream && t < EV.scream + .35) { shake = 1; zoom = 1.06; }
+    if (t < EV.scream) { const k = easeInOut(range(t, 0, EV.scream)); camP = V(.15, 1.8, 2.6).lerp(V(.1, 1.75, 2.2), k); camT = V(0, 1.35, -.6); fov = 42; }
+    else if (t < EV.why) { const k = range(t, EV.scream, EV.why); camP = V(.25, 1.75, .3).lerp(V(.1, 1.95, -.1), k); camT = V(0, 1.15, 3.2); fov = 52; }
+    else { const k = easeInOut(range(t, EV.why, EV.cute)); camP = V(.25, 1.75, 1.6).lerp(V(.15, 1.8, 1.25), k); camT = V(0, 1.75, -.6); fov = 40; robot.root.rotation.y = R(-12) * k; }
+  }
+  // ===== 2. sem máscara: fofo
+  else if (t < EV.graph) {
+    animate([['Wave', EV.cute, EV.cute + 1.8], ['Yes', EV.cute + 1.8, 99]], t);
+    crowdPose(t, t < EV.clap1 ? 'idle' : 'clap');
+    face('Surprised', .0);
+    const k = easeInOut(range(t, EV.cute, EV.graph)); camP = V(.5, 1.6, 2.6).lerp(V(.3, 1.5, 2.2), k); camT = V(-.3, 1.15, -.4); fov = 46;
+    if (t > EV.clap1 && t < EV.clap1 + 1.6) { const q = range(t, EV.clap1, EV.clap1 + 1.6); camP = V(-.3, 1.7, .4).lerp(V(.2, 1.6, .7), q); camT = V(0, 1.1, 3.1); fov = 50; }
+  }
+  // ===== 3. o gráfico
+  else if (t < EV.rewind) {
+    graph = smooth(range(t, EV.graph, EV.graph + .5));
+    gU = t < EV.maskOn ? lerp(0, .3, easeInOut(range(t, EV.graph + .4, EV.maskOn))) : t < EV.human ? lerp(.3, .66, easeInOut(range(t, EV.maskOn, EV.scream2 + .4))) : lerp(.66, 1, easeInOut(range(t, EV.human, EV.human + 1.2)));
+    vale = smooth(range(t, EV.scream2, EV.scream2 + .4));
+    maskOn = t > EV.maskOn ? easeOut(range(t, EV.maskOn, EV.maskOn + .5)) : 0;
+    if (t < EV.human) animate([['Dance', EV.graph, EV.maskOn], ['Yes', EV.maskOn, EV.human, .2]], t);
+    else { animate([['Idle', EV.human, 99]], t); robot.root.position.x = lerp(0, -.95, easeInOut(range(t, EV.human, EV.human + 1))); }
+    teenOn = t > EV.human;
+    crowdPose(t, t < EV.maskOn + .9 ? 'clap' : t < EV.human + .9 ? 'scream' : t < EV.mori ? 'clap' : 'idle');
+    if (t > EV.scream2 && t < EV.scream2 + .3) { shake = .8; zoom = 1.05; }
+    camP = V(0, 2.8, 6.2); camT = V(0, 2.3, -.6); fov = 46;
+  }
+  // ===== 4. rebobina + revelação
+  else if (t < EV.off) {
+    maskOn = 1;
+    if (t < EV.reveal) { vhs = 1; filter = 'contrast(1.3) saturate(.5)'; animate([['Dance', 0, 99]], EV.reveal - (t - EV.rewind) * 4); zoom = 1.03 + .01 * Math.sin(t * 40); camP = V(0, 2.8, 6.2).lerp(V(.2, 1.8, 1.6), range(t, EV.rewind, EV.reveal)); camT = V(0, 1.5, -.6); fov = 42; }
+    else {
+      // movimento travado: congela e salta entre poses
+      const step = t < EV.jerk ? t : EV.jerk + Math.floor((t - EV.jerk) * 5) / 5;
+      animate([['Idle', EV.reveal, EV.jerk, .1], ['Dance', EV.jerk, 99, .01, 1.6]], step);
+      if (t > EV.jerk) { const ph = Math.floor((t - EV.jerk) * 5); if ((t - EV.jerk) * 5 % 1 < .25) { shake = .25; filter = `hue-rotate(${(ph * 37) % 60 - 30}deg) contrast(1.2)`; } }
+      alarm = t > EV.alarm ? .55 + .45 * Math.abs(Math.sin(t * 7)) : 0;
+      const k = easeInOut(range(t, EV.reveal, EV.reveal + 1.2)); camP = V(.2, 1.85, 1.75).lerp(V(.12, 1.8, 1.25), k); camT = V(0, 1.75, -.55); fov = 38;
+    }
+    crowd.forEach(m => m.root.visible = false);
+  }
+  // ===== 5. tira a máscara, joinha
+  else {
+    const fly = range(t, EV.off, EV.off + .9); maskOn = fly < 1 ? 1 : 0;
+    animate([['Jump', EV.off - .1, EV.off + .6, .15], ['ThumbsUp', EV.thumbs, 99, .2]], t);
+    crowdPose(t, 'clap'); face('Surprised', pulse(t, EV.off, EV.thumbs, .2));
+    const k = easeInOut(range(t, EV.off, EV.thumbs + 1)); camP = V(.3, 1.8, 1.6).lerp(V(.2, 1.65, 2.5), k); camT = V(0, 1.6, -.6).lerp(V(0, 1.32, -.5), k); fov = 42;
+    if (t > EV.off && t < EV.off + .15) flash = .4;
+    robot.__fly = fly;
+  }
+  if (t < EV.rewind || t >= EV.off) crowd.forEach(m => m.root.visible = true);
+  // máscara presa na cabeça do robô
+  robot.root.updateMatrixWorld(true);
+  mask.visible = maskOn > .01;
+  const hideHead = maskOn > .5 && !(t >= EV.off && robot.__fly > .05); robot.headMeshes.forEach(m => m.visible = !hideHead);
+  if (mask.visible) {
+    const hp = robot.head.getWorldPosition(V()); robot.head.getWorldQuaternion(hq);
+    const off = V(0, .27, .17).applyQuaternion(hq);
+    mask.position.copy(hp).add(off); mask.quaternion.copy(hq); mask.scale.setScalar(2.55 * (.6 + .4 * maskOn));
+    if (t >= EV.off) { const f = robot.__fly; mask.position.add(V(1.2 * f, 1.4 * Math.sin(Math.PI * f) - .4 * f, .6 * f)); mask.rotateX(f * 6); mask.rotateZ(f * 3); }
+    // olhar fixo, sem piscar; no início pisca de forma estranha
+    const blinkOdd = t < EV.cute ? (Math.sin(t * 2.3) > .97 ? .1 : 1) : 1;
+    maskEyes.forEach(e => { e.scale.set(1, blinkOdd, 1); e.lookAt(e.getWorldPosition(V()).add(camera.position.clone().sub(e.getWorldPosition(V())).normalize())); });
+  }
+  teen.visible = teenOn;
+  if (teenOn) { const k = easeOut(range(t, EV.human, EV.human + .8)); teen.position.set(lerp(3.5, .95, k), .4, -.6); teen.rotation.y = R(-15); teenEyes.forEach(e => e.scale.set(1, Math.sin(t * 1.7) > .985 ? .1 : 1, 1)); }
+  // gráfico
+  graphEl.style.opacity = graph; graphAt(gU); gcurve.style.strokeDasharray = GLEN; gcurve.style.strokeDashoffset = GLEN * (1 - clamp(gU * 1.02 + .02)); gvale.setAttribute('opacity', vale);
+  const sh = shake * .04; camP = camP.clone().add(V(Math.sin(t * 91) * sh, Math.sin(t * 77) * sh, 0));
+  camera.position.copy(camP); camera.fov = fov; camera.updateProjectionMatrix(); camera.lookAt(camT);
+  flashEl.style.opacity = flash; canvasEl.style.filter = filter; canvasEl.style.transform = `scale(${zoom})`; vhsEl.style.opacity = vhs; alarmEl.style.opacity = alarm;
+  for (const x of TEXTS) {
+    if (window.__render) { const k = Math.min(range(t, x.from, x.from + .15), 1 - range(t, x.to - .2, x.to)), e = easeOut(k); x.el.style.transition = 'none'; x.el.style.opacity = k; x.el.style.transform = `translateY(${(1 - e) * 40}px) scale(${.9 + .1 * e})`; }
+    else x.el.classList.toggle('on', t >= x.from && t < x.to);
+  }
+  renderer.render(scene, camera);
+}
+
+/* ---------------- controle + som ---------------- */
+const stage = document.getElementById('stage'), startEl = document.getElementById('start');
+const fit = () => stage.style.setProperty('--s', Math.min(innerWidth / W, innerHeight / H));
+addEventListener('resize', fit); fit();
+const audio = window.AUDIO_SRC ? new Audio(window.AUDIO_SRC) : null;
+let playing = false, offset = parseFloat(params.get('t') || '0'), t0 = 0;
+const current = () => playing ? Math.min(TOTAL, offset + (performance.now() - t0) / 1000) : offset;
+function play() { if (playing) return; playing = true; t0 = performance.now(); startEl.classList.add('hide'); if (audio) { audio.currentTime = offset; audio.play(); } }
+function pause() { offset = current(); playing = false; if (audio) audio.pause(); }
+startEl.addEventListener('click', play);
+addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); if (!playing) play(); else pause(); }
+  if (e.code === 'KeyR') { pause(); offset = 0; play(); }
+  if (e.code === 'ArrowRight') { const p = playing; pause(); offset = Math.min(TOTAL, offset + 3); if (p) play(); }
+  if (e.code === 'ArrowLeft') { const p = playing; pause(); offset = Math.max(0, offset - 3); if (p) play(); }
+});
+await loadAll();
+window.__total = TOTAL;
+window.__seek = (t) => { playing = false; offset = t; frame(t); };
+window.__ready = true;
+if (params.has('hideui')) startEl.classList.add('hide');
+if (params.has('still')) frame(offset);
+else (function loop() { frame(current()); requestAnimationFrame(loop); })();
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Você é um Camarão-Louva-Deus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --accent:#00E5FF; --s:1; }
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;
+    transform:translate(-50%,-50%) scale(var(--s));background:#000}
+  #c{display:block;width:1080px;height:1920px}
+  .ov{position:absolute;left:50px;right:50px;top:var(--y);text-align:center;color:#fff;
+    font-family:'Montserrat',system-ui,sans-serif;font-weight:900;font-size:var(--fs);line-height:1;
+    opacity:0;transform:translateY(40px) scale(.92);
+    transition:opacity .25s ease, transform .45s cubic-bezier(.2,.9,.3,1.25);
+    text-shadow:0 10px 40px rgba(0,0,0,.75),0 2px 8px rgba(0,0,0,.6);pointer-events:none}
+  .ov.on{opacity:1;transform:none}
+  .ov.lbl{left:0;right:auto;top:0;white-space:nowrap}
+  .a{color:var(--accent)}
+  .sub{display:block;font-size:.3em;letter-spacing:.12em;margin-top:.15em}
+  .btn{display:inline-block;border:10px solid var(--accent);border-radius:999px;padding:.28em .75em;
+    background:rgba(0,0,0,.45);box-shadow:0 0 60px rgba(0,229,255,.35)}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;
+    color:#fff;font:800 54px 'Montserrat',sans-serif;background:rgba(0,0,0,.55);cursor:pointer;gap:30px;text-align:center}
+  #start small{font-size:30px;font-weight:800;opacity:.6}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="texts"></div>
+  <div id="start">▶ CLIQUE ou ESPAÇO<small>ESPAÇO pausa · R reinicia · ← → avança/volta 2s</small></div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+
+/* =====================================================================
+   ROTEIRO / TEMPOS — ajuste "dur" (segundos) para casar com a sua fala.
+   ===================================================================== */
+const SEGMENTS = [
+  { id:'intro',    dur:3.5 },  // "Você é um camarão-louva-deus."
+  { id:'valentao', dur:6.5 },  // "E você está com fome. Na sua frente, um caranguejo com uma carapaça dura, se achando o valentão do recife."
+  { id:'enganado', dur:3.5 },  // "Ele acha que está seguro. Ele está muito enganado."
+  { id:'soco',     dur:10.0 }, // "Você tem o soco mais rápido do mundo animal. Seu golpe chega a cerca de 80 quilômetros por hora, debaixo d'água, mais rápido que um piscar de olhos."
+  { id:'mola',     dur:12.0 }, // "O segredo é que seu braço funciona como uma mola. Uma trava segura o braço enquanto uma parte do seu esqueleto, em forma de sela, é comprimida e guarda energia. Quando a trava solta... POW!"
+  { id:'bolhas',   dur:13.0 }, // "E tem mais: o golpe é tão rápido que a água na frente do seu braço forma bolhas que estouram logo em seguida. É como se cada soco acertasse duas vezes: uma com o braço, outra com a bolha."
+  { id:'racha',    dur:5.5 },  // "Resultado: a carapaça dura do caranguejo racha. O valentão do recife virou almoço."
+  { id:'inscreve', dur:5.0 },  // "E se você gostou de ser um camarão-louva-deus, se inscreve."
+];
+const TEXTS = [
+  { seg:'valentao', from:3.6, to:6.4,  y:200,  fs:130, html:'<span class="a">VALENTÃO</span>' },
+  { seg:'soco',     from:0.4, to:3.8,  y:200,  fs:105, html:'O SOCO MAIS<br><span class="a">RÁPIDO</span>' },
+  { seg:'soco',     from:4.6, to:9.9,  y:190,  fs:210, html:'<span class="a">80</span><span class="sub">KM/H</span>' },
+  { seg:'mola',     from:1.0, to:9.0,  anchor:'mola',  fs:70, html:'<span class="a">MOLA</span>' },
+  { seg:'mola',     from:3.4, to:9.0,  anchor:'trava', fs:70, html:'TRAVA' },
+  { seg:'mola',     from:9.05, to:11.9, y:220, fs:240, html:'<span class="a">POW!</span>' },
+  { seg:'bolhas',   from:2.0, to:6.4,  anchor:'hit1', fs:90, html:'<span class="a">1</span>' },
+  { seg:'bolhas',   from:2.7, to:5.0,  anchor:'bub',  fs:66, html:'BOLHAS' },
+  { seg:'bolhas',   from:5.05, to:9.0, anchor:'hit2', fs:90, html:'<span class="a">2</span>' },
+  { seg:'bolhas',   from:6.8, to:12.9, y:200,  fs:130, html:'ACERTA <span class="a">2x</span>' },
+  { seg:'inscreve', from:0.6, to:5.0,  y:1540, fs:110, html:'<span class="btn">SE INSCREVE</span>' },
+];
+const ACCENT = new THREE.Color('#00E5FF');
+
+let acc = 0; for (const s of SEGMENTS) { s.start = acc; acc += s.dur; }
+const TOTAL = acc;
+const SEG = Object.fromEntries(SEGMENTS.map(s => [s.id, s]));
+

@@ -1,0 +1,16 @@
+node_modules/
+*.mp4
+*.wav
+*.mp3
+*.jpg
+*.png
+# páginas finais geradas pelos scripts build_*.py (têm modelos e áudio embutidos)
+stick/botoes.html
+stick/altura.html
+stick/portal.html
+stick/halloween.html
+stick/raio.html
+teen/soluco.html
+teen/adolescente.html
+assets/robo.html
+svg/pegada_som.html

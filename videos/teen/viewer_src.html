@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Adolescente — Modelo</title>
+<style>
+  html,body{margin:0;height:100%;background:#1b1d22;overflow:hidden;font-family:system-ui,sans-serif}
+  #c{display:block;width:100vw;height:100vh}
+  #hud{position:absolute;left:16px;bottom:16px;color:#cfd3da;font-size:13px;opacity:.75;pointer-events:none}
+  #load{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#cfd3da;font-size:18px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="load">carregando modelo…</div>
+<div id="hud">arraste para girar · roda do mouse para zoom · botão direito para mover</div>
+<!--GLB-->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const params = new URLSearchParams(location.search);
+const STILL = params.has('still');
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(STILL ? 1 : Math.min(2, devicePixelRatio));
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = !params.has('noshadow'); renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const pm = new THREE.PMREMGenerator(renderer);
+scene.environment = pm.fromScene(new RoomEnvironment(), .04).texture;
+
+// estúdio: fundo infinito em degradê
+const bg = new THREE.Mesh(new THREE.SphereGeometry(30, 48, 24), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false,
+  vertexShader: `varying vec3 vW; void main(){ vW=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+  fragmentShader: `varying vec3 vW; void main(){ vec3 c=mix(vec3(.16,.17,.2), vec3(.42,.45,.5), smoothstep(-.1,.6,vW.y)); gl_FragColor=vec4(c,1.); }` }));
+scene.add(bg);
+const floor = new THREE.Mesh(new THREE.CircleGeometry(3, 64).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x8a8f99, roughness: .95 }));
+floor.receiveShadow = true; scene.add(floor);
+// iluminação de 3 pontos
+const key = new THREE.DirectionalLight(0xfff1e2, 2.6); key.position.set(-1.6, 2.8, 2.4); key.castShadow = true;
+key.shadow.mapSize.set(4096, 4096); Object.assign(key.shadow.camera, { left: -1, right: 1, top: 2, bottom: -.2, near: .5, far: 8 }); key.shadow.bias = -.0002; key.shadow.normalBias = .01; key.shadow.radius = 4;
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xcfe0ff, .9); fill.position.set(2, 1.6, 2); scene.add(fill);
+const rim = new THREE.DirectionalLight(0xffffff, 2.0); rim.position.set(.8, 2.4, -2.6); scene.add(rim);
+scene.add(new THREE.HemisphereLight(0xeef2ff, 0x50483f, .35));
+
+// texturas de tecido
+function canvasTex(w, h, draw, srgb = false) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; return t;
+}
+let sd = 3; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+const knit = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#808080'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 4) for (let x = 0; x < w; x += 4) { g.fillStyle = `rgb(${150 + rnd() * 60|0},0,0)`; g.fillRect(x, y, 3, 3); } });
+const twill = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#808080'; g.fillRect(0, 0, w, h); g.strokeStyle = '#b0b0b0'; g.lineWidth = 2; for (let i = -h; i < w; i += 5) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + h, h); g.stroke(); } for (let i = 0; i < 3000; i++) { g.fillStyle = `rgba(${rnd() > .5 ? 255 : 0},${rnd() > .5 ? 255 : 0},255,.15)`; g.fillRect(rnd() * w, rnd() * h, 1, 3); } });
+const skinPores = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#808080'; g.fillRect(0, 0, w, h); for (let i = 0; i < 4000; i++) { g.fillStyle = `rgba(0,0,0,${.1 + rnd() * .15})`; g.beginPath(); g.arc(rnd() * w, rnd() * h, .6 + rnd(), 0, 6.3); g.fill(); } });
+// projeção triplanar simples via uv gerada (cubo) para os tecidos
+function boxUV(geo, scale) {
+  const p = geo.attributes.position, n = geo.attributes.normal, uv = new Float32Array(p.count * 2);
+  for (let i = 0; i < p.count; i++) {
+    const ax = Math.abs(n.getX(i)), ay = Math.abs(n.getY(i)), az = Math.abs(n.getZ(i));
+    let u, v; if (ax >= ay && ax >= az) { u = p.getZ(i); v = p.getY(i); } else if (ay >= az) { u = p.getX(i); v = p.getZ(i); } else { u = p.getX(i); v = p.getY(i); }
+    uv[i * 2] = u * scale; uv[i * 2 + 1] = v * scale;
+  }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+}
+
+// materiais
+const MAT = {
+  skin: new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: .5, sheen: .5, sheenColor: new THREE.Color(0xff8a6a), sheenRoughness: .6, bumpMap: skinPores, bumpScale: .4, envMapIntensity: .7 }),
+  shirt: new THREE.MeshPhysicalMaterial({ color: 0xc8202a, roughness: .88, sheen: 1, sheenColor: new THREE.Color(0xff7070), sheenRoughness: .55, bumpMap: knit, bumpScale: .8, envMapIntensity: .6 }),
+  pants: new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: .92, sheen: .4, sheenColor: new THREE.Color(0x8aa8e0), bumpMap: twill, bumpScale: 1.2, envMapIntensity: .5 }),
+  shoe: new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: .45, clearcoat: .3, envMapIntensity: .8 }),
+  sole: new THREE.MeshStandardMaterial({ color: 0xf0ede6, roughness: .75 }),
+  hair: new THREE.MeshPhysicalMaterial({ color: 0x2a1a11, roughness: .58, sheen: 1, sheenColor: new THREE.Color(0x8a5a32), sheenRoughness: .45, envMapIntensity: .55 }),
+};
+const root = new THREE.Group(); scene.add(root);
+
+// olhos
+function makeEye(pos, r) {
+  const g = new THREE.Group(); g.position.fromArray(pos);
+  const irisTex = canvasTex(256, 256, (c, w, h) => {
+    const gr = c.createRadialGradient(128, 128, 10, 128, 128, 128);
+    gr.addColorStop(0, '#1d0f06'); gr.addColorStop(.28, '#3b2210'); gr.addColorStop(.55, '#6b4321'); gr.addColorStop(.85, '#4a2c14'); gr.addColorStop(1, '#1a0d05');
+    c.fillStyle = gr; c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 160; i++) { const a = rnd() * 6.283; c.strokeStyle = `rgba(${rnd() > .5 ? '190,140,80' : '30,15,5'},.35)`; c.lineWidth = 1 + rnd(); c.beginPath(); c.moveTo(128 + Math.cos(a) * 36, 128 + Math.sin(a) * 36); c.lineTo(128 + Math.cos(a) * 120, 128 + Math.sin(a) * 120); c.stroke(); }
+    c.fillStyle = '#050302'; c.beginPath(); c.arc(128, 128, 40, 0, 6.283); c.fill();
+  }, true);
+  const sclera = new THREE.Mesh(new THREE.SphereGeometry(r, 48, 32), new THREE.MeshPhysicalMaterial({ color: 0xf3efe9, roughness: .35 }));
+  g.add(sclera);
+  const irisGeo = new THREE.SphereGeometry(r * 1.002, 48, 24, 0, Math.PI * 2, 0, .72); irisGeo.rotateX(Math.PI / 2);
+  { const uv = irisGeo.attributes.uv, p = irisGeo.attributes.position; for (let i = 0; i < p.count; i++) { uv.setXY(i, .5 + p.getX(i) / (r * 1.32), .5 + p.getY(i) / (r * 1.32)); } }
+  const iris = new THREE.Mesh(irisGeo, new THREE.MeshPhysicalMaterial({ map: irisTex, roughness: .35 })); g.add(iris);
+  const glint = new THREE.Mesh(new THREE.SphereGeometry(r * .11, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffffff })); glint.position.set(r * .28, r * .3, r * .97); g.add(glint);
+  const cornea = new THREE.Mesh(new THREE.SphereGeometry(r * 1.015, 48, 32), new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: .08, roughness: 0, clearcoat: 1, clearcoatRoughness: 0, envMapIntensity: 2 }));
+  g.add(cornea);
+  g.traverse(o => { if (o.isMesh) o.castShadow = false; });
+  return g;
+}
+
+async function load() {
+  const loader = new GLTFLoader();
+  let gltf;
+  if (window.GLB_B64) { const bin = Uint8Array.from(atob(window.GLB_B64), c => c.charCodeAt(0)); gltf = await loader.parseAsync(bin.buffer, ''); }
+  else gltf = await loader.loadAsync('teen.glb');
+  gltf.scene.traverse(o => {
+    if (!o.isMesh) return;
+    const nm = o.name;
+    o.geometry.computeVertexNormals();
+    let m = MAT.skin;
+    if (nm.startsWith('shirt')) { m = MAT.shirt; boxUV(o.geometry, 30); }
+    else if (nm.startsWith('pants')) { m = MAT.pants; boxUV(o.geometry, 22); }
+    else if (nm.includes('upper')) m = MAT.shoe;
+    else if (nm.includes('sole')) m = MAT.sole;
+    else if (nm.startsWith('hair') || nm.startsWith('brows')) m = MAT.hair;
+    else { boxUV(o.geometry, 40); }
+    if (params.has('clay')) m = new THREE.MeshStandardMaterial({ color: nm.startsWith('hair') ? 0x8a6a50 : 0xcfc8c0, roughness: .6 });
+    if (params.get('only') && !params.get('only').split(',').some(k => nm.startsWith(k))) o.visible = false;
+    o.material = m; o.castShadow = true; o.receiveShadow = true;
+  });
+  root.add(gltf.scene);
+  const meta = window.TEEN_META || await (await fetch('teen.json')).json();
+  if (!params.has('noeyes')) for (const p of [meta.eyeL, meta.eyeR]) { const e = makeEye(p, meta.eyeR0); e.lookAt(e.position.clone().add(new THREE.Vector3(0, -.03, 1))); root.add(e); }
+  document.getElementById('load').remove();
+}
+
+const camera = new THREE.PerspectiveCamera(30, 1, .01, 100);
+camera.position.set(0, 1.0, 3.2);
+const controls = new OrbitControls(camera, canvas); controls.target.set(0, .9, 0); controls.enableDamping = true;
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+// vistas para capturas: ?still&view=front|tq|side|back|face|faceside|hands|shoes
+const VIEWS = {
+  front: [[0, .95, 3.3], [0, .86, 0], 32], tq: [[1.7, 1.15, 2.6], [0, .86, 0], 32], side: [[3.2, .95, 0], [0, .86, 0], 32], back: [[-.6, 1.1, -3.1], [0, .86, 0], 32],
+  face: [[.12, 1.57, .55], [0, 1.555, 0], 30], head: [[0, 1.57, .95], [0, 1.57, 0], 24], headtq: [[.55, 1.6, .75], [0, 1.57, 0], 24], headside: [[.95, 1.57, 0], [0, 1.57, 0], 24], faceside: [[.48, 1.58, .3], [0, 1.57, 0], 30], hair: [[.35, 1.82, .45], [0, 1.64, 0], 32],
+  hands: [[.55, .85, .55], [.3, .9, .05], 30], shoes: [[.5, .25, .7], [0, .08, .05], 32], torso: [[.5, 1.25, 1.1], [0, 1.18, 0], 30],
+};
+window.__setView = (v) => { const [p, t, f] = VIEWS[v]; camera.position.fromArray(p); controls.target.fromArray(t); camera.fov = f; camera.updateProjectionMatrix(); controls.update(); renderer.render(scene, camera); };
+await load();
+window.__ready = true;
+if (STILL) { renderer.setSize(+(params.get('w') || 1080), +(params.get('h') || 1920), false); camera.aspect = (+(params.get('w') || 1080)) / (+(params.get('h') || 1920)); camera.updateProjectionMatrix(); }
+(function loop() { if (!STILL) { controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); } })();
+</script>
+</body>
+</html>

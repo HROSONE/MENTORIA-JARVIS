@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atingido por um Raio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --accent:#FFE14D; --s:1; }
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s));background:#000}
+  #c{display:block;width:1080px;height:1920px;transform-origin:50% 45%}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+  #vhs{position:absolute;inset:0;opacity:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 2px,transparent 2px 6px);}
+  #vhs b{position:absolute;left:60px;top:90px;color:#fff;font:900 90px 'Montserrat',sans-serif;text-shadow:0 0 20px rgba(0,0,0,.8)}
+  #ecg{position:absolute;left:90px;top:1380px;width:900px;height:240px;opacity:0;pointer-events:none;filter:drop-shadow(0 0 12px rgba(255,80,80,.9))}
+  .ov{position:absolute;left:40px;right:40px;top:var(--y);text-align:center;color:#fff;font-family:'Montserrat',system-ui,sans-serif;font-weight:900;font-size:var(--fs);line-height:1.02;
+    opacity:0;transform:translateY(40px) scale(.9);transition:opacity .2s ease, transform .35s cubic-bezier(.2,.9,.3,1.4);
+    text-shadow:0 10px 40px rgba(0,0,0,.9),0 2px 8px rgba(0,0,0,.8);pointer-events:none}
+  .ov.on{opacity:1;transform:none}
+  .a{color:var(--accent)}
+  .sub{display:block;font-size:.42em;letter-spacing:.1em;margin-top:.2em}
+  .btn{display:inline-block;border:10px solid var(--accent);border-radius:999px;padding:.28em .75em;background:rgba(0,0,0,.5);box-shadow:0 0 60px rgba(255,225,77,.4)}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;font:800 54px 'Montserrat',sans-serif;background:rgba(0,0,0,.55);cursor:pointer;gap:30px;text-align:center}
+  #start small{font-size:30px;opacity:.6}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="flash"></div>
+  <div id="vhs"><b>⏪</b></div>
+  <svg id="ecg" viewBox="0 0 900 240"><path id="ecgPath" fill="none" stroke="#ff5a5a" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  <div id="texts"></div>
+  <div id="start">▶ CLIQUE ou ESPAÇO<small>com som · ESPAÇO pausa · R reinicia</small></div>
+</div>
+<!--AUDIO-->
+<!--SKIN-->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* ======== LINHA DO TEMPO (segundos) — a mesma usada no áudio ======== */
+const EV = {
+  strike: .7, getUp: 4.0, walkOn: 6.6,
+  hosp: 9.6, lapse1: 13.2, lich: 14.2, fade: 18.6, lapse2: 19.2,
+  crowd: 22.0, crowdUp: 25.2,
+  heart: 28.2, zap: 30.4, restart: 33.6,
+  rewind: 36.2, slow: 37.2, freeze: 39.6, reveal: 40.0,
+  end: 47.0, total: 52.0,
+};
+const TEXTS = [
+  { from: .95, to: 3.6,  y: 180, fs: 112, html: 'ATINGIDO POR<br><span class="a">UM RAIO</span>' },
+  { from: 4.4, to: 6.6,  y: 200, fs: 120, html: '…E <span class="a">LEVANTOU</span>' },
+  { from: 13.2, to: 14.3, y: 200, fs: 100, html: 'HORAS DEPOIS' },
+  { from: 15.0, to: 18.5, y: 170, fs: 88,  html: '<span class="a">FIGURAS DE</span><br>LICHTENBERG' },
+  { from: 19.2, to: 21.9, y: 190, fs: 92,  html: 'SOMEM EM<br><span class="a">1–2 DIAS</span>' },
+  { from: 25.4, to: 28.1, y: 170, fs: 104, html: 'A <span class="a">MAIORIA</span><br>SOBREVIVE' },
+  { from: 30.7, to: 33.6, y: 180, fs: 96,  html: 'O CORAÇÃO<br><span class="a">PODE PARAR</span>' },
+  { from: 37.3, to: 39.7, y: 200, fs: 150, html: 'POR QUÊ<span class="a">?</span>' },
+  { from: 40.6, to: 43.7, y: 180, fs: 104, html: 'POR <span class="a">FORA</span><br>DO CORPO' },
+  { from: 43.9, to: 46.9, y: 180, fs: 104, html: 'PELA PELE<br><span class="a">MOLHADA</span>' },
+  { from: 47.6, to: 52.0, y: 1540, fs: 110, html: '<span class="btn">SE INSCREVE</span>' },
+];

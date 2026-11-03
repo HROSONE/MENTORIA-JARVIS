@@ -1,0 +1,69 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}svg{display:block}</style></head><body>
+<svg id="s" width="1080" height="1920" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg"></svg>
+<script>
+const SKIN='#F4C39C', SKIN_D='#E2A27C', HAIR='#3B2416', SHIRT='#D7263D', SHIRT_D='#A9182C', JEAN='#2F5DA8', JEAN_D='#22467F';
+function arm(x, side, a1, a2) {
+  const s = side;
+  return `<g transform="translate(${x},-608) rotate(${a1 * s})">
+    <line x1="0" y1="0" x2="0" y2="140" stroke="${SHIRT_D}" stroke-width="72" stroke-linecap="round"/>
+    <line x1="0" y1="0" x2="0" y2="140" stroke="${SHIRT}" stroke-width="60" stroke-linecap="round"/>
+    <g transform="translate(0,140) rotate(${a2 * s})">
+      <line x1="0" y1="0" x2="0" y2="128" stroke="${SKIN}" stroke-width="44" stroke-linecap="round"/>
+      <circle cx="0" cy="142" r="34" fill="${SKIN}"/><circle cx="${-12*s}" cy="150" r="14" fill="${SKIN_D}" opacity=".5"/>
+    </g>
+    <line x1="0" y1="0" x2="0" y2="120" stroke="${SHIRT}" stroke-width="66" stroke-linecap="round"/>
+  </g>`;
+}
+function head(ex) {
+  const big = ex === 'susto' ? 1.35 : 1, look = ex === 'susto' ? -4 : 3;
+  const browY = ex === 'susto' ? -22 : ex === 'bravo' ? 6 : 0;
+  const browT = ex === 'bravo' ? 14 : 0;
+  const eye = x => `<g transform="translate(${x},4) scale(${big})"><ellipse rx="26" ry="32" fill="#fff"/><circle cx="${look}" cy="${ex==='susto'?0:4}" r="${ex==='susto'?11:16}" fill="#2B1A10"/><circle cx="${look+6}" cy="-6" r="5.5" fill="#fff"/></g>`;
+  const mouth = ex === 'susto' ? `<ellipse cx="0" cy="98" rx="24" ry="32" fill="#5A1E1E"/><ellipse cx="0" cy="116" rx="14" ry="9" fill="#E06C6C"/>`
+    : ex === 'bravo' ? `<path d="M-32 100 Q0 82 32 100" stroke="#7A2E2A" stroke-width="9" fill="none" stroke-linecap="round"/>`
+    : `<path d="M-38 84 Q0 122 38 84 Q0 104 -38 84Z" fill="#7A2E2A" stroke="#7A2E2A" stroke-width="6" stroke-linejoin="round"/><path d="M-26 92 Q0 100 26 92" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round"/>`;
+  return `<g transform="translate(0,-812)">
+    <circle cx="-120" cy="12" r="28" fill="${SKIN}"/><circle cx="120" cy="12" r="28" fill="${SKIN}"/>
+    <circle cx="-120" cy="12" r="13" fill="${SKIN_D}"/><circle cx="120" cy="12" r="13" fill="${SKIN_D}"/>
+    <ellipse rx="122" ry="138" fill="${SKIN}"/>
+    <path d="M60 -120 Q140 -20 70 120 Q110 130 100 60 Q130 -20 60 -120Z" fill="${SKIN_D}" opacity=".35"/>
+    <path d="M-126 -6 C-134 -120 -64 -168 0 -162 C72 -168 134 -110 126 -6 C116 -52 96 -78 62 -86 C20 -94 -40 -88 -80 -72 C-106 -60 -118 -40 -126 -6Z" fill="${HAIR}"/>
+    <path d="M-84 -104 C-96 -214 44 -262 140 -196 C104 -190 88 -176 82 -150 C48 -176 -22 -160 -84 -104Z" fill="${HAIR}"/>
+    <path d="M-40 -150 C-10 -200 60 -215 110 -195" stroke="#5C3A24" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M-118 -30 L-112 30 L-100 -20Z" fill="${HAIR}"/><path d="M118 -30 L112 30 L100 -20Z" fill="${HAIR}"/>
+    ${eye(-48)}${eye(48)}
+    <path d="M-78 ${-46+browY} Q-50 ${-62+browY} -22 ${-50+browY+browT}" stroke="${HAIR}" stroke-width="13" fill="none" stroke-linecap="round"/>
+    <path d="M78 ${-46+browY} Q50 ${-62+browY} 22 ${-50+browY+browT}" stroke="${HAIR}" stroke-width="13" fill="none" stroke-linecap="round"/>
+    <path d="M-2 26 Q12 50 -6 58" stroke="${SKIN_D}" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <circle cx="-80" cy="60" r="21" fill="#FF8A80" opacity=".35"/><circle cx="80" cy="60" r="21" fill="#FF8A80" opacity=".35"/>
+    ${mouth}
+  </g>`;
+}
+function char(x, y, sc, pose = {}) {
+  const { aL = [8, -10], aR = [8, -10], ex = 'feliz' } = pose;
+  return `<g transform="translate(${x},${y}) scale(${sc})">
+    <ellipse cx="0" cy="6" rx="190" ry="34" fill="#000" opacity=".18"/>
+    <path d="M-48 -390 L-62 -50" stroke="${JEAN}" stroke-width="76" stroke-linecap="round"/>
+    <path d="M48 -390 L62 -50" stroke="${JEAN_D}" stroke-width="76" stroke-linecap="round"/>
+    <path d="M-110 -18 Q-110 -62 -60 -62 Q-14 -62 -14 -18Z" fill="#2A2A35"/><rect x="-114" y="-22" width="104" height="18" rx="9" fill="#fff"/>
+    <path d="M110 -18 Q110 -62 60 -62 Q14 -62 14 -18Z" fill="#2A2A35"/><rect x="10" y="-22" width="104" height="18" rx="9" fill="#fff"/>
+    <rect x="-98" y="-420" width="196" height="70" rx="30" fill="${JEAN}"/>
+        <rect x="-30" y="-700" width="60" height="90" rx="22" fill="${SKIN_D}"/>
+    <path d="M-104 -600 Q-104 -650 -54 -650 L54 -650 Q104 -650 104 -600 L100 -380 Q100 -356 76 -356 L-76 -356 Q-100 -356 -100 -380Z" fill="${SHIRT}"/>
+    <path d="M40 -650 L54 -650 Q104 -650 104 -600 L100 -380 Q100 -356 76 -356 L60 -356 Q86 -500 40 -650Z" fill="${SHIRT_D}"/>
+    <path d="M-38 -650 L0 -600 L38 -650Z" fill="${SKIN_D}"/>
+    ${arm(-96, 1, ...aL)}
+    ${arm(96, -1, ...aR)}
+    ${head(ex)}
+  </g>`;
+}
+const scene = `<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7FB8F5"/><stop offset="1" stop-color="#DDEFFF"/></linearGradient></defs>
+<rect width="1080" height="1920" fill="url(#sky)"/><circle cx="830" cy="300" r="110" fill="#FFE58A"/><circle cx="830" cy="300" r="160" fill="#FFE58A" opacity=".25"/>
+${[[0,900,180],[160,760,150],[290,980,170],[440,700,160],[580,860,150],[720,640,190],[900,820,180]].map(([x,y,w])=>`<rect x="${x}" y="${y}" width="${w}" height="${1400-y}" fill="#A9C7EA"/>`+Array.from({length:Math.floor((1400-y)/90)},(_, r)=>[0,1].map(c=>`<rect x="${x+30+c*(w/2)}" y="${y+30+r*90}" width="${w/2-60}" height="40" rx="6" fill="#C9DDF4"/>`).join('')).join('')).join('')}
+<rect y="1380" width="1080" height="540" fill="#B9B4C6"/><rect y="1380" width="1080" height="30" fill="#9E98AE"/>
+${Array.from({length:7},(_,i)=>`<rect x="${i*170-20}" y="1540" width="140" height="10" rx="5" fill="#A6A0B6"/>`).join('')}`;
+const P = { feliz: { aL: [10, -15], aR: [155, 25], ex: 'feliz' }, susto: { aL: [150, 20], aR: [150, 20], ex: 'susto' }, bravo: { aL: [25, -110], aR: [25, -110], ex: 'bravo' } };
+const mode = location.hash.slice(1) || 'cena';
+document.getElementById('s').innerHTML = mode === 'cena' ? scene + char(540, 1700, 1.15, P.feliz)
+  : `<rect width="1080" height="1920" fill="#20242E"/>` + char(540, 640, .55, P.susto) + char(270, 1260, .55, P.feliz) + char(810, 1260, .55, P.bravo) + char(540, 1880, .55, { aL:[60,-80], aR:[20,40], ex:'feliz' });
+</script></body></html>

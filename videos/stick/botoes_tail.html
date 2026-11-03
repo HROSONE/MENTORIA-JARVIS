@@ -1,0 +1,358 @@
+
+const ACCENT = new THREE.Color('#00E5FF');
+let acc = 0; for (const s of SEGMENTS) { s.start = acc; acc += s.dur; }
+const TOTAL = acc;
+const SEG = Object.fromEntries(SEGMENTS.map(s => [s.id, s]));
+const params = new URLSearchParams(location.search);
+
+/* ---------------- utilidades ---------------- */
+const TAU = Math.PI * 2;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const range = (t, a, b) => clamp((t - a) / (b - a));
+const smooth = x => { x = clamp(x); return x * x * (3 - 2 * x); };
+const easeInOut = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const easeOut = x => 1 - Math.pow(1 - clamp(x), 3);
+const lerp = (a, b, k) => a + (b - a) * k;
+const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const R = THREE.MathUtils.degToRad;
+let seed = 5; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+/* ---------------- renderer ---------------- */
+const W = 1080, H = 1920;
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H, false);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1c22);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), .04).texture;
+const camera = new THREE.PerspectiveCamera(40, W / H, .02, 200);
+const key = new THREE.DirectionalLight(0xfff4e8, 2.2); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -3, right: 3, top: 3, bottom: -1, near: .5, far: 20 }); key.shadow.radius = 4; key.shadow.bias = -.0004;
+scene.add(key, key.target);
+const hemi = new THREE.HemisphereLight(0xffffff, 0x404050, .7); scene.add(hemi);
+
+function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
+const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: .6, ...o });
+const box = (w, h, d, mat, x = 0, y = 0, z = 0, parent = scene) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; parent.add(m); return m; };
+const rbox = (w, h, d, r, mat, x = 0, y = 0, z = 0, parent = scene) => { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 3, r), mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; parent.add(m); return m; };
+const glowMat = (c) => new THREE.MeshStandardMaterial({ color: 0x111111, emissive: new THREE.Color(c), emissiveIntensity: 0, roughness: .3 });
+const tube = (pts, r, mat, parent) => { const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, r, 8), mat); parent.add(m); return m; };
+
+/* ================= CENÁRIO 1: elevador (origem) ================= */
+const ELV = new THREE.Group(); scene.add(ELV);
+const steel = std(0xb8bec7, { metalness: .8, roughness: .32 });
+const doorsL = new THREE.Group(), doorsR = new THREE.Group();
+const panel = {};
+{
+  const wall = std(0x8b6f55, { roughness: .5 });
+  const woodTex = canvasTex(256, 512, (g, w, h) => { g.fillStyle = '#7b5a3e'; g.fillRect(0, 0, w, h); for (let i = 0; i < 160; i++) { g.strokeStyle = `rgba(${rnd() > .5 ? '40,20,10' : '200,150,100'},.12)`; g.lineWidth = 1 + rnd() * 2; g.beginPath(); g.moveTo(rnd() * w, 0); g.bezierCurveTo(rnd() * w, h * .3, rnd() * w, h * .7, rnd() * w, h); g.stroke(); } });
+  wall.map = woodTex;
+  box(1.8, .05, 1.8, std(0x2a2a30, { roughness: .4, metalness: .3 }), 0, -.025, 0, ELV);
+  box(1.8, 2.4, .05, wall, 0, 1.2, -.9, ELV);
+  box(.05, 2.4, 1.8, wall, -.9, 1.2, 0, ELV);
+  box(.05, 2.4, 1.8, wall, .9, 1.2, 0, ELV);
+  box(1.8, .05, 1.8, std(0xeeeeea, { emissive: 0xffffff, emissiveIntensity: .25 }), 0, 2.42, 0, ELV);
+  box(1.75, .06, .04, steel, 0, .9, -.86, ELV); // corrimão
+  // frente: moldura e portas
+  box(.45, 2.4, .06, steel, -.68, 1.2, .9, ELV); box(.45, 2.4, .06, steel, .68, 1.2, .9, ELV); box(1.8, .3, .06, steel, 0, 2.25, .9, ELV);
+  for (const [g, x] of [[doorsL, -.23], [doorsR, .23]]) { g.position.set(x, 0, .93); ELV.add(g); box(.46, 2.1, .03, std(0xc9cfd6, { metalness: .9, roughness: .22 }), 0, 1.05, 0, g); }
+  // painel de botões (na moldura direita, virado para dentro)
+  const P = new THREE.Group(); P.position.set(.6, 1.2, .865); P.rotation.y = Math.PI; ELV.add(P); panel.g = P;
+  rbox(.2, .5, .02, .008, std(0x22252b, { metalness: .6, roughness: .35 }), 0, 0, 0, P);
+  // tampa que abre (dobradiça à esquerda)
+  const hinge = new THREE.Group(); hinge.position.set(-.1, 0, .012); P.add(hinge); panel.hinge = hinge;
+  const plateTex = canvasTex(256, 640, (g, w, h) => {
+    g.fillStyle = '#c6ccd3'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#2b2f36'; g.font = 'bold 34px sans-serif'; g.textAlign = 'center';
+    ['4', '3', '2', '1'].forEach((n, i) => g.fillText(n, 80, 100 + i * 90));
+    ['T', 'S'].forEach((n, i) => g.fillText(n, 180, 100 + i * 90));
+    g.fillText('◀ ▶', 80, 520); g.fillText('▶ ◀', 180, 520);
+  });
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(.2, .5, .008), [std(0xc6ccd3, { metalness: .7 }), std(0xc6ccd3), std(0xc6ccd3), std(0xc6ccd3), new THREE.MeshStandardMaterial({ map: plateTex, metalness: .3, roughness: .4, emissive: 0xffffff, emissiveMap: plateTex, emissiveIntensity: .15 }), std(0xc6ccd3)]);
+  plate.position.set(.1, 0, 0); plate.castShadow = true; hinge.add(plate);
+  const btn = (x, y, c) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, .012, 24).rotateX(Math.PI / 2), glowMat(c)); m.position.set(x, y, .008); hinge.add(m); return m; };
+  [[.06, .17], [.06, .095], [.06, .02], [.06, -.055], [.14, .17], [.14, .095]].forEach(([x, y]) => { const b = btn(x, y, 0xffd27a); b.material.emissiveIntensity = .35; b.material.color.set(0xd8dce2); b.material.metalness = .8; });
+  panel.open = btn(.06, -.15, 0xffffff); panel.close = btn(.14, -.15, 0x00e5ff);
+  for (const b of [panel.open, panel.close]) { b.material.color.set(0xd8dce2); b.material.metalness = .8; }
+  // fechadura da chave
+  const kh = new THREE.Mesh(new THREE.CylinderGeometry(.014, .014, .01, 20).rotateX(Math.PI / 2), steel); kh.position.set(.1, -.215, .006); hinge.add(kh);
+  panel.keyhole = kh;
+  const keyG = new THREE.Group(); keyG.position.set(.1, -.215, .02); hinge.add(keyG); panel.key = keyG;
+  box(.006, .02, .04, std(0xd4af37, { metalness: 1, roughness: .25 }), 0, 0, .0, keyG);
+  rbox(.03, .03, .006, .004, std(0xd4af37, { metalness: 1, roughness: .25 }), 0, 0, .03, keyG);
+  // fiação atrás da tampa
+  const red = std(0xd23b2a, { roughness: .5 }), blue = std(0x2a64d2, { roughness: .5 });
+  const board = box(.16, .12, .006, std(0x1f6b3a, { roughness: .6 }), 0, .1, .002, P);
+  tube([V(-.04, -.15, .006), V(-.05, -.05, .01), V(-.04, .06, .006)], .004, red, P);           // abrir: ligado
+  panel.wireA = tube([V(.04, -.15, .006), V(.045, -.11, .012), V(.05, -.08, .012)], .004, blue, P); // fechar: cortado
+  panel.wireB = tube([V(.05, -.03, .012), V(.045, .0, .01), V(.04, .06, .006)], .004, blue, P);
+  panel.cut = new THREE.Mesh(new THREE.TorusGeometry(.03, .0035, 8, 32), new THREE.MeshBasicMaterial({ color: ACCENT.clone().multiplyScalar(1.6) })); panel.cut.position.set(.05, -.055, .015); P.add(panel.cut);
+}
+
+/* ================= CENÁRIO 2: rua com semáforo (x = 20) ================= */
+const ST = new THREE.Group(); ST.position.x = 20; scene.add(ST);
+const sem = {};
+let car;
+{
+  box(14, .02, 4, std(0x34373d, { roughness: .9 }), 0, -.01, 2.6, ST);                 // asfalto
+  box(14, .16, 3, std(0xb5b1a8, { roughness: .9 }), 0, .08, -1.1, ST);                  // calçada
+  box(14, .17, .14, std(0xd9d5cc, { roughness: .8 }), 0, .085, .4, ST);                 // meio-fio
+  for (let i = 0; i < 7; i++) box(.4, .012, 2.6, std(0xf2f2ee, { roughness: .7 }), -1.4 + i * .55, .006, 2.4, ST);   // faixa
+  const facade = canvasTex(512, 512, (g, w, h) => { g.fillStyle = '#b9764f'; g.fillRect(0, 0, w, h); for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { g.fillStyle = '#2a3b4f'; g.fillRect(30 + x * 120, 30 + y * 120, 80, 90); g.fillStyle = 'rgba(255,240,200,.25)'; g.fillRect(30 + x * 120, 30 + y * 120, 80, 30); } });
+  facade.wrapS = facade.wrapT = THREE.RepeatWrapping; facade.repeat.set(3, 2);
+  box(14, 8, .4, std(0xffffff, { map: facade }), 0, 4, -2.6, ST);
+  // poste e semáforo de pedestre
+  const pole = std(0x3a3f45, { metalness: .5, roughness: .4 });
+  const px = .55, pz = -.55;
+  const p = new THREE.Mesh(new THREE.CylinderGeometry(.045, .05, 3.2, 20), pole); p.position.set(px, 1.6, pz); p.castShadow = true; ST.add(p);
+  const head = rbox(.32, .62, .22, .03, std(0x23262b, { roughness: .4 }), px, 2.55, pz + .12, ST);
+  const iconTex = (walk) => canvasTex(128, 128, (g) => {
+    g.fillStyle = '#000'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#fff'; g.strokeStyle = '#fff'; g.lineWidth = 12; g.lineCap = 'round';
+    if (walk) { g.beginPath(); g.arc(66, 26, 13, 0, TAU); g.fill(); g.beginPath(); g.moveTo(62, 44); g.lineTo(56, 78); g.lineTo(40, 112); g.moveTo(56, 78); g.lineTo(78, 112); g.moveTo(60, 52); g.lineTo(38, 70); g.moveTo(60, 52); g.lineTo(86, 66); g.stroke(); }
+    else { g.beginPath(); g.roundRect(38, 36, 52, 64, 16); g.fill(); for (let i = 0; i < 4; i++) { g.beginPath(); g.roundRect(38 + i * 13, 14, 10, 30, 5); g.fill(); } g.beginPath(); g.roundRect(84, 50, 14, 34, 7); g.fill(); }
+  });
+  const lamp = (y, walk, c) => { const m = new THREE.Mesh(new THREE.CircleGeometry(.11, 32), new THREE.MeshStandardMaterial({ color: 0x050505, emissive: new THREE.Color(c), emissiveMap: iconTex(walk), emissiveIntensity: 0 })); m.position.set(px, 2.55 + y, pz + .232); ST.add(m); return m; };
+  sem.red = lamp(.14, false, 0xff3a2a); sem.green = lamp(-.14, true, 0x3aff7a);
+  // caixa do botão
+  const bx = rbox(.13, .2, .07, .02, std(0xe0c227, { roughness: .4 }), px, 1.15, pz + .075, ST);
+  sem.btn = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .025, 28).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xc9cdd2, metalness: .8, roughness: .3, emissive: ACCENT, emissiveIntensity: 0 }));
+  sem.btn.position.set(px, 1.13, pz + .118); ST.add(sem.btn);
+  sem.btnW = V(20 + px, 1.13, pz + .14);
+  // carro
+  car = new THREE.Group(); ST.add(car);
+  rbox(1.5, .4, .72, .12, std(0x2f7dd1, { metalness: .4, roughness: .35 }), 0, .38, 0, car);
+  rbox(.85, .32, .66, .1, std(0x1b2430, { metalness: .3, roughness: .1 }), -.1, .7, 0, car);
+  for (const [x, z] of [[-.5, .36], [.5, .36], [-.5, -.36], [.5, -.36]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .1, 24).rotateX(Math.PI / 2), std(0x111111)); w.position.set(x, .16, z); car.add(w); }
+  car.traverse(o => { if (o.isMesh) o.castShadow = true; });
+}
+
+/* ================= CENÁRIO 3: escritório (x = 40) ================= */
+const OF = new THREE.Group(); OF.position.x = 40; scene.add(OF);
+const th = {};
+{
+  box(8, .04, 6, std(0x6d7d8c, { roughness: .8 }), 0, -.02, 0, OF);
+  box(8, 3, .1, std(0xe9e3d6, { roughness: .9 }), 0, 1.5, -1, OF);
+  box(1.6, .05, .8, std(0x8a6a4a, { roughness: .5 }), -1.3, .75, -.5, OF);
+  for (const x of [-2, -.6]) box(.05, .75, .7, std(0x8a6a4a), x, .375, -.5, OF);
+  rbox(.5, .32, .03, .01, std(0x15181d, { roughness: .2 }), -1.3, 1.02, -.75, OF);
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(.16, .12, .3, 24), std(0xd9d2c4)); pot.position.set(1.4, .15, -.7); OF.add(pot);
+  for (let i = 0; i < 8; i++) { const l = new THREE.Mesh(new THREE.SphereGeometry(.12, 12, 8), std(0x4e8a45)); l.scale.set(.6, 1.6, .4); l.position.set(1.4 + (rnd() - .5) * .3, .55 + rnd() * .3, -.7 + (rnd() - .5) * .2); l.rotation.set(rnd() - .5, rnd() * 3, rnd() - .5); OF.add(l); }
+  // termostato
+  const T = new THREE.Group(); T.position.set(.5, 1.25, -.945); OF.add(T); th.g = T;
+  rbox(.18, .18, .03, .01, std(0x9aa0a8, { roughness: .5 }), 0, 0, 0, T);             // caixa (vazia por dentro)
+  const hinge = new THREE.Group(); hinge.position.set(-.09, 0, .018); T.add(hinge); th.hinge = hinge;
+  const cover = rbox(.18, .18, .02, .01, std(0xf2f2ee, { roughness: .35 }), .09, 0, 0, hinge);
+  th.disp = canvasTex(256, 128, (g) => { g.fillStyle = '#9fd6a8'; g.fillRect(0, 0, 256, 128); g.fillStyle = '#123'; g.font = 'bold 84px monospace'; g.textAlign = 'center'; g.fillText('22°', 128, 95); });
+  const disp = new THREE.Mesh(new THREE.PlaneGeometry(.1, .05), new THREE.MeshStandardMaterial({ map: th.disp, emissive: 0x335533, emissiveIntensity: .4 })); disp.position.set(.09, .04, .011); hinge.add(disp);
+  th.dial = new THREE.Group(); th.dial.position.set(.09, -.035, .014); hinge.add(th.dial);
+  const dial = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, .014, 32).rotateX(Math.PI / 2), std(0x707780, { metalness: .6, roughness: .3 })); th.dial.add(dial);
+  box(.004, .02, .004, std(0x222222), 0, .018, .008, th.dial);
+  th.empty = new THREE.Mesh(new THREE.TorusGeometry(.07, .004, 8, 32), new THREE.MeshBasicMaterial({ color: ACCENT.clone().multiplyScalar(1.6) })); th.empty.position.set(0, 0, .02); T.add(th.empty);
+}
+
+/* ================= CENÁRIO 4: o botão que funciona (x = 60) ================= */
+const SB = new THREE.Group(); SB.position.x = 60; scene.add(SB);
+const big = {};
+{
+  box(10, .04, 8, std(0x22252c, { roughness: .9 }), 0, -.02, 0, SB);
+  const ped = new THREE.Mesh(new THREE.CylinderGeometry(.2, .26, .95, 40), std(0x2b2f37, { metalness: .4, roughness: .4 })); ped.position.set(0, .475, .45); ped.castShadow = true; SB.add(ped);
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(.22, .22, .05, 40), std(0xdfe3e8, { metalness: .9, roughness: .2 })); ring.position.set(0, .975, .45); SB.add(ring);
+  big.cap = new THREE.Mesh(new THREE.SphereGeometry(.17, 40, 20, 0, TAU, 0, Math.PI / 2), new THREE.MeshPhysicalMaterial({ color: 0xe8262b, roughness: .25, clearcoat: 1, emissive: 0xff2020, emissiveIntensity: 0 })); big.cap.scale.y = .45; big.cap.position.set(0, 1.0, .45); big.cap.castShadow = true; SB.add(big.cap);
+  big.top = V(60, 1.07, .45);
+  big.conf = new THREE.InstancedMesh(new THREE.BoxGeometry(.03, .01, .05), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .5 }), 120); big.conf.frustumCulled = false; SB.add(big.conf);
+  const cc = [0xe8322f, 0x2f6ff0, 0x2fbf5a, 0xf5c021, 0x9b4dff, 0xff7a1f, 0x00e5ff], col = new THREE.Color();
+  big.cd = Array.from({ length: 120 }, (_, i) => { big.conf.setColorAt(i, col.set(cc[i % cc.length])); return { v: V((rnd() - .5) * 2.4, 2.2 + rnd() * 2, (rnd() - .5) * 2), r: V(rnd() * 9, rnd() * 9, rnd() * 9) }; });
+}
+
+/* ---------------- os stickmen ---------------- */
+const people = {};
+for (const [k, c, x, z, ry] of [['red', '#e8322f', .32, .25, 0], ['blue', '#2f6ff0', 20.4, -.1, Math.PI], ['green', '#2fbf5a', 40.28, -.5, Math.PI], ['yellow', '#f5c021', 20.4, -.1, Math.PI], ['purple', '#9b4dff', 60, -.05, 0]]) {
+  const s = makeStickman(c); s.root.position.set(x, 0, z); s.root.rotation.y = ry; s.root.updateMatrixWorld(true); s.home = V(x, 0, z); s.ry = ry; scene.add(s.root);
+  s.root.traverse(o => { if (o.isMesh) o.castShadow = true; }); people[k] = s;
+}
+function resetPose(J) { for (const k in J) J[k].rotation.set(0, 0, 0); J.hips.position.y = M.hip; }
+// IK simples de 2 ossos para levar a mão até um ponto
+const _q = new THREE.Quaternion(), _down = V(0, -1, 0);
+function reach(man, side, target, pole) {
+  const J = man.J, k = side > 0 ? 'L' : 'R';
+  const sh = J['shoulder' + k], el = J['elbow' + k];
+  man.root.updateMatrixWorld(true);
+  const S = sh.getWorldPosition(V());
+  const L1 = M.upper, L2 = M.fore + .05;
+  const dir = target.clone().sub(S); const d = Math.min(dir.length(), L1 + L2 - .002); dir.normalize();
+  const a = (L1 * L1 - L2 * L2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+  const pl = pole.clone().addScaledVector(dir, -pole.dot(dir)).normalize();
+  const E = S.clone().addScaledVector(dir, a).addScaledVector(pl, h);
+  const T = S.clone().addScaledVector(dir, d);
+  const u = E.clone().sub(S).normalize(), f = T.clone().sub(E).normalize();
+  sh.parent.getWorldQuaternion(_q); sh.quaternion.setFromUnitVectors(_down, u.clone().applyQuaternion(_q.clone().invert()));
+  sh.updateMatrixWorld(true);
+  sh.getWorldQuaternion(_q); el.quaternion.setFromUnitVectors(_down, f.clone().applyQuaternion(_q.clone().invert()));
+}
+function idleArms(J, t, k = 1) { J.shoulderL.rotation.z = R(6 + 2 * Math.sin(t * 1.3)) * k; J.shoulderR.rotation.z = -R(6 + 2 * Math.sin(t * 1.3 + 1)) * k; J.elbowL.rotation.x = R(-8); J.elbowR.rotation.x = R(-8); }
+function breathe(J, t) { J.chest.rotation.x = R(1.5 * Math.sin(t * 2)); }
+
+/* ---------------- estado / cenas ---------------- */
+let st, T = 0;
+function reset() { st = { camPos: V(), camTgt: V(), fov: 40, set: 'elv', show: {}, door: 0, plateOpen: 0, key: 0, closeGlow: 0, cut: 0, sem: 'red', semPress: 0, carX: 99, thOpen: 0, thEmpty: 0, dialA: 0, bigPress: 0, conf: -1 }; }
+const cam = (p, t, fov) => { st.camPos.copy(p); st.camTgt.copy(t); st.fov = fov; };
+const mash = (t, rate = 7) => Math.max(0, Math.sin(t * rate)) ** .6;
+scene.updateMatrixWorld(true);
+const B_CLOSE = panel.close.getWorldPosition(V()), TH_DIAL = th.dial.getWorldPosition(V()), TH_POS = th.g.getWorldPosition(V());
+const elvBtnW = () => B_CLOSE.clone();
+
+function redMash(lt, rate = 7, k = 1) {
+  const m = people.red, J = m.J; resetPose(J); breathe(J, lt); m.root.position.copy(m.home);
+  J.spine.rotation.x = R(4); J.head.rotation.x = R(10); J.head.rotation.y = R(18);
+  J.shoulderL.rotation.z = R(12); J.elbowL.rotation.set(R(-70), 0, R(-60)); // mão na cintura (impaciente)
+  const b = elvBtnW(), push = mash(lt, rate) * k;
+  reach(m, -1, b.clone().add(V(0, 0, -.07 + .055 * push)), V(1, -1, -.6));
+}
+const SHOTS = {
+  intro(lt, d) {
+    st.set = 'elv'; st.show.red = 1;
+    redMash(lt, 7.5);
+    st.closeGlow = mash(lt, 7.5) > .7 ? 1 : 0;
+    const k = easeInOut(lt / d);
+    cam(V(-.62, 1.62, -.66).lerp(V(-.5, 1.5, -.5), k), V(.38, 1.15, .7), 62);
+  },
+  elevador(lt, d) {
+    st.set = 'elv'; st.show.red = 1;
+    redMash(lt, 6, lt < 5 ? 1 : 0);
+    const b = elvBtnW();
+    if (lt < 5) { st.closeGlow = mash(lt, 6) > .7 ? 1 : 0; cam(V(-.62, 1.75, .15), V(.45, 1.1, .78), 56); }
+    else {
+      delete st.show.red;
+      st.plateOpen = lt < 9.4 ? easeInOut(range(lt, 5, 6.2)) : 1 - easeInOut(range(lt, 9.4, 10.3));
+      st.cut = smooth(range(lt, 6.0, 6.5)) * (1 - smooth(range(lt, 9.2, 9.5)));
+      st.key = smooth(range(lt, 10.6, 11.6));
+      st.closeGlow = smooth(range(lt, 11.6, 11.9));
+      st.door = easeInOut(range(lt, 12, 13.6));
+      cam(b.clone().add(V(-.1, .12, -.75)), b.clone().add(V(-.04, .12, 0)), 40);
+    }
+  },
+  semaforo(lt, d) {
+    st.set = 'st'; st.show.blue = 1;
+    const m = people.blue, J = m.J; resetPose(J); breathe(J, lt); m.root.position.copy(m.home);
+    J.head.rotation.x = R(-12); J.head.rotation.y = R(-10);
+    const push = lt < 9.5 ? mash(lt, 8) : 0;
+    reach(m, -1, sem.btnW.clone().add(V(0, 0, .05 - .045 * push)), V(1, -1, .8));
+    J.shoulderL.rotation.z = R(10); J.elbowL.rotation.x = R(-10);
+    st.semPress = push > .7 ? 1 : 0;
+    // o sinal muda sozinho, no tempo dele
+    st.sem = (lt > 3.5 && lt < 7.5) || lt > 11.5 ? 'green' : 'red';
+    st.carX = lt < 3.5 ? lerp(-6, 6, range(lt, 0, 3.5)) : 99;
+    if (lt < 5) cam(V(21.55, 1.45, .9), V(20.45, 1.2, -.45), 46);
+    else if (lt < 10) cam(V(22.2, 1.1, 4.4), V(20.5, 1.7, -.4), 46);
+    else cam(V(20.9, 2.0, 1.1), V(20.55, 2.4, -.4), 42);
+  },
+  termostato(lt, d) {
+    st.set = 'of'; st.show.green = 1;
+    const m = people.green, J = m.J; resetPose(J); breathe(J, lt); m.root.position.copy(m.home);
+    J.head.rotation.x = R(-4);
+    th.g.updateMatrixWorld(true);
+    const dW = TH_DIAL.clone();
+    if (lt < 4.2) { reach(m, -1, dW.clone().add(V(0, -.005, .06)), V(1, -1, .6)); st.dialA = Math.sin(lt * 4) * 1.2; J.shoulderL.rotation.z = R(8); }
+    else { idleArms(J, lt); J.spine.rotation.x = R(-3); J.head.rotation.x = R(-10); }
+    st.thOpen = easeInOut(range(lt, 4.3, 5.3)); st.thEmpty = smooth(range(lt, 5.2, 5.6));
+    if (lt < 4.2) cam(V(41.3, 1.55, .7), V(40.42, 1.2, -.8), 44);
+    else { delete st.show.green; cam(TH_POS.clone().add(V(.12, .06, .55)), TH_POS, 36); }
+  },
+  porque(lt, d) {
+    st.set = 'st'; st.show.yellow = 1;
+    const m = people.yellow, J = m.J; resetPose(J); breathe(J, lt); m.root.position.copy(m.home);
+    const press = pulse(lt, 1.0, 2.2, .3);
+    if (press > .01) reach(m, -1, sem.btnW.clone().add(V(0, 0, .05 - .045 * press)), V(1, -1, .8));
+    else { idleArms(J, lt); }
+    st.semPress = press > .7 ? 1 : 0;
+    // depois de apertar: tranquilo, balançando
+    const calm = smooth(range(lt, 2.4, 3.2));
+    J.hips.rotation.z = R(3 * Math.sin(lt * 2.2)) * calm; J.head.rotation.z = R(6 * Math.sin(lt * 2.2 + 1)) * calm; J.head.rotation.x = R(-8);
+    if (calm > 0) { idleArms(J, lt); J.shoulderL.rotation.z += R(4 * Math.sin(lt * 2.2)); J.shoulderR.rotation.z += R(4 * Math.sin(lt * 2.2)); J.spine.rotation.x = R(-4); }
+    st.sem = lt > 7.5 ? 'green' : 'red';
+    const k = easeInOut(lt / d);
+    cam(V(21.7, 1.5, 1.5).lerp(V(21.45, 1.45, 1.15), k), V(20.45, 1.2, -.4), 46);
+  },
+  inscreve(lt, d) {
+    st.set = 'sb'; st.show.purple = 1;
+    const m = people.purple, J = m.J; resetPose(J); breathe(J, lt); m.root.position.copy(m.home);
+    const press = lt < 1.6 ? smooth(range(lt, .5, 1.1)) : 1 - smooth(range(lt, 1.6, 2.2));
+    reach(m, -1, big.top.clone().add(V(0, .06 - .05 * press, 0)), V(1, -.6, -1));
+    J.spine.rotation.x = R(10 * press);
+    st.bigPress = press;
+    if (lt > 1.1) { st.conf = lt - 1.1; J.shoulderL.rotation.z = R(150) * smooth(range(lt, 1.8, 2.3)); J.elbowL.rotation.z = R(20 + 15 * Math.sin(lt * 9)) * smooth(range(lt, 1.8, 2.3)); }
+    cam(V(61.0, 1.85, 2.2), V(60, 1.2, .15), 44);
+  },
+};
+function pulse(t, a, b, f = .25) { return Math.min(range(t, a, a + f), 1 - range(t, b - f, b)); }
+
+/* ---------------- textos ---------------- */
+const textHost = document.getElementById('texts');
+for (const x of TEXTS) {
+  const el = document.createElement('div'); el.className = 'ov'; el.innerHTML = x.html;
+  el.style.setProperty('--y', x.y + 'px'); el.style.setProperty('--fs', x.fs + 'px');
+  textHost.appendChild(el); x.el = el; x.a = SEG[x.seg].start + x.from; x.b = SEG[x.seg].start + x.to;
+}
+
+/* ---------------- quadro ---------------- */
+const m4 = new THREE.Matrix4();
+const SETS = { elv: [ELV, V(0, 0, 0)], st: [ST, V(20, 0, 0)], of: [OF, V(40, 0, 0)], sb: [SB, V(60, 0, 0)] };
+function frame(t) {
+  T = t; reset();
+  const s = [...SEGMENTS].reverse().find(s => t >= s.start) || SEGMENTS[0];
+  const lt = Math.min(t - s.start, s.dur);
+  for (const k in people) people[k].root.visible = false;
+  SHOTS[s.id](lt, s.dur);
+  for (const k in st.show) people[k].root.visible = true;
+  for (const k in SETS) SETS[k][0].visible = k === st.set;
+  const c = SETS[st.set][1]; key.position.copy(c).add(V(-2.5, 5, 4)); key.target.position.copy(c).add(V(0, .8, 0));
+  // elevador
+  doorsL.position.x = -.23 - .44 * (1 - st.door); doorsR.position.x = .23 + .44 * (1 - st.door);
+  panel.hinge.rotation.y = -1.9 * st.plateOpen;
+  panel.close.material.emissiveIntensity = st.closeGlow * 2.2; panel.close.position.z = .008 - .004 * st.closeGlow;
+  panel.cut.visible = st.cut > .01; panel.cut.scale.setScalar(.6 + .4 * st.cut + .08 * Math.sin(t * 8));
+  panel.key.visible = st.key > .001; panel.key.position.z = .06 - .04 * smooth(range(st.key, 0, .5)); panel.key.rotation.z = R(90) * smooth(range(st.key, .5, 1));
+  // semáforo
+  sem.red.material.emissiveIntensity = st.sem === 'red' ? 2.2 : .05; sem.green.material.emissiveIntensity = st.sem === 'green' ? 2.2 : .05;
+  sem.btn.position.z = -.55 + .118 - .006 * st.semPress; sem.btn.material.emissiveIntensity = 0;
+  car.position.set(st.carX, 0, 2.0);
+  // termostato
+  th.hinge.rotation.y = -1.8 * st.thOpen; th.dial.rotation.z = st.dialA; th.empty.visible = st.thEmpty > .01; th.empty.scale.setScalar(.6 + .4 * st.thEmpty + .06 * Math.sin(t * 8));
+  // botão grande + confete
+  big.cap.position.y = 1.0 - .04 * st.bigPress; big.cap.material.emissiveIntensity = st.conf >= 0 ? 1.2 * Math.exp(-st.conf * 1.5) + .2 : 0;
+  big.conf.visible = st.conf >= 0;
+  if (big.conf.visible) { const q = new THREE.Quaternion(), e = new THREE.Euler(); big.cd.forEach((c, i) => { const tt = st.conf; const p = V(0, 1.1, .45).addScaledVector(c.v, tt).add(V(0, -2.6 * tt * tt, 0)); p.y = Math.max(.02, p.y); e.set(c.r.x * tt, c.r.y * tt, c.r.z * tt); q.setFromEuler(e); m4.compose(p, q, V(1, 1, 1)); big.conf.setMatrixAt(i, m4); }); big.conf.instanceMatrix.needsUpdate = true; }
+  camera.position.copy(st.camPos); camera.fov = st.fov; camera.updateProjectionMatrix(); camera.lookAt(st.camTgt);
+  for (const x of TEXTS) {
+    if (window.__render) { const k = Math.min(range(t, x.a, x.a + .3), 1 - range(t, x.b - .25, x.b)), e = easeOut(k); x.el.style.transition = 'none'; x.el.style.opacity = k; x.el.style.transform = `translateY(${(1 - e) * 40}px) scale(${.92 + .08 * e})`; }
+    else x.el.classList.toggle('on', t >= x.a && t < x.b);
+  }
+  renderer.render(scene, camera);
+}
+
+/* ---------------- controle ---------------- */
+const stage = document.getElementById('stage'), startEl = document.getElementById('start');
+const fit = () => stage.style.setProperty('--s', Math.min(innerWidth / W, innerHeight / H));
+addEventListener('resize', fit); fit();
+let playing = false, offset = parseFloat(params.get('t') || '0'), t0 = 0;
+const current = () => playing ? Math.min(TOTAL, offset + (performance.now() - t0) / 1000) : offset;
+function play() { if (playing) return; playing = true; t0 = performance.now(); startEl.classList.add('hide'); }
+function pause() { offset = current(); playing = false; }
+function seek(t) { offset = clamp(t, 0, TOTAL); t0 = performance.now(); }
+startEl.addEventListener('click', play);
+addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); if (!playing) play(); else pause(); }
+  if (e.code === 'KeyR') { seek(0); play(); }
+  if (e.code === 'ArrowRight') seek(current() + 2);
+  if (e.code === 'ArrowLeft') seek(current() - 2);
+});
+window.__total = TOTAL;
+window.__seek = (t) => { playing = false; offset = t; frame(t); };
+window.__ready = true;
+if (params.has('hideui')) startEl.classList.add('hide');
+if (params.has('still')) frame(offset);
+else (function loop() { frame(current()); requestAnimationFrame(loop); })();
+</script>
+</body>
+</html>

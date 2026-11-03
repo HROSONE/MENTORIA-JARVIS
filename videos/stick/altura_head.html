@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mais Alto de Manhã</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --accent:#00E5FF; --s:1; }
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s));background:#000}
+  #c{display:block;width:1080px;height:1920px}
+  .ov{position:absolute;left:50px;right:50px;top:var(--y);text-align:center;color:#fff;font-family:'Montserrat',system-ui,sans-serif;font-weight:900;font-size:var(--fs);line-height:1;
+    opacity:0;transform:translateY(40px) scale(.92);transition:opacity .25s ease, transform .45s cubic-bezier(.2,.9,.3,1.25);
+    text-shadow:0 10px 40px rgba(0,0,0,.8),0 2px 8px rgba(0,0,0,.7);pointer-events:none}
+  .ov.on{opacity:1;transform:none}
+  .a{color:var(--accent)}
+  .sub{display:block;font-size:.32em;letter-spacing:.1em;margin-top:.2em}
+  .btn{display:inline-block;border:10px solid var(--accent);border-radius:999px;padding:.28em .75em;background:rgba(0,0,0,.45);box-shadow:0 0 60px rgba(0,229,255,.35)}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;font:800 54px 'Montserrat',sans-serif;background:rgba(0,0,0,.55);cursor:pointer;gap:30px;text-align:center}
+  #start small{font-size:30px;opacity:.6}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="texts"></div>
+  <div id="start">▶ CLIQUE ou ESPAÇO<small>ESPAÇO pausa · R reinicia · ← → avança/volta 2s</small></div>
+</div>
+<!--SKIN-->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* =====================================================================
+   ROTEIRO / TEMPOS — ajuste "dur" (segundos) para casar com a sua fala.
+   ===================================================================== */
+const SEGMENTS = [
+  // PREMISSA
+  { id:'premissa', dur:7.0 },   // "Todo dia, enquanto você anda por aí, a gravidade está espremendo a sua coluna. É por isso que você acorda mais alto do que vai dormir."
+  // PREVISÃO
+  { id:'discos',   dur:10.0 },  // "Entre as suas vértebras existem discos, como almofadas cheias de água. Durante o dia, o peso do corpo vai espremendo essa água pra fora e os discos ficam mais finos. À noite, deitado, eles se enchem de novo."
+  { id:'noite',    dur:5.0 },   // "No fim do dia, você pode estar cerca de 1 centímetro mais baixo."
+  // TRAGÉDIA
+  { id:'espaco',   dur:9.0 },   // "Agora, tira a gravidade. No espaço, os discos não são espremidos, e os astronautas chegam a ficar até 3% mais altos, uns 5 centímetros."
+  { id:'volta',    dur:7.0 },   // "Só que a coluna esticada desse jeito costuma doer. E quando eles voltam pra Terra, a gravidade aperta tudo de novo, de uma vez."
+  // CONCERTO
+  { id:'concerto', dur:8.0 },   // "Ou seja: se você quer parecer mais alto na foto, mede de manhã. Porque à tarde a gravidade já cobrou o centímetro dela."
+  { id:'inscreve', dur:4.0 },   // "Se inscreve pra mais curiosidades."
+];
+const TEXTS = [
+  { seg:'premissa', from:2.0, to:6.9,  y:200,  fs:140, html:'<span class="a">GRAVIDADE</span>' },
+  { seg:'discos',   from:0.8, to:4.0,  y:200,  fs:150, html:'<span class="a">DISCOS</span>' },
+  { seg:'discos',   from:4.4, to:7.4,  y:200,  fs:120, html:'ESPREMIDOS' },
+  { seg:'discos',   from:7.8, to:10.0, y:200,  fs:120, html:'À NOITE <span class="a">ENCHEM</span>' },
+  { seg:'noite',    from:1.2, to:5.0,  y:200,  fs:210, html:'<span class="a">-1 CM</span><span class="sub">NO FIM DO DIA</span>' },
+  { seg:'espaco',   from:3.6, to:9.0,  y:200,  fs:210, html:'<span class="a">+3%</span><span class="sub">ATÉ ~5 CM MAIS ALTO</span>' },
+  { seg:'volta',    from:0.6, to:3.6,  y:200,  fs:120, html:'<span class="a">DOR</span> NAS COSTAS' },
+  { seg:'volta',    from:4.2, to:7.0,  y:200,  fs:120, html:'DE UMA <span class="a">VEZ</span>' },
+  { seg:'concerto', from:0.8, to:4.4,  y:200,  fs:110, html:'MEDE DE<br><span class="a">MANHÃ</span>' },
+  { seg:'inscreve', from:0.4, to:4.0,  y:1560, fs:110, html:'<span class="btn">SE INSCREVE</span>' },
+];
