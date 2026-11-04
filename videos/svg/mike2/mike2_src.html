@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mike, sem cabeça</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s,1));background:#000}
+  svg{display:block}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font:800 54px sans-serif;background:rgba(0,0,0,.55);cursor:pointer}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+<svg id="s" width="1080" height="1920" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
+<defs id="defs"></defs>
+<g id="root"></g>
+</svg>
+<div id="start">▶ CLIQUE (com som)</div>
+</div>
+<!--AUDIO-->
+<!--GAL-->
+<script>
+/*LIB*/
+
+/* ======================= galinhas (vetorizadas das fotos) ======================= */
+const G = window.GAL;
+const W0 = 1080, H0 = 1920;
+// detalhes da cabeça de lado, medidos na foto (olho, bico, face vermelha)
+const HEADSIDE = `<path d="M446 266 Q420 266 402 291 Q424 289 447 287Z" fill="#E7C27A" stroke="#6b4a22" stroke-width="2.5" stroke-linejoin="round"/><path d="M404 289 Q424 283 446 279" stroke="#9a7438" stroke-width="2" fill="none"/>
+  <path d="M440 276 Q456 272 474 284 Q470 298 452 300 Q440 292 440 276Z" fill="#D8343F" opacity=".85"/>
+  <path d="M446 292 Q452 314 462 318 Q470 306 462 292Z" fill="#C42433" stroke="#4a1010" stroke-width="1.5"/>
+  <ellipse cx="485" cy="260" rx="10.5" ry="9.5" fill="#B5762A" stroke="#3b220e" stroke-width="2.5"/><circle cx="484" cy="260" r="5.2" fill="#120a06"/><circle cx="487.5" cy="256.5" r="2.4" fill="#fff"/>
+  <path d="M472 252 Q485 243 498 252" stroke="#c9b7a2" stroke-width="2.5" fill="none" stroke-linecap="round"/>`;
+const HEADFRONT = `<circle cx="752" cy="215" r="6" fill="#120a06"/><circle cx="754" cy="213" r="2" fill="#fff"/>`;
+const STUMP_S = `<ellipse cx="541" cy="250" rx="20" ry="8" fill="#8E3A33"/><ellipse cx="541" cy="249" rx="12" ry="4.5" fill="#B95A4D"/>`;
+const STUMP_F = `<ellipse cx="866" cy="218" rx="20" ry="8" fill="#8E3A33"/><ellipse cx="866" cy="217" rx="12" ry="4.5" fill="#B95A4D"/>`;
+const VAR = {   // variações de penas (filtro só nas penas; crista fica vermelha)
+  branca: '', ruiva: 'fRuiva', preta: 'fPreta', dourada: 'fDourada', xray: 'fXray', noite: 'fNoite'
+};
+function chickenDefs() {
+  let d = '';
+  d += `<filter id="fRuiva" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".62 .38 .08 0 .02  .30 .26 .06 0 0  .12 .12 .04 0 0  0 0 0 1 0"/></filter>`;
+  d += `<filter id="fPreta" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".28 .1 .04 0 .01  .22 .1 .04 0 .01  .2 .12 .06 0 .02  0 0 0 1 0"/></filter>`;
+  d += `<filter id="fDourada" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".7 .35 .05 0 .03  .52 .3 .04 0 .01  .28 .16 .02 0 0  0 0 0 1 0"/></filter>`;
+  d += `<filter id="fXray" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 .3  0 0 0 0 .85  0 0 0 0 1  0 0 0 .22 0"/></filter>`;
+  d += `<filter id="fNoite" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".2 .2 .08 0 0  .2 .21 .09 0 0  .24 .25 .13 0 .02  0 0 0 1 0"/></filter>`;
+  d += `<g id="LCf">${G.lado_c[0]}</g><g id="LCr">${G.lado_c[1]}${HEADSIDE}</g>`;
+  d += `<g id="LSf">${G.lado_s[0]}</g><g id="LSr">${STUMP_S}</g>`;
+  d += `<g id="FCf">${G.frente_c[0]}</g><g id="FCr">${G.frente_c[1]}${HEADFRONT}</g>`;
+  d += `<g id="FSf">${G.frente_s[0]}</g><g id="FSr">${STUMP_F}</g>`;
+  return d;
+}
+// perna de lado (galinha virada para a esquerda). Cor amarelada com escamas
+function legSide(hx, hy, fx, fy, lift, col = '#E2B85A') {
+  fy -= lift; const kx = (hx + fx) / 2 + 10, ky = (hy + fy) / 2 - 4, sk = '#5b3f1c';
+  let o = `<path d="M${f1(hx)} ${f1(hy)}Q${f1(kx)} ${f1(ky)} ${f1(fx)} ${f1(fy)}" stroke="${sk}" stroke-width="17" fill="none" stroke-linecap="round"/><path d="M${f1(hx)} ${f1(hy)}Q${f1(kx)} ${f1(ky)} ${f1(fx)} ${f1(fy)}" stroke="${col}" stroke-width="11" fill="none" stroke-linecap="round"/>`;
+  for (let i = 2; i < 8; i++) { const k = i / 8, x = lerp(lerp(hx, kx, k), lerp(kx, fx, k), k), y = lerp(lerp(hy, ky, k), lerp(ky, fy, k), k); o += `<path d="M${f1(x - 5)} ${f1(y)}h10" stroke="${sk}" stroke-width="1.6" opacity=".5"/>`; }
+  const toe = (dx, dy, w = 9) => `<path d="M${f1(fx)} ${f1(fy)}l${f1(dx)} ${f1(dy)}" stroke="${sk}" stroke-width="${w + 5}" stroke-linecap="round"/><path d="M${f1(fx)} ${f1(fy)}l${f1(dx)} ${f1(dy)}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`;
+  const up = lift > 4 ? 1 : 0;
+  return toe(18, -2, 7) + toe(-44, up ? 10 : 2) + toe(-34, up ? 16 : 7) + o;
+}
+function legFront(hx, hy, kx, ky, fx, fy, lift, col = '#E0C27A') {
+  fy -= lift; ky -= lift * .5; const sk = '#5b3f1c';
+  let o = `<path d="M${f1(hx - 13)} ${f1(hy)}Q${f1(kx - 16)} ${f1(ky)} ${f1(fx - 9)} ${f1(fy)}L${f1(fx + 9)} ${f1(fy)}Q${f1(kx + 16)} ${f1(ky)} ${f1(hx + 13)} ${f1(hy)}Z" fill="${col}" stroke="${sk}" stroke-width="3" stroke-linejoin="round"/>`;
+  for (let i = 1; i < 8; i++) { const k = i / 8, x = lerp(kx, fx, k), y = lerp(ky, fy, k); o += `<path d="M${f1(x - 7)} ${f1(y)}q7 5 14 0" fill="none" stroke="${sk}" stroke-width="1.6" opacity=".5"/>`; }
+  const toe = (dx, dy) => `<path d="M${f1(fx)} ${f1(fy)}l${f1(dx)} ${f1(dy)}" stroke="${sk}" stroke-width="14" stroke-linecap="round"/><path d="M${f1(fx)} ${f1(fy)}l${f1(dx)} ${f1(dy)}" stroke="${col}" stroke-width="9" stroke-linecap="round"/>`;
+  return toe(-30, 18 - lift * .2) + toe(30, 18 - lift * .2) + toe(0, 28 - lift * .4) + o;
+}
+// galinha: tipo 'L' (lado) ou 'F' (frente); cab: true/false. Origem = ponto entre os pés no chão.
+// o: {x,y,s,flip,v (variação),peck (0..1),ph (fase do passo),walk (0..1), sit (0..1), tilt, rig}
+function chicken(o) {
+  const P = Object.assign({ x: 0, y: 0, s: .5, flip: 1, v: 'branca', peck: 0, ph: 0, walk: 0, sit: 0, tilt: 0, cab: true, tipo: 'L', rig: '', shadow: .35, legCol: null }, o);
+  const id = (P.tipo === 'L' ? 'L' : 'F') + (P.cab ? 'C' : 'S');
+  const fil = VAR[P.v] ? ` filter="url(#${VAR[P.v]})"` : '';
+  let body, legs, ox, oy, piv;
+  const legCol = P.legCol || (P.v === 'xray' ? '#7FE9FF' : P.v === 'noite' ? '#5d6070' : '#E2B85A');
+  if (P.tipo === 'L') {
+    ox = 738; oy = 948; piv = [760, 760];
+    const a = Math.sin(P.ph) * P.walk, lL = Math.max(0, a) * 26, lR = Math.max(0, -a) * 26;
+    const sitY = P.sit * 112;
+    legs = P.sit > .9 ? '' : `<g opacity="${op(1 - P.sit * 1.2)}">` + legSide(752, 818 + sitY * .6, 744 - a * 34, 948, lR, legCol) + legSide(730, 818 + sitY * .6, 724 + a * 34, 948, lL, mix(legCol, '#000000', .18)) + '</g>';
+    const bob = Math.abs(Math.cos(P.ph)) * 8 * P.walk;
+    body = `<g transform="translate(0,${f1(sitY - bob)}) rotate(${f1(-P.peck * 38 + P.tilt)} ${piv[0]} ${piv[1]})"><use href="#${id}f"${fil}/><use href="#${id}r"${P.v === 'xray' ? ' opacity=".35"' : P.v === 'noite' ? ' filter="url(#fNoite)"' : ''}/></g>`;
+  } else {
+    ox = 925; oy = 852; piv = [920, 560];
+    const a = Math.sin(P.ph) * P.walk, lL = Math.max(0, a) * 30, lR = Math.max(0, -a) * 30;
+    legs = legFront(880, 600, 884, 700, 890, 840, lL, legCol) + legFront(962, 615, 968, 725, 955, 846, lR, mix(legCol, '#000000', .12));
+    const bob = Math.abs(Math.cos(P.ph)) * 7 * P.walk;
+    body = `<g transform="translate(0,${f1(-bob)}) rotate(${f1(1.5 * a + P.tilt)} ${piv[0]} ${piv[1]}) translate(0,${f1(P.peck * 30)})"><use href="#${id}f"${fil}/><use href="#${id}r"${P.v === 'noite' ? ' filter="url(#fNoite)"' : ''}/></g>`;
+  }
+  const sh = P.shadow ? `<ellipse cx="0" cy="4" rx="${P.tipo === 'L' ? 300 : 190}" ry="34" fill="#000" opacity="${P.shadow}" filter="url(#b12)"/>` : '';
+  return `<g transform="translate(${f1(P.x)},${f1(P.y)}) scale(${f1(P.s * P.flip * 1000) / 1000},${f1(P.s * 1000) / 1000})">${sh}<g transform="translate(${-ox},${-oy})"${P.rig ? ` filter="url(#${P.rig})"` : ''}>${legs}${body}</g></g>`;
+}
+
+/* ======================= cenário ======================= */
+const R = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+function skyCol(d) { // d: 0 noite, .25 amanhecer, .5 dia, .75 entardecer
+  const K = [[0, '#0B1230', '#1C2550', '#2B2F55'], [.22, '#2A2B5E', '#C76A5A', '#F2B27A'], [.32, '#5E8FD0', '#F4C58E', '#FFE2B0'], [.5, '#4F8EDB', '#9CC8F0', '#DCEEFF'], [.68, '#5E7FC8', '#F0B07A', '#FFD49A'], [.78, '#3A2E66', '#D2665A', '#F7A066'], [.9, '#121836', '#2A2650', '#3A3058'], [1, '#0B1230', '#1C2550', '#2B2F55']];
+  let i = 0; while (i < K.length - 2 && d > K[i + 1][0]) i++;
+  const k = smooth((d - K[i][0]) / (K[i + 1][0] - K[i][0]));
+  return [1, 2, 3].map(j => mix(K[i][j], K[i + 1][j], k));
+}
+const STARS2 = Array.from({ length: 140 }, () => ({ x: R() * 2400 - 600, y: R() * 1300 - 300, r: .7 + R() * 2, p: R() * 6 }));
+function sky(d, t, o = {}) {
+  const [a, b, c] = skyCol(d), id = nid('sk');
+  def(`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset=".62" stop-color="${b}"/><stop offset="1" stop-color="${c}"/></linearGradient>`);
+  const night = clamp(1 - Math.min(Math.abs(d - .5) / .3, 1) * 0 - (1 - (d < .2 || d > .86 ? 1 : d < .27 ? 1 - (d - .2) / .07 : d > .8 ? (d - .8) / .06 : 0)));
+  let s = `<rect x="-1500" y="-1500" width="5000" height="3200" fill="url(#${id})"/>`;
+  const st = d < .25 ? 1 - range(d, .17, .25) : d > .8 ? range(d, .8, .9) : 0;
+  if (st > 0) s += `<g opacity="${op(st)}">${STARS2.map(q => `<circle cx="${f1(q.x)}" cy="${f1(q.y)}" r="${q.r}" fill="#fff" opacity="${op(.5 + .5 * Math.sin(t * 3 + q.p))}"/>`).join('')}</g>`;
+  // sol / lua num arco
+  const ang = (d - .25) * 2 * Math.PI, sx = 540 - Math.cos(ang) * 900, sy = 1500 - Math.sin(ang) * 1250;
+  const mx = 540 - Math.cos(ang + Math.PI) * 900, my = 1500 - Math.sin(ang + Math.PI) * 1250;
+  s += `<circle cx="${f1(sx)}" cy="${f1(sy)}" r="300" fill="url(#gSun)" opacity=".9"/><circle cx="${f1(sx)}" cy="${f1(sy)}" r="62" fill="#FFF4D6"/>`;
+  s += `<circle cx="${f1(mx)}" cy="${f1(my)}" r="200" fill="url(#gMoon)" opacity=".7"/><circle cx="${f1(mx)}" cy="${f1(my)}" r="44" fill="#EEF2FF"/><circle cx="${f1(mx + 14)}" cy="${f1(my - 8)}" r="40" fill="${a}" opacity=".0"/>`;
+  // nuvens
+  const CL = [[-200, 300, 1.2], [500, 180, .9], [1100, 380, 1.4], [200, 560, .8]];
+  const cc = mix(c, '#ffffff', .5), cs = mix(b, '#000000', .1);
+  s += CL.map(([x, y, k], i) => { const xx = ((x + t * (14 + i * 6) + 600) % 2400) - 600; return `<g transform="translate(${f1(xx)},${y}) scale(${k})" opacity=".85"><ellipse cx="0" cy="0" rx="190" ry="44" fill="${cs}" opacity=".6"/><ellipse cx="-60" cy="-26" rx="100" ry="50" fill="${cc}"/><ellipse cx="50" cy="-34" rx="120" ry="62" fill="${cc}"/><ellipse cx="140" cy="-6" rx="90" ry="36" fill="${cc}"/></g>`; }).join('');
+  return s;
+}
+// mesas do Colorado (Book Cliffs): camadas com topo plano
+function mesas(d, y0 = 1180) {
+  const [a, b, c] = skyCol(d), far = mix(b, '#8E6A7A', .45), mid = mix(mix(c, '#B0603C', .55), '#000000', .15), near = mix('#7A4A30', '#000000', .2 + .4 * (d < .22 || d > .82 ? 1 : 0));
+  const lay3 = (col, yy, amp, seed) => { let p = `M-1600 ${yy + 300}`; let x = -1600; let s = seed; const r = () => (s = (s * 9301 + 49297) % 233280) / 233280; let h = yy; while (x < 2700) { const w = 120 + r() * 260; const nh = yy - r() * amp; p += `L${f1(x + 30)} ${f1(nh)}L${f1(x + w - 30)} ${f1(nh)}L${f1(x + w)} ${f1(yy - r() * amp * .3)}`; x += w; } p += `L2700 ${yy + 300}Z`; return `<path d="${p}" fill="${col}"/>`; };
+  return lay3(far, y0 - 60, 180, 3) + `<rect x="-1600" y="${y0 - 200}" width="4400" height="300" fill="${c}" opacity=".25"/>` + lay3(mid, y0, 120, 11);
+}
+function barn(x, y, s, lit = 1) {
+  const wall = mix('#8E2B22', '#2a1414', 1 - lit), wallD = mix('#6E1E18', '#1a0c0c', 1 - lit), trim = mix('#EFE6D6', '#55505a', 1 - lit), roof = mix('#4A4A52', '#1c1c24', 1 - lit);
+  let p = `<g transform="translate(${x},${y}) scale(${s})">`;
+  p += `<path d="M-300 0 L-300 -330 L-200 -470 L0 -560 L200 -470 L300 -330 L300 0Z" fill="${wall}"/>`;
+  for (let i = -280; i < 300; i += 26) p += `<line x1="${i}" y1="0" x2="${i}" y2="-560" stroke="${wallD}" stroke-width="3" opacity=".6"/>`;
+  p += `<path d="M-300 0 L-300 -330 L-200 -470 L0 -560 L200 -470 L300 -330 L300 0Z" fill="none" stroke="${trim}" stroke-width="10" stroke-linejoin="round"/>`;
+  p += `<path d="M-330 -320 L-210 -486 L0 -585 L210 -486 L330 -320" fill="none" stroke="${roof}" stroke-width="34" stroke-linejoin="round"/>`;
+  p += `<rect x="-120" y="-280" width="240" height="280" fill="${wallD}" stroke="${trim}" stroke-width="10"/><path d="M-120 -280 L120 0 M120 -280 L-120 0 M0 -280 L0 0" stroke="${trim}" stroke-width="9"/>`;
+  p += `<rect x="-50" y="-450" width="100" height="90" fill="#2A1A10" stroke="${trim}" stroke-width="8"/><path d="M-50 -405 H50 M0 -450 V-360" stroke="${trim}" stroke-width="6"/>`;
+  p += `<path d="M-300 0 L-300 -330 L-200 -470 L-200 0Z" fill="#000" opacity=".18"/>`;
+  return p + '</g>';
+}
+function windmill(x, y, s, t, lit = 1) {
+  const c = mix('#5A5048', '#15151c', 1 - lit);
+  let p = `<g transform="translate(${x},${y}) scale(${s})" stroke="${c}" fill="none" stroke-width="7">`;
+  p += `<path d="M-60 0 L-10 -520 M60 0 L10 -520 M-52 -80 L52 -80 M-44 -180 L44 -180 M-34 -290 L34 -290 M-24 -400 L24 -400 M-52 -80 L44 -180 M52 -80 L-44 -180 M-44 -180 L34 -290 M44 -180 L-34 -290"/>`;
+  p += `<g transform="translate(0,-530) rotate(${f1(t * 60)})">${Array.from({ length: 12 }, (_, i) => `<path d="M0 0 L0 -130" stroke-width="10" transform="rotate(${i * 30})"/><path d="M-14 -70 L0 -132 L14 -70Z" fill="${c}" stroke-width="2" transform="rotate(${i * 30})"/>`).join('')}<circle r="14" fill="${c}"/></g>`;
+  p += `<path d="M10 -530 L120 -530 L150 -560 L150 -500Z" fill="${c}" stroke-width="3"/>`;
+  return p + '</g>';
+}
+function fence(x0, x1, y, s, lit = 1) {
+  const c = mix('#8A6A48', '#1a1a20', 1 - lit), cd = mix('#5E452E', '#101014', 1 - lit);
+  let p = '';
+  for (let x = x0; x <= x1; x += 150 * s) p += `<rect x="${f1(x - 9 * s)}" y="${f1(y - 150 * s)}" width="${f1(18 * s)}" height="${f1(160 * s)}" rx="3" fill="${c}"/><rect x="${f1(x + 3 * s)}" y="${f1(y - 150 * s)}" width="${f1(6 * s)}" height="${f1(160 * s)}" fill="${cd}"/>`;
+  p += `<rect x="${x0}" y="${f1(y - 120 * s)}" width="${x1 - x0}" height="${f1(14 * s)}" fill="${c}"/><rect x="${x0}" y="${f1(y - 70 * s)}" width="${x1 - x0}" height="${f1(14 * s)}" fill="${c}"/>`;
+  return p;
+}
+const TUFTS = Array.from({ length: 90 }, () => ({ x: R() * 2600 - 760, y: R(), k: .6 + R() * .9, c: R() }));
+const PEBS = Array.from({ length: 120 }, () => ({ x: R() * 2600 - 760, y: R(), r: 2 + R() * 7, c: R() }));
+const GRAIN = Array.from({ length: 70 }, () => ({ x: 200 + R() * 700, y: R(), r: 3 + R() * 3 }));
+function ground(y0, d, t, o = {}) {
+  const lit = o.lit ?? 1, [a, b, c] = skyCol(d), id = nid('gr');
+  const g1 = mix(mix('#9C7A52', c, .15), '#151520', 1 - lit), g2 = mix('#6E5236', '#0d0d14', 1 - lit);
+  def(`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${mix(g1, c, .2)}"/><stop offset=".3" stop-color="${g1}"/><stop offset="1" stop-color="${g2}"/></linearGradient>`);
+  let s = `<rect x="-1500" y="${y0}" width="5000" height="2000" fill="url(#${id})"/>`;
+  const gc = [mix('#7C8A3A', '#151a18', 1 - lit), mix('#97A24A', '#1c2220', 1 - lit), mix('#5C6A2C', '#101410', 1 - lit)];
+  s += PEBS.map(q => { const yy = y0 + 10 + Math.pow(q.y, 1.6) * 1100, k = .4 + q.y; return `<ellipse cx="${f1(q.x)}" cy="${f1(yy)}" rx="${f1(q.r * k * 1.6)}" ry="${f1(q.r * k * .7)}" fill="${q.c < .5 ? g2 : mix(g1, '#ffffff', .15)}" opacity=".7"/>`; }).join('');
+  if (o.grain) s += GRAIN.map(q => `<ellipse cx="${f1(q.x)}" cy="${f1(y0 + 250 + q.y * 500)}" rx="${q.r}" ry="${f1(q.r * .6)}" fill="#E8C060"/>`).join('');
+  s += TUFTS.map(q => { const yy = y0 + 6 + Math.pow(q.y, 1.4) * 1100, k = (.5 + q.y * 1.2) * q.k, sw = Math.sin(t * 1.6 + q.x) * 4; return `<g transform="translate(${f1(q.x)},${f1(yy)}) scale(${f1(k * 100) / 100})">${[-18, -8, 0, 9, 18].map((dx, i) => `<path d="M${dx - 3} 0 Q${dx + sw * .5} -30 ${dx * 1.6 + sw} ${-46 - (i % 2) * 18} Q${dx + 2 + sw * .5} -30 ${dx + 3} 0Z" fill="${gc[(i + Math.floor(q.c * 3)) % 3]}"/>`).join('')}</g>`; }).join('');
+  return s;
+}
+// fazendeiro em silhueta com luz de recorte (chapéu, macacão, botas). Origem nos pés.
+function farmer(o) {
+  const P = Object.assign({ x: 0, y: 0, s: 1, flip: 1, ph: 0, walk: 0, rim: '#FFC27A', body: '#16100C', axeUp: 0 }, o);
+  const a = Math.sin(P.ph) * P.walk, B = P.body;
+  const limb = (x, y, ang, l, w0, w1) => { const c = Math.cos(ang * Math.PI / 180), sn = Math.sin(ang * Math.PI / 180); const ex = x - sn * l, ey = y + c * l; const nx = c, ny = sn; return { d: `M${f1(x + nx * w0)} ${f1(y + ny * w0)} L${f1(ex + nx * w1)} ${f1(ey + ny * w1)} Q${f1(ex - sn * w1 * .8)} ${f1(ey + c * w1 * .8)} ${f1(ex - nx * w1)} ${f1(ey - ny * w1)} L${f1(x - nx * w0)} ${f1(y - ny * w0)}Z`, ex, ey }; };
+  const leg = (ang) => { const th = limb(0, -500, ang, 250, 44, 34), sh = limb(th.ex, th.ey, ang - Math.max(0, -ang) * 1.2 - 4, 240, 33, 26);
+    const bx = sh.ex, by = sh.ey; return `<path d="${th.d}" fill="${B}"/><path d="${sh.d}" fill="${B}"/><path d="M${f1(bx + 34)} ${f1(by - 34)} L${f1(bx + 34)} ${f1(by + 16)} L${f1(bx - 78)} ${f1(by + 16)} Q${f1(bx - 84)} ${f1(by - 14)} ${f1(bx - 50)} ${f1(by - 24)} L${f1(bx - 26)} ${f1(by - 40)}Z" fill="#0b0705"/>`; };
+  let s = leg(26 * a) + leg(-26 * a);
+  // tronco curvado (macacão) + peito para a esquerda
+  s += `<path d="M-46 -860 C-96 -820 -108 -690 -86 -560 C-80 -520 -70 -490 -60 -470 L72 -470 C86 -560 92 -700 70 -820 C60 -858 30 -878 -46 -860Z" fill="${B}"/>`;
+  s += `<path d="M-30 -880 L-10 -820 L40 -820 L40 -882Z" fill="${B}"/>`;
+  // cabeça de perfil: nariz, queixo, orelha
+  s += `<path d="M-6 -1050 C-60 -1052 -80 -1010 -82 -980 L-102 -952 L-82 -946 C-84 -926 -80 -904 -60 -894 C-40 -884 -10 -880 20 -884 C56 -890 70 -930 66 -980 C62 -1030 40 -1050 -6 -1050Z" fill="${B}"/>`;
+  // chapéu de abas largas
+  s += `<path d="M-160 -1026 Q-20 -1060 150 -1022 Q120 -1004 -10 -1008 Q-130 -1006 -160 -1026Z" fill="${B}"/><path d="M-80 -1030 Q-82 -1100 -10 -1112 Q60 -1108 70 -1028Z" fill="${B}"/><path d="M-50 -1100 Q-10 -1086 30 -1104" stroke="#2a201a" stroke-width="6" fill="none"/>`;
+  // braço de trás + braço da frente segurando o machado
+  const armB = limb(30, -820, -18 * a + 6, 190, 30, 24), foreB = limb(armB.ex, armB.ey, -18 * a - 18, 170, 24, 20);
+  const up = P.axeUp; const armF = limb(-30, -820, lerp(18 * a - 4, 150, up), 190, 32, 26), foreF = limb(armF.ex, armF.ey, lerp(18 * a + 22, 175, up), 170, 26, 22);
+  const hx = foreF.ex, hy = foreF.ey, axA = lerp(10 + 10 * a, 200, up);
+  const axe = `<g transform="translate(${f1(hx)},${f1(hy)}) rotate(${f1(axA)})"><rect x="-11" y="-80" width="22" height="440" rx="10" fill="#3A2A1C"/><path d="M-12 300 L-120 270 Q-150 330 -120 400 L-12 360Z" fill="#7E8892"/><path d="M-120 270 Q-150 330 -120 400" stroke="#F0F6FA" stroke-width="7" fill="none"/></g>`;
+  s = `<path d="${armB.d}" fill="${B}"/><path d="${foreB.d}" fill="${B}"/>` + s + axe + `<path d="${armF.d}" fill="${B}"/><path d="${foreF.d}" fill="${B}"/><circle cx="${f1(hx)}" cy="${f1(hy)}" r="30" fill="${B}"/>`;
+  const id = rig({ amb: '#ffffff', k: [-1, -.2], shO: 0, rims: [{ c: P.rim, k: [1, -.3], w: 10, o: 1, glow: true }] });
+  return `<g transform="translate(${f1(P.x)},${f1(P.y)}) scale(${f1(P.s * P.flip * 1000) / 1000},${f1(P.s * 1000) / 1000})" filter="url(#${id})"><ellipse cx="0" cy="10" rx="160" ry="26" fill="#000" opacity=".4" filter="url(#b12)"/>${s}</g>`;
+}
+const DUST = Array.from({ length: 50 }, () => ({ x: R() * 1080, y: R() * 1920, r: 1.5 + R() * 4, s: R() * 6 }));
+const dust = (t, col = '#FFE6B0', k = 1) => DUST.map(q => `<circle cx="${f1((q.x + Math.sin(t * .4 + q.s) * 40 + t * 8) % 1080)}" cy="${f1((q.y - t * 14 * (.5 + q.s / 6) + 1920 * 4) % 1920)}" r="${q.r}" fill="${col}" opacity="${op((.25 + .3 * Math.sin(t * 2 + q.s)) * k)}"/>`).join('');
+function feathers(t0, t, n = 22, cx = 540, cy = 900, col = '#F4EEE2') {
+  const dt = t - t0; if (dt < 0) return '';
+  let s = '';
+  for (let i = 0; i < n; i++) {
+    const a = i * 2.39996 + Math.sin(i * 7.1) * 1.3, v = 250 + ((i * 7919) % 1000) * .9, x = cx + Math.cos(a) * v * (1 - Math.exp(-dt * 3)) / 3 + Math.sin(dt * 2 + i) * 30, y = cy + Math.sin(a) * v * (1 - Math.exp(-dt * 3)) / 3 + dt * dt * 60 + dt * 40;
+    s += `<g transform="translate(${f1(x)},${f1(y)}) rotate(${f1(a * 57 + dt * 90 * (i % 2 ? 1 : -1))}) scale(${f1(.8 + (i % 5) * .15)})" opacity="${op(1 - range(dt, 1.8, 3))}"><path d="M0 -38 Q16 -10 4 34 L-4 34 Q-16 -10 0 -38Z" fill="${col}"/><path d="M0 -36 L0 40" stroke="#B9AE9C" stroke-width="2.5"/></g>`;
+  }
+  return s;
+}
+const VIG = () => `<rect width="1080" height="1920" fill="url(#vig)"/>`;
+const GRAIN_FX = t => { const j = Math.floor(t * 24); return `<rect width="1080" height="1920" fill="url(#noiseP)" opacity=".07" transform="translate(${(j * 37) % 200 - 100},${(j * 53) % 200 - 100})"/>`; };
+
+/* ======================= contador ======================= */
+function counter(t, days, final) {
+  // placa do contador: número grande + marcas de dias (sem palavras, só número e "dias")
+  const n = Math.round(days);
+  const pop = final ? backOut(range(t, 0, .35)) : 1;
+  let s = `<g transform="translate(540,250) scale(${f1(pop * 100) / 100})">`;
+  s += `<rect x="-300" y="-120" width="600" height="230" rx="34" fill="#0A0806" opacity=".55"/><rect x="-300" y="-120" width="600" height="230" rx="34" fill="none" stroke="#FFE2A8" stroke-width="4" opacity=".6"/>`;
+  if (!final) {
+    s += `<text x="0" y="40" text-anchor="middle" font-family="'DejaVu Sans Mono',monospace" font-weight="700" font-size="150" fill="#FFF3D6">${n}</text>`;
+    s += `<text x="0" y="94" text-anchor="middle" font-family="'DejaVu Sans',sans-serif" font-weight="700" font-size="40" letter-spacing="10" fill="#FFD27A">${n === 1 ? 'DIA' : 'DIAS'}</text>`;
+  } else {
+    s += `<text x="0" y="40" text-anchor="middle" font-family="'DejaVu Sans Mono',monospace" font-weight="700" font-size="150" fill="#FFF3D6">18</text>`;
+    s += `<text x="0" y="94" text-anchor="middle" font-family="'DejaVu Sans',sans-serif" font-weight="700" font-size="40" letter-spacing="10" fill="#FFD27A">MESES</text>`;
+  }
+  return s + '</g>';
+}
+
+/* ======================= linha do tempo ======================= */
+const SH = [
+  ['hook', 0, 7.5], ['farm', 7.5, 12.5], ['block', 12.5, 17], ['up', 17, 23], ['barn', 23, 28], ['drop', 28, 33],
+  ['show', 33, 40], ['xray', 40, 47.5], ['syr', 47.5, 49.8], ['motel', 49.8, 55], ['end', 55, 58.5]];
+const TOTAL = 58.5;
+const shotAt = t => SH.find(s => t >= s[1] && t < s[2]) || SH[SH.length - 1];
+
+function stdDefs() {
+  return `<filter id="b4" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4"/></filter>
+  <filter id="b12" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="12"/></filter>
+  <filter id="b30" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="30"/></filter>
+  <filter id="bBg" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="9"/></filter>
+  <radialGradient id="vig" cx=".5" cy=".5" r=".78"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".75"/></radialGradient>
+  <radialGradient id="gSun"><stop offset="0" stop-color="#FFE9B0" stop-opacity=".9"/><stop offset=".25" stop-color="#FFC26A" stop-opacity=".45"/><stop offset="1" stop-color="#FF9A4A" stop-opacity="0"/></radialGradient>
+  <radialGradient id="gMoon"><stop offset="0" stop-color="#DDE6FF" stop-opacity=".6"/><stop offset="1" stop-color="#9AB0FF" stop-opacity="0"/></radialGradient>
+  <radialGradient id="gWarm"><stop offset="0" stop-color="#FFD9A0" stop-opacity=".85"/><stop offset=".4" stop-color="#FFB060" stop-opacity=".3"/><stop offset="1" stop-color="#FF8A30" stop-opacity="0"/></radialGradient>
+  <radialGradient id="gSpot"><stop offset="0" stop-color="#FFF4DC" stop-opacity=".75"/><stop offset=".6" stop-color="#FFE0A8" stop-opacity=".25"/><stop offset="1" stop-color="#FFE0A8" stop-opacity="0"/></radialGradient>
+  <radialGradient id="gCyan"><stop offset="0" stop-color="#E6FDFF" stop-opacity="1"/><stop offset=".35" stop-color="#5FE6FF" stop-opacity=".55"/><stop offset="1" stop-color="#5FE6FF" stop-opacity="0"/></radialGradient>
+  <radialGradient id="gNeonP"><stop offset="0" stop-color="#FF3D8A" stop-opacity=".7"/><stop offset="1" stop-color="#FF3D8A" stop-opacity="0"/></radialGradient>
+  <linearGradient id="beamW" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF0C8" stop-opacity=".55"/><stop offset="1" stop-color="#FFF0C8" stop-opacity="0"/></linearGradient>
+  <linearGradient id="beamM" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFD4FF" stop-opacity=".4"/><stop offset="1" stop-color="#BFD4FF" stop-opacity="0"/></linearGradient>
+  <pattern id="noiseP" width="256" height="256" patternUnits="userSpaceOnUse"><image href="${NOISE}" width="256" height="256"/></pattern>`;
+}
+let NOISE = '';
+(function () { const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'), im = x.createImageData(256, 256); for (let i = 0; i < im.data.length; i += 4) { const v = Math.random() * 255; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; } x.putImageData(im, 0, 0); NOISE = c.toDataURL(); })();
+
+/* ---------- 1. GANCHO: Mike sem cabeça vivendo entre as outras; dias passando ---------- */
+const FLOCK = [ // x, y (chão), escala, variação, tipo, flip, fase
+  [170, 1440, .32, 'ruiva', 'L', 1, 0], [900, 1430, .3, 'preta', 'L', -1, 1.3], [330, 1310, .22, 'dourada', 'F', 1, 2.1], [790, 1290, .19, 'branca', 'L', -1, .7],
+  [150, 1860, .44, 'dourada', 'F', 1, 3.1], [960, 1880, .42, 'ruiva', 'L', -1, 2.4], [520, 1270, .17, 'ruiva', 'L', -1, 4.2]];
+function farmyard(t, d, o = {}) {
+  let s = '';
+  s += lay(.05, sky(d, t));
+  s += lay(.15, mesas(d, 1150));
+  const lit = d < .2 || d > .86 ? .25 : d < .27 ? lerp(.25, 1, range(d, .2, .27)) : d > .8 ? lerp(1, .25, range(d, .8, .86)) : 1;
+  s += lay(.35, windmill(150, 1190, .5, t, lit) + barn(800, 1200, .55, lit));
+  s += lay(.5, fence(-700, 1800, 1222, .7, lit));
+  s += lay(1, ground(1200, d, t, { lit, grain: o.grain }));
+  return { s, lit };
+}
+function rigFor(d, lit) {
+  const [a, b, c] = skyCol(d);
+  const amb = mix('#8E8C9C', '#FFF6EA', lit), rim = mix('#9FB4FF', d > .6 ? '#FFB46A' : '#FFE2A8', lit);
+  return rig({ amb, k: [d > .5 ? 1 : -1, -.25], sh: '#2a1a30', shO: .4 * lit, shD: 26, rims: [{ c: rim, k: [d > .5 ? -1 : 1, -.4], w: 7, o: .85 }] });
+}
+function sHook(t) {
+  // timelapse: ~5 dias/noites passando em 6.5 s; contador 1 → 548
+  const L = t, cyc = range(L, .2, 6.6), d = (.33 + cyc * 4.0) % 1, days = 1 + Math.round(easeIn(cyc) * 547 * 0 + Math.pow(cyc, 1.6) * 547);
+  const pull = easeInOut(range(L, .4, 3.2)); setCam(lerp(600, 540, pull), lerp(1420, 1260, pull) + 30 * range(L, 3.2, 7.5), lerp(1.45, 1.0, pull) + .08 * range(L, 3.2, 7.5), lerp(-.5, .5, L / 7.5), [540, 1260, 1.0]);
+  const F = farmyard(t, d, { grain: true }); let s = F.s;
+  const rg = rigFor(d, F.lit), v = F.lit < .5 ? 'noite' : null;
+  const tl = Math.floor(cyc * 40); // galinhas "pulam" de posição no timelapse
+  let ch = '';
+  const fl = FLOCK.map((f, i) => { const j = (tl + i * 3) % 7; return { x: f[0] + (j - 3) * 18 * (i % 2 ? 1 : -1), y: f[1], s: f[2], v: v || f[3], tipo: f[4], flip: f[5], ph: f[6] + t * 7, walk: (j % 3) ? .8 : 0, peck: j % 3 === 0 ? .5 + .5 * Math.sin(t * 9 + i) : 0, rig: rg }; });
+  fl.filter(f => f.y < 1560).forEach(f => ch += chicken(f));
+  // Mike: centro, de lado, andando devagar e ciscando com o toco do pescoço
+  const mk = { x: 600 + Math.sin(t * .8) * 30, y: 1640, s: .74, flip: 1, tipo: 'L', cab: false, v: v || 'branca', ph: t * 6.5, walk: .9, peck: Math.max(0, Math.sin(t * 2.2)) * .45, rig: rg, shadow: .4 };
+  ch += chicken(mk);
+  fl.filter(f => f.y >= 1560).forEach(f => ch += chicken(f));
+  s += lay(1, ch);
+  let fx = VIG() + `<rect width="1080" height="1920" fill="#000" opacity="${op((1 - F.lit) * .25)}"/>`;
+  fx += cyc < 1 ? counter(t, days, false) : counter(t - 6.6, 548, true);
+  return s + fx;
+}
+/* ---------- 2. 1945: fazenda ao amanhecer, Lloyd vem buscar o galo ---------- */
+function sFarm(t) {
+  const L = t - 7.5, k = L / 5, d = .27;
+  setCam(lerp(560, 520, easeInOut(k)), lerp(1180, 1300, easeInOut(k)), lerp(.95, 1.05, easeInOut(k)), 0, [540, 1240, 1]);
+  const F = farmyard(t, d); let s = F.s; const rg = rigFor(d, 1);
+  let ch = chicken({ x: 300 + L * 14, y: 1500, s: .46, tipo: 'L', cab: true, ph: L * 6, walk: .6, peck: Math.max(0, Math.sin(L * 2.5)) * .6, rig: rg });
+  ch += chicken({ x: 760, y: 1450, s: .34, tipo: 'L', flip: -1, v: 'ruiva', ph: L * 6 + 1, walk: .5, peck: Math.max(0, Math.sin(L * 3)) * .7, rig: rg });
+  const fx = 1060 - L * 60;
+  ch += farmer({ x: fx, y: 1840, s: .95, flip: 1, ph: L * 4.2, walk: 1, rim: '#FFC88A' });
+  s += lay(1, ch);
+  return s + `<rect width="1080" height="1920" fill="#3A2008" opacity=".18"/>` + VIG();
+}
+/* ---------- 3. o toco de madeira: sombra do machado, golpe, penas ---------- */
+function stump(x, y, s) {
+  return `<g transform="translate(${x},${y}) scale(${s})"><path d="M-230 0 Q-240 220 -210 330 L210 330 Q240 220 230 0Z" fill="#5E4026"/><path d="M-230 0 Q-240 220 -210 330 L-120 330 Q-150 200 -140 0Z" fill="#000" opacity=".25"/>
+  ${[-170, -90, 0, 80, 160].map((xx, i) => `<path d="M${xx} 20 Q${xx + 10} 160 ${xx - 6} 320" stroke="#3E2A18" stroke-width="5" fill="none" opacity=".6"/>`).join('')}
+  <ellipse cx="0" cy="0" rx="230" ry="62" fill="#C99A62"/>${[200, 160, 120, 80, 40].map((r, i) => `<ellipse cx="0" cy="0" rx="${r}" ry="${f1(r * .27)}" fill="none" stroke="#A47848" stroke-width="3" opacity=".8"/>`).join('')}
+  <path d="M-60 -8 L90 14" stroke="#5E4026" stroke-width="6" opacity=".7"/><path d="M-120 18 L-20 30" stroke="#5E4026" stroke-width="4" opacity=".6"/></g>`;
+}
+function sBlock(t) {
+  const L = t - 12.5, d = .3, hit = 3.15;
+  setCam(lerp(540, 560, L / 4.5), lerp(1080, 1040, L / 4.5), lerp(1.0, 1.12, easeInOut(L / 4.5)), 0, [540, 1060, 1]);
+  let s = lay(.1, `<g filter="url(#bBg)">${sky(d, t)}${mesas(d, 1000)}${barn(250, 1040, .5)}${fence(-600, 1800, 1060, .6)}</g>`);
+  s += lay(.6, `<g filter="url(#b4)">${ground(1040, d, t)}</g>`);
+  s += lay(1, stump(540, 1420, 1.15));
+  const rg = rigFor(d, 1);
+  // galo deitado no toco (antes do golpe), olhando
+  if (L < hit + .05) s += lay(1, chicken({ x: 560, y: 1420, s: .62, tipo: 'L', cab: true, tilt: 0, peck: .1 + .05 * Math.sin(L * 5), rig: rg, shadow: 0 }));
+  // sombra do machado subindo e descendo sobre a cena
+  const up = easeOut(range(L, .4, 2.4)), sw = easeIn(range(L, hit - .3, hit));
+  const ang = lerp(10, -70, up) + sw * 95, ax = 760 + 120 * up - sw * 160, ay = 900 - 260 * up + sw * 380;
+  s += `<g filter="url(#b30)" opacity="${op(.25 + .45 * up)}" transform="translate(${f1(ax)},${f1(ay)}) rotate(${f1(ang)}) scale(2.2)"><rect x="-14" y="-40" width="28" height="520" rx="12" fill="#0a0604"/><path d="M-14 -30 L-180 -90 Q-215 0 -180 90 L-14 30Z" fill="#0a0604"/></g>`;
+  // silhueta do braço/machado entrando pela direita (primeiro plano)
+  s += `<g transform="translate(${f1(1150 - 120 * up + sw * -100)},${f1(520 - 120 * up + sw * 520)}) rotate(${f1(-30 - 30 * up + sw * 120)})"><rect x="-26" y="-40" width="52" height="700" rx="24" fill="#0E0906"/><path d="M-26 -20 L-300 -110 Q-350 40 -300 190 L-26 100Z" fill="#1B1A1E"/><path d="M-300 -110 Q-350 40 -300 190" stroke="#E8EEF4" stroke-width="10" fill="none" opacity=".85"/></g>`;
+  let fx = VIG();
+  if (L > hit) { const k = range(L, hit, hit + .08); fx += `<rect width="1080" height="1920" fill="#fff" opacity="${op(1 - range(L, hit + .05, hit + .2))}"/><rect width="1080" height="1920" fill="#000" opacity="${op(range(L, hit + .05, hit + .12))}"/>` + feathers(12.5 + hit, t, 26, 540, 1000); }
+  return s + `<rect width="1080" height="1920" fill="#3A2008" opacity=".15"/>` + fx;
+}
+/* ---------- 4. ele se levanta sem cabeça ---------- */
+function sUp(t) {
+  const L = t - 17, d = .31, rg = rigFor(d, 1);
+  setCam(lerp(540, 540, L / 6), lerp(1330, 1360, L / 6), lerp(1.25, 1.05, easeInOut(range(L, 0, 4))), 0, [540, 1330, 1.15]);
+  const F = farmyard(t, d); let s = F.s;
+  const rise = easeOut(range(L, .5, 1.6)), wob = Math.sin(L * 14) * (1 - range(L, 1.6, 3)) * 8;
+  let ch = '';
+  // galinhas ao redor viram a cabeça (olham) — reagem
+  const look = range(L, 1.2, 1.6);
+  ch += chicken({ x: 180, y: 1480, s: .36, tipo: 'L', flip: -1, v: 'ruiva', peck: lerp(.6, -.1, look), tilt: -look * 6, rig: rg });
+  ch += chicken({ x: 920, y: 1470, s: .34, tipo: 'L', flip: 1, v: 'preta', peck: lerp(.5, -.1, look), tilt: -look * 6, rig: rg });
+  ch += chicken({ x: 760, y: 1330, s: .24, tipo: 'F', v: 'dourada', rig: rg });
+  const walk = range(L, 2.2, 3);
+  const mx = 560 - Math.max(0, L - 2.4) * 40;
+  ch += chicken({ x: mx, y: 1600, s: .6, tipo: 'L', cab: false, sit: 1 - rise, tilt: lerp(70, 0, rise) + wob, ph: L * 6, walk, peck: walk * Math.max(0, Math.sin(L * 2.6)) * .4, rig: rg });
+  s += lay(1, ch);
+  // machado caindo no chão no primeiro plano (o fazendeiro largou)
+  const fall = easeIn(range(L, 2.6, 3.0));
+  if (L > 2.6) s += lay(1.15, `<g transform="translate(${f1(1010 - fall * 90)},${f1(700 + fall * 1060)}) rotate(${f1(-30 + fall * 100)})"><rect x="-14" y="-300" width="28" height="520" rx="12" fill="#5A3E28"/><path d="M-14 -290 L-150 -340 Q-185 -260 -150 -180 L-14 -230Z" fill="#8E98A2"/><path d="M-150 -340 Q-185 -260 -150 -180" stroke="#E8EEF4" stroke-width="7" fill="none"/></g>` + `<g opacity="${op(range(L, 3.0, 3.1) * (1 - range(L, 3.1, 4)))}">${Array.from({ length: 10 }, (_, i) => `<circle cx="${f1(900 + Math.cos(i) * 80 * range(L, 3, 4))}" cy="${f1(1800 - Math.abs(Math.sin(i * 1.7)) * 70 * range(L, 3, 4))}" r="${f1(14 + i % 3 * 6)}" fill="#C8A878" opacity=".6"/>`).join('')}</g>`);
+  return s + `<rect width="1080" height="1920" fill="#3A2008" opacity=".12"/>` + VIG() + `<rect width="1080" height="1920" fill="#000" opacity="${op(1 - range(L, 0, .5))}"/>`;
+}
+/* ---------- 5. celeiro à noite: dormindo com o "pescoço" sob a asa; a porta abre de manhã ---------- */
+function sBarn(t) {
+  const L = t - 23, open = easeInOut(range(L, 3.2, 4.2));
+  setCam(lerp(520, 560, L / 5), lerp(1220, 1180, L / 5), lerp(1.12, 1.0, easeInOut(L / 5)), 0, [540, 1200, 1.05]);
+  let s = `<rect x="-2000" y="-2000" width="5000" height="5000" fill="${mix('#0E0D16', '#3A2A1A', open)}"/>`;
+  let wall = '';
+  for (let x = -400; x < 1500; x += 70) wall += `<rect x="${x}" y="300" width="64" height="1100" fill="${mix('#1B1820', '#5A4028', open)}"/><rect x="${x + 64}" y="300" width="6" height="1100" fill="#C8D8FF" opacity="${op(.25 * (1 - open))}"/>`;
+  s += lay(.6, wall + `<rect x="-400" y="1400" width="2000" height="900" fill="${mix('#14121A', '#6E5232', open)}"/>`);
+  // feixes de lua pelas frestas
+  s += lay(.6, `<g opacity="${op(1 - open)}">${[0, 1, 2, 3, 4].map(i => `<path d="M${270 + i * 140} 300 L${330 + i * 140} 300 L${520 + i * 170} 1700 L${380 + i * 170} 1700Z" fill="url(#beamM)" opacity=".55"/>`).join('')}</g>`);
+  // feno
+  let hay = ''; for (let i = 0; i < 90; i++) { const x = (i * 97) % 1400 - 160, y = 1500 + (i * 53) % 260; hay += `<path d="M${x} ${y} l${30 + i % 40} ${-6 - i % 12}" stroke="${mix('#4A4030', '#D9B060', open)}" stroke-width="4" stroke-linecap="round"/>`; }
+  s += lay(.85, hay);
+  // caixote
+  const crate = `<g transform="translate(540,1640)"><path d="M-300 -60 L300 -60 L300 170 L-300 170Z" fill="${mix('#2A2018', '#8A6038', open)}"/>${[-40, 30, 100].map(y => `<rect x="-300" y="${y}" width="600" height="8" fill="#000" opacity=".25"/>`).join('')}<rect x="-300" y="-60" width="600" height="20" fill="${mix('#3A2C20', '#B07A44', open)}"/></g>`;
+  const breathe = Math.sin(L * 2.4) * 4;
+  const rg = open > .3 ? rig({ amb: '#FFE9CC', k: [-1, -.2], shO: .35, shD: 24, rims: [{ c: '#FFD08A', k: [1, -.3], w: 8, o: .9 }] }) : rig({ amb: '#5A6488', k: [1, -.2], shO: .3, shD: 20, rims: [{ c: '#AFC6FF', k: [-1, -.5], w: 6, o: .8 }] });
+  const stand = easeOut(range(L, 4.1, 4.8));
+  s += lay(1, chicken({ x: 560, y: 1600 + breathe * (1 - stand), s: .6, tipo: 'L', cab: false, sit: 1 - stand, tilt: lerp(-14, 0, stand), rig: rg, shadow: 0 }) + crate);
+  // porta abre: luz quente invade da esquerda
+  if (open > 0) s += `<path d="M-200 0 L${f1(-200 + 700 * open)} 0 L${f1(400 + 900 * open)} 1920 L-200 1920Z" fill="url(#beamW)" opacity="${op(open * .9)}"/>` + dust(t, '#FFE6B0', open);
+  return s + VIG() + `<rect width="1080" height="1920" fill="#000" opacity="${op(1 - range(L, 0, .6))}"/>`;
+}
+/* ---------- 6. conta-gotas direto no pescoço ---------- */
+function sDrop(t) {
+  const L = t - 28;
+  setCam(lerp(540, 540, L / 5), lerp(980, 940, L / 5), lerp(1.0, 1.12, easeInOut(L / 5)), 0, [540, 960, 1]);
+  let s = `<rect x="-2000" y="-2000" width="5000" height="5000" fill="#1A120C"/>`;
+  s += lay(.3, `<ellipse cx="200" cy="400" rx="700" ry="600" fill="url(#gWarm)"/><g filter="url(#b12)"><rect x="-300" y="1260" width="1800" height="900" fill="#3A2614"/><rect x="760" y="900" width="120" height="360" rx="20" fill="#2A1C10"/><ellipse cx="820" cy="900" rx="80" ry="22" fill="#D8C8A8" opacity=".5"/></g>`);
+  const rg = rig({ amb: '#FFE4C0', k: [1, -.1], sh: '#1a0c08', shO: .55, shD: 34, rims: [{ c: '#FFC27A', k: [-1, -.6], w: 10, o: 1, glow: true }] });
+  // close no pescoço: galinha grande, toco no centro-alto
+  s += lay(1, chicken({ x: 860, y: 1980, s: 1.55, tipo: 'L', cab: false, rig: rg, shadow: 0, peck: Math.sin(L * 3) * .02 }));
+  // conta-gotas: vidro com bulbo de borracha, vindo de cima
+  const dy = lerp(-400, 0, easeOut(range(L, .2, 1.2))), sx = 553, tipY = 790 + dy;
+  s += lay(1, `<g transform="translate(${sx},${f1(tipY)})"><path d="M-22 -520 L22 -520 L18 -40 L4 0 L-4 0 L-18 -40Z" fill="#DDEFF5" opacity=".45" stroke="#F4FBFF" stroke-width="3"/><path d="M-12 -300 L12 -300 L10 -44 L3 -8 L-3 -8 L-10 -44Z" fill="#F6F1E2" opacity=".85"/><path d="M-30 -660 Q-40 -760 0 -770 Q40 -760 30 -660 L26 -520 L-26 -520Z" fill="#7A1E1A"/><path d="M-14 -740 Q-4 -760 12 -744" stroke="#C0504A" stroke-width="6" fill="none"/><rect x="-14" y="-500" width="5" height="440" fill="#fff" opacity=".6"/></g>`);
+  // gotas de leite caindo no toco do pescoço
+  let dr = '';
+  for (let i = 0; i < 6; i++) { const t0 = 1.4 + i * .55, p = range(L, t0, t0 + .32); if (p > 0 && p < 1) dr += `<ellipse cx="${sx}" cy="${f1(tipY + 10 + p * p * 100)}" rx="9" ry="12" fill="#FAF4E4"/>`; const q = range(L, t0 + .32, t0 + .6); if (q > 0 && q < 1) dr += `<ellipse cx="${sx}" cy="${f1(tipY + 110)}" rx="${f1(10 + q * 22)}" ry="${f1(3 + q * 5)}" fill="none" stroke="#FAF4E4" stroke-width="3" opacity="${op(1 - q)}"/>`; }
+  s += lay(1, dr);
+  return s + VIG() + GRAIN_FX(t);
+}
+/* ---------- 7. fama: tenda do show, holofote, flashes, moeda ---------- */
+const CROWD = Array.from({ length: 26 }, (_, i) => ({ x: -120 + (i % 13) * 105 + (i > 12 ? 50 : 0), row: i > 12 ? 1 : 0, h: R(), hat: R() < .6 }));
+function sShow(t) {
+  const L = t - 33, k = L / 7;
+  setCam(lerp(540, 540, k), lerp(1150, 1000, easeInOut(range(L, 0, 4))), lerp(.9, 1.25, easeInOut(range(L, 0, 5))), 0, [540, 1100, 1]);
+  let s = `<rect x="-2000" y="-2000" width="5000" height="5000" fill="#120A10"/>`;
+  // listras da tenda
+  let tent = ''; for (let i = -10; i < 12; i++) tent += `<path d="M540 -200 L${f1(540 + i * 150)} 1300 L${f1(540 + (i + 1) * 150)} 1300Z" fill="${i % 2 ? '#7E1820' : '#E8D8B8'}" opacity="${i % 2 ? .9 : .75}"/>`;
+  s += lay(.3, tent + `<rect x="-1500" y="1300" width="4000" height="1200" fill="#1E120E"/>`);
+  s += lay(.3, `<rect x="-1500" y="-600" width="4000" height="2200" fill="#000" opacity=".45"/>`);
+  // cordão de lâmpadas
+  let bulbs = ''; for (let row = 0; row < 2; row++) for (let i = 0; i < 16; i++) { const x = -260 + i * 110, y = 300 + row * 220 + Math.sin(i / 15 * Math.PI) * 120; const on = .6 + .4 * Math.sin(t * 5 + i * 1.3 + row); bulbs += `<circle cx="${x}" cy="${f1(y)}" r="40" fill="#FFD27A" opacity="${op(.25 * on)}" filter="url(#b12)"/><circle cx="${x}" cy="${f1(y)}" r="11" fill="#FFF0C0" opacity="${op(on)}"/>`; }
+  s += lay(.45, `<path d="M-260 300 Q540 540 1390 300 M-260 520 Q540 760 1390 520" stroke="#2A1A10" stroke-width="4" fill="none"/>` + bulbs);
+  // pedestal + holofote
+  s += lay(1, `<path d="M380 0 L700 0 L900 1500 L180 1500Z" fill="url(#gSpot)" opacity=".55"/><ellipse cx="540" cy="1420" rx="300" ry="60" fill="#FFF0C8" opacity=".3" filter="url(#b12)"/>
+    <path d="M360 1420 L720 1420 L690 1700 L390 1700Z" fill="#5A1A20"/><rect x="340" y="1395" width="400" height="40" rx="8" fill="#C8A040"/><rect x="380" y="1700" width="320" height="40" rx="6" fill="#C8A040"/>`);
+  const rg = rig({ amb: '#FFF2DC', k: [0, -1], sh: '#200810', shO: .5, shD: 28, rims: [{ c: '#FFE6B0', k: [0, -1], w: 8, o: 1, glow: true }] });
+  s += lay(1, chicken({ x: 560, y: 1418, s: .52, tipo: 'L', cab: false, ph: L * 5, walk: .25, peck: Math.max(0, Math.sin(L * 2)) * .3, rig: rg, shadow: .5 }));
+  // plateia em silhueta (primeiro plano)
+  let cr = '';
+  CROWD.forEach((p, i) => { const y = 1880 + p.row * 120 + Math.sin(t * 2 + i) * 4, sc = p.row ? 1.25 : 1; cr += `<g transform="translate(${f1(p.x)},${f1(y)}) scale(${sc})"><path d="M-80 200 Q-90 0 -50 -30 Q0 -50 50 -30 Q90 0 80 200Z" fill="#07050A"/><ellipse cx="0" cy="-90" rx="44" ry="52" fill="#07050A"/>${p.hat ? `<path d="M-74 -120 Q0 -134 74 -120 Q66 -110 0 -112 Q-66 -110 -74 -120Z M-42 -122 Q-40 -170 0 -172 Q40 -170 42 -122Z" fill="#07050A"/>` : ''}<path d="M-44 -90 Q-40 -140 0 -142" stroke="#FFD9A0" stroke-width="3" fill="none" opacity=".35"/></g>`; });
+  s += lay(1.3, cr);
+  // flashes de câmeras antigas
+  let fx = '';
+  const FL = [1.0, 1.7, 2.3, 3.1, 3.6, 4.4, 5.0, 5.7, 6.3];
+  FL.forEach((f, i) => { const p = range(L, f, f + .25); if (p > 0 && p < 1) { const x = 100 + (i * 263) % 880, y = 1500 + (i * 131) % 300; fx += `<circle cx="${x}" cy="${y}" r="${f1(60 + 400 * p)}" fill="#fff" opacity="${op((1 - p) * .55)}" filter="url(#b30)"/><rect width="1080" height="1920" fill="#fff" opacity="${op((1 - p) * .18)}"/>`; } });
+  // moedas caindo num pote (inserção no fim)
+  const cj = range(L, 5.1, 7);
+  if (cj > 0) {
+    let jar = `<rect width="1080" height="1920" fill="#0A0608" opacity="${op(range(L, 5.1, 5.3) * .92)}"/><g transform="translate(540,1180)"><ellipse cx="0" cy="-300" rx="420" ry="420" fill="url(#gWarm)" opacity=".5"/>`;
+    for (let i = 0; i < 7; i++) { const t0 = 5.25 + i * .22, p = range(L, t0, t0 + .3); if (p <= 0) continue; const y = lerp(-700, -60 - (i > 2 ? (i - 2) * 6 : 0), easeIn(p)); jar += `<g transform="translate(${f1((i % 3 - 1) * 30)},${f1(y)}) rotate(${f1(p * 200 + i * 40)})"><ellipse rx="44" ry="${f1(44 * (.3 + .7 * Math.abs(Math.cos(p * 9 + i))))}" fill="#D8DCE2" stroke="#8A9098" stroke-width="5"/><ellipse rx="30" ry="${f1(30 * (.3 + .7 * Math.abs(Math.cos(p * 9 + i))))}" fill="none" stroke="#A8AEB6" stroke-width="3"/></g>`; }
+    jar += `<path d="M-200 -360 Q-220 -320 -210 -280 L-200 120 Q-200 170 -150 170 L150 170 Q200 170 200 120 L210 -280 Q220 -320 200 -360Z" fill="#BFE2EA" opacity=".25" stroke="#E8F8FF" stroke-width="6"/><path d="M-160 -300 L-160 100" stroke="#fff" stroke-width="10" opacity=".35" stroke-linecap="round"/>`;
+    for (let i = 0; i < 18; i++) jar += `<ellipse cx="${f1(-150 + (i * 47) % 300)}" cy="${f1(150 - Math.floor(i / 6) * 22)}" rx="40" ry="12" fill="#C8CCD4" stroke="#7A8088" stroke-width="3"/>`;
+    fx += jar + `</g>`;
+  }
+  return s + fx + VIG() + GRAIN_FX(t);
+}
+/* ---------- 8. raio-X: por que ele sobreviveu ---------- */
+function sXray(t) {
+  const L = t - 40;
+  setCam(lerp(560, 600, easeInOut(range(L, 0, 2.5))), lerp(1120, 900, easeInOut(range(L, 0, 2.5))), lerp(1.0, 1.7, easeInOut(range(L, 0, 2.5))), 0, [560, 1100, 1]);
+  let s = `<rect x="-2000" y="-2000" width="5000" height="5000" fill="#04121E"/>`;
+  let grid = ''; for (let x = -400; x < 1500; x += 60) grid += `<line x1="${x}" y1="-400" x2="${x}" y2="2400" stroke="#0E3346" stroke-width="2"/>`; for (let y = -400; y < 2400; y += 60) grid += `<line x1="-400" y1="${y}" x2="1500" y2="${y}" stroke="#0E3346" stroke-width="2"/>`;
+  s += lay(.4, grid);
+  // galinha translúcida + contorno ciano
+  const X = 560, Y = 1500, S = .9;
+  s += lay(1, `<g opacity=".95">${chicken({ x: X, y: Y, s: S, tipo: 'L', cab: false, v: 'xray', shadow: 0, legCol: '#5FD8F0' })}</g>`);
+  // coordenadas da foto → mundo
+  const P = (px, py) => [X + (px - 738) * S, Y + (py - 948) * S];
+  let o = '';
+  // vértebras do pescoço
+  const V = [[541, 262], [538, 292], [536, 324], [540, 356], [548, 388], [560, 418], [576, 446], [596, 470]];
+  V.forEach(([px, py], i) => { const [x, y] = P(px, py); o += `<rect x="${f1(x - 16)}" y="${f1(y - 11)}" width="32" height="22" rx="7" fill="#DFF8FF" opacity=".75"/>`; });
+  // tronco cerebral (o que restou) — brilha
+  const glow = .6 + .4 * Math.sin(t * 6), bs = range(L, 1.2, 2);
+  const [bx, by] = P(541, 262);
+  o += `<ellipse cx="${f1(bx)}" cy="${f1(by - 4)}" rx="${f1(60 * bs)}" ry="${f1(60 * bs)}" fill="url(#gCyan)" opacity="${op(bs * glow)}"/><path d="M${f1(bx - 10)} ${f1(by - 14)} Q${f1(bx)} ${f1(by - 30)} ${f1(bx + 12)} ${f1(by - 14)} L${f1(bx + 8)} ${f1(by + 16)} L${f1(bx - 8)} ${f1(by + 16)}Z" fill="#7CFFC8" opacity="${op(bs)}"/>`;
+  // linha do machado passando por cima
+  const cutK = easeInOut(range(L, 2.2, 3.0)); const [c1x, c1y] = P(470, 210), [c2x, c2y] = P(640, 226);
+  if (cutK > 0) o += `<line x1="${f1(c1x)}" y1="${f1(c1y)}" x2="${f1(lerp(c1x, c2x, cutK))}" y2="${f1(lerp(c1y, c2y, cutK))}" stroke="#FF4A4A" stroke-width="7" stroke-dasharray="18 12" stroke-linecap="round"/>`;
+  // veia jugular + coágulo
+  const jv = range(L, 3.8, 4.6); const pts = [[556, 258], [560, 300], [566, 340], [574, 380], [586, 420], [604, 456]].map(p => P(...p));
+  if (jv > 0) o += `<path d="M${pts.map(p => f1(p[0]) + ' ' + f1(p[1])).join(' L')}" stroke="#FF6A6A" stroke-width="9" fill="none" stroke-linecap="round" opacity="${op(jv)}" stroke-dasharray="${f1(400 * jv)} 400"/>`;
+  const cl = easeOut(range(L, 4.8, 5.8)); const [kx, ky] = P(556, 262);
+  if (cl > 0) o += `<circle cx="${f1(kx)}" cy="${f1(ky)}" r="${f1(lerp(70, 18, cl))}" fill="none" stroke="#FFB0A0" stroke-width="4" opacity="${op(1 - .4 * cl)}"/><circle cx="${f1(kx)}" cy="${f1(ky)}" r="${f1(14 * cl)}" fill="#C83A3A"/>` + Array.from({ length: 9 }, (_, i) => { const a = i * .7; return `<line x1="${f1(kx + Math.cos(a) * 16)}" y1="${f1(ky + Math.sin(a) * 16)}" x2="${f1(kx + Math.cos(a + 2.2) * 16)}" y2="${f1(ky + Math.sin(a + 2.2) * 16)}" stroke="#FF8A7A" stroke-width="3" opacity="${op(cl)}"/>`; }).join('');
+  // coração batendo (respiração e batimentos continuam)
+  const hb = Math.pow(Math.max(0, Math.sin(t * 7.5)), 8); const [hx, hy] = P(600, 640);
+  o += `<g transform="translate(${f1(hx)},${f1(hy)}) scale(${f1((1 + .15 * hb) * 100) / 100})" opacity="${op(range(L, 1.2, 2))}"><path d="M0 26 C-50 -6 -40 -48 -12 -40 C-4 -38 0 -30 0 -26 C0 -30 4 -38 12 -40 C40 -48 50 -6 0 26Z" fill="#FF5A6A" opacity=".85"/></g>`;
+  s += lay(1, o);
+  const scan = (L * 500) % 2600 - 300;
+  s += `<rect x="0" y="${f1(scan)}" width="1080" height="80" fill="#5FE6FF" opacity=".07"/>`;
+  return s + VIG() + GRAIN_FX(t);
+}
+/* ---------- 9. a seringa esquecida no palco ---------- */
+function sSyr(t) {
+  const L = t - 47.5;
+  setCam(540, lerp(1060, 1000, L / 2.3), lerp(1.05, 1.25, easeInOut(L / 2.3)), 0, [540, 1040, 1.1]);
+  let s = `<rect x="-2000" y="-2000" width="5000" height="5000" fill="#07060A"/>`;
+  s += lay(1, `<path d="M440 -200 L640 -200 L860 1500 L220 1500Z" fill="url(#gSpot)" opacity=".4"/><ellipse cx="540" cy="1250" rx="320" ry="70" fill="#FFF0C8" opacity=".22" filter="url(#b12)"/>
+    <rect x="300" y="1220" width="480" height="30" rx="6" fill="#3A2418"/><rect x="330" y="1250" width="24" height="500" fill="#2A1A10"/><rect x="726" y="1250" width="24" height="500" fill="#2A1A10"/>
+    <g transform="translate(540,1200) rotate(-8)"><rect x="-150" y="-16" width="230" height="32" rx="8" fill="#E8F4F8" opacity=".7" stroke="#fff" stroke-width="3"/><rect x="-140" y="-10" width="120" height="20" fill="#F4E8D0" opacity=".7"/><rect x="80" y="-8" width="80" height="16" fill="#8A9098"/><rect x="160" y="-24" width="14" height="48" rx="4" fill="#8A9098"/><path d="M-150 -3 L-230 0 L-150 3Z" fill="#C8D0D8"/></g>`);
+  s += dust(t, '#FFE6B0', .6);
+  return s + VIG() + GRAIN_FX(t) + `<rect width="1080" height="1920" fill="#000" opacity="${op(1 - range(L, 0, .4))}"/>`;
+}
+/* ---------- 10. motel em Phoenix, 1947: ele engasga ---------- */
+function sMotel(t) {
+  const L = t - 49.8, k = L / 5.2;
+  setCam(lerp(540, 560, k), lerp(1150, 1260, easeInOut(k)), lerp(1.0, 1.35, easeInOut(k)), 0, [540, 1150, 1.1]);
+  const neon = (Math.sin(t * 13) > -.6 ? 1 : .3) * (1 - range(L, 4.4, 4.9));
+  let s = `<rect x="-2000" y="-2000" width="5000" height="5000" fill="#0A0814"/>`;
+  // janela com persiana e luz de neon entrando em faixas
+  let bl = ''; for (let i = 0; i < 12; i++) bl += `<rect x="150" y="${300 + i * 46}" width="560" height="30" fill="#1A1626"/>`;
+  s += lay(.6, `<rect x="140" y="290" width="580" height="560" fill="#FF3D8A" opacity="${op(.55 * neon)}"/>${bl}<rect x="130" y="280" width="600" height="580" fill="none" stroke="#221C2A" stroke-width="20"/>`);
+  let st = ''; for (let i = 0; i < 12; i++) st += `<path d="M150 ${310 + i * 46} L710 ${310 + i * 46} L${1100} ${1300 + i * 60} L${560} ${1300 + i * 60}Z" fill="#FF3D8A" opacity="${op(.09 * neon)}"/>`;
+  s += lay(.8, st + `<rect x="-600" y="1500" width="2400" height="800" fill="#141020"/><rect x="-600" y="1300" width="700" height="260" rx="20" fill="#1E1830"/>`);
+  // caixa
+  const box = `<g transform="translate(560,1620)"><path d="M-300 -40 L300 -40 L300 200 L-300 200Z" fill="#3A2C26"/><path d="M-300 -40 L-360 -120 L-240 -120 L-200 -40Z M300 -40 L360 -110 L240 -110 L200 -40Z" fill="#4A382E"/><rect x="-300" y="-40" width="600" height="16" fill="#000" opacity=".3"/></g>`;
+  const choke = range(L, 1.2, 4.2), jerk = choke > 0 && choke < 1 ? Math.sin(L * 22) * 6 * (1 - choke) + Math.sin(L * 9) * 4 : 0;
+  const fallK = easeIn(range(L, 3.6, 4.4));
+  const rg = rig({ amb: mix('#6A5A9A', '#2A2240', fallK), k: [1, -.2], sh: '#0a0410', shO: .4, shD: 22, rims: [{ c: '#FF5AA0', k: [-1, -.4], w: 8, o: .9 * neon + .1 }] });
+  s += lay(1, chicken({ x: 560, y: 1590, s: .6, tipo: 'L', cab: false, sit: .7 + .3 * fallK, tilt: jerk + fallK * -24, peck: choke > 0 ? .1 * Math.abs(Math.sin(L * 7)) : 0, rig: rg, shadow: 0 }) + box);
+  return s + VIG() + GRAIN_FX(t) + `<rect width="1080" height="1920" fill="#000" opacity="${op(range(L, 4.6, 5.2))}"/>`;
+}
+/* ---------- 11. final: amanhecer, uma pena caindo, contador ---------- */
+function sEnd(t) {
+  const L = t - 55, d = .3;
+  setCam(540, lerp(1150, 1220, L / 3.5), lerp(1.0, 1.08, L / 3.5), 0, [540, 1200, 1]);
+  const F = farmyard(t, d); let s = F.s;
+  const fy = lerp(700, 1560, easeInOut(range(L, 0, 3.2))), fxp = 540 + Math.sin(L * 2.4) * 120;
+  s += `<g transform="translate(${f1(fxp)},${f1(fy)}) rotate(${f1(Math.sin(L * 2.4) * 40)}) scale(1.6)"><path d="M0 -60 Q26 -16 6 54 L-6 54 Q-26 -16 0 -60Z" fill="#F4EEE2"/><path d="M0 -58 L0 62" stroke="#B9AE9C" stroke-width="3"/></g>`;
+  s += VIG() + counter(L - .3, 548, true);
+  return s + `<rect width="1080" height="1920" fill="#000" opacity="${op(1 - range(L, 0, .6))}"/>`;
+}
+const FN = { hook: sHook, farm: sFarm, block: sBlock, up: sUp, barn: sBarn, drop: sDrop, show: sShow, xray: sXray, syr: sSyr, motel: sMotel, end: sEnd };
+
+/* ======================= render ======================= */
+const defsEl = document.getElementById('defs'), root = document.getElementById('root');
+const STATIC = stdDefs() + chickenDefs();
+function frame(t) {
+  D = []; uid = 0;
+  const sh = shotAt(t);
+  let body = FN[sh[0]](t);
+  // corte com flash curto
+  for (const c of SH.slice(1)) if (t >= c[1] && t < c[1] + .08) body += `<rect width="1080" height="1920" fill="#fff" opacity="${op(.25 * (1 - (t - c[1]) / .08))}"/>`;
+  defsEl.innerHTML = STATIC + D.join('');
+  root.innerHTML = body;
+}
+const params = new URLSearchParams(location.search);
+const stage = document.getElementById('stage'), startEl = document.getElementById('start');
+const fit = () => stage.style.setProperty('--s', Math.min(innerWidth / 1080, innerHeight / 1920));
+addEventListener('resize', fit); fit();
+const audio = window.AUDIO_SRC ? new Audio(window.AUDIO_SRC) : null;
+let playing = false, offset = parseFloat(params.get('t') || '0'), t0 = 0;
+const current = () => playing ? Math.min(TOTAL, offset + (performance.now() - t0) / 1000) : offset;
+function play() { if (playing) return; playing = true; t0 = performance.now(); startEl.classList.add('hide'); if (audio) { audio.currentTime = offset; audio.play(); } }
+startEl.addEventListener('click', play);
+window.__total = TOTAL;
+window.__seek = t => { playing = false; offset = t; frame(t); };
+window.__ready = true;
+if (params.has('hideui')) startEl.classList.add('hide');
+if (params.has('still')) frame(offset); else (function loop() { frame(current()); requestAnimationFrame(loop); })();
+</script>
+</body>
+</html>
