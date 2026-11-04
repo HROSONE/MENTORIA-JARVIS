@@ -1,0 +1,96 @@
+{
+ "voice": "pm_alex",
+ "total": 54.964,
+ "s": [
+  {
+   "k": "s1",
+   "t0": 0.35,
+   "t1": 1.737,
+   "txt": "Você é uma galinha."
+  },
+  {
+   "k": "s2",
+   "t0": 1.987,
+   "t1": 4.333,
+   "txt": "E acabaram de cortar a sua cabeça."
+  },
+  {
+   "k": "s3",
+   "t0": 5.233,
+   "t1": 6.727,
+   "txt": "Mas você não morreu."
+  },
+  {
+   "k": "s4",
+   "t0": 7.327,
+   "t1": 11.081,
+   "txt": "Colorado, Estados Unidos. Mil novecentos e quarenta e cinco."
+  },
+  {
+   "k": "s5",
+   "t0": 11.431,
+   "t1": 14.439,
+   "txt": "O fazendeiro Lloyd Olsen queria você no jantar."
+  },
+  {
+   "k": "s6",
+   "t0": 14.789,
+   "t1": 19.013,
+   "txt": "Mas na manhã seguinte, você ainda estava lá. Andando. Procurando milho no chão."
+  },
+  {
+   "k": "s7",
+   "t0": 19.463,
+   "t1": 24.029,
+   "txt": "Então ele começou a te alimentar com um conta-gotas. Direto pelo pescoço."
+  },
+  {
+   "k": "s8",
+   "t0": 24.479,
+   "t1": 28.788,
+   "txt": "Você virou atração. As pessoas pagavam pra ver a galinha sem cabeça."
+  },
+  {
+   "k": "s9",
+   "t0": 29.188,
+   "t1": 31.385,
+   "txt": "E você viveu assim por um ano e meio."
+  },
+  {
+   "k": "s10",
+   "t0": 32.085,
+   "t1": 33.685,
+   "txt": "Mas como isso é possível?"
+  },
+  {
+   "k": "s11",
+   "t0": 34.185,
+   "t1": 39.924,
+   "txt": "O machado passou por cima da parte do cérebro que controla a respiração, o coração e os reflexos."
+  },
+  {
+   "k": "s12",
+   "t0": 40.274,
+   "t1": 43.133,
+   "txt": "E um coágulo impediu que você perdesse sangue."
+  },
+  {
+   "k": "s13",
+   "t0": 43.633,
+   "t1": 47.43,
+   "txt": "Você não tinha cabeça. Mas tinha tudo o que precisava pra viver."
+  },
+  {
+   "k": "s14",
+   "t0": 47.93,
+   "t1": 52.175,
+   "txt": "Até hoje, a cidade de Fruita faz uma festa em sua homenagem, todo ano."
+  },
+  {
+   "k": "s15",
+   "t0": 52.625,
+   "t1": 53.564,
+   "txt": "Se inscreve."
+  }
+ ]
+}
