@@ -21,6 +21,8 @@ Os vídeos (MP4) não estão aqui: dá para gerar todos de novo com estes arquiv
 | Vale da estranheza (robô) | `assets/robo_*`, `assets/sfx_robo.py` | `assets/roteiro_robo.md` |
 | A pegada na Lua (SVG) | `svg/pegada.html`, `svg/sfx_final.py` | `svg/roteiro_pegada.md` |
 | O paradoxo dos gêmeos (SVG) | `svg/gemeos.html`, `svg/sfx_gemeos.py` | `svg/roteiro_gemeos.md` |
+| O Zeptoverso (16:9) | `svg/zepto_src.html` → `build_zepto.py`, `svg/sfx_zepto.py` | `svg/roteiro_zepto.md`, `svg/narracao_zepto.md` |
+| Elefantes (16:9, documentário) | `svg/elef_src.html` → `build_elef.py`, `svg/sfx_elef.py` | `svg/roteiro_elefantes.md` |
 
 Personagens:
 - `stick/stick_core2.js` + `stick/skin2.json` — stickmen com pele (gerada por `stick/skin_model2.py`).
@@ -50,3 +52,11 @@ ffmpeg -framerate 30 -i fr/f%05d.jpg -i stick/raio_sfx.wav -c:v libx264 -crf 18 
 Os vídeos em SVG (`svg/pegada.html`, `svg/gemeos.html`) não precisam do passo 2: abra o HTML direto no navegador para ver a animação (ESPAÇO toca/pausa) ou renderize com `PAGE=svg/gemeos.html`.
 
 Pré-visualizar quadros soltos: `PAGE=svg/gemeos.html OUT=shots node shot.js 1 5 10` e `python3 sheet.py shots folha.png 1 5 10`.
+
+## Vídeos 16:9
+
+Use `render169.js` (1920×1080) e `shot169.js` no lugar de `render.js`/`shot.js`.
+
+## Teste no Google Colab (GPU)
+
+`colab/teste_render_gpu.ipynb` mede se a GPU do Colab renderiza mais rápido e pode gerar o vídeo dos elefantes inteiro lá.

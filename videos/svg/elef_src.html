@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Elefantes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --accent:#FFC870; --s:1; }
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s));background:#000}
+  #s{display:block}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+  .ov{position:absolute;left:120px;right:120px;top:var(--y);text-align:center;color:#fff;font-family:'Montserrat',system-ui,sans-serif;font-weight:900;font-size:var(--fs);line-height:1.08;
+    opacity:0;transform:translateY(24px);transition:opacity .25s ease, transform .4s cubic-bezier(.2,.9,.3,1.2);
+    text-shadow:0 8px 34px rgba(0,0,0,.95),0 2px 8px rgba(0,0,0,.85);pointer-events:none}
+  .ov.on{opacity:1;transform:none}
+  .a{color:var(--accent)} .c{color:#7FE6FF} .r{color:#FF6A6A} .g{color:#7DFFA8}
+  .sub{display:block;font-size:.45em;font-weight:800;letter-spacing:.06em;margin-top:.35em;color:#F2EDE4}
+  .btn{display:inline-block;border:8px solid var(--accent);border-radius:999px;padding:.24em .8em;background:rgba(0,0,0,.5)}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;font:800 54px 'Montserrat',sans-serif;background:rgba(0,0,0,.55);cursor:pointer;gap:30px;text-align:center}
+  #start small{font-size:30px;opacity:.6}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+<svg id="s" width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="skyDawn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1B2550"/><stop offset=".45" stop-color="#6A4C7A"/><stop offset=".75" stop-color="#E88A6A"/><stop offset="1" stop-color="#FFD3A0"/></linearGradient>
+  <linearGradient id="skyDay" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A7BC8"/><stop offset=".6" stop-color="#9ACCF0"/><stop offset="1" stop-color="#F4E8CC"/></linearGradient>
+  <linearGradient id="skySunset" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A1F4A"/><stop offset=".4" stop-color="#A8457A"/><stop offset=".7" stop-color="#F07A4A"/><stop offset="1" stop-color="#FFC870"/></linearGradient>
+  <linearGradient id="skyNight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#02040C"/><stop offset=".6" stop-color="#0B1433"/><stop offset="1" stop-color="#1E2A55"/></linearGradient>
+  <linearGradient id="gSav" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D6B06A"/><stop offset=".35" stop-color="#A47A42"/><stop offset="1" stop-color="#4A3420"/></linearGradient>
+  <linearGradient id="gDry" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9A27A"/><stop offset="1" stop-color="#6A4A30"/></linearGradient>
+  <linearGradient id="gForest" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16301E"/><stop offset="1" stop-color="#050E08"/></linearGradient>
+  <linearGradient id="gConcrete" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8A8C90"/><stop offset="1" stop-color="#4E5054"/></linearGradient>
+  <linearGradient id="gWater" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7FB8D0"/><stop offset="1" stop-color="#3A6A80"/></linearGradient>
+  <linearGradient id="gChapada" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C0583A"/><stop offset="1" stop-color="#7A3020"/></linearGradient>
+  <linearGradient id="beamG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF1D0" stop-opacity=".6"/><stop offset="1" stop-color="#FFF1D0" stop-opacity="0"/></linearGradient>
+  <linearGradient id="torchBeam" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".55"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>
+  <radialGradient id="glowW"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset=".25" stop-color="#fff" stop-opacity=".45"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  <radialGradient id="glowWarm"><stop offset="0" stop-color="#FFF1D0" stop-opacity="1"/><stop offset=".35" stop-color="#FFD9A0" stop-opacity=".5"/><stop offset="1" stop-color="#FFB870" stop-opacity="0"/></radialGradient>
+  <radialGradient id="glowO"><stop offset="0" stop-color="#FFF6D8" stop-opacity="1"/><stop offset=".3" stop-color="#FFB347" stop-opacity=".6"/><stop offset="1" stop-color="#FF6A1F" stop-opacity="0"/></radialGradient>
+  <radialGradient id="glowC"><stop offset="0" stop-color="#E6FDFF" stop-opacity="1"/><stop offset=".2" stop-color="#7FE6FF" stop-opacity=".6"/><stop offset="1" stop-color="#7FE6FF" stop-opacity="0"/></radialGradient>
+  <radialGradient id="glowR"><stop offset="0" stop-color="#FFE0E0" stop-opacity="1"/><stop offset=".3" stop-color="#FF5050" stop-opacity=".5"/><stop offset="1" stop-color="#FF2020" stop-opacity="0"/></radialGradient>
+  <radialGradient id="sunG"><stop offset="0" stop-color="#FFFBE8"/><stop offset=".22" stop-color="#FFE7A6"/><stop offset=".45" stop-color="#FFC06A" stop-opacity=".55"/><stop offset="1" stop-color="#FF9A4A" stop-opacity="0"/></radialGradient>
+  <radialGradient id="spotG"><stop offset="0" stop-color="#FFF6E6" stop-opacity=".55"/><stop offset="1" stop-color="#FFF6E6" stop-opacity="0"/></radialGradient>
+  <radialGradient id="vig" cx=".5" cy=".5" r=".72"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".72"/></radialGradient>
+  <radialGradient id="atmo"><stop offset=".86" stop-color="#5EC8FF" stop-opacity="0"/><stop offset=".9" stop-color="#5EC8FF" stop-opacity=".7"/><stop offset="1" stop-color="#5EC8FF" stop-opacity="0"/></radialGradient>
+  <radialGradient id="earthShade" cx=".3" cy=".25" r=".9"><stop offset=".4" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000818" stop-opacity=".85"/></radialGradient>
+  <linearGradient id="hull" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#F2F5FA"/><stop offset="1" stop-color="#9AA3B5"/></linearGradient>
+  <linearGradient id="chrome" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#9EA8BC"/><stop offset=".55" stop-color="#5E6880"/><stop offset="1" stop-color="#C9D1E0"/></linearGradient>
+  <radialGradient id="smokeG" cx=".5" cy=".4" r=".6"><stop offset="0" stop-color="#F3EEE8"/><stop offset="1" stop-color="#A89C96"/></radialGradient>
+  <radialGradient id="smokeFire" cx=".5" cy=".8" r=".7"><stop offset="0" stop-color="#FFB060"/><stop offset="1" stop-color="#8D7A72"/></radialGradient>
+  <linearGradient id="plumeO" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FF5A1F" stop-opacity="0"/></linearGradient>
+  <filter id="bl3" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
+  <filter id="bl8" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="8"/></filter>
+  <filter id="bl16" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="16"/></filter>
+  <filter id="bl30" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="30"/></filter>
+  <filter id="bl60" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="60"/></filter>
+</defs>
+<defs id="fdefs"></defs>
+<g id="world"></g>
+<g id="post"></g>
+</svg>
+<div id="flash"></div>
+<div id="texts"></div>
+<div id="start">▶ CLIQUE ou ESPAÇO<small>com som · ESPAÇO pausa · ← → pula 5 s</small></div>
+</div>
+<!--AUDIO-->
+<script>
+/*LIB*/
+
+/* ======== LINHA DO TEMPO ======== */
+const EV = {
+  hook: 0, call: 10.5, answer: 13.0, title: 18.0,
+  sp: 22.0, maps: 34.0,
+  fam: 46.0, calf: 58.0, male: 68.0, musth: 78.0,
+  mem: 90.0, drought: 100.0, lion: 126.0,
+  com: 138.0, ground: 150.0, names: 160.0,
+  mind: 180.0, bones: 194.0, burial: 208.0,
+  eng: 222.0, forest: 236.0,
+  poach: 252.0, tusk: 268.0, conflict: 282.0, bees: 292.0, habitat: 302.0,
+  zoo: 318.0, life: 334.0, happy: 346.0, tour: 358.0, breed: 376.0,
+  sanct: 390.0, kenya: 402.0, todo: 412.0, close: 422.0, end: 436.0,
+};
+const TEXTS = [
+  { from: 13.4, to: 17.8, y: 120, fs: 64, html: 'ELA ACABOU DE CHAMAR<br><span class="a">ALGUÉM PELO NOME</span>' },
+  { from: 18.4, to: 21.9, y: 370, fs: 150, html: 'ELEFANTES<span class="sub">MEMÓRIA, FAMÍLIA, MENTE — E O QUE NÓS FAZEMOS COM ELES</span>' },
+  { from: 34.4, to: 45.8, y: 70, fs: 54, html: 'TRÊS ESPÉCIES. <span class="r">TODAS AMEAÇADAS.</span>' },
+  { from: 47.0, to: 57.8, y: 70, fs: 56, html: 'QUEM MANDA É <span class="a">A AVÓ</span><span class="sub">A FAMÍLIA É LIDERADA PELA FÊMEA MAIS VELHA: A MATRIARCA</span>' },
+  { from: 58.5, to: 67.8, y: 70, fs: 56, html: '<span class="a">22 MESES</span> DE GESTAÇÃO<span class="sub">E O FILHOTE É CRIADO POR TODAS AS FÊMEAS DA FAMÍLIA</span>' },
+  { from: 68.5, to: 77.8, y: 70, fs: 52, html: 'NA ADOLESCÊNCIA, <span class="c">OS MACHOS VÃO EMBORA</span><span class="sub">ENTRE 10 E 15 ANOS · PASSAM A VIVER SOZINHOS OU EM GRUPOS DE MACHOS</span>' },
+  { from: 78.5, to: 89.8, y: 70, fs: 56, html: '<span class="r">MUSTH</span><span class="sub">ALGUMAS SEMANAS POR ANO, A TESTOSTERONA DISPARA · OS MACHOS FICAM AGRESSIVOS</span>' },
+  { from: 91.0, to: 99.8, y: 820, fs: 64, html: 'A MEMÓRIA DELA<br><span class="a">É O MAPA DA FAMÍLIA</span>' },
+  { from: 100.4, to: 125.8, y: 60, fs: 46, html: 'TANZÂNIA, 1993 · <span class="r">A PIOR SECA EM 35 ANOS</span>' },
+  { from: 126.4, to: 137.8, y: 70, fs: 52, html: 'MATRIARCAS MAIS VELHAS<br><span class="a">RECONHECEM MELHOR O PERIGO</span>' },
+  { from: 138.5, to: 149.8, y: 70, fs: 52, html: 'RONCOS GRAVES DEMAIS <span class="c">PRA GENTE OUVIR</span><span class="sub">INFRASSOM · ALCANCE DE QUILÔMETROS</span>' },
+  { from: 150.4, to: 159.8, y: 70, fs: 52, html: 'E PELO CHÃO?<span class="sub">AS VIBRAÇÕES VIAJAM PELO SOLO — SE ELES AS SENTEM PELOS PÉS AINDA É ESTUDADO</span>' },
+  { from: 160.5, to: 179.8, y: 70, fs: 56, html: 'ELES SE CHAMAM <span class="a">PELO NOME</span><span class="sub">QUÊNIA · ESTUDO PUBLICADO EM 2024</span>' },
+  { from: 180.5, to: 193.8, y: 70, fs: 52, html: 'ELES SE RECONHECEM <span class="a">NO ESPELHO</span><span class="sub">POUQUÍSSIMOS ANIMAIS PASSAM NESSE TESTE · O CÉREBRO PESA CERCA DE 5 KG</span>' },
+  { from: 194.5, to: 207.8, y: 70, fs: 52, html: 'ELES VOLTAM AOS <span class="a">OSSOS DOS SEUS MORTOS</span><span class="sub">TOCAM, CHEIRAM, FICAM EM SILÊNCIO</span>' },
+  { from: 208.5, to: 221.8, y: 70, fs: 50, html: 'ÍNDIA: FILHOTES <span class="a">ENTERRADOS PELA MANADA</span><span class="sub">5 CASOS REGISTRADOS (2022–2023) · É LUTO? A CIÊNCIA AINDA DEBATE</span>' },
+  { from: 222.5, to: 235.8, y: 70, fs: 52, html: 'ELES CAVAM ÁGUA <span class="c">PARA A SAVANA INTEIRA</span><span class="sub">NA SECA, OS POÇOS DELES SALVAM OUTROS ANIMAIS</span>' },
+  { from: 236.5, to: 251.8, y: 70, fs: 50, html: 'ELES <span class="g">PLANTAM FLORESTAS</span><span class="sub">SEM OS ELEFANTES-DA-FLORESTA, A MATA GUARDARIA 6–9% MENOS CARBONO (PNAS, 2023)</span>' },
+  { from: 252.6, to: 267.8, y: 70, fs: 52, html: 'O PREÇO DO <span class="r">MARFIM</span><span class="sub">2007–2014: OS ELEFANTES-DA-SAVANA CAÍRAM 30% · GRANDE CENSO DO ELEFANTE</span>' },
+  { from: 268.5, to: 281.8, y: 70, fs: 52, html: 'A CAÇA <span class="r">MUDOU A EVOLUÇÃO</span><span class="sub">MOÇAMBIQUE: FÊMEAS SEM PRESAS PASSARAM DE 18% PARA 51% (SCIENCE, 2021)</span>' },
+  { from: 282.5, to: 291.8, y: 70, fs: 50, html: 'QUANDO ELES ENTRAM NA LAVOURA<span class="sub r">ÍNDIA: ~600 PESSOAS E ~100 ELEFANTES MORREM POR ANO NESSES CONFLITOS</span>' },
+  { from: 292.5, to: 301.8, y: 70, fs: 52, html: 'UMA SOLUÇÃO SIMPLES: <span class="a">COLMEIAS</span><span class="sub">ELEFANTES EVITAM ABELHAS · CERCAS COM COLMEIAS PROTEGEM ROÇAS</span>' },
+  { from: 302.5, to: 317.8, y: 70, fs: 50, html: 'O MAIOR INIMIGO: <span class="r">FALTA DE ESPAÇO</span><span class="sub">ÍNDIA: DE ~30 MIL (2017) PARA 22.446 ELEFANTES SELVAGENS (2025)</span>' },
+  { from: 318.6, to: 333.8, y: 70, fs: 52, html: 'BALANÇAR SEM PARAR<span class="sub">COMPORTAMENTO REPETITIVO: UM SINAL CLÁSSICO DE ESTRESSE EM CATIVEIRO</span>' },
+  { from: 346.5, to: 357.8, y: 70, fs: 48, html: 'HAPPY · ZOO DO BRONX (EUA)<span class="sub">2022: A JUSTIÇA DECIDIU QUE ELA NÃO TINHA DIREITO A HABEAS CORPUS · VIVEU SOZINHA ATÉ MORRER, AOS 55 (2026)</span>' },
+  { from: 358.5, to: 375.8, y: 70, fs: 48, html: 'O OUTRO LADO DO PASSEIO<span class="sub">FILHOTES SEPARADOS DAS MÃES E "QUEBRADOS" PARA OBEDECER · ~15 MIL ASIÁTICOS VIVEM SOB CUIDADO HUMANO</span>' },
+  { from: 376.5, to: 389.8, y: 70, fs: 50, html: 'CRIAÇÃO EM CATIVEIRO<span class="sub">CONSERVAÇÃO, OU SÓ MAIS ELEFANTES PARA EXIBIR?</span>' },
+  { from: 390.5, to: 401.8, y: 70, fs: 50, html: '<span class="g">SANTUÁRIO DE ELEFANTES BRASIL</span><span class="sub">CHAPADA DOS GUIMARÃES (MT) · 1.100 HECTARES · ELEFANTAS VINDAS DE CIRCOS E ZOOS</span>' },
+  { from: 402.5, to: 411.8, y: 70, fs: 52, html: 'DÁ PARA <span class="g">VIRAR O JOGO</span>' },
+  { from: 412.5, to: 421.8, y: 70, fs: 56, html: 'O QUE <span class="a">VOCÊ</span> PODE FAZER' },
+  { from: 423.0, to: 430.0, y: 380, fs: 74, html: 'ELES SE LEMBRAM DE TUDO.<br><span class="a">DO QUE VÃO SE LEMBRAR DE NÓS?</span>' },
+  { from: 430.5, to: 436.0, y: 420, fs: 100, html: '<span class="btn">SE INSCREVE</span>' },
+];
+const TOTAL = EV.end;
+const FONT = "Montserrat,'DejaVu Sans',sans-serif";
+const W = 1920, H = 1080, CX = 960, CY = 540;
+
+/* ---------- câmera / pós (16:9) ---------- */
+function lay(p, content, filter = '') {
+  const z = CAM.z0 * (1 + (CAM.z / CAM.z0 - 1) * p), x = CAM.x0 + (CAM.x - CAM.x0) * p, y = CAM.y0 + (CAM.y - CAM.y0) * p;
+  return `<g transform="translate(${CX},${CY}) rotate(${f1(CAM.r)}) scale(${Math.round(z * 10000) / 10000}) translate(${f1(-x)},${f1(-y)})"${filter ? ` filter="url(#${filter})"` : ''}>${content}</g>`;
+}
+function post(o = {}) {
+  const { grade = null, gradeMode = 'soft-light', gradeO = .5, vig = 1, grain = .06, t = 0, bars = 1 } = o;
+  const gid = nid('gr');
+  def(`<filter id="${gid}" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="${Math.floor(t * 24) % 997}" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>`);
+  let s = '';
+  if (grade) s += `<rect width="${W}" height="${H}" fill="${grade}" opacity="${gradeO}" style="mix-blend-mode:${gradeMode}"/>`;
+  s += `<rect width="${W}" height="${H}" fill="url(#vig)" opacity="${vig}"/>`;
+  s += `<rect width="${W}" height="${H}" filter="url(#${gid})" opacity="${grain}" style="mix-blend-mode:overlay"/>`;
+  if (bars > 0) s += `<rect width="${W}" height="${f1(64 * bars)}" fill="#000"/><rect y="${f1(H - 64 * bars)}" width="${W}" height="${f1(64 * bars)}" fill="#000"/>`;
+  return s;
+}
+const zoomG = (z, content, cx = CX, cy = CY, r = 0) => `<g transform="translate(${CX},${CY}) rotate(${f1(r)}) scale(${Math.round(z * 10000) / 10000}) translate(${f1(-cx)},${f1(-cy)})">${content}</g>`;
+const txt = (x, y, s, size, fill = '#fff', anchor = 'middle', w = 900, extra = '') => `<text x="${f1(x)}" y="${f1(y)}" text-anchor="${anchor}" font-family="${FONT}" font-weight="${w}" font-size="${size}" fill="${fill}" ${extra}>${s}</text>`;
+const label = (x, y, s, col = '#FFC870', size = 30, k = 1) => k <= 0 ? '' : `<g opacity="${op(k)}"><line x1="${f1(x)}" y1="${f1(y)}" x2="${f1(x)}" y2="${f1(y - 70)}" stroke="${col}" stroke-width="3"/><circle cx="${f1(x)}" cy="${f1(y)}" r="7" fill="${col}"/>${txt(x, y - 84, s, size, '#fff', 'middle', 900, `style="paint-order:stroke" stroke="#000" stroke-opacity=".6" stroke-width="7"`)}</g>`;
+const badge = (x, y, s, col, k = 1) => k <= 0 ? '' : `<g transform="translate(${f1(x)},${f1(y)}) scale(${f1(backOut(k) * 100) / 100})"><rect x="${-s.length * 11 - 28}" y="-30" width="${s.length * 22 + 56}" height="54" rx="27" fill="${col}" opacity=".2" stroke="${col}" stroke-width="4"/>${txt(0, 9, s, 26, col)}</g>`;
+const chapter = (t, a, n, title) => { const k = Math.min(range(t, a, a + .5), 1 - range(t, a + 3.2, a + 3.8)); if (k <= 0) return ''; const e = easeOut(k); return `<g opacity="${op(k)}" transform="translate(${f1(-60 * (1 - e))},0)"><rect x="90" y="890" width="8" height="110" fill="#FFC870"/>${txt(120, 940, 'CAPÍTULO ' + n, 30, '#FFC870', 'start', 800, 'letter-spacing="6"')}${txt(120, 995, title, 54, '#fff', 'start', 900, 'style="paint-order:stroke" stroke="#000" stroke-opacity=".5" stroke-width="6"')}</g>`; };
+
+/* ---------------- O ELEFANTE ---------------- */
+const ECOL = { savana: ['#8E8780', '#6A645F'], floresta: ['#6E6964', '#524E4A'], asia: ['#857C76', '#655D58'] };
+function trunk(bx, by, o) {
+  const { N = 16, L = 16, base = 92, curl = 0, w0 = 58, w1 = 18, t = 0, sway = 1, col } = o;
+  let x = bx, y = by; const P = [[x, y]], A = [];
+  for (let i = 0; i < N; i++) { const u = (i + 1) / N; const a = (base + curl * u * u * 170 + sway * 6 * Math.sin(t * 1.5 + i * .35)) * Math.PI / 180; x += Math.cos(a) * L; y += Math.sin(a) * L; P.push([x, y]); A.push(a); }
+  A.unshift(A[0]);
+  const Lf = [], Rt = [];
+  P.forEach((p, i) => { const a = A[i], w = lerp(w0, w1, i / N) / 2, nx = -Math.sin(a), ny = Math.cos(a); Lf.push([p[0] + nx * w, p[1] + ny * w]); Rt.push([p[0] - nx * w, p[1] - ny * w]); });
+  const tp = P[P.length - 1];
+  let s = `<path d="M${Lf.concat(Rt.reverse()).map(q => f1(q[0]) + ' ' + f1(q[1])).join(' L')}Z" fill="${col}"/><circle cx="${f1(tp[0])}" cy="${f1(tp[1])}" r="${w1 / 2 + 1}" fill="${col}"/>`;
+  let rg = '';
+  for (let i = 2; i < N; i++) { const a = A[i], w = lerp(w0, w1, i / N) / 2 * .85, nx = -Math.sin(a), ny = Math.cos(a), p = P[i]; rg += `M${f1(p[0] + nx * w)} ${f1(p[1] + ny * w)} Q${f1(p[0] + Math.cos(a) * 4)} ${f1(p[1] + Math.sin(a) * 4)} ${f1(p[0] - nx * w)} ${f1(p[1] - ny * w)} `; }
+  s += `<path d="${rg}" stroke="#000" stroke-opacity=".2" stroke-width="2.5" fill="none"/>`;
+  return { s, tip: tp };
+}
+function elephant(o) {
+  const P = Object.assign({ x: 0, y: 0, sc: 1, flip: 1, type: 'savana', calf: false, walk: 0, ph: 0, trunk: {}, ear: 0, tusks: null, rig: null, t: 0, headDip: 0, mark: 0, eye: 1, musth: 0, dust: 0, shadow: .35 }, o);
+  const [C, CD] = ECOL[P.type];
+  const asia = P.type === 'asia';
+  const tusks = P.tusks ?? (!P.calf && !asia);
+  const s = P.walk, p = P.ph;
+  const sw = [18 * s * Math.sin(p), 18 * s * Math.sin(p + Math.PI), 18 * s * Math.sin(p + Math.PI), 18 * s * Math.sin(p)];
+  const bd = [Math.max(0, Math.sin(p)) * 28 * s, Math.max(0, Math.sin(p + Math.PI)) * 28 * s, Math.max(0, Math.sin(p + Math.PI)) * 28 * s, Math.max(0, Math.sin(p)) * 28 * s];
+  const wr = (w) => [32, 62, 92].map(yy => `<path d="M${f1(-w * .42)} ${yy} q${f1(w * .42)} 7 ${f1(w * .84)} 0" stroke="#000" stroke-opacity=".16" stroke-width="3" fill="none"/>`).join('');
+  const leg = (x, a, b, col, w) => `<g transform="translate(${x},-245) rotate(${f1(a)})"><rect x="${f1(-w / 2)}" y="-30" width="${w}" height="160" rx="${f1(w * .35)}" fill="${col}"/>${wr(w)}<g transform="translate(0,118) rotate(${f1(b)})"><rect x="${f1(-w * .43)}" y="-16" width="${f1(w * .86)}" height="128" rx="${f1(w * .3)}" fill="${col}"/>${wr(w * .86).replace(/ 32 /g, ' 40 ')}<ellipse cx="0" cy="104" rx="${f1(w * .54)}" ry="14" fill="${col}"/><path d="M${f1(-w * .34)} 110 q${f1(w * .1)} -9 ${f1(w * .2)} 0 M${f1(-w * .08)} 112 q${f1(w * .1)} -9 ${f1(w * .2)} 0 M${f1(w * .18)} 110 q${f1(w * .1)} -9 ${f1(w * .2)} 0" stroke="#E2D8C8" stroke-width="5" fill="none" opacity=".75"/></g></g>`;
+  const backMid = asia ? -392 : -338;
+  const body = `M -265 -215 C -275 -310 -210 -358 -120 -352 C -40 ${backMid} 40 ${backMid} 95 ${asia ? -362 : -356} C 165 -366 228 -345 242 -285 C 256 -225 236 -160 176 -140 C 60 -118 -60 -112 -195 -132 C -245 -140 -262 -170 -265 -215 Z`;
+  let g = '';
+  g += leg(-150, sw[3], bd[3], CD, 92) + leg(120, sw[1], bd[1], CD, 86);
+  g += `<path d="M-258 -238 Q-285 -170 -272 -100" stroke="${C}" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M-272 -100 l-8 30 l10 -6 l6 10 l4 -30Z" fill="#2A2420"/>`;
+  g += `<path d="${body}" fill="${C}"/>`;
+  g += `<path d="M-200 -300 Q-190 -240 -205 -180 M-120 -320 Q-110 -250 -122 -170 M-40 -330 Q-30 -250 -40 -150 M60 -340 Q70 -260 58 -150 M-230 -160 Q-100 -125 160 -150" stroke="#000" stroke-opacity=".1" stroke-width="5" fill="none"/>`;
+  g += `<path d="M-200 -340 Q-60 ${backMid - 6} 90 -350" stroke="#fff" stroke-opacity=".12" stroke-width="10" fill="none"/>`;
+  if (P.dust) g += `<path d="${body}" fill="#B07A50" opacity="${op(P.dust * .5)}"/>`;
+  g += leg(-175, sw[2], bd[2], C, 96) + leg(95, sw[0], bd[0], C, 90);
+  // cabeça
+  const hs = P.calf ? 1.22 : 1;
+  const head = asia ? `M 182 -338 C 190 -408 252 -418 266 -382 C 286 -418 348 -404 352 -330 C 362 -265 347 -215 320 -195 C 292 -180 257 -178 232 -190 C 197 -215 184 -290 182 -338 Z`
+    : `M 175 -350 C 215 -402 322 -398 347 -322 C 362 -262 347 -215 320 -195 C 292 -180 257 -178 232 -190 C 197 -215 178 -290 175 -350 Z`;
+  let h = `<path d="${head}" fill="${C}"/><path d="M200 -360 Q260 -${asia ? 405 : 395} 330 -350" stroke="#fff" stroke-opacity=".14" stroke-width="9" fill="none"/>`;
+  if (P.musth) h += `<path d="M282 -268 Q276 -235 270 -195" stroke="#2A1A10" stroke-width="${f1(8 * P.musth)}" fill="none" opacity="${op(P.musth)}" stroke-linecap="round"/>`;
+  h += `<path d="M302 -192 Q314 -184 326 -196" stroke="#3A2A22" stroke-width="5" fill="none"/>`;
+  if (tusks) h += `<path d="M314 -204 C 348 -172 390 -152 428 -178 C 392 -162 352 -180 326 -210 Z" fill="#EFE3C8" stroke="#BFAF90" stroke-width="3"/>`;
+  const tr = trunk(340, -252, Object.assign({ N: P.calf ? 13 : 16, L: P.calf ? 12 : 16, w0: P.calf ? 46 : 58, w1: P.calf ? 16 : 18, t: P.t, col: C }, P.trunk));
+  h += tr.s;
+  // orelha
+  const ef = 1 - .28 * P.ear;
+  const ear = asia ? `M 214 -340 C 160 -352 138 -300 146 -248 C 154 -204 186 -190 216 -214 Z` : `M 206 -354 C 118 -396 36 -350 50 -256 C 58 -192 94 -148 140 -138 C 160 -110 198 -126 216 -190 C 224 -252 222 -312 206 -354 Z`;
+  h += `<g transform="translate(212,0) scale(${f1(ef * 100) / 100},1) translate(-212,0)"><path d="${ear}" fill="${CD}"/><path d="${ear}" fill="none" stroke="${C}" stroke-width="8"/>`;
+  h += asia ? `<g fill="#C9A094" opacity=".7"><circle cx="160" cy="-300" r="6"/><circle cx="168" cy="-280" r="4"/><circle cx="156" cy="-262" r="5"/></g>` : `<path d="M150 -330 Q120 -280 130 -220 M180 -340 Q150 -260 170 -180 M110 -300 Q90 -250 100 -200" stroke="#000" stroke-opacity=".18" stroke-width="4" fill="none"/>`;
+  h += `</g>`;
+  if (asia) h += `<g fill="#C9A094" opacity=".6"><circle cx="330" cy="-265" r="6"/><circle cx="318" cy="-250" r="4"/><circle cx="340" cy="-245" r="5"/></g>`;
+  h += `<path d="M284 -306 Q300 -318 316 -304" stroke="#2A2018" stroke-width="4" fill="none"/><ellipse cx="300" cy="-298" rx="9" ry="${f1(6 * P.eye)}" fill="#1A120C"/><circle cx="303" cy="-300" r="2.2" fill="#fff" opacity="${P.eye > .3 ? .8 : 0}"/><path d="M280 -290 Q300 -280 318 -292 M286 -314 Q300 -324 314 -316" stroke="#000" stroke-opacity=".22" stroke-width="3" fill="none"/>`;
+  if (P.mark) h += `<g opacity="${op(P.mark)}" stroke="#fff" stroke-width="9" stroke-linecap="round"><line x1="240" y1="-372" x2="268" y2="-344"/><line x1="268" y1="-372" x2="240" y2="-344"/></g>`;
+  g += `<g transform="translate(205,-255) rotate(${f1(P.headDip)}) scale(${hs}) translate(-205,255)">${h}</g>`;
+  const out = `<g transform="translate(${f1(P.x)},${f1(P.y)}) scale(${f1(P.sc * P.flip * 1000) / 1000},${f1(P.sc * 1000) / 1000})"${P.rig ? ` filter="url(#${P.rig})"` : ''}>${g}</g>`;
+  const shd = P.shadow > 0 ? `<ellipse cx="${f1(P.x)}" cy="${f1(P.y + 4 * P.sc)}" rx="${f1(310 * P.sc)}" ry="${f1(34 * P.sc)}" fill="#000" opacity="${P.shadow}"/>` : '';
+  return shd + out;
+}
+const walkPh = (t, sp = 1, off = 0) => t * 3.2 * sp + off;
+
+/* ---------------- cenários ---------------- */
+const TREES = Array.from({ length: 22 }, () => ({ x: rnd() * 4200 - 1200, s: .5 + rnd() * .9, d: rnd() }));
+const TUFTS = Array.from({ length: 200 }, () => ({ x: rnd() * 4600 - 1400, y: 1030 + Math.pow(rnd(), 1.5) * 700, s: .5 + rnd() * .8 }));
+const TUFTS_B = Array.from({ length: 220 }, () => ({ x: rnd() * 4600 - 1400, y: 790 + Math.pow(rnd(), 1.3) * 200, s: .4 + rnd() * .7 }));
+const MOTES2 = Array.from({ length: 60 }, () => ({ x: rnd() * 2400 - 240, y: rnd() * 1200, r: 1.5 + rnd() * 4, p: rnd() * 6 }));
+function acacia(x, y, s, col) {
+  return `<g transform="translate(${f1(x)},${f1(y)}) scale(${f1(s * 100) / 100})"><path d="M0 0 C -6 -60 6 -120 -10 -170 M -10 -170 L -70 -212 M -10 -170 L 56 -218 M -10 -170 L -10 -224" stroke="${col}" stroke-width="13" fill="none" stroke-linecap="round"/><ellipse cx="-6" cy="-228" rx="150" ry="26" fill="${col}"/><ellipse cx="-60" cy="-244" rx="84" ry="18" fill="${col}"/><ellipse cx="50" cy="-242" rx="74" ry="16" fill="${col}"/></g>`;
+}
+const TOD = {
+  dawn: { sky: 'skyDawn', hill: '#4A3858', tree: '#2A1E30', ground: '#8A6A50', tint: '#FFB080', amb: '#E8C0B0', rim: '#FFC890' },
+  day: { sky: 'skyDay', hill: '#8FA6B8', tree: '#4A5A3A', ground: '#C9A465', tint: null, amb: '#FFF2DC', rim: '#FFF6E0' },
+  sunset: { sky: 'skySunset', hill: '#5A3050', tree: '#2A1426', ground: '#9A6040', tint: '#FF8040', amb: '#F0B898', rim: '#FFC070' },
+  night: { sky: 'skyNight', hill: '#141C3A', tree: '#070A18', ground: '#1A2038', tint: '#3050A0', amb: '#7080B8', rim: '#A8C0FF' },
+};
+function savanna(t, tod = 'day', o = {}) {
+  const T = TOD[tod], { sun = [1450, 700], dry = 0 } = o;
+  let bg = `<rect x="-2400" y="-1600" width="7000" height="4400" fill="url(#${T.sky})"/>`;
+  if (tod === 'night') bg += STARS.map(s => `<circle cx="${f1(s.x * 2)}" cy="${f1(s.y * .45)}" r="${s.r}" fill="#fff" opacity="${op(.4 + .5 * Math.sin(t * 2 + s.p))}"/>`).join('') + `<circle cx="1500" cy="200" r="46" fill="#EEF2FF"/><circle cx="1500" cy="200" r="160" fill="url(#glowW)" opacity=".2"/>`;
+  else bg += `<circle cx="${sun[0]}" cy="${sun[1]}" r="${tod === 'day' ? 300 : 460}" fill="url(#sunG)" opacity="${tod === 'day' ? .5 : 1}"/><circle cx="${sun[0]}" cy="${sun[1]}" r="${tod === 'day' ? 50 : 70}" fill="#FFFBEA"/>`;
+  const far = `<path d="M-2400 760 L-1500 660 L-1100 700 L-700 610 L-300 690 L200 640 L700 700 L1100 600 L1500 680 L2000 640 L2600 700 L3400 650 L4600 720 L4600 800 L-2400 800Z" fill="${T.hill}" opacity=".85"/>` + TREES.filter(r => r.d < .5).map(r => acacia(r.x, 770, r.s * .45, T.hill)).join('');
+  const mid = TREES.filter(r => r.d >= .5).map(r => acacia(r.x, 800 + r.d * 30, r.s * .8, T.tree)).join('');
+  let gr = `<rect x="-2400" y="770" width="7000" height="2400" fill="${dry ? 'url(#gDry)' : 'url(#gSav)'}"/>`;
+  if (T.tint) gr += `<rect x="-2400" y="770" width="7000" height="2400" fill="${T.tint}" opacity=".25" style="mix-blend-mode:multiply"/>`;
+  if (tod === 'night') gr += `<rect x="-2400" y="770" width="7000" height="2400" fill="#0A1030" opacity=".7"/>`;
+  const tuft = u => `<path d="M${f1(u.x)} ${f1(u.y)} l${f1(-8 * u.s)} ${f1(-26 * u.s)} M${f1(u.x)} ${f1(u.y)} l${f1(2 * u.s)} ${f1(-32 * u.s)} M${f1(u.x)} ${f1(u.y)} l${f1(10 * u.s)} ${f1(-24 * u.s)}" stroke="${tod === 'night' ? '#2A3050' : mix(T.ground, '#3A2A10', .4)}" stroke-width="${f1(2.5 * u.s)}" fill="none"/>`;
+  gr += TUFTS_B.map(tuft).join('');
+  const fg = TUFTS.map(u => `<path d="M${f1(u.x)} ${f1(u.y)} l${f1(-8 * u.s)} ${f1(-26 * u.s)} M${f1(u.x)} ${f1(u.y)} l${f1(2 * u.s)} ${f1(-32 * u.s)} M${f1(u.x)} ${f1(u.y)} l${f1(10 * u.s)} ${f1(-24 * u.s)}" stroke="${tod === 'night' ? '#2A3050' : mix(T.ground, '#3A2A10', .4)}" stroke-width="${f1(2.5 * u.s)}" fill="none"/>`).join('');
+  const fx = tod === 'night' ? '' : `<g style="mix-blend-mode:screen">` + MOTES2.map(m => `<circle cx="${f1((m.x + t * 18) % 2400 - 200)}" cy="${f1(500 + (m.y * .4 + 10 * Math.sin(t + m.p)))}" r="${m.r}" fill="#FFE7B0" opacity="${op((.2 + .25 * Math.sin(t * 2 + m.p)) * (tod === 'day' ? .5 : 1))}"/>`).join('') + `</g>`;
+  return { bg, far, mid, gr, fg, fx };
+}
+function eRig(tod, o = {}) {
+  const T = TOD[tod]; const k = o.k || [-1, -.35];
+  return rig({ amb: o.amb || T.amb, k, sh: o.sh || '#1A1020', shO: o.shO ?? .45, shD: o.shD ?? 90, rims: o.rims || [{ k, c: T.rim, w: 12, o: 1, glow: 1 }] });
+}
+function scene(L, extra = '', fgExtra = '') { return lay(.05, L.bg) + lay(.35, L.far) + lay(.7, L.mid) + lay(1, L.gr + extra) + lay(1.25, L.fg + fgExtra) + lay(1.1, L.fx); }
+// mapas estilizados
+const AFRICA = 'M330 40 L470 20 L560 60 L620 50 L690 110 L730 170 L800 230 L900 255 L965 300 L905 380 L845 470 L785 560 L765 650 L705 760 L645 860 L565 930 L485 950 L435 880 L400 760 L382 640 L362 540 L300 470 L200 445 L110 420 L58 340 L80 240 L160 150 L250 80Z';
+const ASIA = 'M60 120 L260 60 L520 40 L760 90 L900 200 L860 300 L760 330 L720 420 L640 400 L600 480 L560 560 L520 470 L470 420 L420 470 L380 560 L330 640 L290 560 L250 440 L200 380 L120 330 L60 240Z';
+
+/* ---------------- CENAS ---------------- */
+const HERD = [[0, 0, 1.0, 'm'], [-420, 30, .9, 'f'], [-260, 70, .4, 'c'], [-760, 20, .95, 'f'], [-620, 80, .38, 'c'], [-1080, 40, .85, 'f']];
+function hookScene(t) {
+  const L = savanna(t, 'dawn', { sun: [1500, 700] });
+  const R = eRig('dawn', { amb: '#5A4868', shO: .5, rims: [{ k: [1, -.2], c: '#FFC890', w: 14, o: 1, glow: 1 }, { k: [0, -1], c: '#FFD8A8', w: 8, o: .6 }] });
+  let herd = '';
+  if (t < EV.call) {
+    const k = range(t, 0, EV.call);
+    setCam(lerp(500, 900, k), lerp(640, 760, k), lerp(.75, 1.25, easeInOut(k)), lerp(-1, 1, k), [500, 640, .75]);
+    const adv = Math.min(t, EV.call - .6) * 70;
+    for (const [dx, dy, s, kind] of HERD) herd += elephant({ x: 600 + dx + adv, y: 900 + dy, sc: .55 * s, calf: kind === 'c', rig: R, walk: t < EV.call - .6 ? 1 : 0, ph: walkPh(t, 1, dx * .01), t, trunk: { base: 88, curl: -.08 } });
+  } else if (t < EV.answer) {
+    const k = range(t, EV.call, EV.answer);
+    setCam(lerp(1380, 1400, k), lerp(640, 620, k), lerp(2.4, 2.7, easeOut(k)), lerp(2, 0, k), [1380, 640, 2.4]);
+    const call = range(t, EV.call + .2, EV.call + 1.0);
+    herd += elephant({ x: 600 + (EV.call - .6) * 70, y: 900, sc: .55, rig: R, t, trunk: { base: lerp(88, 30, easeOut(call)), curl: lerp(-.08, -.25, call) }, ear: .6 * Math.sin(t * 6) * call, headDip: -8 * call });
+    for (let i = 0; i < 3; i++) { const r = range(t, EV.call + .5 + i * .45, EV.call + 2.6 + i * .45); if (r > 0 && r < 1) herd += `<ellipse cx="${1290}" cy="660" rx="${f1(60 + 900 * r)}" ry="${f1(30 + 420 * r)}" fill="none" stroke="#FFE2B0" stroke-width="${f1(8 * (1 - r))}" opacity="${op(.8 * (1 - r))}"/>`; }
+  } else {
+    const k = range(t, EV.answer, EV.title);
+    setCam(lerp(700, 640, k), lerp(700, 680, k), lerp(1.0, .9, k), 0, [700, 700, 1.0]);
+    const base = 600 + (EV.call - .6) * 70;
+    herd += elephant({ x: base, y: 900, sc: .55, rig: R, t, trunk: { base: 50, curl: -.2 } });
+    HERD.slice(1).forEach(([dx, dy, s, kind], i) => { const turn = range(t, EV.answer + i * .3, EV.answer + i * .3 + .8); herd += elephant({ x: base + dx + 240 * easeInOut(range(t, EV.answer + 1, EV.title)), y: 900 + dy, sc: .55 * s, calf: kind === 'c', rig: R, walk: range(t, EV.answer + 1, EV.answer + 1.3), ph: walkPh(t, 1.2, i), t, ear: .7 * turn * Math.max(0, Math.sin(t * 7)), headDip: -10 * turn, trunk: { base: lerp(88, 40, turn), curl: -.15 * turn } }); });
+    if (t > EV.title - 1) { const u = easeIn(range(t, EV.title - 1, EV.title)); CAM.y -= 200 * u; CAM.z *= 1 - .1 * u; }
+  }
+  if (t >= EV.title) { const k = range(t, EV.title, EV.sp); setCam(lerp(1000, 1100, k), lerp(560, 500, k), lerp(.8, .85, k), 0, [1000, 560, .8]); const base = 600 + (EV.call - .6) * 70 + 240; herd = ''; for (const [dx, dy, s, kind] of HERD) herd += elephant({ x: base + dx + (t - EV.title) * 70, y: 900 + dy, sc: .55 * s, calf: kind === 'c', rig: R, walk: 1, ph: walkPh(t, 1, dx * .01), t }); }
+  return scene(L, herd);
+}
+function speciesScene(t) {
+  if (t < EV.maps) {
+    const k = range(t, EV.sp, EV.maps);
+    let s = `<rect width="${W}" height="${H}" fill="#14100C"/><rect y="760" width="${W}" height="400" fill="#2A2018"/>`;
+    s += `<g style="mix-blend-mode:screen">${[420, 1000, 1560].map((x, i) => `<path d="M${x - 60} -20 L${x + 60} -20 L${x + 330} 900 L${x - 330} 900Z" fill="url(#beamG)" opacity="${op(.55 * range(t, EV.sp + i * .8, EV.sp + i * .8 + .6))}" filter="url(#bl16)"/><ellipse cx="${x}" cy="880" rx="330" ry="50" fill="url(#spotG)" opacity="${op(range(t, EV.sp + i * .8, EV.sp + i * .8 + .6))}"/>`).join('')}</g>`;
+    const R = rig({ amb: '#D8CCC0', k: [0, -1], sh: '#0A0806', shO: .55, shD: 100, rims: [{ k: [0, -1], c: '#FFF1D0', w: 12, o: 1, glow: 1 }, { k: [1, 0], c: '#FFD9A0', w: 8, o: .5 }] });
+    const sp = [['savana', 400, .78, 'ELEFANTE-DA-SAVANA', 'ÁFRICA · O MAIOR ANIMAL TERRESTRE'], ['floresta', 1000, .58, 'ELEFANTE-DA-FLORESTA', 'ÁFRICA · MENOR, PRESAS RETAS'], ['asia', 1560, .66, 'ELEFANTE-ASIÁTICO', 'ÁSIA · ORELHAS PEQUENAS, CABEÇA COM DUAS BOSSAS']];
+    sp.forEach(([ty, x, sc, a, b], i) => {
+      const on = range(t, EV.sp + i * .8, EV.sp + i * .8 + .6);
+      if (on <= 0) return;
+      s += `<g opacity="${op(on)}">${elephant({ x: x - 40, y: 880, sc, type: ty, rig: R, t: t + i, trunk: { base: 90, curl: -.1 }, ear: .15 * Math.sin(t * 2 + i), tusks: ty === 'floresta' ? true : null })}</g>`;
+      s += `<g opacity="${op(range(t, EV.sp + 3 + i * 1.6, EV.sp + 3.5 + i * 1.6))}">${txt(x, 980, a, 34, '#FFC870')}${txt(x, 1016, b, 20, '#fff', 'middle', 700, 'opacity=".8"')}</g>`;
+    });
+    return zoomG(lerp(1.12, 1.0, easeOut(k)), s, lerp(700, 1100, easeInOut(k)), 600);
+  }
+  const k = range(t, EV.maps, EV.fam);
+  let s = `<rect width="${W}" height="${H}" fill="#0E0C0A"/>`;
+  s += `<g transform="translate(220,120) scale(.82)"><path d="${AFRICA}" fill="#3A2E22" stroke="#FFC870" stroke-width="3"/>
+    <path d="M520 560 Q650 520 720 640 Q700 760 600 840 Q480 860 450 760 Q440 640 520 560Z M640 330 Q760 360 780 450 Q700 500 620 450Z M560 760 Q640 740 660 820 Q600 880 540 850Z" fill="#E0A040" opacity="${op(range(t, EV.maps + .6, EV.maps + 1.4) * .75)}"/>
+    <path d="M300 470 Q420 420 520 470 Q540 560 440 600 Q340 600 300 520Z" fill="#3E9E5E" opacity="${op(range(t, EV.maps + 1.6, EV.maps + 2.4) * .85)}"/></g>`;
+  s += `<g transform="translate(1040,200) scale(.8)"><path d="${ASIA}" fill="#3A2E22" stroke="#FFC870" stroke-width="3"/><path d="M380 430 Q460 420 470 500 Q420 560 360 540Z M520 470 Q620 420 660 520 Q600 580 540 560Z M300 600 Q340 580 350 630 Q320 650 300 630Z" fill="#C88070" opacity="${op(range(t, EV.maps + 2.6, EV.maps + 3.4) * .85)}"/></g>`;
+  s += badge(560, 820, 'SAVANA · EM PERIGO', '#FFB347', range(t, EV.maps + 4, EV.maps + 4.4)) + badge(560, 900, 'FLORESTA · CRITICAMENTE EM PERIGO', '#FF6A6A', range(t, EV.maps + 4.8, EV.maps + 5.2)) + badge(1420, 820, 'ASIÁTICO · EM PERIGO', '#FFB347', range(t, EV.maps + 5.6, EV.maps + 6));
+  s += `<g opacity="${op(range(t, EV.maps + 6.5, EV.maps + 7))}">${txt(560, 990, '~415 MIL NA ÁFRICA (ESTIMATIVA DE 2016)', 26, '#fff', 'middle', 800)}${txt(1420, 900, '~50 MIL ASIÁTICOS SELVAGENS', 26, '#fff', 'middle', 800)}${txt(1420, 940, 'FONTE: UICN', 20, '#fff', 'middle', 700, 'opacity=".6"')}</g>`;
+  return zoomG(lerp(1.06, 1.0, easeOut(k)), s, lerp(900, 1000, k), 540, lerp(-1, 1, k));
+}
+function familyScene(t) {
+  const L = savanna(t, 'day', { sun: [300, 260] });
+  const R = eRig('day', { k: [-1, -.6], rims: [{ k: [-1, -.6], c: '#FFF6E0', w: 10, o: .9, glow: 1 }] });
+  let s = '';
+  const pool = `<ellipse cx="900" cy="980" rx="700" ry="90" fill="url(#gWater)"/><ellipse cx="900" cy="980" rx="700" ry="90" fill="none" stroke="#E8D6A8" stroke-width="6" opacity=".6"/><ellipse cx="760" cy="965" rx="240" ry="16" fill="#fff" opacity=".3"/>`;
+  if (t < EV.calf) {
+    const k = range(t, EV.fam, EV.calf);
+    setCam(lerp(900, 950, k), lerp(500, 760, easeInOut(k)), lerp(.7, 1.15, easeInOut(k)), lerp(-2, 1, k), [900, 500, .7]);
+    const F = [[700, 900, .62, 'M'], [1150, 920, .55, 'F'], [380, 930, .52, 'F'], [930, 960, .26, 'C'], [1400, 940, .5, 'F'], [560, 965, .24, 'C']];
+    s += pool;
+    F.forEach(([x, y, sc, kind], i) => s += elephant({ x: x + 10 * Math.sin(t * .3 + i), y, sc, calf: kind === 'C', rig: R, t: t + i, trunk: { base: kind === 'C' ? 80 : 95, curl: -.15 + .1 * Math.sin(t + i) }, ear: .3 * Math.max(0, Math.sin(t * 2 + i)), headDip: 6 * Math.sin(t * .8 + i) }));
+    s += label(860, 560, 'MATRIARCA', '#FFC870', 46, range(t, EV.fam + 2, EV.fam + 2.4)) + label(1240, 620, 'IRMÃS · FILHAS', '#fff', 40, range(t, EV.fam + 3.4, EV.fam + 3.8)) + label(470, 640, 'TIAS', '#fff', 40, range(t, EV.fam + 4.2, EV.fam + 4.6)) + label(990, 820, 'FILHOTE', '#7FE6FF', 40, range(t, EV.fam + 5, EV.fam + 5.4));
+    return scene(L, s);
+  }
+  if (t < EV.male) {
+    const k = range(t, EV.calf, EV.male);
+    setCam(lerp(980, 1040, k), lerp(820, 800, k), lerp(2.0, 2.4, easeInOut(k)), lerp(1, -1, k), [980, 820, 2.0]);
+    s += pool;
+    s += elephant({ x: 860, y: 960, sc: .62, rig: R, t, trunk: { base: lerp(92, 60, pulse(t, EV.calf + 3, EV.calf + 7, .6)), curl: -.35 * pulse(t, EV.calf + 3, EV.calf + 7, .6) }, ear: .2 * Math.sin(t * 2) });
+    s += elephant({ x: 1010 + 30 * Math.sin(t * .6), y: 975, sc: .27, calf: true, rig: R, t: t * 1.5, walk: .5 * Math.abs(Math.sin(t * .6)), ph: walkPh(t, 1.5), trunk: { base: 80 + 20 * Math.sin(t * 2), curl: -.2 } });
+    s += elephant({ x: 1300, y: 950, sc: .55, flip: -1, rig: R, t: t + 2, trunk: { base: lerp(95, 40, pulse(t, EV.calf + 4, EV.calf + 8, .8)), curl: -.3 * pulse(t, EV.calf + 4, EV.calf + 8, .8) }, headDip: 8 * pulse(t, EV.calf + 4, EV.calf + 8, .8) });
+    return scene(L, s);
+  }
+  if (t < EV.musth) {
+    const k = range(t, EV.male, EV.musth);
+    setCam(lerp(1000, 1300, easeInOut(k)), lerp(760, 700, k), lerp(1.6, .85, easeInOut(k)), lerp(0, 2, k), [1000, 760, 1.6]);
+    s += pool;
+    s += elephant({ x: 700, y: 930, sc: .6, rig: R, t, trunk: { base: 92, curl: -.1 } }) + elephant({ x: 450, y: 950, sc: .5, rig: R, t: t + 3 });
+    const wk = range(t, EV.male + 1, EV.musth);
+    s += elephant({ x: 1050 + 900 * wk, y: 960 - 80 * wk, sc: .48 - .12 * wk, rig: R, t, walk: wk > 0 ? 1 : 0, ph: walkPh(t), trunk: { base: 90 } });
+    s += elephant({ x: 2300, y: 860, sc: .32, rig: R, t: t + 4, walk: .6, ph: walkPh(t, .8) }) + elephant({ x: 2520, y: 870, sc: .34, rig: R, t: t + 5, walk: .6, ph: walkPh(t, .8, 1) });
+    return scene(L, s);
+  }
+  const k = range(t, EV.musth, EV.mem);
+  const L2 = savanna(t, 'sunset', { sun: [1500, 720] });
+  setCam(lerp(1050, 1000, k), lerp(760, 720, k), lerp(2.6, 1.9, easeInOut(k)), lerp(-3, 2, k), [1050, 760, 2.6]);
+  const R2 = eRig('sunset', { amb: '#7A5050', shO: .55, rims: [{ k: [1, -.2], c: '#FFB060', w: 14, o: 1, glow: 1 }] });
+  s += elephant({ x: 900, y: 940, sc: .78, rig: R2, t, musth: 1, walk: .5, ph: walkPh(t, .6), trunk: { base: 75, curl: -.2 }, ear: .5 * Math.max(0, Math.sin(t * 3)), headDip: -6 });
+  s += `<g style="mix-blend-mode:screen" opacity=".5">${Array.from({ length: 18 }, (_, i) => `<circle cx="${f1(700 + i * 40 + 30 * Math.sin(t + i))}" cy="${f1(960 - 30 * ((t * .8 + i * .2) % 1.5))}" r="${f1(30 + 20 * ((t + i * .3) % 1))}" fill="#E0A070" opacity=".25" filter="url(#bl8)"/>`).join('')}</g>`;
+  return scene(L2, s);
+}
+function memoryScene(t) {
+  if (t < EV.drought) {
+    const k = range(t, EV.mem, EV.drought);
+    const L = savanna(t, 'sunset', { sun: [300, 700] });
+    setCam(lerp(1150, 1170, k), lerp(680, 660, k), lerp(3.4, 4.6, easeInOut(k)), lerp(1, -1, k), [1150, 680, 3.4]);
+    const R = eRig('sunset', { amb: '#C8A090', k: [-1, -.2], rims: [{ k: [-1, -.2], c: '#FFC080', w: 10, o: 1, glow: 1 }] });
+    return scene(L, elephant({ x: 900, y: 940, sc: .78, rig: R, t, eye: Math.sin(t * .9) > .97 ? .1 : 1, trunk: { base: 95, curl: -.05 }, ear: .1 * Math.sin(t) }));
+  }
+  if (t < EV.lion) {
+    const k = range(t, EV.drought, EV.lion);
+    let s = `<rect width="${W}" height="${H}" fill="#2A1C12"/>`;
+    s += `<g transform="translate(${f1(-40 * k)},${f1(-20 * k)})"><rect x="0" y="0" width="2000" height="1100" fill="#B88A58"/>`;
+    for (let i = 0; i < 40; i++) { const st = STARS[i]; s += `<path d="M${f1(st.x)} ${f1(st.y * .6)} l${f1(18 + st.r * 6)} ${f1(10 + st.r * 3)} l-${f1(10 + st.r * 3)} ${f1(14 + st.r * 3)}" stroke="#8A6034" stroke-width="2" fill="none" opacity=".6"/>`; }
+    s += `<path d="M200 600 C 500 520 700 700 1000 600 S 1500 500 1800 620" stroke="#7A5A34" stroke-width="40" fill="none" stroke-linecap="round" opacity=".7"/><path d="M200 600 C 500 520 700 700 1000 600 S 1500 500 1800 620" stroke="#5A3E20" stroke-width="10" fill="none" stroke-dasharray="20 18"/>`;
+    s += `<rect x="560" y="300" width="760" height="560" rx="40" fill="none" stroke="#FFF1D0" stroke-width="5" stroke-dasharray="26 16" opacity=".7"/>${txt(940, 285, 'PARQUE NACIONAL DE TARANGIRE', 28, '#FFF1D0', 'middle', 800, 'opacity=".9"')}`;
+    const go = easeInOut(range(t, EV.drought + 9, EV.drought + 19));
+    const ghost = range(t, EV.drought + 5.5, EV.drought + 7);
+    s += `<g opacity="${op(ghost * (1 - range(t, EV.drought + 20, EV.drought + 22)) * .8)}"><path d="M900 560 C 700 400 400 300 160 200" stroke="#7FE6FF" stroke-width="6" fill="none" stroke-dasharray="12 12"/><path d="M1000 640 C 1200 800 1500 900 1780 960" stroke="#7FE6FF" stroke-width="6" fill="none" stroke-dasharray="12 12"/>${txt(330, 220, 'ROTA DA SECA DE 1958–61', 26, '#7FE6FF', 'middle', 800)}</g>`;
+    const dot = (x, y, col, lab, age) => `<g transform="translate(${f1(x)},${f1(y)})"><circle r="26" fill="${col}"/><circle r="46" fill="${col}" opacity=".25"/>${txt(0, -60, lab, 24, '#fff', 'middle', 900, 'style="paint-order:stroke" stroke="#000" stroke-width="6"')}${txt(0, 8, age, 22, '#14100C')}</g>`;
+    const p1 = [lerp(900, 230, go), lerp(560, 230, go)], p2 = [lerp(1000, 1700, go), lerp(640, 940, go)];
+    s += dot(p1[0], p1[1], '#FFC870', 'MATRIARCA DE 45 ANOS', '45') + dot(p2[0], p2[1], '#FFC870', 'MATRIARCA DE 38 ANOS', '38') + dot(940, 720, '#FF6A6A', 'MATRIARCA DE ~33 ANOS', '33');
+    if (t > EV.drought + 2) s += `<g opacity="${op(range(t, EV.drought + 2, EV.drought + 2.5))}">${txt(1700, 120, '1993', 90, '#fff', 'end', 900, 'opacity=".9"')}</g>`;
+    s += `</g>`;
+    s += `<g opacity="${op(range(t, EV.drought + 20, EV.drought + 21))}"><rect x="460" y="840" width="1000" height="130" rx="20" fill="#000" opacity=".6"/>${txt(960, 895, 'QUEM SAIU, SEGUINDO A MEMÓRIA DAS MAIS VELHAS,', 34, '#FFC870')}${txt(960, 945, 'PERDEU MUITO MENOS FILHOTES', 40, '#fff')}</g>`;
+    s += txt(960, 1030, 'FOLEY ET AL., 2008 · HIPÓTESE BASEADA EM 3 MANADAS', 20, '#fff', 'middle', 700, 'opacity=".55"');
+    return zoomG(lerp(1.08, 1.0, easeOut(k)), s, 960, 560, lerp(-1, 1, k));
+  }
+  const k = range(t, EV.lion, EV.com);
+  const L = savanna(t, 'dusk' in TOD ? 'dusk' : 'sunset', { sun: [1600, 760] });
+  setCam(lerp(800, 900, k), lerp(760, 700, k), lerp(1.4, 1.1, easeInOut(k)), lerp(2, -1, k), [800, 760, 1.4]);
+  const R = eRig('sunset', { amb: '#A08090', rims: [{ k: [1, -.2], c: '#FFB060', w: 12, o: 1, glow: 1 }] });
+  const alarm = range(t, EV.lion + 3, EV.lion + 4.5);
+  let s = '';
+  [[700, 930, .58], [520, 940, .5], [880, 950, .48], [640, 970, .24, 1], [780, 975, .22, 1]].forEach(([x, y, sc, c], i) => { const gx = lerp(x, 700 + (x - 700) * .4, alarm); s += elephant({ x: gx, y: y + (c ? 10 * alarm : 0), sc, calf: !!c, rig: R, t: t + i, ear: alarm * .8 * Math.abs(Math.sin(t * 5 + i)), headDip: -10 * alarm, trunk: { base: lerp(95, 40, alarm), curl: -.25 * alarm } }); });
+  const roar = range(t, EV.lion + 1, EV.lion + 3.5);
+  if (roar > 0 && roar < 1) for (let i = 0; i < 3; i++) { const r = clamp(roar * 1.3 - i * .15); s += `<path d="M1700 ${880 - 200 * r} Q${1700 - 500 * r} 880 1700 ${880 + 200 * r}" stroke="#FF6A6A" stroke-width="${f1(8 * (1 - r))}" fill="none" opacity="${op(1 - r)}"/>`; }
+  s += `<g transform="translate(1720,900)"><path d="M0 0 Q20 -50 70 -55 Q110 -90 150 -60 Q170 -30 150 0Z" fill="#1A0E08"/><circle cx="135" cy="-75" r="40" fill="#1A0E08"/></g>`;
+  return scene(L, s);
+}
+function commScene(t) {
+  if (t < EV.ground) {
+    const k = range(t, EV.com, EV.ground);
+    const L = savanna(t, 'sunset', { sun: [1500, 760] });
+    setCam(lerp(900, 1100, k), lerp(700, 660, k), lerp(1.3, .8, easeInOut(k)), lerp(-1, 1, k), [900, 700, 1.3]);
+    const R = eRig('sunset', { amb: '#B08888' });
+    let s = elephant({ x: 760, y: 930, sc: .6, rig: R, t, trunk: { base: 92, curl: -.05 }, headDip: 3 * Math.sin(t * 4) });
+    for (let i = 0; i < 5; i++) { const r = ((t - EV.com) * .35 + i * .2) % 1; s += `<ellipse cx="900" cy="760" rx="${f1(80 + 2400 * r)}" ry="${f1(40 + 700 * r)}" fill="none" stroke="#FFE2B0" stroke-width="${f1(10 * (1 - r))}" opacity="${op(.7 * (1 - r))}"/>`; }
+    s += `<g opacity="${op(range(t, EV.com + 4, EV.com + 5))}"><g transform="translate(1500,560)"><path d="M0 -40 C 40 -40 50 0 30 20 C 20 30 20 50 0 50 C -30 50 -40 20 -40 0 C -40 -30 -25 -40 0 -40Z" fill="#F4C39C"/><line x1="-60" y1="60" x2="60" y2="-60" stroke="#FF6A6A" stroke-width="10"/></g>${txt(1500, 660, 'ABAIXO DA AUDIÇÃO HUMANA', 28, '#fff')}</g>`;
+    return scene(L, s);
+  }
+  if (t < EV.names) {
+    const k = range(t, EV.ground, EV.names);
+    let s = `<rect width="${W}" height="${H}" fill="#120E1A"/><rect y="0" width="${W}" height="520" fill="url(#skySunset)" opacity=".6"/>`;
+    s += `<rect y="520" width="${W}" height="600" fill="#3A2818"/>` + Array.from({ length: 8 }, (_, i) => `<path d="M0 ${560 + i * 60} Q960 ${540 + i * 60 + 20 * Math.sin(t + i)} 1920 ${560 + i * 60}" stroke="#5A3E26" stroke-width="3" fill="none"/>`).join('');
+    const R = rig({ amb: '#B09080', k: [1, -.3], sh: '#100808', shO: .5, shD: 70, rims: [{ k: [1, -.3], c: '#FFC080', w: 10, o: 1, glow: 1 }] });
+    s += elephant({ x: 380, y: 530, sc: .45, rig: R, t, trunk: { base: 92 } }) + elephant({ x: 1560, y: 530, sc: .45, flip: -1, rig: R, t: t + 2, trunk: { base: 90 }, ear: .2 * Math.sin(t * 3) });
+    for (let i = 0; i < 6; i++) { const r = ((t - EV.ground) * .5 + i / 6) % 1; const x = lerp(420, 1500, r); s += `<g style="mix-blend-mode:screen"><circle cx="${f1(x)}" cy="${f1(600 + 80 * Math.sin(r * Math.PI))}" r="${f1(30 + 20 * Math.sin(r * Math.PI))}" fill="url(#glowO)" opacity=".8"/></g>`; }
+    s += `<path d="M420 560 Q960 ${f1(760 + 20 * Math.sin(t * 6))} 1500 560" stroke="#FFB347" stroke-width="5" fill="none" stroke-dasharray="14 12" opacity=".7"/>`;
+    s += `<g style="mix-blend-mode:screen"><ellipse cx="1500" cy="540" rx="${f1(60 + 20 * Math.sin(t * 8))}" ry="16" fill="url(#glowO)"/></g>`;
+    return zoomG(lerp(1.0, 1.12, easeInOut(k)), s, lerp(800, 1200, k), 560, lerp(0, 1.5, k));
+  }
+  const k = range(t, EV.names, EV.mind);
+  const L = savanna(t, 'day', { sun: [300, 300] });
+  const R = eRig('day', { k: [-1, -.5] });
+  setCam(lerp(900, 1050, k), lerp(720, 700, k), lerp(1.1, 1.35, easeInOut(k)), lerp(-1, 1, k), [900, 720, 1.1]);
+  const names = [[500, 'NAILA'], [880, 'TOTO'], [1300, 'AMANI']];
+  const who = Math.floor((t - EV.names) / 4.5) % 3;
+  let s = '';
+  names.forEach(([x, n], i) => { const called = i === who && ((t - EV.names) % 4.5) > 1.6; s += elephant({ x, y: 930 + (i === 1 ? 20 : 0), sc: i === 1 ? .32 : .52, calf: i === 1, rig: R, t: t + i, headDip: called ? -10 : 2, ear: called ? .6 * Math.abs(Math.sin(t * 6)) : 0, trunk: { base: called ? 45 : 92, curl: called ? -.2 : -.08 } }); s += label(x + (i === 1 ? 40 : 60), i === 1 ? 760 : 640, n, called ? '#FFC870' : '#fff', 28, range(t, EV.names + 1 + i * .3, EV.names + 1.4 + i * .3)); });
+  const ph = (t - EV.names) % 4.5;
+  if (ph < 1.6) { s += `<g transform="translate(1700,820)"><rect x="-60" y="-80" width="120" height="160" rx="16" fill="#1C2230"/><circle cy="-20" r="36" fill="#3A4256"/><circle cy="-20" r="14" fill="#9AA1AE"/><circle cy="50" r="14" fill="#3A4256"/></g>`; for (let i = 0; i < 3; i++) { const r = clamp(ph / 1.6 - i * .2); s += `<path d="M1630 ${800 - 60 * r} Q${1630 - 120 * r} 800 1630 ${800 + 60 * r}" stroke="#FFC870" stroke-width="5" fill="none" opacity="${op(1 - r)}"/>`; } s += txt(1700, 700, `"${names[who][1]}…"`, 34, '#FFC870'); }
+  return scene(L, s);
+}
+function mindScene(t) {
+  if (t < EV.bones) {
+    const k = range(t, EV.mind, EV.bones);
+    let s = `<rect width="${W}" height="${H}" fill="#2A2420"/><rect y="760" width="${W}" height="400" fill="#4A3A2A"/>`;
+    s += `<g transform="translate(1380,0)"><rect x="-10" y="180" width="440" height="620" rx="10" fill="url(#chrome)"/><rect x="10" y="200" width="400" height="580" fill="#3A4256"/></g>`;
+    const R = rig({ amb: '#D8CCC0', k: [1, -.4], sh: '#100A08', shO: .5, shD: 80, rims: [{ k: [1, -.4], c: '#E6F2FF', w: 12, o: 1, glow: 1 }] });
+    const touch = pulse(t, EV.mind + 6, EV.mind + 10, .8);
+    const el = (x, fl) => elephant({ x, y: 780, sc: .7, type: 'asia', flip: fl, rig: R, t, mark: range(t, EV.mind + 2, EV.mind + 2.6), trunk: { base: lerp(95, -100, touch), curl: lerp(-.05, -.15, touch) }, headDip: -8 * touch });
+    s += el(1030, 1);
+    def(`<clipPath id="mirC"><rect x="1390" y="200" width="400" height="580"/></clipPath>`);
+    s += `<g clip-path="url(#mirC)" opacity=".75"><g transform="translate(2780,0) scale(-1,1)">${el(1030, 1).replace(/filter="url\(#[^)]+\)"/, '')}</g></g><path d="M1420 230 L1520 230 L1420 400Z" fill="#fff" opacity=".12"/>`;
+    s += `<g opacity="${op(range(t, EV.mind + 2.4, EV.mind + 3))}">${txt(740, 330, 'MARCA FEITA NA CABEÇA', 28, '#fff', 'middle', 800, 'opacity=".9"')}<path d="M760 345 Q800 380 880 470" stroke="#fff" stroke-width="3" fill="none" stroke-dasharray="8 8"/></g>`;
+    return zoomG(lerp(1.0, 1.25, easeInOut(k)), s, lerp(1000, 1200, k), lerp(600, 520, k), lerp(-1, 1, k));
+  }
+  if (t < EV.burial) {
+    const k = range(t, EV.bones, EV.burial);
+    const L = savanna(t, 'sunset', { sun: [1600, 760] });
+    setCam(lerp(700, 980, k), lerp(820, 780, k), lerp(1.8, 1.4, easeInOut(k)), lerp(1, -1, k), [700, 820, 1.8]);
+    const R = eRig('sunset', { amb: '#906870', rims: [{ k: [1, -.2], c: '#FFB060', w: 12, o: 1, glow: 1 }] });
+    let s = `<g transform="translate(900,980)"><ellipse rx="200" ry="26" fill="#000" opacity=".25"/><path d="M-160 -10 Q-80 -60 0 -40 Q90 -60 170 -10" stroke="#E8DCC8" stroke-width="16" fill="none"/>${[-120, -80, -40, 0, 40, 80, 120].map(x => `<path d="M${x} -40 Q${x + 10} -10 ${x - 4} 10" stroke="#E8DCC8" stroke-width="9" fill="none"/>`).join('')}<path d="M180 -30 C 200 -80 280 -80 290 -30 C 295 0 250 10 210 0Z" fill="#EFE6D6"/><circle cx="250" cy="-40" r="10" fill="#4A3A2A"/></g>`;
+    s += elephant({ x: 760, y: 950, sc: .6, rig: R, t, trunk: { base: lerp(92, 60, pulse(t, EV.bones + 2, EV.bones + 9, 1)), curl: .25 * pulse(t, EV.bones + 2, EV.bones + 9, 1) }, headDip: 14 * pulse(t, EV.bones + 2, EV.bones + 9, 1) });
+    s += elephant({ x: 1320, y: 960, sc: .56, flip: -1, rig: R, t: t + 3, trunk: { base: 70, curl: .2 }, headDip: 12 }) + elephant({ x: 1120, y: 1000, sc: .25, calf: true, flip: -1, rig: R, t: t + 1 });
+    return scene(L, s);
+  }
+  const k = range(t, EV.burial, EV.eng);
+  const L = savanna(t, 'night', {});
+  setCam(lerp(900, 1000, k), lerp(800, 760, k), lerp(1.2, 1.5, easeInOut(k)), lerp(-1, 1, k), [900, 800, 1.2]);
+  const R = eRig('night', { amb: '#5A6898', rims: [{ k: [1, -.6], c: '#A8C0FF', w: 12, o: 1, glow: 1 }] });
+  let s = `<g>${Array.from({ length: 9 }, (_, i) => `<ellipse cx="${200 + i * 200}" cy="${880 + (i % 2) * 20}" rx="90" ry="30" fill="#0E2418"/>`).join('')}</g><path d="M600 1000 Q960 960 1320 1000 L1300 1030 Q960 990 620 1030Z" fill="#0A0806"/>`;
+  [[720, 990, .58], [1180, 995, .55, -1], [950, 1010, .5]].forEach(([x, y, sc, fl], i) => s += elephant({ x, y, sc, flip: fl || 1, type: 'asia', rig: R, t: t + i, headDip: 12, trunk: { base: 85, curl: .15 } }));
+  return scene(L, s);
+}
+function engScene(t) {
+  if (t < EV.forest) {
+    const k = range(t, EV.eng, EV.forest);
+    const L = savanna(t, 'day', { sun: [1600, 260], dry: 1 });
+    setCam(lerp(1100, 900, k), lerp(820, 760, k), lerp(1.6, 1.0, easeInOut(k)), lerp(1, -1, k), [1100, 820, 1.6]);
+    const R = eRig('day', { k: [1, -.6], rims: [{ k: [1, -.6], c: '#FFF6E0', w: 10, o: .9, glow: 1 }] });
+    const dig = range(t, EV.eng, EV.eng + 6);
+    let s = `<path d="M-400 980 Q900 940 2400 990" stroke="#8A6040" stroke-width="80" fill="none" opacity=".5"/>`;
+    s += `<ellipse cx="1180" cy="985" rx="${f1(40 + 90 * dig)}" ry="${f1(10 + 22 * dig)}" fill="#4A3020"/><ellipse cx="1180" cy="988" rx="${f1(20 + 70 * dig)}" ry="${f1(5 + 14 * dig)}" fill="url(#gWater)" opacity="${op(range(t, EV.eng + 3, EV.eng + 6))}"/>`;
+    s += elephant({ x: 960, y: 960, sc: .6, rig: R, t: t * 2, trunk: { base: lerp(88, 70, Math.abs(Math.sin(t * 2))), curl: .1 }, headDip: 10 + 6 * Math.sin(t * 2) });
+    const come = range(t, EV.eng + 7, EV.forest);
+    s += `<g transform="translate(${f1(lerp(1900, 1420, come))},970)"><ellipse cx="0" cy="-90" rx="70" ry="40" fill="#F2EEE8"/>${[-40, 40].map(x => `<rect x="${x - 8}" y="-70" width="16" height="70" fill="#F2EEE8"/>`).join('')}<path d="M50 -110 Q90 -160 110 -120 L80 -90Z" fill="#F2EEE8"/>${[-60, -30, 0, 30].map(x => `<path d="M${x} -125 L${x + 10} -55" stroke="#1A1A1A" stroke-width="10"/>`).join('')}</g>`;
+    s += `<g opacity="${op(come)}">${[[1300, 900], [1340, 880], [1380, 905]].map(([x, y], i) => `<path d="M${f1(x + 10 * Math.sin(t * 5 + i))} ${y} q10 -12 20 0 q10 -12 20 0" stroke="#1A1A1A" stroke-width="5" fill="none"/>`).join('')}</g>`;
+    return scene(L, s);
+  }
+  const k = range(t, EV.forest, EV.poach);
+  let s = `<rect width="${W}" height="${H}" fill="url(#gForest)"/>`;
+  for (let l = 0; l < 3; l++) for (let i = 0; i < 9; i++) { const x = (i * 260 + l * 90 - 200 * k * (l + 1)) % 2400 - 200; s += `<rect x="${f1(x)}" y="0" width="${50 - l * 12}" height="1080" fill="${['#0A1A10', '#122A1A', '#1A3A22'][l]}"/>`; s += `<ellipse cx="${f1(x + 20)}" cy="${120 + l * 60}" rx="${220 - l * 40}" ry="${120 - l * 20}" fill="${['#0E2A16', '#16381E', '#1E4A28'][l]}"/>`; }
+  s += `<g style="mix-blend-mode:screen">${[400, 900, 1400].map((x, i) => `<path d="M${x} -20 L${x + 120} -20 L${x + 360} 1100 L${x + 160} 1100Z" fill="#E6FFD0" opacity="${op(.08 + .04 * Math.sin(t + i))}" filter="url(#bl30)"/>`).join('')}</g>`;
+  s += `<rect y="900" width="${W}" height="200" fill="#0A1408"/>`;
+  const R = rig({ amb: '#90A890', k: [1, -.6], sh: '#020602', shO: .55, shD: 80, rims: [{ k: [1, -.6], c: '#E6FFD0', w: 10, o: .9, glow: 1 }] });
+  s += elephant({ x: 760, y: 940, sc: .5, type: 'floresta', tusks: true, rig: R, t, walk: .6, ph: walkPh(t, .7), trunk: { base: 80 + 10 * Math.sin(t * 2), curl: -.1 } });
+  const grow = range(t, EV.forest + 3, EV.poach - 1);
+  [[1120, .2], [1280, .4], [1440, .6], [1600, .8]].forEach(([x, d]) => { const g = clamp((grow - d * .5) * 2); if (g <= 0) return; s += `<circle cx="${x}" cy="935" r="8" fill="#7A5A30"/><g transform="translate(${x},940) scale(${f1(g * 100) / 100})"><rect x="-10" y="-420" width="20" height="420" fill="#3A2A18"/><ellipse cx="0" cy="-440" rx="120" ry="80" fill="#2E6A3A"/><ellipse cx="-50" cy="-400" rx="70" ry="50" fill="#3E7E4A"/></g>`; });
+  s += `<g opacity="${op(range(t, EV.forest + 2, EV.forest + 3))}">${txt(1360, 990, 'SEMENTES ESPALHADAS NAS FEZES → ÁRVORES GRANDES', 26, '#7DFFA8', 'middle', 800)}</g>`;
+  return zoomG(lerp(1.15, 1.0, easeOut(k)), s, lerp(800, 1150, easeInOut(k)), 560, lerp(-1, 1, k));
+}
+function threatScene(t) {
+  if (t < EV.tusk) {
+    const k = range(t, EV.poach, EV.tusk);
+    if (t < EV.poach + 8) {
+      const L = savanna(t, 'night', {});
+      setCam(lerp(800, 1100, k * 2), lerp(780, 760, k), lerp(1.2, 1.0, k), 3 * noise1(t * 2), [800, 780, 1.2]);
+      const R = eRig('night', { amb: '#5A6898' });
+      let s = '';
+      const run = range(t, EV.poach + 2.5, EV.poach + 8);
+      [[600, 930, .55], [380, 950, .48], [480, 970, .24, 1]].forEach(([x, y, sc, c], i) => s += elephant({ x: x + 900 * run, y, sc, calf: !!c, rig: R, t, walk: run > 0 ? 1.4 : 0, ph: walkPh(t, 2, i), ear: run > 0 ? .7 : 0, trunk: { base: 70, curl: -.2 } }));
+      const fl = range(t, EV.poach + 1, EV.poach + 2.5);
+      s += `<g style="mix-blend-mode:screen" opacity="${op(fl)}">${[[-300, 900], [-200, 1000]].map(([x, y], i) => `<path d="M${x} ${y} L${f1(700 + 300 * Math.sin(t * .8 + i))} ${f1(800 + 60 * Math.sin(t + i))} L${f1(760 + 300 * Math.sin(t * .8 + i))} ${f1(960 + 60 * Math.sin(t + i))}Z" fill="url(#torchBeam)" filter="url(#bl8)"/>`).join('')}</g>`;
+      if (t > EV.poach + 2.4 && t < EV.poach + 2.6) s += `<rect x="-2000" y="-1000" width="6000" height="4000" fill="#fff" opacity=".3"/>`;
+      return scene(L, s);
+    }
+    let s = `<rect width="${W}" height="${H}" fill="#140C08"/><g style="mix-blend-mode:screen"><ellipse cx="960" cy="600" rx="700" ry="360" fill="url(#spotG)"/></g>`;
+    const pile = Array.from({ length: 26 }, (_, i) => [600 + (i % 9) * 85 + (i % 2) * 20, 760 - Math.floor(i / 9) * 45, i]);
+    s += pile.map(([x, y, i]) => `<path d="M${x} ${y} C ${x + 60} ${y - 30} ${x + 140} ${y - 20} ${x + 190} ${y - 70} C ${x + 150} ${y - 10} ${x + 70} ${y + 10} ${x} ${y + 18}Z" fill="#EFE3C8" stroke="#A89878" stroke-width="3" transform="rotate(${(i * 37) % 20 - 10} ${x} ${y})"/>`).join('');
+    s += `<g opacity="${op(range(t, EV.poach + 9, EV.poach + 10))}"><rect x="1300" y="400" width="420" height="300" rx="20" fill="#000" opacity=".6"/>${txt(1510, 470, 'GRANDE CENSO 2016', 26, '#FFC870')}${txt(1510, 560, '−30%', 90, '#FF6A6A')}${txt(1510, 620, 'ELEFANTES-DA-SAVANA', 24, '#fff', 'middle', 800)}${txt(1510, 660, '2007 → 2014', 24, '#fff', 'middle', 800, 'opacity=".7"')}</g>`;
+    return zoomG(lerp(1.15, 1.0, easeOut(range(t, EV.poach + 8, EV.tusk))), s, 1000, 600, lerp(-2, 1, k));
+  }
+  if (t < EV.conflict) {
+    const k = range(t, EV.tusk, EV.conflict);
+    const L = savanna(t, 'day', { sun: [300, 300] });
+    setCam(lerp(700, 900, k), lerp(760, 740, k), lerp(1.4, 1.2, k), lerp(1, -1, k), [700, 760, 1.4]);
+    const R = eRig('day', { k: [-1, -.5] });
+    let s = elephant({ x: 560, y: 940, sc: .55, rig: R, t, tusks: false, walk: .4, ph: walkPh(t, .6), trunk: { base: 92 } });
+    const bars = range(t, EV.tusk + 2, EV.tusk + 5);
+    s += `<g transform="translate(850,960)"><rect x="0" y="${f1(-500 * .18 * bars)}" width="140" height="${f1(500 * .18 * bars)}" fill="#C9A465"/><rect x="300" y="${f1(-500 * .51 * bars)}" width="140" height="${f1(500 * .51 * bars)}" fill="#FF6A6A"/>${txt(70, f1(-500 * .18 * bars - 20), '18%', 40, '#fff')}${txt(370, f1(-500 * .51 * bars - 20), '51%', 40, '#fff')}${txt(70, 50, 'ANTES DA GUERRA', 22, '#fff', 'middle', 800)}${txt(370, 50, 'DEPOIS DA GUERRA', 22, '#fff', 'middle', 800)}${txt(220, -330, 'FÊMEAS SEM PRESAS · GORONGOSA', 26, '#FFC870')}</g>`;
+    return scene(L, s);
+  }
+  if (t < EV.habitat) {
+    const k = range(t, EV.conflict, EV.habitat), bees = t >= EV.bees;
+    const L = savanna(t, 'night', {});
+    setCam(lerp(900, 1000, k), lerp(780, 760, k), lerp(1.3, 1.1, k), lerp(-1, 1, k), [900, 780, 1.3]);
+    const R = eRig('night', { amb: '#6A78A8', rims: [{ k: [1, -.3], c: '#FFB060', w: 12, o: 1, glow: 1 }] });
+    let s = Array.from({ length: 10 }, (_, i) => `<path d="M${200 + i * 120} 1060 L${700 + i * 60} 860" stroke="#2E4A20" stroke-width="18"/>`).join('');
+    s += `<g transform="translate(1500,860)"><rect x="-100" y="-90" width="200" height="90" fill="#3A2A20"/><path d="M-130 -90 L0 -170 L130 -90Z" fill="#5A3A20"/><rect x="-30" y="-60" width="50" height="40" fill="#FFC870"/><circle cx="-5" cy="-40" r="80" fill="url(#glowWarm)" opacity=".4"/></g>`;
+    if (!bees) {
+      s += elephant({ x: 860, y: 950, sc: .55, type: 'asia', rig: R, t, walk: .8, ph: walkPh(t, .8), trunk: { base: 80, curl: .1 } });
+      s += `<g transform="translate(1340,930)"><rect x="-6" y="-70" width="12" height="70" fill="#1A1410"/><circle cx="0" cy="-80" r="${f1(14 + 4 * Math.sin(t * 20))}" fill="#FFB347"/><circle cx="0" cy="-80" r="70" fill="url(#glowO)" opacity=".6"/></g>`;
+    } else {
+      const bk = range(t, EV.bees + 2, EV.bees + 7);
+      s += `<g>${Array.from({ length: 6 }, (_, i) => `<line x1="${560 + i * 160}" y1="920" x2="${560 + i * 160}" y2="990" stroke="#5A3A20" stroke-width="10"/><rect x="${520 + i * 160}" y="880" width="80" height="50" rx="8" fill="#E0B040"/><line x1="${560 + i * 160}" y1="900" x2="${720 + i * 160}" y2="900" stroke="#C9C0A0" stroke-width="3"/>`).join('')}</g>`;
+      s += Array.from({ length: 30 }, (_, i) => `<circle cx="${f1(600 + (i * 53) % 900 + 20 * Math.sin(t * 9 + i))}" cy="${f1(860 + 20 * Math.cos(t * 7 + i * 2))}" r="3.5" fill="#FFD040"/>`).join('');
+      s += elephant({ x: lerp(500, 220, bk), y: 950, sc: .55, type: 'asia', flip: bk > .1 ? -1 : 1, rig: R, t, walk: bk > .1 && bk < 1 ? 1 : 0, ph: walkPh(t), ear: .6 * Math.abs(Math.sin(t * 6)) * (bk > 0 ? 1 : 0), trunk: { base: 50, curl: -.2 } });
+    }
+    return scene(L, s);
+  }
+  const k = range(t, EV.habitat, EV.zoo);
+  let s = `<rect width="${W}" height="${H}" fill="#2A3A20"/>`;
+  const cut = easeInOut(k);
+  for (let i = 0; i < 160; i++) { const st = STARS[i], x = (st.x * .8 + 300) % 1920, y = (st.y * .5) % 1080; const gone = (x / 1920) < cut * 1.1 && (i % 3) !== 0; s += gone ? `<rect x="${f1(x - 30)}" y="${f1(y - 20)}" width="60" height="40" fill="${['#C9B060', '#A8C060', '#8A7050'][i % 3]}" opacity=".9"/>` : `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(30 + st.r * 8)}" fill="${['#1E5A28', '#2E6A30', '#245020'][i % 3]}"/>`; }
+  s += `<path d="M${f1(-100 + 2000 * cut)} -50 L${f1(-200 + 2000 * cut)} 1150" stroke="#8A8070" stroke-width="30"/><path d="M-100 600 Q960 ${f1(560 + 40 * cut)} 2020 520" stroke="#6A6458" stroke-width="22" fill="none" opacity="${op(cut)}"/>`;
+  s += `<g opacity="${op(range(t, EV.habitat + 6, EV.habitat + 7))}"><rect x="1200" y="760" width="560" height="200" rx="20" fill="#000" opacity=".65"/>${txt(1480, 830, 'ÍNDIA · CENSO POR DNA', 26, '#FFC870')}${txt(1480, 905, '29.964 → 22.446', 54, '#fff')}${txt(1480, 945, '2017 → 2025 · −25%', 24, '#FF6A6A', 'middle', 800)}</g>`;
+  return zoomG(lerp(1.0, 1.25, easeInOut(k)), s, 900, 500, lerp(0, 3, k));
+}
+function captiveScene(t) {
+  if (t < EV.life) {
+    const k = range(t, EV.zoo, EV.life);
+    let s = `<rect width="${W}" height="${H}" fill="url(#gConcrete)"/><rect y="780" width="${W}" height="400" fill="#6A5A48"/>`;
+    s += `<rect x="1280" y="380" width="260" height="400" fill="#3A3C40"/><rect x="1300" y="400" width="220" height="380" fill="#2A2C30"/>`;
+    s += Array.from({ length: 12 }, (_, i) => `<path d="M${i * 170} 740 Q${i * 170 + 40} 700 ${i * 170 + 80} 740" stroke="#5A5C60" stroke-width="3" fill="none"/>`).join('');
+    s += `<g style="mix-blend-mode:screen"><path d="M820 -20 L1100 -20 L1300 1000 L600 1000Z" fill="#E6F0FF" opacity=".1" filter="url(#bl30)"/></g>`;
+    const R = rig({ amb: '#B8C0C8', k: [0, -1], sh: '#101418', shO: .5, shD: 80, rims: [{ k: [0, -1], c: '#E6F0FF', w: 10, o: .8, glow: 1 }] });
+    const sway = Math.sin((t - EV.zoo) * 2.4);
+    s += elephant({ x: 900 + 20 * sway, y: 900, sc: .62, type: 'asia', rig: R, t, headDip: 9 * sway, trunk: { base: 95 + 18 * sway, curl: .05, sway: 0 }, ear: .1 * Math.abs(sway) });
+    s += `<g opacity=".95">${Array.from({ length: 14 }, (_, i) => `<rect x="${f1(i * 150 - 200 + 300 * k)}" y="0" width="22" height="1080" fill="#1A1C20"/><rect x="${f1(i * 150 - 196 + 300 * k)}" y="0" width="5" height="1080" fill="#4A4E56"/>`).join('')}<rect y="300" width="${W}" height="18" fill="#1A1C20"/></g>`;
+    return zoomG(lerp(1.25, 1.0, easeOut(k)), s, lerp(1000, 900, k), 560, lerp(1, -1, k));
+  }
+  if (t < EV.happy) {
+    const k = range(t, EV.life, EV.happy);
+    let s = `<rect width="${W}" height="${H}" fill="#0E0C0A"/>`;
+    const g = easeOut(range(t, EV.life + .6, EV.life + 3));
+    const bar = (x, v, col, l1, l2) => `<rect x="${x}" y="${f1(900 - 11 * v * g)}" width="200" height="${f1(11 * v * g)}" rx="10" fill="${col}"/>${txt(x + 100, 900 - 11 * v * g - 20, Math.round(v * g) + ' ANOS', 40, '#fff')}${txt(x + 100, 950, l1, 24, '#fff', 'middle', 800)}${txt(x + 100, 985, l2, 20, '#fff', 'middle', 700, 'opacity=".65"')}`;
+    s += txt(560, 200, 'AFRICANOS', 36, '#FFC870') + txt(1360, 200, 'ASIÁTICOS', 36, '#FFC870');
+    s += bar(330, 56, '#7DFFA8', 'NA NATUREZA', 'AMBOSELI, QUÊNIA') + bar(590, 17, '#FF6A6A', 'NASCIDOS EM ZOO', 'EUROPA') + bar(1130, 42, '#7DFFA8', 'TRABALHO EM MIANMAR', 'VIDA SEMI-LIVRE') + bar(1390, 19, '#FF6A6A', 'NASCIDOS EM ZOO', 'EUROPA');
+    s += txt(960, 1030, 'EXPECTATIVA DE VIDA MEDIANA DAS FÊMEAS · CLUBB ET AL., SCIENCE, 2008', 22, '#fff', 'middle', 700, 'opacity=".6"');
+    return zoomG(lerp(1.1, 1.0, easeOut(k)), s, lerp(800, 1100, k), 560);
+  }
+  if (t < EV.tour) {
+    const k = range(t, EV.happy, EV.tour);
+    let s = `<rect width="${W}" height="${H}" fill="#2A2C30"/><rect y="760" width="${W}" height="400" fill="#4A4038"/><rect x="0" y="200" width="${W}" height="560" fill="url(#gConcrete)" opacity=".8"/>`;
+    const R = rig({ amb: '#A8B0B8', k: [1, -.5], sh: '#0A0C10', shO: .55, shD: 80, rims: [{ k: [1, -.5], c: '#DDE6F0', w: 10, o: .8, glow: 1 }] });
+    s += elephant({ x: 900, y: 880, sc: .6, type: 'asia', rig: R, t: t * .5, headDip: 10, trunk: { base: 100, curl: .1, sway: .3 } });
+    s += `<g opacity="${op(range(t, EV.happy + 4, EV.happy + 5))}" transform="translate(1500,760) rotate(${f1(-30 + 30 * easeOut(range(t, EV.happy + 5, EV.happy + 5.4)))})"><rect x="-20" y="-140" width="40" height="160" rx="8" fill="#6A4428"/><rect x="-80" y="-180" width="160" height="70" rx="14" fill="#8A5A34"/></g>`;
+    return zoomG(lerp(1.0, 1.3, easeInOut(k)), s, lerp(900, 980, k), lerp(600, 560, k), lerp(-1, 1, k));
+  }
+  if (t < EV.breed) {
+    const k = range(t, EV.tour, EV.breed);
+    if (t < EV.tour + 9) {
+      const L = savanna(t, 'day', { sun: [1600, 300] });
+      setCam(lerp(900, 1000, k * 2), lerp(700, 690, k), lerp(1.15, 1.3, k), lerp(-1, 1, k), [900, 700, 1.15]);
+      const R = eRig('day', { k: [1, -.6] });
+      let s = `<g transform="translate(1400,960)"><rect x="-10" y="-220" width="20" height="220" fill="#5A3A20"/><rect x="-200" y="-260" width="400" height="40" fill="#8A6A40"/><path d="M-220 -260 L0 -340 L220 -260Z" fill="#C9A060"/></g>`;
+      s += elephant({ x: 860, y: 960, sc: .6, type: 'asia', rig: R, t, walk: .7, ph: walkPh(t, .7), trunk: { base: 92 } });
+      s += `<g transform="translate(860,960) scale(.6)"><rect x="-150" y="-470" width="300" height="80" rx="10" fill="#B03030"/><rect x="-130" y="-560" width="260" height="100" rx="10" fill="#C9A040" stroke="#7A5020" stroke-width="8"/></g>`;
+      s += `<g transform="translate(860,${f1(960 - .6 * 560 + 175)}) scale(.33)">${person({ x: 0, y: 0, sc: 1, out: 'shirt', arms: [[30, -40], [30, -40]], head: { ex: 'feliz', turn: .3 }, parts: 'upper' })}</g>`;
+      s += `<path d="M${860 - 105} 960 Q760 990 700 970" stroke="#9A9AA0" stroke-width="6" fill="none" stroke-dasharray="10 6"/>`;
+      return scene(L, s);
+    }
+    let s = `<rect width="${W}" height="${H}" fill="#0A0806"/>`;
+    const R = rig({ amb: '#605048', k: [1, -.3], sh: '#000', shO: .6, shD: 60, rims: [{ k: [1, -.3], c: '#FF9A5A', w: 10, o: .8, glow: 1 }] });
+    s += `<g transform="translate(960,860)">${[-260, -130, 0, 130, 260].map(x => `<rect x="${x - 14}" y="-420" width="28" height="460" fill="#3A2818"/>`).join('')}<rect x="-300" y="-430" width="600" height="28" fill="#3A2818"/><rect x="-300" y="-220" width="600" height="24" fill="#3A2818"/></g>`;
+    s = `<g>${s}${elephant({ x: 980, y: 860, sc: .32, calf: true, type: 'asia', rig: R, t: t * 2, headDip: 14, ear: .3 * Math.abs(Math.sin(t * 3)), trunk: { base: 100, curl: .2 } })}</g>` + `<g transform="translate(960,860)">${[-195, -65, 65, 195].map(x => `<rect x="${x - 12}" y="-420" width="24" height="460" fill="#2A1A10"/>`).join('')}</g>`;
+    s += `<g opacity="${op(range(t, EV.tour + 10, EV.tour + 11))}"><rect x="1240" y="700" width="560" height="200" rx="20" fill="#000" opacity=".7"/>${txt(1520, 760, 'TURISMO NA ÁSIA (2017)', 26, '#FFC870')}${txt(1520, 830, '77%', 64, '#FF6A6A')}${txt(1520, 875, 'DE 2.923 ELEFANTES EM CONDIÇÕES RUINS', 22, '#fff', 'middle', 800)}</g>`;
+    return zoomG(lerp(1.2, 1.0, easeOut(range(t, EV.tour + 9, EV.breed))), s, 960, 620, lerp(1, -1, k));
+  }
+  const k = range(t, EV.breed, EV.sanct);
+  let s = `<rect width="${W}" height="${H}" fill="url(#gConcrete)"/><rect y="760" width="${W}" height="400" fill="#7A6A50"/>`;
+  const R = rig({ amb: '#C8C0B8', k: [-1, -.5], sh: '#101010', shO: .5, shD: 80, rims: [{ k: [-1, -.5], c: '#FFF1D0', w: 10, o: .9, glow: 1 }] });
+  s += elephant({ x: 860, y: 900, sc: .62, type: 'asia', rig: R, t, trunk: { base: lerp(95, 70, pulse(t, EV.breed + 2, EV.breed + 7, .7)), curl: .25 * pulse(t, EV.breed + 2, EV.breed + 7, .7) } }) + elephant({ x: 1080 + 20 * Math.sin(t * .7), y: 920, sc: .26, calf: true, type: 'asia', rig: R, t: t * 1.5, walk: .4, ph: walkPh(t, 1.4) });
+  s += `<g opacity=".6">${Array.from({ length: 6 }, (_, i) => `<g transform="translate(${200 + i * 300},1080) scale(.5)"><circle cy="-260" r="70" fill="#1A1A1E"/><rect x="-90" y="-200" width="180" height="220" rx="60" fill="#1A1A1E"/></g>`).join('')}</g>`;
+  s += `<g opacity="${op(range(t, EV.breed + 4, EV.breed + 5))}">${txt(1500, 520, 'FILHOTES DE ZOO', 34, '#FFC870')}${txt(1500, 565, 'SOBREVIVEM MENOS QUE OS SELVAGENS', 26, '#fff', 'middle', 800)}</g>`;
+  return zoomG(lerp(1.0, 1.15, easeInOut(k)), s, lerp(900, 1000, k), 600, lerp(-1, 1, k));
+}
+function hopeScene(t) {
+  if (t < EV.kenya) {
+    const k = range(t, EV.sanct, EV.kenya);
+    let s = `<rect width="${W}" height="${H}" fill="url(#skyDay)"/>`;
+    s += `<path d="M-200 520 L300 470 L320 520 L800 500 L820 540 L1400 520 L1420 470 L2100 480 L2100 700 L-200 700Z" fill="url(#gChapada)" transform="translate(${f1(-60 * k)},0)"/>`;
+    s += `<rect y="680" width="${W}" height="420" fill="#8A9A4A"/>` + Array.from({ length: 14 }, (_, i) => `<g transform="translate(${(i * 167 + 30 - 120 * k) % 2100},${700 + (i % 3) * 20})"><rect x="-6" y="-60" width="12" height="60" fill="#4A3020"/><ellipse cx="0" cy="-70" rx="50" ry="30" fill="#4A6A2A"/></g>`).join('');
+    const R = eRig('day', { k: [-1, -.5] });
+    s += elephant({ x: 600 + 200 * k, y: 930, sc: .55, type: 'asia', rig: R, t, walk: .8, ph: walkPh(t, .8), trunk: { base: 85, curl: -.1 }, ear: .2 * Math.sin(t * 2) }) + elephant({ x: 1300 + 120 * k, y: 900, sc: .45, type: 'savana', tusks: false, rig: R, t: t + 3, walk: .6, ph: walkPh(t, .6, 2) });
+    return zoomG(lerp(1.2, 1.0, easeOut(k)), s, lerp(800, 1000, k), 600, lerp(-1, 1, k));
+  }
+  if (t < EV.todo) {
+    const k = range(t, EV.kenya, EV.todo);
+    const L = savanna(t, 'day', { sun: [300, 260] });
+    setCam(lerp(900, 1100, k), lerp(700, 680, k), lerp(.9, 1.0, k), 0, [900, 700, .9]);
+    const R = eRig('day', { k: [-1, -.6] });
+    let s = '';
+    const n = Math.round(lerp(16000, 34800, easeInOut(range(t, EV.kenya + .5, EV.kenya + 4))));
+    for (let i = 0; i < Math.floor(lerp(3, 8, range(t, EV.kenya + .5, EV.kenya + 4))); i++) s += elephant({ x: 300 + i * 220, y: 930 + (i % 2) * 30, sc: i % 3 === 2 ? .24 : .42, calf: i % 3 === 2, rig: R, t: t + i, walk: .6, ph: walkPh(t, .7, i) });
+    s += `<g transform="translate(${f1(CAM.x)},${f1(CAM.y - 250)})"><rect x="-330" y="-90" width="660" height="170" rx="20" fill="#000" opacity=".6"/>${txt(0, -30, 'QUÊNIA · 1989 → 2019', 28, '#FFC870')}${txt(0, 50, n.toLocaleString('pt-BR') + ' ELEFANTES', 60, '#7DFFA8')}</g>`;
+    s += `<g opacity="${op(range(t, EV.kenya + 5, EV.kenya + 5.5))}" transform="translate(${f1(CAM.x)},${f1(CAM.y + 40)})"><rect x="-420" y="-40" width="840" height="70" rx="16" fill="#000" opacity=".55"/>${txt(0, 8, 'CHINA PROIBIU A VENDA DE MARFIM EM 2017 · O PREÇO DESABOU', 26, '#fff', 'middle', 800)}</g>`;
+    return scene(L, s);
+  }
+  if (t < EV.close) {
+    const k = range(t, EV.todo, EV.close);
+    let s = `<rect width="${W}" height="${H}" fill="#120E0A"/><g style="mix-blend-mode:screen"><ellipse cx="960" cy="560" rx="900" ry="420" fill="url(#spotG)" opacity=".5"/></g>`;
+    const items = [['✕', 'NÃO MONTE EM ELEFANTES', '#FF6A6A'], ['✕', 'NÃO COMPRE NADA DE MARFIM', '#FF6A6A'], ['✓', 'PREFIRA TURISMO SÓ DE OBSERVAÇÃO', '#7DFFA8'], ['✓', 'APOIE SANTUÁRIOS E PROJETOS SÉRIOS', '#7DFFA8']];
+    items.forEach(([ic, tx, col], i) => { const e = easeOut(range(t, EV.todo + .6 + i * 1.4, EV.todo + 1.1 + i * 1.4)); if (e <= 0) return; s += `<g transform="translate(${f1(420 - 80 * (1 - e))},${330 + i * 150})" opacity="${op(e)}"><circle r="46" fill="${col}" opacity=".2" stroke="${col}" stroke-width="5"/>${txt(0, 18, ic, 54, col)}${txt(90, 16, tx, 44, '#fff', 'start')}</g>`; });
+    return zoomG(lerp(1.06, 1.0, easeOut(k)), s, 960, 560, lerp(-.8, .8, k));
+  }
+  const k = range(t, EV.close, EV.end);
+  const L = savanna(t, 'sunset', { sun: [1500, 730] });
+  setCam(lerp(800, 1200, k), lerp(760, 600, easeInOut(k)), lerp(1.3, .75, easeInOut(k)), lerp(1, 0, k), [800, 760, 1.3]);
+  const R = eRig('sunset', { amb: '#5A3848', shO: .55, rims: [{ k: [1, -.2], c: '#FFB060', w: 14, o: 1, glow: 1 }] });
+  let s = '';
+  for (const [dx, dy, sc, kind] of HERD) s += elephant({ x: 1000 + dx + (t - EV.close) * 60, y: 920 + dy, sc: .55 * sc, calf: kind === 'c', rig: R, walk: 1, ph: walkPh(t, 1, dx * .01), t, headDip: kind === 'm' ? -4 * pulse(t, EV.close + 2, EV.close + 6, 1) : 0 });
+  return scene(L, s);
+}
+
+/* ---------------- quadro ---------------- */
+function frame(t) {
+  D = []; uid = 0;
+  let Wd = '', P = { t }, flash = 0, ch = '';
+  if (t < EV.sp) { Wd = hookScene(t); P = { t, grade: '#FF9A5A', gradeO: .15 }; }
+  else if (t < EV.fam) { Wd = speciesScene(t); ch = chapter(t, EV.sp, 1, 'QUEM SÃO ELES'); }
+  else if (t < EV.mem) { Wd = familyScene(t); ch = chapter(t, EV.fam, 2, 'UMA FAMÍLIA DE MULHERES'); }
+  else if (t < EV.com) { Wd = memoryScene(t); ch = chapter(t, EV.mem, 3, 'A MEMÓRIA'); P = { t, grade: '#FF9A5A', gradeO: .12 }; }
+  else if (t < EV.mind) { Wd = commScene(t); ch = chapter(t, EV.com, 4, 'COMO ELES CONVERSAM'); }
+  else if (t < EV.eng) { Wd = mindScene(t); ch = chapter(t, EV.mind, 5, 'A MENTE'); }
+  else if (t < EV.poach) { Wd = engScene(t); ch = chapter(t, EV.eng, 6, 'JARDINEIROS DO PLANETA'); }
+  else if (t < EV.zoo) { Wd = threatScene(t); ch = chapter(t, EV.poach, 7, 'AMEAÇAS NA NATUREZA'); }
+  else if (t < EV.sanct) { Wd = captiveScene(t); ch = chapter(t, EV.zoo, 8, 'A VIDA EM CATIVEIRO'); P = { t, grade: '#5A7090', gradeO: .15 }; }
+  else { Wd = hopeScene(t); ch = t < EV.close ? chapter(t, EV.sanct, 9, 'O QUE ESTÁ DANDO CERTO') : ''; if (t >= EV.close) P = { t, grade: '#FF9A5A', gradeO: .15 }; }
+  // transição: flash suave em cada troca de capítulo
+  for (const c of [EV.sp, EV.fam, EV.mem, EV.com, EV.mind, EV.eng, EV.poach, EV.zoo, EV.sanct, EV.close]) if (t >= c && t < c + .35) flash = Math.max(flash, .35 * (1 - (t - c) / .35));
+  // câmera na mão: nunca parada
+  const hx = 7 * noise1(t * .6, 1), hy = 5 * noise1(t * .5, 4), hr = .35 * noise1(t * .4, 7);
+  const world = document.getElementById('world');
+  world.setAttribute('transform', `translate(${CX + f1(hx)},${CY + f1(hy)}) rotate(${f1(hr)}) scale(1.02) translate(${-CX},${-CY})`);
+  world.innerHTML = Wd;
+  document.getElementById('post').innerHTML = post(P) + ch;
+  document.getElementById('fdefs').innerHTML = D.join('');
+  document.getElementById('flash').style.opacity = flash;
+  for (const x of TEXTS) {
+    if (window.__render) { const kk = Math.min(range(t, x.from, x.from + .2), 1 - range(t, x.to - .25, x.to)), e = easeOut(kk); x.el.style.transition = 'none'; x.el.style.opacity = kk; x.el.style.transform = `translateY(${(1 - e) * 24}px)`; }
+    else x.el.classList.toggle('on', t >= x.from && t < x.to);
+  }
+}
+
+/* ---------------- controle ---------------- */
+const textHost = document.getElementById('texts');
+for (const x of TEXTS) { const el = document.createElement('div'); el.className = 'ov'; el.innerHTML = x.html; el.style.setProperty('--y', x.y + 'px'); el.style.setProperty('--fs', x.fs + 'px'); textHost.appendChild(el); x.el = el; }
+const params = new URLSearchParams(location.search);
+const stage = document.getElementById('stage'), startEl = document.getElementById('start');
+const fit = () => stage.style.setProperty('--s', Math.min(innerWidth / W, innerHeight / H));
+addEventListener('resize', fit); fit();
+const audio = window.AUDIO_SRC ? new Audio(window.AUDIO_SRC) : null;
+let playing = false, offset = parseFloat(params.get('t') || '0'), t0 = 0;
+const current = () => playing ? Math.min(TOTAL, offset + (performance.now() - t0) / 1000) : offset;
+function play() { if (playing) return; playing = true; t0 = performance.now(); startEl.classList.add('hide'); if (audio) { audio.currentTime = offset; audio.play(); } }
+function pause() { offset = current(); playing = false; if (audio) audio.pause(); }
+startEl.addEventListener('click', play);
+addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); if (!playing) play(); else pause(); }
+  if (e.code === 'ArrowRight') { const p = playing; pause(); offset = Math.min(TOTAL, offset + 5); if (p) play(); }
+  if (e.code === 'ArrowLeft') { const p = playing; pause(); offset = Math.max(0, offset - 5); if (p) play(); }
+});
+window.__total = TOTAL;
+window.__seek = (t) => { playing = false; offset = t; frame(t); };
+window.__ready = true;
+if (params.has('hideui')) startEl.classList.add('hide');
+if (params.has('still')) frame(offset);
+else (function loop() { frame(current()); requestAnimationFrame(loop); })();
+</script>
+</body>
+</html>
