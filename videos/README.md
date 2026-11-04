@@ -60,3 +60,13 @@ Use `render169.js` (1920×1080) e `shot169.js` no lugar de `render.js`/`shot.js`
 ## Teste no Google Colab (GPU)
 
 `colab/teste_render_gpu.ipynb` mede se a GPU do Colab renderiza mais rápido e pode gerar o vídeo dos elefantes inteiro lá.
+
+## Render rápido para vídeos em SVG
+
+Para as páginas em SVG (pasta `svg/`), use `render_svg.js`: ele não emula placa de vídeo (SwiftShader) e captura direto pelo protocolo do Chrome. Fica 5–7× mais rápido com a mesma imagem.
+
+```bash
+PAGE=svg/elefantes.html FR=fr VW=1920 VH=1080 node render_svg.js 0 4 24   # rode 4 processos (0..3)
+```
+
+Para vídeos verticais use `VW=1080 VH=1920`. As páginas em Three.js continuam com `render.js`.
