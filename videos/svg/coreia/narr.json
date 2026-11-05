@@ -1,0 +1,227 @@
+{
+ "total": 207.17,
+ "s": [
+  {
+   "k": "h1",
+   "txt": "Esse bebê foi condenado à prisão perpétua.",
+   "t0": 0.4,
+   "t1": 3.56
+  },
+  {
+   "k": "h2",
+   "txt": "Ele tinha dois anos.",
+   "t0": 4.06,
+   "t1": 5.99
+  },
+  {
+   "k": "h3",
+   "txt": "O crime? A família dele tinha uma Bíblia.",
+   "t0": 6.69,
+   "t1": 10.26
+  },
+  {
+   "k": "h4",
+   "txt": "E se você acha que ele foi solto logo depois… você está completamente enganado.",
+   "t0": 11.06,
+   "t1": 17.07
+  },
+  {
+   "k": "a1",
+   "txt": "Coreia do Norte, 2009.",
+   "t0": 18.27,
+   "t1": 20.2
+  },
+  {
+   "k": "a2",
+   "txt": "Numa casa simples, uma família guardava um segredo debaixo do assoalho: uma Bíblia.",
+   "t0": 20.7,
+   "t1": 26.31
+  },
+  {
+   "k": "a3",
+   "txt": "Os pais liam escondidos, à noite, enquanto o filho de dois anos dormia.",
+   "t0": 26.81,
+   "t1": 32.41
+  },
+  {
+   "k": "b1",
+   "txt": "Só tem um detalhe.",
+   "t0": 33.41,
+   "t1": 35.35
+  },
+  {
+   "k": "b2",
+   "txt": "Na Coreia do Norte, quem é adorado é o próprio líder.",
+   "t0": 35.85,
+   "t1": 40.64
+  },
+  {
+   "k": "b3",
+   "txt": "Desde pequenas, as pessoas aprendem a se curvar diante das estátuas da família Kim.",
+   "t0": 41.04,
+   "t1": 47.05
+  },
+  {
+   "k": "b4",
+   "txt": "Em toda casa, os retratos deles ficam pendurados na parede, e precisam estar sempre limpos.",
+   "t0": 47.45,
+   "t1": 53.87
+  },
+  {
+   "k": "b5",
+   "txt": "A lei até fala em liberdade religiosa. Mas, na prática, quem acredita em outro deus vira inimigo do Estado.",
+   "t0": 54.37,
+   "t1": 62.43
+  },
+  {
+   "k": "c1",
+   "txt": "E não é só isso.",
+   "t0": 63.43,
+   "t1": 65.77
+  },
+  {
+   "k": "c2",
+   "txt": "O povo não tem acesso à internet. Existe só uma rede interna, controlada pelo governo, com poucos sites aprovados.",
+   "t0": 66.17,
+   "t1": 74.22
+  },
+  {
+   "k": "c3",
+   "txt": "E quem for pego com um filme, uma música ou uma série estrangeira pode ser preso. Ou coisa pior.",
+   "t0": 74.72,
+   "t1": 82.78
+  },
+  {
+   "k": "d1",
+   "txt": "Até os turistas são vigiados.",
+   "t0": 84.08,
+   "t1": 86.42
+  },
+  {
+   "k": "d2",
+   "txt": "Eles andam sempre acompanhados por guias do governo, só visitam lugares escolhidos, e não podem sair sozinhos nem conversar livremente com as pessoas na rua.",
+   "t0": 86.82,
+   "t1": 97.32
+  },
+  {
+   "k": "e1",
+   "txt": "Tudo isso tem um motivo: controlar o que o povo vê, ouve e pensa.",
+   "t0": 98.32,
+   "t1": 104.34
+  },
+  {
+   "k": "e2",
+   "txt": "Quem nunca conheceu outro mundo… não sonha com ele.",
+   "t0": 104.84,
+   "t1": 108.81
+  },
+  {
+   "k": "f1",
+   "txt": "E a vigilância mais forte vem de perto.",
+   "t0": 109.81,
+   "t1": 113.38
+  },
+  {
+   "k": "f2",
+   "txt": "Cada bairro tem grupos de vizinhos que vigiam uns aos outros e contam tudo às autoridades.",
+   "t0": 113.78,
+   "t1": 120.61
+  },
+  {
+   "k": "f3",
+   "txt": "Basta um vizinho desconfiar.",
+   "t0": 121.01,
+   "t1": 122.94
+  },
+  {
+   "k": "g1",
+   "txt": "Foi assim que, em 2009, a polícia bateu naquela porta e encontrou a Bíblia.",
+   "t0": 123.94,
+   "t1": 129.96
+  },
+  {
+   "k": "g2",
+   "txt": "E na Coreia do Norte, a punição não é só de quem cometeu o crime.",
+   "t0": 130.56,
+   "t1": 136.98
+  },
+  {
+   "k": "g3",
+   "txt": "Pode cair sobre a família inteira, até três gerações.",
+   "t0": 137.38,
+   "t1": 141.35
+  },
+  {
+   "k": "g4",
+   "txt": "Por isso o bebê foi junto.",
+   "t0": 141.95,
+   "t1": 144.7
+  },
+  {
+   "k": "g5",
+   "txt": "A família toda foi condenada à prisão perpétua, num campo de prisioneiros políticos.",
+   "t0": 145.2,
+   "t1": 150.81
+  },
+  {
+   "k": "i1",
+   "txt": "Esses campos ficam escondidos nas montanhas.",
+   "t0": 152.01,
+   "t1": 154.76
+  },
+  {
+   "k": "i2",
+   "txt": "A ONU estima que dezenas de milhares de pessoas vivam neles, entre trabalho forçado, fome e frio.",
+   "t0": 155.16,
+   "t1": 162.39
+  },
+  {
+   "k": "i3",
+   "txt": "Muitas nunca mais saem.",
+   "t0": 162.89,
+   "t1": 164.83
+  },
+  {
+   "k": "j1",
+   "txt": "E o bebê?",
+   "t0": 166.03,
+   "t1": 167.55
+  },
+  {
+   "k": "j2",
+   "txt": "O caso só veio a público mais de dez anos depois, num relatório de direitos humanos, citado pelo governo dos Estados Unidos.",
+   "t0": 168.15,
+   "t1": 177.43
+  },
+  {
+   "k": "j3",
+   "txt": "Hoje, ele teria uns dezenove anos.",
+   "t0": 178.03,
+   "t1": 180.78
+  },
+  {
+   "k": "j4",
+   "txt": "E ninguém sabe se ele ainda está vivo, nem se um dia saiu de lá.",
+   "t0": 181.28,
+   "t1": 187.7
+  },
+  {
+   "k": "j5",
+   "txt": "Ele pode ter passado a vida inteira preso… por causa de um livro que ainda nem sabia ler.",
+   "t0": 188.5,
+   "t1": 196.15
+  },
+  {
+   "k": "k1",
+   "txt": "Se você acha que mais gente precisa saber disso, compartilha esse vídeo.",
+   "t0": 197.65,
+   "t1": 202.85
+  },
+  {
+   "k": "k2",
+   "txt": "E se inscreve.",
+   "t0": 203.15,
+   "t1": 204.67
+  }
+ ]
+}
