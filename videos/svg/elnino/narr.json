@@ -1,0 +1,85 @@
+{
+ "total": 50.4,
+ "s": [
+  {
+   "k": "n1",
+   "txt": "O super El Niño já começou. E pode ser o mais forte desde que começaram as medições, em 1950.",
+   "t0": 0.1,
+   "t1": 5.1,
+   "a": 0,
+   "b": 5.4
+  },
+  {
+   "k": "n2",
+   "txt": "É quando a água do Oceano Pacífico esquenta demais e bagunça o clima do planeta inteiro.",
+   "t0": 5.5,
+   "t1": 10.1,
+   "a": 5.4,
+   "b": 10.4
+  },
+  {
+   "k": "n3",
+   "txt": "No Brasil, isso traz chuva forte no Sul, seca no Norte e no Nordeste, e calor extremo em quase todo o país.",
+   "t0": 10.5,
+   "t1": 16.1,
+   "a": 10.4,
+   "b": 16.4
+  },
+  {
+   "k": "n4",
+   "txt": "Primeiro: mande o seu CEP por SMS pro número 40199 e receba os alertas da Defesa Civil.",
+   "t0": 16.5,
+   "t1": 21.5,
+   "a": 16.4,
+   "b": 21.8
+  },
+  {
+   "k": "n5",
+   "txt": "Nunca atravesse rua alagada, nem a pé nem de carro. Pouca água já consegue arrastar um carro.",
+   "t0": 21.9,
+   "t1": 26.9,
+   "a": 21.8,
+   "b": 27.2
+  },
+  {
+   "k": "n6",
+   "txt": "Deixe uma mochila pronta: documentos num saco plástico, água, lanterna, remédios e carregador.",
+   "t0": 27.3,
+   "t1": 32.5,
+   "a": 27.2,
+   "b": 32.8
+  },
+  {
+   "k": "n7",
+   "txt": "No calor, beba água mesmo sem sede, evite o sol forte e cuide de idosos, crianças e animais.",
+   "t0": 32.9,
+   "t1": 37.9,
+   "a": 32.8,
+   "b": 38.2
+  },
+  {
+   "k": "n8",
+   "txt": "Na seca, economize água, guarde com tampa e nunca faça queimada.",
+   "t0": 38.3,
+   "t1": 42.3,
+   "a": 38.2,
+   "b": 42.6
+  },
+  {
+   "k": "n9",
+   "txt": "E com calor e chuva, a dengue explode. Não deixe água parada.",
+   "t0": 42.7,
+   "t1": 46.5,
+   "a": 42.6,
+   "b": 46.8
+  },
+  {
+   "k": "n10",
+   "txt": "Manda esse vídeo pra quem você ama. E se inscreve.",
+   "t0": 46.9,
+   "t1": 50.1,
+   "a": 46.8,
+   "b": 50.4
+  }
+ ]
+}
