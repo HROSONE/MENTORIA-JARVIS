@@ -88,8 +88,17 @@ def vaults(a, b, rate, off=0, g=.5):   # som de cada salto: corrida, mãos baten
         if t_land < b: add(lp(ken('footstep_grass', i % 5), 2500), t_land, g * .6)
 # 1. pátio, saltos, guarda
 a, b = A['n1']; bedL('0935', 5, a, b - a, .45); bedL('2968', 40, a, b - a, .12)
-for j in range(4): vaults(a, b, .62, -j * .25 * 1 / .62 * .62)
+for j in range(4): vaults(a, a + 2.4, .62, -j * .25 * 1 / .62 * .62)
+for j in range(4): vaults(a + 3.8, b, .9, -j * .25, .25)
 add(lp(noise(.4), 140) * np.exp(-T(.4) * 9) * .6, a); add(whoosh(.3, 4500, 700, .15), a)
+# ponto de vista de quem pula (2.4–3.8): passos rápidos, respiração, mãos no couro, voo, aterrissagem
+p0 = a + 2.4
+for k in range(5): add(lp(ken('footstep_grass', k % 5), 3000), p0 + k * .14, .7, (k % 2 - .5) * .4)
+add(bp(noise(.6), 300, 1800) * env(int(.6 * SR), .1, .3) * .3, p0 + .05)
+add(ken('impactSoft_heavy', 2), p0 + .72, 1.0); add(ken('impactPunch_medium', 1), p0 + .73, .5)
+add(whoosh(.5, 600, 3200, .3), p0 + .85); add(ken('impactSoft_heavy', 4), p0 + 1.27, .9); add(lp(ken('footstep_grass', 2), 2000), p0 + 1.3, .8)
+# ponto de vista do guarda (3.8–5.0): vento lá em cima, madeira da torre, pulos distantes
+bedL('0146', 30, a + 3.8, 1.2, .35, .05, .05); add(lp(bsb('3211', 0, 1.0), 1500), a + 3.85, .2)
 # 2. carregando o cavalo, bocejo, saltos
 a, b = A['n2']; bedL('0935', 25, a, b - a, .4)
 add(bsb('3205', 0, 1.6), a + .05, .6, -.4); steps(a + .95, 9, .27, .45, .0); add(lp(ken('impactWood_heavy', 0), 1800), a + 3.35, .6)

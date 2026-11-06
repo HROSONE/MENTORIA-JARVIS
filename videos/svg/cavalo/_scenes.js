@@ -83,16 +83,81 @@ function yard(t, o = {}) {
   return s;
 }
 
-/* ---------- 1. gancho: prisioneiros pulando o cavalo; guarda na torre olhando ---------- */
-function s1(t) {
-  const { L, d, k } = loc(t, 'n1'), [hx, hy] = HH(t);
-  setCam(lerp(860, 920, k) + hx, 1080 + hy, lerp(.92, 1.02, easeInOut(k)), 0, [540, 1100, 1]);
+/* ---------- 1. gancho: vista geral → ponto de vista de quem pula → ponto de vista do guarda ---------- */
+function s1wide(t, L) {
+  const [hx, hy] = HH(t);
+  setCam(lerp(860, 900, L / 2.4) + hx, 1080 + hy, lerp(.92, 1.0, easeInOut(L / 2.4)), 0, [540, 1100, 1]);
   let s = yard(t);
   s += lay(.9, fence(-1100, 2300, GND - 120, 520) + tower(420, GND - 120, .8, t, { flip: 1 }));
   s += lay(1, horse(820, GND, 1.0));
   const kinds = ['pow', 'pow2', 'pow3', 'pow4'];
-  for (let i = 0; i < 4; i++) { const ph = ((L * .62) + i * .25) % 1; s += lay(1, vault(-200 + i * 0, 820, ph, kinds[i])); }
-  return s + VIG(.7) + GRAINV(t) + (L < .1 ? `<rect width="1080" height="1920" fill="#fff" opacity="${op(.3 * (1 - L / .1))}"/>` : '');
+  for (let i = 0; i < 4; i++) { const ph = ((L * .62) + i * .25) % 1; s += lay(1, vault(-200, 820, ph, kinds[i])); }
+  return s;
+}
+// braço em primeira pessoa (de baixo da tela até a mão)
+function povArm(x0, y0, x1, y1, side, kind = 'pow') {
+  const C = KIND[kind];
+  return capsule(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2 + 30, 110, 86, C.shirt) + capsule((x0 + x1) / 2, (y0 + y1) / 2 + 30, x1, y1, 86, 70, C.shirt) + capsule(lerp(x0, x1, .82), lerp(y0, y1, .82), x1, y1, 76, 72, mix(C.shirt, '#000000', .14)) +
+    `<g transform="translate(${f1(x1)},${f1(y1)}) scale(${side},1)"><path d="M-70 10 Q-80 -60 -20 -76 L60 -70 Q96 -60 92 -20 L86 30 Q40 50 -40 44Z" fill="${C.skin}" stroke="${OUTL}" stroke-width="5"/>${[-40, -10, 20, 50].map(fx => `<path d="M${fx} -64 L${fx + 6} -110" stroke="${C.skin}" stroke-width="30" stroke-linecap="round"/><path d="M${fx} -64 L${fx + 6} -110" stroke="${OUTL}" stroke-width="34" stroke-linecap="round" opacity="0"/>`).join('')}<path d="M-60 -20 L-110 -60" stroke="${C.skin}" stroke-width="32" stroke-linecap="round"/></g>`;
+}
+function s1pov(t, L) {   // L: 0..1.4
+  const p = L / 1.4, run = Math.min(1, p / .5), hit = range(p, .5, .62), over = range(p, .62, .9), land = range(p, .9, 1);
+  const bob = Math.sin(p * 30) * 22 * (1 - hit) * (p < .5 ? 1 : 0);
+  const lift = easeInOut(over) * 1300 + (land > 0 ? 1300 - Math.sin(land * Math.PI) * 60 : 0) * (land > 0 ? 1 : 0) - (land > 0 ? 1300 * easeInOut(over) : 0);
+  const roll = Math.sin(over * Math.PI) * 10, shake = (hit > 0 && hit < 1 ? 14 : 0) + (land > 0 && land < .4 ? 20 : 0);
+  const sx = shake * noise1(t * 40, 1), sy = shake * noise1(t * 40, 3);
+  // mundo (horizonte em y=800); o cavalo cresce e depois passa por baixo
+  const hw = lerp(260, 1500, easeIn(run)), hy = lerp(1050, 1700, easeIn(run)) + easeInOut(over) * 1400, hh = hw * .5;
+  let w = `<rect x="-600" y="-1400" width="2300" height="2300" fill="#9CC0DE"/>` + clouds(t, 1).replace(/translate\(/g, 'translate(') + `<circle cx="900" cy="300" r="300" fill="url(#gSun)" opacity=".5"/>`;
+  w += pines(800, 30, .7, '#3A5A3A', 2) + fence(-600, 1700, 800, 260) + `<g transform="translate(860,800) scale(.42)">${tower(0, 0, 1, t, { flip: -1 }).replace(/^<g transform="translate\(0,0\) scale\(1\)">/, '<g>')}</g>`;
+  w += `<rect x="-600" y="800" width="2300" height="2300" fill="#C8B48A"/>` + groundDetail(t).replace(new RegExp(String(GND), 'g'), '800');
+  // cavalo visto de trás (trapézio + couro em cima)
+  const top = hy - hh;
+  w += `<g><path d="M${f1(540 - hw / 2)} ${f1(hy)} L${f1(540 - hw * .42)} ${f1(top)} L${f1(540 + hw * .42)} ${f1(top)} L${f1(540 + hw / 2)} ${f1(hy)}Z" fill="#B8864E" stroke="${OUTL}" stroke-width="6"/>${Array.from({ length: 4 }, (_, i) => `<line x1="${f1(540 - hw * (.5 - .02 * (i + 1)))}" y1="${f1(hy - hh * (i + 1) / 5)}" x2="${f1(540 + hw * (.5 - .02 * (i + 1)))}" y2="${f1(hy - hh * (i + 1) / 5)}" stroke="#8A6038" stroke-width="5"/>`).join('')}<rect x="${f1(540 - hw * .46)}" y="${f1(top - hw * .08)}" width="${f1(hw * .92)}" height="${f1(hw * .12)}" rx="${f1(hw * .05)}" fill="#6A3A22" stroke="${OUTL}" stroke-width="6"/><path d="M${f1(540 - hw * .42)} ${f1(top - hw * .06)} L${f1(540 + hw * .42)} ${f1(top - hw * .06)}" stroke="#fff" stroke-width="8" opacity=".2"/></g>`;
+  let o = `<g transform="translate(${f1(sx)},${f1(sy + bob)}) rotate(${f1(roll)} 540 960) translate(0,${f1(-easeInOut(over) * 300 + (land > 0 ? -300 + 300 * land : 0))})">${w}</g>`;
+  // mãos batendo no couro e empurrando
+  if (p > .42 && p < .86) { const k = range(p, .42, .52), push = range(p, .62, .86); const hyH = lerp(2200, top - hw * .05, k) + push * 700; o += povArm(120, 2300, 340, hyH, -1) + povArm(960, 2300, 740, hyH, 1); }
+  // velocidade nos cantos durante a corrida
+  if (p < .5) o += `<g opacity="${op(.25 * run)}">${Array.from({ length: 10 }, (_, i) => `<line x1="${i % 2 ? 0 : 1080}" y1="${300 + i * 150}" x2="${i % 2 ? 160 : 920}" y2="${360 + i * 150}" stroke="#fff" stroke-width="5"/>`).join('')}</g>`;
+  return o;
+}
+// pessoa vista de cima (do alto da torre)
+function topMan(x, y, s, kind, run = 0, ph = 0, air = 0) {
+  const C = KIND[kind], a = Math.sin(ph) * run * 30;
+  return `<g transform="translate(${f1(x)},${f1(y)}) scale(${f1(s * (1 + air * .25) * 100) / 100})"><ellipse cx="${f1(30 + air * 60)}" cy="${f1(40 + air * 70)}" rx="70" ry="40" fill="#000" opacity="${op(.25 - air * .1)}" filter="url(#b12)"/>
+    <path d="M-20 ${f1(10 + a)} L-20 ${f1(80 + a)}" stroke="${C.pants}" stroke-width="28" stroke-linecap="round"/><path d="M20 ${f1(10 - a)} L20 ${f1(80 - a)}" stroke="${C.pantsD}" stroke-width="28" stroke-linecap="round"/>
+    <path d="M-56 ${f1(-10 - a * .6)} L-70 ${f1(40 - a)}" stroke="${C.shirtD}" stroke-width="24" stroke-linecap="round"/><path d="M56 ${f1(-10 + a * .6)} L70 ${f1(40 + a)}" stroke="${C.shirtD}" stroke-width="24" stroke-linecap="round"/>
+    <ellipse cx="0" cy="0" rx="62" ry="34" fill="${C.shirt}" stroke="${OUTL}" stroke-width="4"/><circle cx="0" cy="-6" r="30" fill="${C.hair}" stroke="${OUTL}" stroke-width="4"/><path d="M-12 -24 Q0 -32 12 -24" stroke="#fff" stroke-width="4" opacity=".3" fill="none"/></g>`;
+}
+function s1guard(t, L) {   // L: 0..1.2
+  const [hx, hy] = HH(t, 2);
+  let w = `<rect x="-600" y="-600" width="2300" height="3200" fill="#C8B48A"/>`;
+  for (let i = 0; i < 90; i++) w += `<ellipse cx="${-500 + (i * 173) % 2100}" cy="${-500 + (i * 311) % 3000}" rx="${8 + i % 8}" ry="${5 + i % 4}" fill="#A8946A"/>`;
+  for (let i = 0; i < 50; i++) { const x = -500 + (i * 233) % 2100, y = -500 + (i * 157) % 3000; w += `<g transform="translate(${x},${y})">${[0, 1, 2, 3].map(j => `<path d="M0 0 l${-14 + j * 9} -18" stroke="#7A8A3A" stroke-width="5" stroke-linecap="round"/>`).join('')}</g>`; }
+  w += `<rect x="-600" y="-200" width="2300" height="60" fill="#5A4430"/>${Array.from({ length: 12 }, (_, i) => `<rect x="${-600 + i * 200}" y="-220" width="30" height="100" fill="#6A5440" stroke="${OUTL}" stroke-width="3"/>`).join('')}`;
+  // cavalo visto de cima
+  w += `<g transform="translate(560,1060) scale(1.25)"><ellipse cx="40" cy="40" rx="260" ry="110" fill="#000" opacity=".25" filter="url(#b12)"/><rect x="-250" y="-90" width="500" height="180" rx="10" fill="#B8864E" stroke="${OUTL}" stroke-width="6"/><rect x="-220" y="-56" width="440" height="112" rx="50" fill="#6A3A22" stroke="${OUTL}" stroke-width="5"/><path d="M-200 -30 L200 -30" stroke="#fff" stroke-width="7" opacity=".2"/></g>`;
+  // prisioneiros correndo de baixo para cima da tela e pulando
+  const kinds = ['pow', 'pow2', 'pow3', 'pow4'];
+  for (let i = 0; i < 4; i++) {
+    const ph = ((L * .9) + i * .25) % 1, y = lerp(1800, 280, ph), air = ph > .42 && ph < .66 ? Math.sin((ph - .42) / .24 * Math.PI) : 0;
+    w += topMan(560 + (i % 2 ? 40 : -40), y, 1.2, kinds[i], 1, L * 22 + i, air);
+  }
+  let o = `<g transform="translate(${f1(hx)},${f1(hy)}) rotate(${f1(-4 + Math.sin(t) * 1.2)} 540 960) translate(540,960) scale(${f1(lerp(1.0, 1.12, L / 1.2) * 100) / 100}) translate(-540,-960)">${w}</g>`;
+  // parapeito da torre e braços do guarda (primeiro plano)
+  o += `<rect x="-100" y="1560" width="1300" height="90" fill="#6A5038" stroke="${OUTL}" stroke-width="6"/><rect x="-100" y="1560" width="1300" height="18" fill="#8A6A4A"/><rect x="-100" y="1650" width="1300" height="400" fill="#3A2A1C"/>`;
+  o += capsule(-60, 2100, 280, 1600, 90, 70, KIND.alemao.shirt) + `<circle cx="300" cy="1600" r="64" fill="${KIND.alemao.skin}" stroke="${OUTL}" stroke-width="5"/>` + capsule(1140, 2100, 800, 1600, 90, 70, KIND.alemao.shirt) + `<circle cx="780" cy="1600" r="64" fill="${KIND.alemao.skin}" stroke="${OUTL}" stroke-width="5"/>`;
+  return o;
+}
+function s1(t) {
+  const { L } = loc(t, 'n1');
+  let s;
+  if (L < 2.4) s = s1wide(t, L);
+  else if (L < 3.8) s = s1pov(t, L - 2.4);
+  else s = s1guard(t, L - 3.8);
+  let fx = VIG(.7) + GRAINV(t);
+  for (const c of [2.4, 3.8]) if (L >= c && L < c + .07) fx += `<rect width="1080" height="1920" fill="#fff" opacity="${op(.25 * (1 - (L - c) / .07))}"/>`;
+  return s + fx + (L < .1 ? `<rect width="1080" height="1920" fill="#fff" opacity="${op(.3 * (1 - L / .1))}"/>` : '');
 }
 /* ---------- 2. carregam o cavalo até o canto, perto da cerca; o guarda boceja ---------- */
 function s2(t) {
