@@ -92,9 +92,10 @@ for j in range(4): vaults(a, b, .62, -j * .25 * 1 / .62 * .62)
 add(lp(noise(.4), 140) * np.exp(-T(.4) * 9) * .6, a); add(whoosh(.3, 4500, 700, .15), a)
 # 2. carregando o cavalo, bocejo, saltos
 a, b = A['n2']; bedL('0935', 25, a, b - a, .4)
-steps(a + .1, 10, .27, .45, .0); add(lp(ken('impactWood_heavy', 0), 1800), a + 2.85, .6)
-add(bp(noise(1.0), 200, 900) * env(int(SR), .3, .5) * .25, a + 3.2)          # bocejo do guarda
-vaults(a + 2.9, b, .7, 0); vaults(a + 2.9, b, .7, .33)
+add(bsb('3205', 0, 1.6), a + .05, .6, -.4); steps(a + .95, 9, .27, .45, .0); add(lp(ken('impactWood_heavy', 0), 1800), a + 3.35, .6)
+for k in range(3): add(bsb('2892'), a + .5 + k * 1.2, .08, .6)
+add(bp(noise(1.0), 200, 900) * env(int(SR), .3, .5) * .25, a + 3.6)          # bocejo do guarda
+vaults(a + 3.4, b, .8, 0); vaults(a + 3.4, b, .8, .33)
 # 3. o corte: alguém lá dentro (tensão)
 a, b = A['n3']; bedL('0935', 45, a, b - a, .25); add(drone(b - a, 52, .1), a)
 add(whoosh(.5, 300, 2500, .18), a + 1.0); add(ken('impactPunch_heavy', 1), a + 1.3, .5)

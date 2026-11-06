@@ -27,14 +27,30 @@ function tower(x, y, s, t, o = {}) {
 function sandGround(day = 1) { return `<rect x="-1500" y="${GND}" width="6800" height="1600" fill="${mix('#2A2618', '#C8B48A', day)}"/><rect x="-1500" y="${GND}" width="6800" height="10" fill="#000" opacity=".2"/>${Array.from({ length: 50 }, (_, i) => `<ellipse cx="${-1400 + (i * 173) % 3900}" cy="${GND + 40 + (i * 61) % 500}" rx="${8 + i % 9}" ry="3" fill="${mix('#1A1810', '#A8946A', day)}"/>`).join('')}`; }
 // cavalo de ginástica de madeira (perfil). open: 0..1 mostra o interior (corte); inside: conteúdo
 function horse(x, y, s, o = {}) {
-  const day = o.day ?? 1, wood = mix('#4A3420', '#B8864E', day), woodD = mix('#3A2818', '#8A6038', day), top = mix('#2A1A10', '#6A3A22', day);
-  let g = `<g transform="translate(${f1(x)},${f1(y)}) scale(${s})">`;
+  const day = o.day ?? 1, wood = mix('#4A3420', '#B8864E', day), woodD = mix('#3A2818', '#8A6038', day), woodL = mix('#5A4430', '#D8A868', day), top = mix('#2A1A10', '#6A3A22', day);
+  let g = `<g transform="translate(${f1(x)},${f1(y)}) scale(${s})"><ellipse cx="30" cy="8" rx="360" ry="30" fill="#000" opacity=".3" filter="url(#b12)"/>`;
   g += `<path d="M-300 0 L-240 -360 L240 -360 L300 0Z" fill="${o.open ? '#1A120C' : wood}" stroke="${OUTL}" stroke-width="6"/>`;
   if (o.inside) g += o.inside;
-  if (!o.open) { for (let i = 1; i < 5; i++) g += `<line x1="${-300 + i * 12}" y1="${-i * 72}" x2="${300 - i * 12}" y2="${-i * 72}" stroke="${woodD}" stroke-width="5"/>`; g += `<rect x="-60" y="-220" width="120" height="70" rx="12" fill="${woodD}" stroke="${OUTL}" stroke-width="4"/>`; }
-  else g += `<path d="M-300 0 L-240 -360 L240 -360 L300 0" fill="none" stroke="${wood}" stroke-width="26"/><path d="M-300 0 L-240 -360 L240 -360 L300 0" fill="none" stroke="${OUTL}" stroke-width="4"/>`;
-  g += `<rect x="-270" y="-410" width="540" height="64" rx="30" fill="${top}" stroke="${OUTL}" stroke-width="5"/><path d="M-230 -396 L230 -396" stroke="#fff" stroke-width="6" opacity=".2"/>`;
-  if (o.poles) g += `<rect x="-560" y="-250" width="1120" height="24" rx="10" fill="${woodD}" stroke="${OUTL}" stroke-width="4"/>`;
+  if (!o.open) {
+    for (let i = 1; i < 5; i++) g += `<line x1="${-300 + i * 12}" y1="${-i * 72}" x2="${300 - i * 12}" y2="${-i * 72}" stroke="${woodD}" stroke-width="5"/>`;
+    for (let i = 0; i < 5; i++) for (let j = 0; j < 3; j++) { const y0 = -i * 72 - 36, x0 = -200 + j * 160 + (i % 2) * 60; g += `<path d="M${x0} ${y0} q40 ${-8 + j * 4} 90 0 q20 6 40 0" stroke="${woodD}" stroke-width="2.5" fill="none" opacity=".7"/>`; }
+    g += `<path d="M-290 -10 L-236 -350" stroke="${woodL}" stroke-width="10" opacity=".6"/><path d="M290 -10 L236 -350" stroke="#000" stroke-width="16" opacity=".15"/>`;
+    g += `<rect x="-60" y="-220" width="120" height="70" rx="12" fill="${woodD}" stroke="${OUTL}" stroke-width="4"/><rect x="-44" y="-206" width="88" height="14" rx="6" fill="#1A120C" opacity=".6"/>`;
+    for (const [cx, cy] of [[-290, -20], [290, -20], [-244, -340], [244, -340]]) g += `<rect x="${cx - 22}" y="${cy - 22}" width="44" height="44" fill="#7A7A80" stroke="${OUTL}" stroke-width="3" transform="rotate(${cx < 0 ? 10 : -10} ${cx} ${cy})"/><circle cx="${cx}" cy="${cy}" r="5" fill="#2A2A30"/>`;
+    for (let i = 0; i < 4; i++) for (const sx of [-1, 1]) g += `<circle cx="${sx * (270 - i * 12)}" cy="${-36 - i * 72}" r="4" fill="#3A3A40"/>`;
+  } else g += `<path d="M-300 0 L-240 -360 L240 -360 L300 0" fill="none" stroke="${wood}" stroke-width="26"/><path d="M-300 0 L-240 -360 L240 -360 L300 0" fill="none" stroke="${OUTL}" stroke-width="4"/>`;
+  g += `<rect x="-270" y="-410" width="540" height="64" rx="30" fill="${top}" stroke="${OUTL}" stroke-width="5"/><path d="M-240 -398 L240 -398" stroke="#fff" stroke-width="7" opacity=".22" stroke-linecap="round"/><path d="M-250 -360 L250 -360" stroke="${mix('#C8A070', '#E8C890', day)}" stroke-width="3" stroke-dasharray="10 8" opacity=".8"/>`;
+  if (o.poles) g += `<rect x="-560" y="-250" width="1120" height="24" rx="10" fill="${woodD}" stroke="${OUTL}" stroke-width="4"/><path d="M-550 -244 L550 -244" stroke="${woodL}" stroke-width="4" opacity=".6"/>`;
+  return g + '</g>';
+}
+// porta grande do depósito de onde sai o cavalo
+function shed(x, y, open = 0, day = 1) {
+  let g = `<g transform="translate(${x},${y})"><rect x="-520" y="-700" width="1040" height="700" fill="${mix('#3A3026', '#8A6E50', day)}" stroke="${OUTL}" stroke-width="6"/>${Array.from({ length: 21 }, (_, i) => `<line x1="${-520 + i * 52}" y1="-700" x2="${-520 + i * 52}" y2="0" stroke="${OUTL}" stroke-width="2" opacity=".35"/>`).join('')}`;
+  g += `<path d="M-560 -690 L0 -900 L560 -690Z" fill="${mix('#2A2420', '#5A4A3A', day)}" stroke="${OUTL}" stroke-width="6"/><rect x="300" y="-980" width="70" height="200" fill="#4A3A30" stroke="${OUTL}" stroke-width="5"/>`;
+  g += `<rect x="-380" y="-560" width="760" height="560" fill="#140E0A" stroke="${OUTL}" stroke-width="6"/>`;
+  const dw = 380 * (1 - open);
+  g += `<rect x="-380" y="-560" width="${f1(dw)}" height="560" fill="${mix('#4A3A28', '#9A7A54', day)}" stroke="${OUTL}" stroke-width="5"/><rect x="${f1(380 - dw)}" y="-560" width="${f1(dw)}" height="560" fill="${mix('#4A3A28', '#9A7A54', day)}" stroke="${OUTL}" stroke-width="5"/>`;
+  if (dw > 40) g += `<path d="M-380 -560 L${f1(-380 + dw)} 0 M-380 0 L${f1(-380 + dw)} -560 M${f1(380 - dw)} -560 L380 0 M${f1(380 - dw)} 0 L380 -560" stroke="${OUTL}" stroke-width="4" opacity=".6"/>`;
   return g + '</g>';
 }
 // salto: fase 0..1 (corrida → mãos no cavalo → aterrissa)
@@ -48,11 +64,22 @@ const sack = (x, y, s = 1) => `<g transform="translate(${f1(x)},${f1(y)}) scale(
 function counterBox(t, n, label, pop = 1) {
   return `<g transform="translate(540,220) scale(${f1(pop * 100) / 100})"><rect x="-300" y="-118" width="600" height="226" rx="34" fill="#0A0806" opacity=".6"/><rect x="-300" y="-118" width="600" height="226" rx="34" fill="none" stroke="#FFE2A8" stroke-width="4" opacity=".6"/><text x="0" y="40" text-anchor="middle" font-family="'DejaVu Sans Mono',monospace" font-weight="700" font-size="150" fill="#FFF3D6">${n}</text><text x="0" y="92" text-anchor="middle" font-family="'DejaVu Sans',sans-serif" font-weight="700" font-size="40" letter-spacing="10" fill="#FFD27A">${label}</text></g>`;
 }
+function clouds(t, day = 1) { let o = ''; for (let i = 0; i < 6; i++) { const x = ((i * 520 + t * (18 + i * 5)) % 3600) - 1300, y = 120 + (i % 3) * 170, k = .8 + (i % 3) * .3; o += `<g transform="translate(${f1(x)},${y}) scale(${k})" opacity="${op(.85 * day + .1)}"><ellipse cx="0" cy="20" rx="200" ry="44" fill="${mix('#3A4060', '#C8D4E2', day)}"/><ellipse cx="-70" cy="-6" rx="110" ry="60" fill="${mix('#4A5070', '#F4F6F8', day)}"/><ellipse cx="50" cy="-20" rx="130" ry="74" fill="${mix('#4A5070', '#FFFFFF', day)}"/><ellipse cx="150" cy="10" rx="90" ry="46" fill="${mix('#4A5070', '#F0F2F6', day)}"/></g>`; } return o; }
+function birds(t) { let o = ''; for (let i = 0; i < 5; i++) { const x = ((i * 260 + t * 90) % 2800) - 900, y = 420 + Math.sin(t * .8 + i) * 40 + i * 30, f = Math.sin(t * 10 + i) * 14; o += `<path d="M${f1(x - 22)} ${f1(y - f)} Q${f1(x - 10)} ${f1(y - 6)} ${f1(x)} ${f1(y)} Q${f1(x + 10)} ${f1(y - 6)} ${f1(x + 22)} ${f1(y - f)}" stroke="#2A2A30" stroke-width="4" fill="none"/>`; } return o; }
+function smoke(x, y, t) { let o = ''; for (let i = 0; i < 6; i++) { const p = (t * .25 + i / 6) % 1; o += `<circle cx="${f1(x + p * 160 + Math.sin(t + i) * 20)}" cy="${f1(y - p * 420)}" r="${f1(26 + p * 70)}" fill="#E8E8EC" opacity="${op((1 - p) * .45)}"/>`; } return o; }
+const TUFT = Array.from({ length: 70 }, (_, i) => ({ x: -1300 + (i * 271) % 4400, y: (i * 97) % 520, k: .6 + (i % 5) * .2 }));
+function groundDetail(t, day = 1) {
+  let o = '';
+  TUFT.forEach((q, i) => { const y = GND + 30 + q.y, sw = Math.sin(t * 1.5 + i) * 3; o += `<g transform="translate(${q.x},${y}) scale(${q.k})">${[-14, -5, 4, 13].map((dx, j) => `<path d="M${dx - 3} 0 Q${dx + sw} -26 ${dx * 1.5 + sw} ${-38 - (j % 2) * 12} Q${dx + 2 + sw} -26 ${dx + 3} 0Z" fill="${mix('#2A3A20', ['#7A8A3A', '#96A24A', '#5C6A2C'][j % 3], day)}"/>`).join('')}</g>`; if (i % 3 === 0) o += `<ellipse cx="${q.x + 60}" cy="${y + 10}" rx="${10 + i % 7}" ry="${5 + i % 3}" fill="${mix('#2A2418', '#9A8A6A', day)}" stroke="${OUTL}" stroke-width="2" opacity=".8"/>`; });
+  for (let i = 0; i < 26; i++) { const x = -400 + i * 70, y = GND + 70 + (i % 2) * 40; o += `<ellipse cx="${x}" cy="${y}" rx="16" ry="7" fill="#000" opacity=".1"/>`; }
+  return o;
+}
 function yard(t, o = {}) {
   const day = o.day ?? 1;
-  let s = lay(.05, sky(day)) + lay(.25, pines(1240, 26, 1.0, mix('#0E1810', '#3A5A3A', day), 1)) + lay(.35, pines(1300, 20, 1.3, mix('#0A140C', '#2E4A2E', day), 3));
-  s += lay(.6, barracks(-260, 1280, .7, day) + barracks(560, 1260, .55, day));
-  s += lay(.8, sandGround(day));
+  let s = lay(.05, sky(day) + `<circle cx="1500" cy="260" r="380" fill="url(#gSun)" opacity="${op(.5 * day)}"/>` + clouds(t, day)) + lay(.15, birds(t)) + lay(.25, pines(1240, 26, 1.0, mix('#0E1810', '#3A5A3A', day), 1)) + lay(.35, pines(1300, 20, 1.3, mix('#0A140C', '#2E4A2E', day), 3));
+  s += lay(.6, barracks(-260, 1280, .7, day) + barracks(560, 1260, .55, day) + `<rect x="-40" y="930" width="40" height="110" fill="#4A3A30" stroke="${OUTL}" stroke-width="4"/>` + smoke(-20, 930, t));
+  s += lay(.8, sandGround(day) + groundDetail(t, day));
+  s += lay(.8, `<rect x="-1500" y="1100" width="6800" height="500" fill="#FFF2D8" opacity="${op(.08 * day)}"/>`);
   return s;
 }
 
@@ -70,15 +97,21 @@ function s1(t) {
 /* ---------- 2. carregam o cavalo até o canto, perto da cerca; o guarda boceja ---------- */
 function s2(t) {
   const { L, d, k } = loc(t, 'n2'), [hx, hy] = HH(t);
-  setCam(lerp(-80, 1000, easeInOut(range(L, 0, 3))) + hx, 1080 + hy, .82, 0, [540, 1100, 1]);
+  const carry = easeInOut(range(L, .9, 3.3)), hxp = lerp(-700, 900, carry);
+  setCam(lerp(-640, 1000, easeInOut(range(L, .6, 3.4))) + hx, 1080 + hy, lerp(.95, .82, range(L, 0, 1)), 0, [540, 1100, 1]);
   let s = yard(t);
-  const yawn = range(L, 3.2, 3.6) * (1 - range(L, 4.6, 5.0));
-  s += lay(.9, fence(-1100, 2400, GND - 160, 520) + tower(1350, GND - 160, .8, t, { flip: -1, mouth: yawn, armF: yawn ? [170, 20] : [-10, 10], armB: yawn ? [170, 20] : [-10, 10], eyes: yawn > .5 ? 0 : 1 }));
-  const carry = easeInOut(range(L, 0, 2.8)), hxp = lerp(-300, 900, carry), W = walkPose(L * 9, carry < 1 ? 1 : 0);
+  const yawn = range(L, 3.6, 4.0) * (1 - range(L, 4.9, 5.3));
+  s += lay(.9, fence(-300, 2400, GND - 160, 520) + tower(1350, GND - 160, .8, t, { flip: -1, mouth: yawn, armF: yawn ? [170, 20] : [-10, 10], armB: yawn ? [170, 20] : [-10, 10], eyes: yawn > .5 ? 0 : 1 }));
+  s += lay(1, shed(-700, GND - 10, easeInOut(range(L, 0, .7))));
+  const moving = L > .9 && L < 3.3, W = n => walkPose(L * 9 + n, moving ? 1 : 0);
   const kinds = ['pow', 'pow2', 'pow3', 'pow4'];
   let c = '';
-  if (L < 2.9) { c += man({ x: hxp - 520, y: GND, s: .85, kind: kinds[0], ...W, armF: [20, -40], armB: [10, -30] }) + man({ x: hxp - 380, y: GND, s: .85, kind: kinds[1], ...walkPose(L * 9 + 2, W.bob ? 1 : 0), armF: [20, -40] }); c += horse(hxp, GND - 40 - W.bob * .5, 1.0, { poles: true }); c += man({ x: hxp + 380, y: GND, s: .85, kind: kinds[2], ...walkPose(L * 9 + 1, carry < 1 ? 1 : 0), armF: [-20, -40] }) + man({ x: hxp + 520, y: GND, s: .85, kind: kinds[3], ...walkPose(L * 9 + 3, carry < 1 ? 1 : 0), armF: [-20, -40] }); }
-  else { c += horse(900, GND, 1.0); for (let i = 0; i < 3; i++) { const ph = ((L - 2.9) * .7 + i * .33) % 1; c += vault(200, 900, ph, kinds[i]); } }
+  if (L < 3.4) {
+    c += man({ x: hxp - 520, y: GND, s: .85, kind: kinds[0], ...W(0), armF: [20, -40], armB: [10, -30] }) + man({ x: hxp - 380, y: GND, s: .85, kind: kinds[1], ...W(2), armF: [20, -40] });
+    c += horse(hxp, GND - 40 - (moving ? Math.abs(Math.cos(L * 9)) * 5 : 0), 1.0, { poles: true });
+    c += man({ x: hxp + 380, y: GND, s: .85, kind: kinds[2], ...W(1), armF: [-20, -40] }) + man({ x: hxp + 520, y: GND, s: .85, kind: kinds[3], ...W(3), armF: [-20, -40] });
+    if (moving) for (let i = 0; i < 8; i++) { const p = (L * 2 + i * .125) % 1; c += `<circle cx="${f1(hxp - 560 + i * 140)}" cy="${f1(GND - p * 50)}" r="${f1(10 + p * 18)}" fill="#E8DCC0" opacity="${op((1 - p) * .5)}"/>`; }
+  } else { c += horse(900, GND, 1.0); for (let i = 0; i < 3; i++) { const ph = ((L - 3.4) * .8 + i * .33) % 1; c += vault(200, 900, ph, kinds[i]); } }
   s += lay(1, c);
   return s + VIG(.7) + GRAINV(t);
 }
@@ -219,6 +252,6 @@ function frame(t) {
   const sh = shotAt(t);
   let body = FN[sh[0]](t);
   for (const c of SH.slice(1)) if (t >= c[1] && t < c[1] + .08) body += `<rect width="1080" height="1920" fill="#fff" opacity="${op(.2 * (1 - (t - c[1]) / .08))}"/>`;
-  defsEl.innerHTML = STATIC + objDefs() + `<filter id="bl6" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>` + D.join('');
+  defsEl.innerHTML = STATIC + objDefs() + `<filter id="manVol" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB"><feOffset in="SourceAlpha" dx="-16" dy="8" result="o1"/><feComposite in="SourceAlpha" in2="o1" operator="out" result="e1"/><feGaussianBlur in="e1" stdDeviation="7" result="b1"/><feComposite in="b1" in2="SourceAlpha" operator="in" result="s1"/><feFlood flood-color="#1A1028" flood-opacity=".38"/><feComposite in2="s1" operator="in" result="sh"/><feOffset in="SourceAlpha" dx="7" dy="-7" result="o2"/><feComposite in="SourceAlpha" in2="o2" operator="out" result="e2"/><feGaussianBlur in="e2" stdDeviation="2.5" result="b2"/><feComposite in="b2" in2="SourceAlpha" operator="in" result="r1"/><feFlood flood-color="#FFF0D0" flood-opacity=".55"/><feComposite in2="r1" operator="in" result="rim"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="sh"/><feMergeNode in="rim"/></feMerge></filter><radialGradient id="gSun"><stop offset="0" stop-color="#FFF4D0" stop-opacity=".9"/><stop offset="1" stop-color="#FFE0A0" stop-opacity="0"/></radialGradient><filter id="bl6" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>` + D.join('');
   root.innerHTML = body;
 }

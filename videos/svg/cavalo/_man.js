@@ -32,8 +32,8 @@ function man(o) {
   const leg = (ang, back) => {
     const [t, sh] = ang, k1 = seg(hip[0], hip[1], t, 230), f = seg(k1[0], k1[1], t + sh, 225);
     const col = back ? C.pantsD : C.pants;
-    let o2 = capsule(hip[0], hip[1], k1[0], k1[1], 44, 36, col) + capsule(k1[0], k1[1], f[0], f[1], 36, 28, col);
-    o2 += `<path d="M${f1(f[0] - 30)} ${f1(f[1] - 22)} Q${f1(f[0] - 34)} ${f1(f[1] + 14)} ${f1(f[0] - 20)} ${f1(f[1] + 16)} L${f1(f[0] + 78)} ${f1(f[1] + 16)} Q${f1(f[0] + 92)} ${f1(f[1] - 2)} ${f1(f[0] + 64)} ${f1(f[1] - 22)}Z" fill="${C.shoe}" stroke="${OUTL}" stroke-width="4"/>`;
+    let o2 = capsule(hip[0], hip[1], k1[0], k1[1], 44, 36, col) + capsule(k1[0], k1[1], f[0], f[1], 36, 28, col) + `<path d="M${f1(hip[0] + 12)} ${f1(hip[1] + 20)} L${f1(k1[0] + 10)} ${f1(k1[1])} L${f1(f[0] + 8)} ${f1(f[1] - 20)}" stroke="#000" stroke-width="3" opacity=".18" fill="none"/><path d="M${f1(k1[0] - 22)} ${f1(k1[1] - 6)} q14 10 30 2" stroke="#000" stroke-width="3" opacity=".2" fill="none"/>`;
+    o2 += `<path d="M${f1(f[0] - 30)} ${f1(f[1] - 22)} Q${f1(f[0] - 34)} ${f1(f[1] + 14)} ${f1(f[0] - 20)} ${f1(f[1] + 16)} L${f1(f[0] + 78)} ${f1(f[1] + 16)} Q${f1(f[0] + 92)} ${f1(f[1] - 2)} ${f1(f[0] + 64)} ${f1(f[1] - 22)}Z" fill="${C.shoe}" stroke="${OUTL}" stroke-width="4"/><path d="M${f1(f[0] + 20)} ${f1(f[1] - 12)} q24 -4 40 4" stroke="#fff" stroke-width="4" opacity=".3" fill="none"/>`;
     return o2;
   };
   // tronco (gira no quadril)
@@ -41,14 +41,14 @@ function man(o) {
   const arm = (ang, back, held) => {
     const [u, fa] = ang, e = seg(sh[0], sh[1], u, 170), h = seg(e[0], e[1], u + fa, 160);
     const col = back ? C.shirtD : C.shirt;
-    return capsule(sh[0], sh[1], e[0], e[1], 34, 28, col) + capsule(e[0], e[1], h[0], h[1], 28, 22, col) + `<circle cx="${f1(h[0])}" cy="${f1(h[1])}" r="27" fill="${back ? C.skinD : C.skin}" stroke="${OUTL}" stroke-width="4"/>` + (held ? `<g transform="translate(${f1(h[0])},${f1(h[1])})">${held}</g>` : '');
+    const cf = seg(e[0], e[1], u + fa, 128); return capsule(sh[0], sh[1], e[0], e[1], 34, 28, col) + capsule(e[0], e[1], h[0], h[1], 28, 22, col) + capsule(cf[0], cf[1], h[0], h[1], 25, 24, back ? C.shirtD : mix(C.shirt, '#000000', .12)) + `<path d="M${f1(sh[0])} ${f1(sh[1])} L${f1(e[0])} ${f1(e[1])}" stroke="#fff" stroke-width="5" opacity=".18"/>` + `<circle cx="${f1(h[0])}" cy="${f1(h[1])}" r="27" fill="${back ? C.skinD : C.skin}" stroke="${OUTL}" stroke-width="4"/>` + (held ? `<g transform="translate(${f1(h[0])},${f1(h[1])})">${held}</g>` : '');
   };
   s += arm(P.armB, true, P.heldB) + leg(P.legB, true) + leg(P.legF, false);
   // tronco
   const tor = `<g transform="rotate(${f1(P.lean)} ${hip[0]} ${hip[1]})"><path d="M-70 ${hip[1] + 20} L-78 ${hip[1] - 300} Q-60 ${hip[1] - 352} 0 ${hip[1] - 356} Q60 ${hip[1] - 352} 78 ${hip[1] - 300} L72 ${hip[1] + 20}Z" fill="${C.shirt}" stroke="${OUTL}" stroke-width="4"/>
     <path d="M40 ${hip[1] - 330} L46 ${hip[1] + 10}" stroke="${C.shirtD}" stroke-width="5"/>${[-280, -210, -140, -70].map(yy => `<circle cx="52" cy="${hip[1] + yy}" r="6" fill="${C.shirtD}"/>`).join('')}
     <path d="M-20 ${hip[1] - 352} L40 ${hip[1] - 300} L62 ${hip[1] - 350}Z" fill="${C.shirtD}" stroke="${OUTL}" stroke-width="3"/>
-    ${C.belt ? `<rect x="-74" y="${hip[1] - 20}" width="148" height="30" fill="#0E0E12"/><rect x="56" y="${hip[1] - 16}" width="22" height="22" fill="#C8A040"/><path d="M-50 ${hip[1] - 260} l30 0 l0 20 l-30 0Z" fill="#C8A040"/>` : ''}
+    <rect x="6" y="${hip[1] - 290}" width="52" height="56" rx="6" fill="${C.shirtD}" stroke="${OUTL}" stroke-width="3" opacity=".9"/><path d="M4 ${hip[1] - 292} L60 ${hip[1] - 292} L56 ${hip[1] - 270} L8 ${hip[1] - 270}Z" fill="${C.shirt}" stroke="${OUTL}" stroke-width="3"/><circle cx="32" cy="${hip[1] - 276}" r="4" fill="${OUTL}"/><path d="M-58 ${hip[1] - 344} L20 ${hip[1] - 330}" stroke="${C.shirtD}" stroke-width="14" stroke-linecap="round"/><path d="M-60 ${hip[1] - 120} Q-30 ${hip[1] - 100} -50 ${hip[1] - 60} M-40 ${hip[1] - 200} Q-10 ${hip[1] - 180} -30 ${hip[1] - 150}" stroke="#000" stroke-width="3" opacity=".18" fill="none"/><path d="M-70 ${hip[1] + 20} L-78 ${hip[1] - 300} Q-60 ${hip[1] - 352} 0 ${hip[1] - 356}" stroke="#000" stroke-width="18" opacity=".12" fill="none"/>${C.belt ? `<rect x="-74" y="${hip[1] - 20}" width="148" height="30" fill="#0E0E12"/><rect x="56" y="${hip[1] - 16}" width="22" height="22" fill="#C8A040"/><path d="M-50 ${hip[1] - 260} l30 0 l0 20 l-30 0Z" fill="#C8A040"/>` : ''}
     ${P.kind === 'barbeiro' ? `<path d="M-74 ${hip[1] - 300} L74 ${hip[1] - 300}" stroke="#C8C4BA" stroke-width="4"/>` : ''}
     ${P.kind.startsWith('preso') ? `<rect x="-58" y="${hip[1] - 250}" width="50" height="22" fill="#F4F0E4" stroke="${OUTL}" stroke-width="2"/>` : ''}</g>`;
   s += tor;
@@ -57,17 +57,18 @@ function man(o) {
   let hd = `<g transform="translate(${f1(hx)},${f1(hy)}) scale(${hf},1)">`;
   hd += `<rect x="-22" y="20" width="44" height="60" fill="${C.skinD}" stroke="${OUTL}" stroke-width="4"/>`;
   hd += `<path d="M-58 -10 Q-62 -78 -4 -84 Q56 -84 62 -24 L66 2 L80 14 L64 22 Q66 50 40 62 Q0 72 -30 56 Q-62 40 -58 -10Z" fill="${C.skin}" stroke="${OUTL}" stroke-width="4" stroke-linejoin="round"/>`;
+  hd += `<ellipse cx="38" cy="20" rx="14" ry="9" fill="#E07A6A" opacity=".25"/><path d="M60 4 Q64 18 56 22" stroke="${C.skinD}" stroke-width="5" fill="none"/><path d="M-56 -6 Q-56 40 -24 56" stroke="${C.skinD}" stroke-width="10" fill="none" opacity=".5"/>`;
   hd += `<ellipse cx="-14" cy="0" rx="13" ry="18" fill="${C.skinD}" stroke="${OUTL}" stroke-width="3"/>`;
   hd += P.eyes > .5 ? `<ellipse cx="36" cy="-12" rx="7" ry="9" fill="#fff" stroke="${OUTL}" stroke-width="2"/><circle cx="39" cy="-11" r="4.5" fill="#1A120C"/>` : `<path d="M28 -10 Q37 -4 46 -10" stroke="${OUTL}" stroke-width="4" fill="none"/>`;
   hd += `<path d="M24 -28 Q38 -34 52 -28" stroke="${C.hair}" stroke-width="6" fill="none" stroke-linecap="round"/>`;
   hd += P.mouth ? `<ellipse cx="46" cy="40" rx="9" ry="${f1(6 + 8 * P.mouth)}" fill="#5A1E1A"/>` : `<path d="M36 40 Q46 44 54 38" stroke="${OUTL}" stroke-width="3" fill="none"/>`;
   if (C.cap) hd += `<path d="M-66 -46 Q-60 -110 4 -112 Q66 -110 66 -50Z" fill="${C.cap}" stroke="${OUTL}" stroke-width="4"/><path d="M40 -52 L108 -40 L104 -30 L40 -38Z" fill="#0A0A0E" stroke="${OUTL}" stroke-width="3"/><circle cx="6" cy="-80" r="9" fill="#C8A040"/>`;
-  else hd += `<path d="M-60 -6 Q-70 -92 6 -96 Q60 -96 62 -40 Q40 -64 6 -62 Q-30 -60 -40 -20 Q-46 -6 -60 -6Z" fill="${C.hair}" stroke="${OUTL}" stroke-width="4"/>`;
+  else hd += `<path d="M-60 -6 Q-70 -92 6 -96 Q60 -96 62 -40 Q40 -64 6 -62 Q-30 -60 -40 -20 Q-46 -6 -60 -6Z" fill="${C.hair}" stroke="${OUTL}" stroke-width="4"/><path d="M-30 -78 Q6 -90 40 -74" stroke="#fff" stroke-width="5" opacity=".25" fill="none"/>`;
   hd += `</g>`;
   s += hd;
   s += arm(P.armF, false, P.held);
   const shd = P.shadow ? `<ellipse cx="0" cy="6" rx="150" ry="22" fill="#000" opacity="${P.shadow}" filter="url(#b12)"/>` : '';
-  return `<g transform="translate(${f1(P.x)},${f1(P.y)}) scale(${f1(P.s * P.flip * 1000) / 1000},${f1(P.s * 1000) / 1000})">${shd}${s}</g>`;
+  return `<g transform="translate(${f1(P.x)},${f1(P.y)}) scale(${f1(P.s * P.flip * 1000) / 1000},${f1(P.s * 1000) / 1000})">${shd}<g filter="url(#manVol)">${s}</g></g>`;
 }
 // capa dobrada (para carregar / pilha)
 const foldedCoat = (w = 150, h = 50, rot = 0) => `<g transform="rotate(${rot})"><rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="10" fill="#2E3C37" stroke="${OUTL}" stroke-width="4"/><path d="M${-w / 2 + 10} ${-h / 2 + 10} L${w / 2 - 10} ${-h / 2 + 10}" stroke="#7E9A92" stroke-width="5" opacity=".6"/><path d="M${-w / 4} ${-h / 2} L${-w / 4 + 12} ${h / 2}" stroke="#141A18" stroke-width="3"/></g>`;
