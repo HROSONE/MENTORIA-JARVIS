@@ -1,0 +1,416 @@
+/* ---------------- recife mais colorido ---------------- */
+scene.background.set(0x0d6a86); scene.fog.color.set(0x0d6a86); scene.fog.density = .2;
+branchCoral(V(-.9, 0, -.55), 0xff4f8b, 3, .16); branchCoral(V(.95, 0, -.45), 0xffb02e, 3, .15); branchCoral(V(-.25, 0, -1.25), 0x9b6bff, 3, .2); branchCoral(V(.4, 0, -1.1), 0xff6f61, 3, .18);
+{
+  const brainC = (pos, r, col) => {
+    const bc = new THREE.Mesh(new THREE.SphereGeometry(r, 64, 32, 0, TAU, 0, Math.PI * .55), new THREE.MeshStandardMaterial({ color: col, roughness: .7 }));
+    const p = bc.geometry.attributes.position; for (let i = 0; i < p.count; i++) { const v = V().fromBufferAttribute(p, i), n = v.clone().normalize(); v.addScaledVector(n, r * .06 * Math.sin(n.x * 40 + Math.sin(n.z * 30) * 2)); p.setXYZ(i, v.x, v.y, v.z); }
+    bc.geometry.computeVertexNormals(); bc.position.copy(pos); bc.castShadow = true; scene.add(bc);
+  };
+  brainC(V(-.75, -.03, -.25), .16, 0x8fc456); brainC(V(.75, -.03, -.75), .2, 0xe0a35a); brainC(V(-.05, -.04, -.75), .14, 0xb0d06a);
+}
+// esponjas-tubo
+for (const [x, z, c] of [[-.6, -.6, 0x8a4fd8], [1.1, -.2, 0xe86a3a], [.2, -.55, 0x5ac0c8]]) {
+  for (let i = 0; i < 3; i++) {
+    const h = .18 + rnd() * .2; const m = new THREE.Mesh(new THREE.CylinderGeometry(.03, .025, h, 20, 1, true), new THREE.MeshStandardMaterial({ color: c, roughness: .8, side: THREE.DoubleSide }));
+    m.position.set(x + (rnd() - .5) * .08, h / 2, z + (rnd() - .5) * .08); m.rotation.set((rnd() - .5) * .3, 0, (rnd() - .5) * .3); m.castShadow = true; scene.add(m);
+  }
+}
+// anêmonas
+const anemones = [];
+function makeAnemone(pos, col, n = 60) {
+  const g = new THREE.Group(); g.position.copy(pos); scene.add(g);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.05, .06, .05, 24), new THREE.MeshStandardMaterial({ color: 0xc86a3a, roughness: .6 })); base.position.y = .025; g.add(base);
+  const tent = new THREE.InstancedMesh(new THREE.CapsuleGeometry(.006, .09, 4, 8).translate(0, .05, 0), new THREE.MeshStandardMaterial({ color: col, roughness: .4, emissive: col, emissiveIntensity: .15 }), n);
+  tent.position.y = .05; g.add(tent);
+  const data = []; for (let i = 0; i < n; i++) { const a = rnd() * TAU, r = Math.sqrt(rnd()) * .045; data.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, a, r, ph: rnd() * 6 }); }
+  anemones.push({ tent, data });
+}
+makeAnemone(V(.85, 0, .05), 0xff8fb3); makeAnemone(V(-.85, 0, .3), 0xb7f27a); makeAnemone(V(.55, 0, -.4), 0xffd06a);
+// toca do camarão
+const BW = V(-.42, 0, .05);
+{
+  const hole = new THREE.Mesh(new THREE.CircleGeometry(.08, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x06100f })); hole.position.copy(BW).add(V(0, .022, 0)); scene.add(hole);
+  const peb = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), rockMat, 26); const m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
+  for (let i = 0; i < 26; i++) { const a = i / 26 * TAU + rnd() * .2, r = .09 + rnd() * .03; q.setFromEuler(new THREE.Euler(rnd() * 3, rnd() * 3, rnd() * 3)); m4.compose(V(BW.x + Math.cos(a) * r, .012, BW.z + Math.sin(a) * r), q, V(1, .7, 1).multiplyScalar(.012 + rnd() * .012)); peb.setMatrixAt(i, m4); }
+  peb.castShadow = true; scene.add(peb);
+}
+
+/* ---------------- o camarão-louva-deus ---------------- */
+const shrimpTex = canvasTex(1024, 256, (g, w, h) => {
+  const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#1f8f7a'); gr.addColorStop(.35, '#2fa45a'); gr.addColorStop(.8, '#4bb04a'); gr.addColorStop(1, '#3f9a48');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  const top = g.createLinearGradient(0, 0, 0, h); top.addColorStop(.15, 'rgba(200,255,180,0)'); top.addColorStop(.25, 'rgba(200,255,180,.35)'); top.addColorStop(.35, 'rgba(200,255,180,0)'); g.fillStyle = top; g.fillRect(0, 0, w, h);
+  for (let k = 1; k < 9; k++) { const x = k / 9 * w * .8; g.fillStyle = 'rgba(10,50,40,.55)'; g.fillRect(x - 3, 0, 6, h); g.fillStyle = 'rgba(255,140,60,.35)'; g.fillRect(x + 3, 0, 4, h); }
+  for (let i = 0; i < 160; i++) { g.fillStyle = 'rgba(20,40,20,.55)'; g.beginPath(); g.arc(w * (.8 + rnd() * .2), rnd() * h, 2 + rnd() * 4, 0, TAU); g.fill(); }
+  for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(${rnd() > .5 ? '220,255,200' : '10,40,30'},.2)`; g.fillRect(rnd() * w, rnd() * h, 2, 2); }
+});
+const eyeTex = canvasTex(128, 256, (g, w, h) => {
+  g.fillStyle = '#4fd07a'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 500; i++) { g.fillStyle = `rgba(${rnd() > .5 ? '20,90,50' : '180,255,200'},.4)`; g.fillRect(rnd() * w, rnd() * h, 2, 2); }
+  g.fillStyle = '#1a3a2a'; g.fillRect(0, h * .46, w, h * .08); g.fillStyle = '#d8f05a'; g.fillRect(0, h * .44, w, h * .02); g.fillRect(0, h * .54, w, h * .02);
+});
+const shrimp = new THREE.Group(); shrimp.rotation.order = 'YXZ'; scene.add(shrimp);
+const shell2 = new THREE.MeshPhysicalMaterial({ map: shrimpTex, roughness: .32, clearcoat: .9, clearcoatRoughness: .2, iridescence: .45, sheen: .3, sheenColor: new THREE.Color(0xb8ffd8) });
+const orange = new THREE.MeshPhysicalMaterial({ color: 0xff6a2a, roughness: .35, clearcoat: .8 });
+const red = new THREE.MeshPhysicalMaterial({ color: 0xe0322a, roughness: .3, clearcoat: .9 });
+const teal = new THREE.MeshPhysicalMaterial({ color: 0x2aa0b0, roughness: .3, clearcoat: .9 });
+const SH = { eyes: [], apps: [], pleo: [] };
+const clubGeo = new THREE.LatheGeometry([[0, 0], [.009, .003], [.0155, .012], [.017, .022], [.0145, .031], [.009, .037], [0, .039]].map(([x, y]) => new THREE.Vector2(x, y)), 28).rotateZ(-Math.PI / 2).scale(1, 1, .8);
+{
+  const sW = curveOf([[0, .03], [.18, .052], [.55, .06], [.85, .052], [1, .024]]), sH = curveOf([[0, .02], [.18, .032], [.55, .038], [.85, .034], [1, .016]]);
+  const bodyG = loft([V(-.27, .05, 0), V(-.13, .054, 0), V(.01, .058, 0), V(.13, .057, 0), V(.22, .053, 0), V(.275, .049, 0)], 140, 32,
+    (t) => ({ w: sW(t), h: sH(t) }), (t, a) => (t < .8 ? .955 + .07 * Math.pow((t * 9 / .8) % 1, 2) : 1) * (1 - .18 * Math.pow(Math.max(0, -Math.sin(a)), 2)) * (1 + .12 * Math.pow(Math.max(0, Math.cos(a) ** 2), 4) * smooth(range(t, .62, .8)) * (1 - smooth(range(t, .9, 1)))), 1);
+  shrimp.add(new THREE.Mesh(bodyG, shell2));
+  // olhos-pedúnculo
+  for (const s of [1, -1]) {
+    const base = V(.262, .07, s * .016), tip = V(.288, .108, s * .03);
+    const stalk = new THREE.Mesh(limbGeo, shell2); placeLimb(stalk, base, tip, .006); shrimp.add(stalk);
+    const eg = new THREE.Group(); eg.position.copy(tip); shrimp.add(eg);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(.0135, 32, 24), new THREE.MeshPhysicalMaterial({ map: eyeTex, roughness: .1, clearcoat: 1, iridescence: .6 })); eye.scale.set(1, 1.35, 1); eg.add(eye);
+    SH.eyes.push({ eg, side: s });
+    // antênulas (3 filamentos) e escamas antenais
+    for (let f = 0; f < 3; f++) {
+      const pts = []; for (let i = 0; i <= 10; i++) { const u = i / 10; pts.push(V(.275 + u * .2, .06 + u * .07 + Math.sin(u * 3 + f) * .01, s * (.01 + u * (.03 + f * .02)))); }
+      shrimp.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 30, .0018, 5), f === 1 ? orange : shell2));
+    }
+    const sc = new THREE.Shape(); sc.absellipse(0, 0, .03, .011, 0, TAU);
+    const scale = new THREE.Mesh(new THREE.ShapeGeometry(sc, 20), new THREE.MeshPhysicalMaterial({ color: 0xff9a6a, roughness: .35, side: THREE.DoubleSide, clearcoat: .6 }));
+    scale.position.set(.28, .055, s * .04); scale.rotation.set(Math.PI / 2 - .3, 0, s * .5); shrimp.add(scale);
+    // patas
+    for (let i = 0; i < 3; i++) {
+      const x = .05 + i * .035, a = V(x, .032, s * .03), k = V(x + .008, .028, s * .058), f = V(x + .012, .002, s * .066);
+      const l1 = new THREE.Mesh(limbGeo, orange), l2 = new THREE.Mesh(limbGeo, orange); placeLimb(l1, a, k, .0045); placeLimb(l2, k, f, .0035); shrimp.add(l1, l2);
+    }
+    // pleópodes
+    for (let i = 0; i < 5; i++) { const p = new THREE.Mesh(new THREE.SphereGeometry(.009, 10, 8), teal); p.scale.set(.5, 1.0, .25); p.position.set(-.2 + i * .035, .033, s * .02); shrimp.add(p); SH.pleo.push(p); }
+    // braços-martelo (apêndices raptoriais)
+    const root = new THREE.Group(); root.position.set(.205, .03, s * .03); shrimp.add(root);
+    const mer = new THREE.Group(); root.add(mer);
+    const Lm = .075, Lp = .062;
+    const merM = new THREE.Mesh(new THREE.CapsuleGeometry(.012, Lm - .02, 6, 14).rotateZ(-Math.PI / 2).translate(Lm / 2, 0, 0), teal); mer.add(merM);
+    for (let k = 0; k < 4; k++) { const d = new THREE.Mesh(new THREE.SphereGeometry(.0025, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffd23f })); d.position.set(.016 + k * .013, .009 * (k % 2 ? 1 : -1), s * .009); mer.add(d); }
+    const joint = new THREE.Group(); joint.position.x = Lm; mer.add(joint);
+    const buildFore = (mat, clubMat) => {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(new THREE.CapsuleGeometry(.0085, Lp - .015, 6, 12).rotateZ(-Math.PI / 2).translate(Lp / 2, 0, 0), mat));
+      const club = new THREE.Mesh(clubGeo, clubMat); club.position.x = Lp - .012; g.add(club);
+      const hook = new THREE.Mesh(new THREE.ConeGeometry(.005, .03, 8).rotateZ(Math.PI / 2), mat); hook.position.set(Lp - .01, -.012, 0); hook.rotation.z = -.4; g.add(hook);
+      return g;
+    };
+    joint.add(buildFore(orange, red));
+    const ghosts = [];
+    if (s > 0) for (let k = 0; k < 7; k++) { const gm = new THREE.MeshBasicMaterial({ color: ACCENT.clone().multiplyScalar(1.4), transparent: true, opacity: 0, depthWrite: false }); const gg = new THREE.Group(); gg.position.x = Lm; gg.add(buildFore(gm, gm)); mer.add(gg); ghosts.push({ g: gg, m: gm }); }
+    // mola e trava (diagrama)
+    let spring = null, latch = null;
+    if (s > 0) {
+      const hp = []; for (let i = 0; i <= 160; i++) { const u = i / 160, a = u * TAU * 6; hp.push(V(u * .05, Math.cos(a) * .011, Math.sin(a) * .011)); }
+      spring = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(hp), 200, .0016, 6), new THREE.MeshBasicMaterial({ color: ACCENT.clone().multiplyScalar(1.5), transparent: true, depthTest: false }));
+      spring.position.set(.012, .016, 0); spring.renderOrder = 30; mer.add(spring);
+      latch = new THREE.Group(); latch.position.set(Lm - .004, .012, 0); joint.parent.add(latch);
+      const lb = new THREE.Mesh(new THREE.BoxGeometry(.004, .028, .02), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthTest: false })); lb.position.y = .01; lb.renderOrder = 31; latch.add(lb);
+    }
+    SH.apps.push({ root, mer, joint, ghosts, spring, latch, side: s });
+  }
+  // leque da cauda
+  const fan = new THREE.Group(); fan.position.set(-.27, .05, 0); shrimp.add(fan);
+  const tel = new THREE.Shape(); tel.moveTo(0, -.025); tel.quadraticCurveTo(-.06, -.03, -.065, 0); tel.quadraticCurveTo(-.06, .03, 0, .025); tel.closePath();
+  const telM = new THREE.Mesh(new THREE.ShapeGeometry(tel, 16).rotateX(-Math.PI / 2), new THREE.MeshPhysicalMaterial({ color: 0x2f9a6a, roughness: .35, clearcoat: .8, side: THREE.DoubleSide })); fan.add(telM);
+  for (const s of [1, -1]) for (const [ang, c] of [[.45, 0xff7a2a], [.85, 0x3a7aff]]) {
+    const u = new THREE.Shape(); u.absellipse(-.035, 0, .035, .012, 0, TAU);
+    const m = new THREE.Mesh(new THREE.ShapeGeometry(u, 16).rotateX(-Math.PI / 2), new THREE.MeshPhysicalMaterial({ color: c, roughness: .35, clearcoat: .8, side: THREE.DoubleSide }));
+    m.rotation.y = s * ang; m.position.y = .002; fan.add(m);
+  }
+  fan.rotation.z = -.15;
+  shrimp.traverse(o => { if (o.isMesh && o.renderOrder < 30) o.castShadow = true; });
+}
+const LM = .075, LP = .062;
+// pose do braço: k = 0 recolhido, 1 golpe estendido
+const mAngOf = (k) => lerp(-.95, .45, k), pAngOf = (k) => lerp(2.9, .05, k);
+
+/* ---------------- o caranguejo valentão ---------------- */
+const crab = new THREE.Group(); scene.add(crab); crab.scale.setScalar(1.15);
+const crabLegs = [], crabClaws = [];
+const cracks = [];
+{
+  const sh = new THREE.MeshPhysicalMaterial({ map: crabTex, roughness: .4, clearcoat: .6 });
+  const shDark = new THREE.MeshPhysicalMaterial({ color: 0xa8401c, roughness: .4, clearcoat: .6 });
+  const clawTip = new THREE.MeshStandardMaterial({ color: 0x2a120a, roughness: .4 });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(.09, 48, 24), sh); body.scale.set(1.3, .5, .9); body.position.y = .07; crab.add(body);
+  for (let i = -3; i <= 3; i++) { const sp = new THREE.Mesh(new THREE.ConeGeometry(.007, .02, 6), sh); sp.position.set(i * .022, .08, .078 - Math.abs(i) * .004); sp.rotation.x = 1.3; crab.add(sp); }
+  for (const s of [1, -1]) {
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(.005, .005, .035, 6), shDark); st.position.set(s * .03, .1, .07); crab.add(st);
+    const e = new THREE.Mesh(new THREE.SphereGeometry(.009, 10, 8), new THREE.MeshPhysicalMaterial({ color: 0x101010, roughness: .05, clearcoat: 1 })); e.position.set(s * .03, .12, .07); crab.add(e);
+    for (let k = 0; k < 4; k++) {
+      const leg = new THREE.Group(); leg.position.set(s * .1, .07, .04 - k * .03); crab.add(leg);
+      const s1 = new THREE.Mesh(limbGeo, sh), s2 = new THREE.Mesh(limbGeo, sh); leg.add(s1, s2);
+      crabLegs.push({ leg, s1, s2, s, k });
+    }
+    const claw = new THREE.Group(); claw.position.set(s * .08, .07, .07); crab.add(claw);
+    const arm1 = new THREE.Mesh(limbGeo, sh); placeLimb(arm1, V(), V(s * .045, .015, .05), .016); claw.add(arm1);
+    const palm = new THREE.Mesh(new THREE.SphereGeometry(.036, 24, 14), sh); palm.scale.set(.85, .75, 1.35); palm.position.set(s * .05, .02, .085); claw.add(palm);
+    const finger = (pts, r) => { const g = new THREE.Group(); const c = new THREE.CatmullRomCurve3(pts); g.add(new THREE.Mesh(new THREE.TubeGeometry(c, 16, r, 8), shDark)); const tip = new THREE.Mesh(new THREE.ConeGeometry(r, .012, 8), clawTip); tip.position.copy(pts.at(-1)); tip.quaternion.setFromUnitVectors(UPV, c.getTangentAt(1)); g.add(tip); return g; };
+    claw.add(finger([V(s * .055, .008, .125), V(s * .062, .0, .155), V(s * .05, .006, .18)], .009));
+    const mov = new THREE.Group(); mov.position.set(s * .045, .03, .12); claw.add(mov);
+    mov.add(finger([V(0, 0, 0), V(s * .008, .006, .03), V(0, -.008, .055)], .008));
+    crabClaws.push({ claw, mov, s });
+  }
+  // rachaduras (aparecem no golpe final)
+  const crackMat = new THREE.MeshBasicMaterial({ color: 0x1a0905 });
+  const top = (x, z) => V(x, .07 + .045 * Math.sqrt(Math.max(0, 1 - (x / .117) ** 2 - (z / .081) ** 2)) + .001, z);
+  for (let c = 0; c < 6; c++) {
+    const pts = []; let x = (rnd() - .5) * .02, z = .055; const a0 = -Math.PI / 2 + (c - 2.5) * .45;
+    for (let i = 0; i < 9; i++) { pts.push(top(x, z)); const a = a0 + (rnd() - .5) * .9; x += Math.cos(a) * .014; z += Math.sin(a) * .014; if (Math.abs(x) > .1 || Math.abs(z) > .075) break; }
+    if (pts.length < 3) continue;
+    const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, .0018, 4), crackMat); m.visible = false; crab.add(m); cracks.push(m);
+  }
+  crab.traverse(o => { if (o.isMesh) o.castShadow = true; });
+}
+function animCrab(t, walking, taunt = 0, raise = 0) {
+  crabLegs.forEach(({ s1, s2, s, k }) => {
+    const ph = t * 9 + k * 1.6 + (s > 0 ? 0 : Math.PI);
+    const lift = walking ? Math.max(0, Math.sin(ph)) * .025 : 0, sw = walking ? Math.cos(ph) * .02 : 0;
+    const knee = V(s * .085, .04 + lift, sw + (k - 1.5) * -.014), foot = V(s * .15, -.066, sw * 1.5 + (k - 1.5) * -.035);
+    placeLimb(s1, V(), knee, .006); placeLimb(s2, knee, foot, .0042);
+  });
+  crabClaws.forEach(({ claw, mov, s }) => {
+    mov.rotation.x = -.15 - .45 * Math.max(0, Math.sin(t * (taunt ? 7 : 3) + s));
+    claw.rotation.x = -raise * (.6 + .2 * Math.sin(t * 5 + s * 2));
+  });
+}
+const S0 = V(-.09, 0, .12);
+shrimp.position.copy(S0); shrimp.updateMatrixWorld(true);
+const HIT0 = (() => { const A = SH.apps[0]; A.mer.rotation.z = mAngOf(1); A.joint.rotation.z = pAngOf(1); shrimp.updateMatrixWorld(true); return A.joint.localToWorld(V(LP + .02, 0, 0)); })();
+const CRAB_P = V(HIT0.x + .21, 0, HIT0.z - .16);
+
+/* ---------------- cavitação: bolhas, flash, ondas ---------------- */
+const cav = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 16, 12), new THREE.MeshPhysicalMaterial({ color: 0xeafcff, transparent: true, opacity: .55, roughness: 0, clearcoat: 1, transmission: 0, depthWrite: false }), 46);
+cav.frustumCulled = false; cav.count = 0; scene.add(cav);
+const cavSeed = Array.from({ length: 46 }, () => [V(rnd() - .5, rnd() - .5, rnd() - .5).multiply(V(.6, 1, 1.4)), .25 + rnd() * .75]);
+const flashTex = canvasTex(128, 128, (g) => { const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.25, 'rgba(200,250,255,.8)'); gr.addColorStop(1, 'rgba(120,220,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); });
+const flash = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: flashTex, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending }));
+flash.renderOrder = 40; scene.add(flash);
+const flashLight = new THREE.PointLight(0xcff6ff, 0, 0, 2); scene.add(flashLight);
+const rings = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.TorusGeometry(1, .04, 8, 48), new THREE.MeshBasicMaterial({ color: ACCENT.clone().multiplyScalar(1.6), transparent: true, depthWrite: false, depthTest: false })); m.renderOrder = 41; scene.add(m); return m; });
+const chips = Array.from({ length: 14 }, () => { const m = new THREE.Mesh(new THREE.TetrahedronGeometry(.008), new THREE.MeshStandardMaterial({ color: 0xc4532a, roughness: .5 })); m.userData = { v: V(rnd() - .3, rnd() * .8 + .2, rnd() - .5).normalize(), sp: .15 + rnd() * .2 }; scene.add(m); return m; });
+
+/* ---------------- estado ---------------- */
+let st, T = 0;
+function reset() {
+  st = {
+    camPos: V(), camTgt: V(), fov: 34, focus: null, aperture: .02, vig: .45,
+    pos: S0.clone(), yaw: 0, pitch: 0, k: [0, 0], kPrev: null, ghost: 0,
+    eyeT: null, crab: CRAB_P.clone(), crabYaw: -Math.PI / 2, crabWalk: false, taunt: 0, raise: 0, crabRoll: 0, crack: 0, chipsT: -1,
+    cav: -1, flashA: 0, flashP: null, ring: [-1, -1], spring: 0, latch: 0, springVis: 0, impact: null,
+  };
+}
+const cam = (p, t, fov) => { st.camPos.copy(p); st.camTgt.copy(t); st.fov = fov; };
+// posição do martelo (lado +z) para um k
+function clubWorld(k) {
+  const A = SH.apps[0];
+  A.mer.rotation.z = mAngOf(k); A.joint.rotation.z = pAngOf(k); shrimp.updateMatrixWorld(true);
+  return A.joint.localToWorld(V(LP + .02, 0, 0));
+}
+const strikeK = (lt, a, dur) => (lt < a ? 0 : lt < a + dur ? Math.pow(range(lt, a, a + dur), 2.2) : Math.max(0, 1 - range(lt, a + dur + .15, a + dur + .6)));
+function placeShrimp() { shrimp.position.copy(st.pos); shrimp.rotation.set(st.pitch, st.yaw, 0); shrimp.updateMatrixWorld(true); }
+const SHOTS = {
+  intro(lt, d) {
+    const k = easeOut(range(lt, .2, 3.2));
+    st.pos = BW.clone().add(V(.04, -.09, 0)).lerp(S0, k); st.pitch = 0; st.yaw = 0;
+    shrimp.rotation.z = 0; st.rollUp = lerp(.55, 0, k);
+    st.crab = null;
+    cam(BW.clone().add(V(.55, .16, .5)).lerp(S0.clone().add(V(.5, .12, .42)), k), BW.clone().add(V(.08, .04, 0)).lerp(S0.clone().add(V(.18, .05, 0)), k), 32);
+  },
+  valentao(lt, d) {
+    st.crab = CRAB_P.clone().add(V(.45, 0, -.05)).lerp(CRAB_P, easeOut(range(lt, 0, 2.6))); st.crabWalk = lt < 2.6;
+    st.taunt = smooth(range(lt, 2.4, 3.0)); st.raise = st.taunt;
+    st.eyeT = st.crab.clone().add(V(0, .1, 0));
+    if (lt < 3.2) cam(V(-.12, .2, .42), st.crab.clone().add(V(-.04, .07, 0)), 34);
+    else { const k = easeInOut(range(lt, 3.2, 6.5)); cam(V(-.72, .42, .85).lerp(V(-.64, .38, .78), k), HIT0.clone().add(V(.08, -.02, -.08)), 30); }
+  },
+  enganado(lt, d) {
+    st.taunt = 1; st.raise = 1; st.eyeT = CRAB_P.clone().add(V(0, .1, 0));
+    st.pitch = -.04 * smooth(range(lt, 1.5, 2.5));
+    const k = easeInOut(lt / d);
+    cam(S0.clone().add(V(.42, .1, .34).lerp(V(.38, .09, .3), k)), S0.clone().add(V(.25, .07, 0)), 30);
+  },
+  soco(lt, d) {
+    st.taunt = 1; st.raise = .15; st.eyeT = CRAB_P.clone().add(V(0, .1, 0));
+    let k = 0;
+    if (lt < 4.6) { k = strikeK(lt, 1.5, 2.1); st.ghost = smooth(range(lt, 1.6, 1.9)) * (1 - smooth(range(lt, 3.6, 4.2))); }
+    else { const ph = (lt - 4.6) % 1.25; k = strikeK(ph, .25, .09); st.ghost = pulse(ph, .25, .7, .05); }
+    st.k[0] = k; st.k[1] = lt > 4.6 ? strikeK((lt - 4.6 + .6) % 1.25, .25, .09) : 0;
+    st.kPrev = (dt) => (lt < 4.6 ? strikeK(lt - dt * 2.2, 1.5, 2.1) : strikeK(((lt - 4.6) % 1.25) - dt * .09, .25, .09));
+    if (k > .97) { st.impact = 1; }
+    cam(HIT0.clone().add(V(-.06, .05, .6)), HIT0.clone().add(V(-.05, -.02, 0)), 34); st.aperture = .012;
+  },
+  mola(lt, d) {
+    st.eyeT = CRAB_P.clone().add(V(0, .1, 0)); st.taunt = 1; st.raise = .15;
+    st.springVis = smooth(range(lt, .6, 1.2)) * (1 - smooth(range(lt, 11.0, 11.8)));
+    st.spring = easeInOut(range(lt, 3.6, 8.6)) * (lt < 9.0 ? 1 : 1 - easeOut(range(lt, 9.0, 9.12)));
+    st.latch = smooth(range(lt, 2.8, 3.4)) * (lt < 9.0 ? 1 : 1 - smooth(range(lt, 9.0, 9.1)));
+    st.k[0] = lt < 9.0 ? 0 : strikeK(lt, 9.0, .12);
+    st.kPrev = (dt) => strikeK(lt - dt * .12, 9.0, .12); st.ghost = pulse(lt, 9.0, 9.7, .05);
+    if (lt > 9.1 && lt < 9.4) st.impact = 1;
+    st.flashA = lt > 9.1 ? Math.exp(-(lt - 9.1) * 6) * .8 : 0;
+    const shake = lt > 9.1 ? Math.exp(-(lt - 9.1) * 8) * .004 : 0;
+    cam(S0.clone().add(V(.25 + Math.sin(T * 80) * shake, .06, .36)), S0.clone().add(V(.26, .045, .03)), 30); st.aperture = .01;
+  },
+  bolhas(lt, d) {
+    st.eyeT = CRAB_P.clone().add(V(0, .1, 0)); st.taunt = 0; st.raise = .15;
+    st.k[0] = lerp(.6, 1, easeInOut(range(lt, 0, 2.0)));
+    st.cav = lt - 2.0;
+    if (lt > 2.0) st.ring[0] = lt - 2.0;
+    if (lt > 5.0) { st.ring[1] = lt - 5.0; st.flashA = Math.exp(-(lt - 5.0) * 4) * 1.2; }
+    if (lt > 2.0 && lt < 2.6) st.flashA = Math.max(st.flashA, Math.exp(-(lt - 2.0) * 8) * .5);
+    const p = clubWorld(1);
+    const k = easeInOut(range(lt, 6.5, 13));
+    cam(p.clone().add(V(lerp(-.02, -.05, k), lerp(.025, .07, k), lerp(.22, .5, k))), p.clone().add(V(-.005, .0, 0)), 30); st.aperture = .008;
+  },
+  racha(lt, d) {
+    st.eyeT = CRAB_P.clone().add(V(0, .08, 0));
+    st.k[0] = strikeK(lt, .1, .1); st.kPrev = (dt) => strikeK(lt - dt * .1, .1, .1); st.ghost = pulse(lt, .1, .6, .05);
+    if (lt > .2) { st.crack = smooth(range(lt, .2, .9)); st.chipsT = lt - .2; st.flashA = Math.exp(-(lt - .2) * 6) * .7; st.impact = 1; }
+    st.crabRoll = easeInOut(range(lt, 1.0, 2.0)) * 1.9;
+    const drag = easeInOut(range(lt, 2.6, 5.5));
+    st.crab = CRAB_P.clone().lerp(BW.clone().add(V(.25, 0, .02)), drag).add(V(0, .03 * st.crabRoll / 1.9, 0));
+    st.pos = S0.clone().lerp(BW.clone().add(V(.05, 0, 0)), drag);
+    st.k[1] = drag > 0 ? .5 : 0;
+    const kc = easeInOut(range(lt, 1.6, 3.2)); cam(CRAB_P.clone().add(V(-.15, .3, .55)).lerp(V(.02, .24, .78), kc), CRAB_P.clone().add(V(0, .07, 0)).lerp(V(.0, .05, .06), kc), 34);
+  },
+  inscreve(lt, d) {
+    st.crab = null; st.yaw = -Math.PI / 2; st.pos = S0.clone().add(V(0, .006 * Math.sin(T * 6), 0));
+    st.eyeT = st.camPos.clone();
+    const punch = strikeK(lt, 2.2, .1);
+    st.k[0] = Math.max(.15 + .12 * Math.max(0, Math.sin(T * 6)), punch); st.k[1] = .15 + .12 * Math.max(0, Math.sin(T * 6 + Math.PI));
+    st.flashA = lt > 2.3 ? Math.exp(-(lt - 2.3) * 6) * .5 : 0; st.flashCam = true;
+    cam(S0.clone().add(V(.04, .12, .78)), S0.clone().add(V(0, .07, .16)), 32);
+  },
+};
+
+/* ---------------- textos ---------------- */
+const textHost = document.getElementById('texts');
+for (const x of TEXTS) {
+  const el = document.createElement('div'); el.className = 'ov' + (x.anchor ? ' lbl' : ''); el.innerHTML = x.html;
+  if (!x.anchor) el.style.setProperty('--y', x.y + 'px');
+  el.style.setProperty('--fs', x.fs + 'px');
+  textHost.appendChild(el); x.el = el; x.a = SEG[x.seg].start + x.from; x.b = SEG[x.seg].start + x.to;
+}
+const anchors = {};
+
+/* ---------------- quadro ---------------- */
+const m4 = new THREE.Matrix4();
+function frame(t) {
+  T = t; reset(); causticU.uTime.value = t;
+  const s = [...SEGMENTS].reverse().find(s => t >= s.start) || SEGMENTS[0];
+  const lt = Math.min(t - s.start, s.dur);
+  placeShrimp();
+  SHOTS[s.id](lt, s.dur);
+  placeShrimp();
+  shrimp.rotation.x = st.pitch; shrimp.rotateZ(st.rollUp || 0); shrimp.updateMatrixWorld(true);
+
+  // braços-martelo
+  SH.apps.forEach((A, i) => {
+    const k = st.k[i] ?? 0;
+    A.mer.rotation.z = mAngOf(k) - (A.spring ? .05 * st.spring : 0); A.joint.rotation.z = pAngOf(k);
+    A.ghosts.forEach((g, j) => {
+      const kp = st.kPrev ? st.kPrev((j + 1) * .12) : k;
+      g.g.rotation.z = pAngOf(clamp(kp)); g.m.opacity = st.ghost * .32 * (1 - j / A.ghosts.length);
+      g.g.visible = st.ghost > .01;
+    });
+    if (A.spring) {
+      A.spring.visible = st.springVis > .01; A.spring.material.opacity = st.springVis; A.spring.scale.set(1 - .55 * st.spring, 1 + .25 * st.spring, 1 + .25 * st.spring);
+      A.latch.visible = st.springVis > .01; A.latch.children[0].material.opacity = st.springVis; A.latch.rotation.z = lerp(-1.4, 0, st.latch);
+    }
+  });
+  SH.pleo.forEach((p, i) => p.rotation.z = Math.sin(t * 9 + i * .8) * .5);
+  shrimp.updateMatrixWorld(true);
+  // olhos
+  SH.eyes.forEach((e, i) => {
+    const tg = st.eyeT || e.eg.getWorldPosition(V()).add(V(Math.sin(t * 1.3 + i * 2) + .6, Math.sin(t * .9 + i) * .6, e.side * (1 + Math.cos(t * 1.1 + i))));
+    e.eg.lookAt(tg);
+  });
+  // caranguejo
+  crab.visible = !!st.crab;
+  if (st.crab) {
+    let p = st.crab.clone();
+    if (st.impact) p.x += .012;
+    crab.position.copy(p); crab.rotation.set(0, st.crabYaw, st.crabRoll, 'YXZ');
+    animCrab(t, st.crabWalk, st.taunt, st.raise);
+    cracks.forEach((c, i) => c.visible = st.crack > i / cracks.length);
+  }
+  chips.forEach((c, i) => { c.visible = st.chipsT >= 0 && st.chipsT < 2; if (c.visible) { const tt = st.chipsT; c.position.copy(CRAB_P).add(V(-.08, .14, 0)).addScaledVector(c.userData.v, c.userData.sp * tt).add(V(0, -.12 * tt * tt, 0)); c.rotation.set(tt * 9 + i, tt * 7, 0); } });
+  // impacto / bolhas
+  const hit = clubWorld(1); SH.apps[0].mer.rotation.z = mAngOf(st.k[0]); SH.apps[0].joint.rotation.z = pAngOf(st.k[0]); shrimp.updateMatrixWorld(true);
+  const bubP = hit.clone().add(V(.012, 0, 0));
+  cav.count = 0;
+  if (st.cav >= 0) {
+    const c = st.cav, grow = easeOut(range(c, 0, 2.4)), coll = range(c, 2.6, 3.0);
+    const sz = grow * (1 - coll * coll);
+    if (sz > .001) { cav.count = cavSeed.length; cavSeed.forEach(([o, r], i) => { m4.compose(bubP.clone().addScaledVector(o, .036 * (1 - coll * .7)), new THREE.Quaternion(), V(1, 1, 1).multiplyScalar(.013 * r * sz)); cav.setMatrixAt(i, m4); }); cav.instanceMatrix.needsUpdate = true; }
+  }
+  flash.visible = st.flashA > .01; flashLight.intensity = st.flashA * 1.5;
+  const fp = st.flashCam ? SH.apps[0].joint.localToWorld(V(LP, 0, 0)) : bubP;
+  flash.position.copy(fp); flashLight.position.copy(fp); flash.quaternion.copy(camera.quaternion); flash.scale.setScalar(.08 + .12 * st.flashA); flash.material.opacity = Math.min(1, st.flashA);
+  rings.forEach((r, i) => { const a = st.ring[i]; r.visible = a >= 0 && a < .9; if (r.visible) { r.position.copy(bubP); r.quaternion.copy(camera.quaternion); r.scale.setScalar(.01 + a * .07); r.material.opacity = 1 - a / .9; } });
+  // recife vivo
+  anemones.forEach(({ tent, data }) => { data.forEach((d, i) => { const e = new THREE.Euler(Math.sin(t * 1.5 + d.ph) * .35 + Math.sin(d.a) * d.r * 9, 0, Math.cos(t * 1.3 + d.ph) * .35 - Math.cos(d.a) * d.r * 9); m4.compose(V(d.x, 0, d.z), new THREE.Quaternion().setFromEuler(e), V(1, 1, 1)); tent.setMatrixAt(i, m4); }); tent.instanceMatrix.needsUpdate = true; });
+  const q0 = new THREE.Quaternion(), e0 = new THREE.Euler();
+  grassData.forEach((g, i) => { e0.set(Math.sin(t * 1.3 + g.ph) * .25, g.rot, Math.cos(t * 1.1 + g.ph) * .2); q0.setFromEuler(e0); m4.compose(g.p, q0, V(1, g.h, 1)); grass.setMatrixAt(i, m4); });
+  grass.instanceMatrix.needsUpdate = true;
+  rays.forEach(r => { r.rotation.z = Math.sin(t * .2 + r.userData.p) * .08; r.rotation.x = Math.cos(t * .17 + r.userData.p) * .06; });
+  fishes.forEach(f => { const u = f.userData, a = t * u.s + u.p; f.position.set(u.c.x + Math.cos(a) * u.r, u.c.y + Math.sin(a * 1.7) * .1, u.c.z + Math.sin(a) * u.r * .4); f.rotation.y = -a - Math.PI / 2; });
+  snow.position.y = -((t * .02) % .5); snow.rotation.y = t * .01;
+
+  // âncoras
+  const A0 = SH.apps[0];
+  anchors.mola = A0.mer.localToWorld(V(.035, .045, 0)); anchors.trava = A0.mer.localToWorld(V(LM + .01, -.03, 0));
+  anchors.hit1 = hit.clone().add(V(-.02, .035, 0)); anchors.bub = bubP.clone().add(V(.01, -.035, 0)); anchors.hit2 = bubP.clone().add(V(.02, .035, 0));
+
+  // câmera
+  camera.position.copy(st.camPos); camera.fov = st.fov; camera.updateProjectionMatrix(); camera.lookAt(st.camTgt); camera.updateMatrixWorld(true);
+  bokeh.uniforms.focus.value = st.focus ?? st.camPos.distanceTo(st.camTgt);
+  bokeh.uniforms.aperture.value = st.aperture;
+  gradePass.uniforms.uVig.value = st.vig; gradePass.uniforms.uTime.value = t;
+
+  for (const x of TEXTS) {
+    if (window.__render) {
+      const k = Math.min(range(t, x.a, x.a + .3), 1 - range(t, x.b - .25, x.b)), e = easeOut(k);
+      x.el.style.transition = 'none'; x.el.style.opacity = k;
+      x.el.style.transform = `translateY(${(1 - e) * 40}px) scale(${.92 + .08 * e})`;
+    } else x.el.classList.toggle('on', t >= x.a && t < x.b);
+    if (x.anchor && anchors[x.anchor]) {
+      const p = anchors[x.anchor].clone().project(camera);
+      x.el.style.left = ((p.x + 1) / 2 * W) + 'px'; x.el.style.top = ((1 - p.y) / 2 * H) + 'px'; x.el.style.translate = '-50% -50%';
+    }
+  }
+  composer.render();
+}
+
+/* ---------------- controle ---------------- */
+const stage = document.getElementById('stage'), startEl = document.getElementById('start');
+const fit = () => stage.style.setProperty('--s', Math.min(innerWidth / W, innerHeight / H));
+addEventListener('resize', fit); fit();
+const params = new URLSearchParams(location.search);
+let playing = false, offset = parseFloat(params.get('t') || '0'), t0 = 0;
+const current = () => playing ? Math.min(TOTAL, offset + (performance.now() - t0) / 1000) : offset;
+function play() { if (playing) return; playing = true; t0 = performance.now(); startEl.classList.add('hide'); }
+function pause() { offset = current(); playing = false; }
+function seek(t) { offset = clamp(t, 0, TOTAL); t0 = performance.now(); }
+startEl.addEventListener('click', play);
+addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); if (!playing) play(); else pause(); }
+  if (e.code === 'KeyR') { seek(0); play(); }
+  if (e.code === 'ArrowRight') seek(current() + 2);
+  if (e.code === 'ArrowLeft') seek(current() - 2);
+});
+window.__total = TOTAL;
+window.__seek = (t) => { playing = false; offset = t; frame(t); };
+window.__ready = true;
+if (params.has('hideui')) startEl.classList.add('hide');
+if (params.has('nobokeh')) bokeh.enabled = false;
+if (params.has('still')) frame(offset);
+else (function loop() { frame(current()); requestAnimationFrame(loop); })();
+</script>
+</body>
+</html>

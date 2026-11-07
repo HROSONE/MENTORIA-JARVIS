@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Você é um Camarão-Louva-Deus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --accent:#00E5FF; --s:1; }
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;
+    transform:translate(-50%,-50%) scale(var(--s));background:#000}
+  #c{display:block;width:1080px;height:1920px}
+  .ov{position:absolute;left:50px;right:50px;top:var(--y);text-align:center;color:#fff;
+    font-family:'Montserrat',system-ui,sans-serif;font-weight:900;font-size:var(--fs);line-height:1;
+    opacity:0;transform:translateY(40px) scale(.92);
+    transition:opacity .25s ease, transform .45s cubic-bezier(.2,.9,.3,1.25);
+    text-shadow:0 10px 40px rgba(0,0,0,.75),0 2px 8px rgba(0,0,0,.6);pointer-events:none}
+  .ov.on{opacity:1;transform:none}
+  .ov.lbl{left:0;right:auto;top:0;white-space:nowrap}
+  .a{color:var(--accent)}
+  .sub{display:block;font-size:.3em;letter-spacing:.12em;margin-top:.15em}
+  .btn{display:inline-block;border:10px solid var(--accent);border-radius:999px;padding:.28em .75em;
+    background:rgba(0,0,0,.45);box-shadow:0 0 60px rgba(0,229,255,.35)}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;
+    color:#fff;font:800 54px 'Montserrat',sans-serif;background:rgba(0,0,0,.55);cursor:pointer;gap:30px;text-align:center}
+  #start small{font-size:30px;font-weight:800;opacity:.6}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="texts"></div>
+  <div id="start">▶ CLIQUE ou ESPAÇO<small>ESPAÇO pausa · R reinicia · ← → avança/volta 2s</small></div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+
+/* =====================================================================
+   ROTEIRO / TEMPOS — ajuste "dur" (segundos) para casar com a sua fala.
+   ===================================================================== */
+const SEGMENTS = [
+  { id:'intro',    dur:3.5 },  // "Você é um camarão-louva-deus."
+  { id:'valentao', dur:6.5 },  // "E você está com fome. Na sua frente, um caranguejo com uma carapaça dura, se achando o valentão do recife."
+  { id:'enganado', dur:3.5 },  // "Ele acha que está seguro. Ele está muito enganado."
+  { id:'soco',     dur:10.0 }, // "Você tem o soco mais rápido do mundo animal. Seu golpe chega a cerca de 80 quilômetros por hora, debaixo d'água, mais rápido que um piscar de olhos."
+  { id:'mola',     dur:12.0 }, // "O segredo é que seu braço funciona como uma mola. Uma trava segura o braço enquanto uma parte do seu esqueleto, em forma de sela, é comprimida e guarda energia. Quando a trava solta... POW!"
+  { id:'bolhas',   dur:13.0 }, // "E tem mais: o golpe é tão rápido que a água na frente do seu braço forma bolhas que estouram logo em seguida. É como se cada soco acertasse duas vezes: uma com o braço, outra com a bolha."
+  { id:'racha',    dur:5.5 },  // "Resultado: a carapaça dura do caranguejo racha. O valentão do recife virou almoço."
+  { id:'inscreve', dur:5.0 },  // "E se você gostou de ser um camarão-louva-deus, se inscreve."
+];
+const TEXTS = [
+  { seg:'valentao', from:3.6, to:6.4,  y:200,  fs:130, html:'<span class="a">VALENTÃO</span>' },
+  { seg:'soco',     from:0.4, to:3.8,  y:200,  fs:105, html:'O SOCO MAIS<br><span class="a">RÁPIDO</span>' },
+  { seg:'soco',     from:4.6, to:9.9,  y:190,  fs:210, html:'<span class="a">80</span><span class="sub">KM/H</span>' },
+  { seg:'mola',     from:1.0, to:9.0,  anchor:'mola',  fs:70, html:'<span class="a">MOLA</span>' },
+  { seg:'mola',     from:3.4, to:9.0,  anchor:'trava', fs:70, html:'TRAVA' },
+  { seg:'mola',     from:9.05, to:11.9, y:220, fs:240, html:'<span class="a">POW!</span>' },
+  { seg:'bolhas',   from:2.0, to:6.4,  anchor:'hit1', fs:90, html:'<span class="a">1</span>' },
+  { seg:'bolhas',   from:2.7, to:5.0,  anchor:'bub',  fs:66, html:'BOLHAS' },
+  { seg:'bolhas',   from:5.05, to:9.0, anchor:'hit2', fs:90, html:'<span class="a">2</span>' },
+  { seg:'bolhas',   from:6.8, to:12.9, y:200,  fs:130, html:'ACERTA <span class="a">2x</span>' },
+  { seg:'inscreve', from:0.6, to:5.0,  y:1540, fs:110, html:'<span class="btn">SE INSCREVE</span>' },
+];
+const ACCENT = new THREE.Color('#00E5FF');
+
+let acc = 0; for (const s of SEGMENTS) { s.start = acc; acc += s.dur; }
+const TOTAL = acc;
+const SEG = Object.fromEntries(SEGMENTS.map(s => [s.id, s]));
+
+/* ---------------- utilidades ---------------- */
+const TAU = Math.PI * 2;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const range = (t, a, b) => clamp((t - a) / (b - a));
+const smooth = x => { x = clamp(x); return x * x * (3 - 2 * x); };
+const easeInOut = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const easeOut = x => 1 - Math.pow(1 - clamp(x), 3);
+const lerp = (a, b, k) => a + (b - a) * k;
+const pulse = (t, a, b, f = .25) => Math.min(range(t, a, a + f), 1 - range(t, b - f, b));
+const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const UPV = V(0, 1, 0), ZV = V(0, 0, 1);
+let seed = 13; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const curveOf = (pts) => (t) => {
+  if (t <= pts[0][0]) return pts[0][1];
+  for (let i = 1; i < pts.length; i++) if (t <= pts[i][0]) { const [a, va] = pts[i - 1], [b, vb] = pts[i]; return lerp(va, vb, smooth((t - a) / (b - a))); }
+  return pts[pts.length - 1][1];
+};
+const bez = (a, b, c, k) => a.clone().multiplyScalar((1 - k) ** 2).addScaledVector(b, 2 * k * (1 - k)).addScaledVector(c, k * k);
+
+/* ---------------- renderer + pós-processamento ---------------- */
+const W = 1080, H = 1920;
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: false, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H, false);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const MAXANI = renderer.capabilities.getMaxAnisotropy();
+
+const WATER = new THREE.Color(0x0b4f6c);
+const scene = new THREE.Scene();
+scene.background = WATER.clone();
+scene.fog = new THREE.FogExp2(WATER.getHex(), .16);
+const overlay = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, W / H, 0.01, 120);
+
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(W, H, { type: THREE.HalfFloatType, samples: 4 }));
+composer.addPass(new RenderPass(scene, camera));
+const bokeh = new BokehPass(scene, camera, { focus: 1, aperture: .018, maxblur: .018 });
+composer.addPass(bokeh);
+const overPass = new RenderPass(overlay, camera); overPass.clear = false; overPass.clearDepth = true;
+composer.addPass(overPass);
+const gradePass = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uVig: { value: .45 }, uTime: { value: 0 }, uRes: { value: new THREE.Vector2(W, H) } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uVig,uTime; uniform vec2 uRes; varying vec2 vUv;
+    void main(){ vec2 uv=vUv; uv.x += sin(uv.y*40.+uTime*2.)*0.0006; vec4 c=texture2D(tDiffuse,uv); float v=length((vUv-.5)*vec2(1.,1.15));
+      c.rgb*=1.-uVig*smoothstep(.3,.95,v);
+      float g=fract(sin(dot(vUv*uRes+uTime*61.,vec2(12.9898,78.233)))*43758.5453); c.rgb+=(g-.5)*.01; gl_FragColor=c; }`
+});
+composer.addPass(gradePass);
+composer.addPass(new OutputPass());
+
+/* ---------------- água, luz e ambiente ---------------- */
+const waterSky = new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, fog: false,
+  vertexShader: `varying vec3 vW; void main(){ vW=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+  fragmentShader: `varying vec3 vW; void main(){ float h=vW.y;
+    vec3 deep=vec3(.01,.08,.14), mid=vec3(.03,.28,.38), top=vec3(.35,.8,.9);
+    vec3 c = h>0. ? mix(mid, top, pow(h,1.6)) : mix(mid, deep, pow(-h,.5));
+    c += vec3(.8,1.,1.)*pow(max(h,0.),14.)*1.5;
+    gl_FragColor=vec4(c,1.); }`
+});
+{
+  const envScene = new THREE.Scene(); envScene.add(new THREE.Mesh(new THREE.SphereGeometry(10, 32, 16), waterSky));
+  const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(envScene, .03).texture;
+}
+const sun = new THREE.DirectionalLight(0xd6f6ff, 3.0);
+sun.position.set(1.5, 8, 2.5); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -3, right: 3.5, top: 3, bottom: -3, near: 1, far: 20 });
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = .01; sun.shadow.radius = 5; scene.add(sun);
+scene.add(new THREE.HemisphereLight(0x8fe0ff, 0x0b2a35, .55));
+// cáusticas (a luz ondulando no fundo)
+const causticU = { uTime: { value: 0 } };
+const CAUSTIC_GLSL = `
+uniform float uTime; varying vec3 vWP;
+float caustic(vec2 uv, float time){
+  vec2 p = mod(uv*6.28318, 6.28318) - 250.0; vec2 i = p; float c = 1.0; float inten = .005;
+  for (int n = 0; n < 4; n++) { float t = time * (1.0 - (3.5 / float(n+1)));
+    i = p + vec2(cos(t - i.x) + sin(t + i.y), sin(t - i.y) + cos(t + i.x));
+    c += 1.0/length(vec2(p.x / (sin(i.x+t)/inten), p.y / (cos(i.y+t)/inten))); }
+  c /= 4.0; c = 1.17 - pow(c, 1.4); return clamp(pow(abs(c), 8.0), 0., 2.);
+}`;
+function addCaustics(mat, k = .8) {
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = causticU.uTime;
+    sh.vertexShader = 'varying vec3 vWP;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = CAUSTIC_GLSL + '\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>',
+      `#include <emissivemap_fragment>
+       float cz = caustic(vWP.xz * .55 + vec2(vWP.y*.2), uTime * .5);
+       totalEmissiveRadiance += vec3(.6, .95, 1.) * cz * ${k.toFixed(2)} * diffuseColor.rgb * smoothstep(-1.0, 0.6, vWP.y);`);
+  };
+  return mat;
+}
+// raios de luz
+const rayMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+  uniforms: { uO: { value: .07 } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+  fragmentShader: `uniform float uO; varying vec2 vUv; void main(){ float a = uO * smoothstep(0.,.6,vUv.y) * (0.6+0.4*sin(vUv.x*40.)); gl_FragColor=vec4(vec3(.7,.95,1.)*a, 1.); }`
+});
+const rays = [];
+for (let i = 0; i < 7; i++) {
+  const r = new THREE.Mesh(new THREE.ConeGeometry(.35 + rnd() * .5, 9, 24, 1, true), rayMat);
+  r.position.set(-2.5 + i * .9 + rnd() * .4, 4.2, -2.4 + rnd() * 1.6); r.userData.p = rnd() * 6; scene.add(r); rays.push(r);
+}
+
+/* ---------------- texturas ---------------- */
+function canvasTex(w, h, draw, srgb = true) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = MAXANI; return t;
+}
+const sandTex = canvasTex(512, 512, (g, w, h) => {
+  g.fillStyle = '#c9b48a'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 26000; i++) { const v = rnd(); g.fillStyle = v > .5 ? `rgba(240,225,190,${.25 + rnd() * .3})` : `rgba(120,100,70,${.15 + rnd() * .25})`; g.fillRect(rnd() * w, rnd() * h, 1.5, 1.5); }
+});
+sandTex.repeat.set(26, 26);
+function octoSkin(underside) {
+  return canvasTex(1024, 512, (g, w, h) => {
+    g.fillStyle = '#b25131'; g.fillRect(0, 0, w, h);
+    g.filter = 'blur(10px)';
+    for (let i = 0; i < 110; i++) { g.fillStyle = `rgba(100,30,18,${.5 + rnd() * .35})`; g.beginPath(); g.ellipse(rnd() * w, rnd() * h, 20 + rnd() * 50, 12 + rnd() * 30, rnd() * 3, 0, TAU); g.fill(); }
+    for (let i = 0; i < 70; i++) { g.fillStyle = `rgba(230,140,95,${.3 + rnd() * .3})`; g.beginPath(); g.ellipse(rnd() * w, rnd() * h, 8 + rnd() * 22, 6 + rnd() * 14, rnd() * 3, 0, TAU); g.fill(); }
+    g.filter = 'none';
+    for (let i = 0; i < 1400; i++) { g.fillStyle = `rgba(${rnd() > .5 ? '245,190,150' : '80,25,15'},${.25 + rnd() * .3})`; g.beginPath(); g.arc(rnd() * w, rnd() * h, 1 + rnd() * 2.5, 0, TAU); g.fill(); }
+    if (underside) {
+      const gr = g.createLinearGradient(0, 0, 0, h);
+      gr.addColorStop(.08, 'rgba(245,205,180,0)'); gr.addColorStop(.17, 'rgba(245,205,180,.92)'); gr.addColorStop(.33, 'rgba(245,205,180,.92)'); gr.addColorStop(.42, 'rgba(245,205,180,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    }
+  });
+}
+const bumpTex = canvasTex(512, 256, (g, w, h) => {
+  g.fillStyle = '#808080'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2600; i++) { const x = rnd() * w, y = rnd() * h, r = 1.5 + rnd() * 4; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, 'rgba(128,128,128,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
+}, false);
+const irisTex = canvasTex(256, 128, (g, w, h) => {
+  g.fillStyle = '#7a5a1e'; g.fillRect(0, 0, w, h);
+  const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#5a3a12'); gr.addColorStop(.5, '#e0b04a'); gr.addColorStop(1, '#5a3a12'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 300; i++) { g.fillStyle = `rgba(${rnd() > .5 ? '255,220,140' : '60,35,10'},.25)`; g.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 3, 1 + rnd() * 6); }
+});
+const crabTex = canvasTex(512, 256, (g, w, h) => {
+  g.fillStyle = '#c4532a'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 500; i++) { g.fillStyle = `rgba(${rnd() > .5 ? '120,30,15' : '235,140,80'},.35)`; g.beginPath(); g.arc(rnd() * w, rnd() * h, 2 + rnd() * 6, 0, TAU); g.fill(); }
+});
+
+/* ---------------- geometria "esculpida" (loft) ---------------- */
+function loft(pts, segs, radial, prof, shapeFn, uScale = 1) {
+  const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
+  const P = [], UV = [], I = [];
+  let side = null;
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs, p = curve.getPointAt(t), T = curve.getTangentAt(t).normalize();
+    if (!side) { side = V().crossVectors(T, UPV); if (side.lengthSq() < 1e-4) side.set(1, 0, 0); side.normalize(); }
+    else side.addScaledVector(T, -side.dot(T)).normalize();
+    const up = V().crossVectors(side, T).normalize();
+    const { w, h } = prof(t);
+    for (let j = 0; j <= radial; j++) {
+      const a = j / radial * TAU, c = Math.cos(a), s = Math.sin(a), m = shapeFn ? shapeFn(t, a) : 1;
+      const q = p.clone().addScaledVector(side, c * w * m).addScaledVector(up, s * h * m);
+      P.push(q.x, q.y, q.z); UV.push(t * uScale, j / radial);
+    }
+  }
+  for (let i = 0; i < segs; i++) for (let j = 0; j < radial; j++) { const a = i * (radial + 1) + j, b = a + radial + 1; I.push(a, b, a + 1, b, b + 1, a + 1); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2));
+  g.setIndex(I); g.computeVertexNormals();
+  return g;
+}
+const limbGeo = new THREE.CylinderGeometry(1, 1, 1, 10);
+function placeLimb(m, a, b, r) { const d = b.clone().sub(a), len = d.length(); m.position.copy(a).addScaledVector(d, .5); m.scale.set(r, Math.max(len, 1e-4), r); m.quaternion.setFromUnitVectors(UPV, d.normalize()); }
+const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: .8, ...o });
+function noisyRock(r, s) {
+  let g = new THREE.IcosahedronGeometry(r, 5); g.deleteAttribute('normal'); g.deleteAttribute('uv'); g = mergeVertices(g); const p = g.attributes.position; const col = [];
+  const a = rnd() * 9, b = rnd() * 9;
+  for (let i = 0; i < p.count; i++) {
+    const v = V().fromBufferAttribute(p, i), n = v.clone().normalize();
+    const d = 1 + .18 * Math.sin(n.x * 3 + a) * Math.cos(n.y * 4 + b) + .08 * Math.sin(n.z * 9 + a * 2) + .04 * Math.sin(n.x * 19 + n.y * 13);
+    v.copy(n).multiplyScalar(r * d); v.multiply(s); p.setXYZ(i, v.x, v.y, v.z);
+    const k = .75 + .25 * Math.sin(n.y * 6 + a) ; col.push(.42 * k, .4 * k, .36 * k);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals(); return g;
+}
+
+/* ---------------- fundo do mar ---------------- */
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(60, 48, 24), waterSky));
+const FLAT_C = V(.5, 0, 0);
+{
+  const sg = new THREE.PlaneGeometry(60, 60, 220, 220).rotateX(-Math.PI / 2); const p = sg.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i), d = Math.hypot(x - FLAT_C.x, z - FLAT_C.z);
+    const dune = .25 * Math.sin(x * .7) * Math.cos(z * .55) + .08 * Math.sin(x * 2.3 + z * 1.7);
+    p.setY(i, dune * smooth(range(d, 2.6, 6.5)) + .012 * Math.sin(x * 9 + z * 3) + .01 * Math.sin(z * 11));
+  }
+  sg.computeVertexNormals();
+  const sand = new THREE.Mesh(sg, addCaustics(std(0xffffff, { map: sandTex, roughness: 1 }), 1.1)); sand.receiveShadow = true; scene.add(sand);
+}
+// rochas e a toca
+const rockMat = addCaustics(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95 }), .9);
+const rocks = [];
+for (const [x, y, z, r, sx, sy, sz] of [
+  [-.78, .22, -.86, .42, 1.1, .9, 1], [.36, .2, -.9, .38, 1, .85, 1], [-.22, .62, -1.0, .52, 1.4, .55, 1], [-.2, .3, -1.42, .55, 1.6, 1, .8],
+  [-1.3, .12, -.5, .25, 1, .7, 1], [1.05, .1, -.75, .22, 1.2, .7, 1], [1.7, .1, .9, .2, 1.1, .6, 1], [2.35, .16, .25, .28, 1, .7, 1.1], [-1.6, .3, -1.6, .5, 1, .9, 1],
+  [2.6, .5, -1.4, .7, 1.2, 1, 1], [-2.6, .4, -.2, .6, 1, .9, 1.2], [.5, .06, 1.35, .13, 1, .7, 1]]) {
+  const m = new THREE.Mesh(noisyRock(r, V(sx, sy, sz)), rockMat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; scene.add(m); rocks.push(m);
+}
+// algas
+const grassGeo = (() => { const g = new THREE.PlaneGeometry(.035, .55, 1, 8).translate(0, .275, 0); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const y = p.getY(i); p.setZ(i, y * y * .35); p.setX(i, p.getX(i) * (1 - y * 1.2)); } g.computeVertexNormals(); return g; })();
+const grass = new THREE.InstancedMesh(grassGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .6, side: THREE.DoubleSide }), 260);
+const grassData = [];
+{
+  const col = new THREE.Color();
+  for (let i = 0; i < 260; i++) {
+    let x, z; do { x = -3.5 + rnd() * 7.5; z = -2.8 + rnd() * 4.5; } while (Math.hypot(x - .5, z - .1) < 1.25 || (x > -1 && x < .6 && z > -1.2 && z < -.3));
+    grassData.push({ p: V(x, 0, z), h: .6 + rnd() * .9, rot: rnd() * TAU, ph: rnd() * 6 });
+    grass.setColorAt(i, col.setHSL(.27 + rnd() * .1, .55, .22 + rnd() * .15));
+  }
+  scene.add(grass);
+}
+// corais, estrela-do-mar, conchas
+const corals = new THREE.Group(); scene.add(corals);
+function branchCoral(pos, color, depth = 3, len = .22, dir = V(0, 1, 0), r = .03) {
+  const m = new THREE.MeshStandardMaterial({ color, roughness: .55 });
+  const grow = (p, d, l, rr, k) => {
+    const e = p.clone().addScaledVector(d, l);
+    const seg = new THREE.Mesh(limbGeo, m); placeLimb(seg, p, e, rr); corals.add(seg);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(rr, 10, 8), m); tip.position.copy(e); corals.add(tip);
+    if (k > 0) for (let i = 0; i < 2 + (rnd() > .5 ? 1 : 0); i++) {
+      const nd = d.clone().add(V((rnd() - .5) * 1.2, .3, (rnd() - .5) * 1.2)).normalize();
+      grow(e, nd, l * .78, rr * .75, k - 1);
+    }
+  };
+  grow(pos, dir, len, r, depth);
+}
+branchCoral(V(1.5, 0, -1.0), 0xff6f61); branchCoral(V(-1.05, 0, .25), 0xf2a541, 3, .18); branchCoral(V(2.0, 0, -.2), 0xd65db1, 3, .2); branchCoral(V(-1.9, 0, -.9), 0xff8a5c, 3, .25);
+{
+  const bc = new THREE.Mesh(new THREE.SphereGeometry(.26, 64, 32, 0, TAU, 0, Math.PI * .55), new THREE.MeshStandardMaterial({ color: 0xc9b05a, roughness: .7 }));
+  const p = bc.geometry.attributes.position; for (let i = 0; i < p.count; i++) { const v = V().fromBufferAttribute(p, i), n = v.clone().normalize(); v.addScaledVector(n, .015 * Math.sin(n.x * 40 + Math.sin(n.z * 30) * 2)); p.setXYZ(i, v.x, v.y, v.z); }
+  bc.geometry.computeVertexNormals(); bc.position.set(1.25, -.04, -.35); bc.castShadow = true; corals.add(bc);
+  // estrela-do-mar
+  const star = new THREE.Group(); const sm = new THREE.MeshStandardMaterial({ color: 0xff7b2e, roughness: .6 });
+  for (let i = 0; i < 5; i++) { const a = i / 5 * TAU; const arm = new THREE.Mesh(new THREE.ConeGeometry(.045, .2, 12).rotateZ(-Math.PI / 2).translate(.1, 0, 0), sm); arm.scale.y = .45; arm.rotation.y = a; star.add(arm); }
+  star.add(new THREE.Mesh(new THREE.SphereGeometry(.05, 16, 8), sm)); star.children.at(-1).scale.y = .45;
+  star.position.set(-.7, .02, .55); star.rotation.y = .4; corals.add(star);
+}
+const shellMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: .3, clearcoat: .8 });
+function makeShell(pos, s, rotY) {
+  const pts = []; for (let i = 0; i <= 40; i++) { const t = i / 40; const r = t < .22 ? lerp(.18, .42, Math.sin(t / .22 * Math.PI / 2)) : .42 * Math.pow(1 - (t - .22) / .78, 1.25); pts.push(new THREE.Vector2(r + .005, t * 1.1)); }
+  const g = new THREE.Group(); const body = new THREE.Mesh(new THREE.LatheGeometry(pts, 48), shellMat);
+  const p = body.geometry.attributes.position; const col = [];
+  for (let i = 0; i < p.count; i++) { const y = p.getY(i); const a = Math.atan2(p.getZ(i), p.getX(i)); const sp = Math.sin(y * 34 + a); const k = 1 + .07 * Math.max(0, sp); p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k);
+    const band = .5 + .5 * Math.sin(y * 34 + a); col.push(lerp(.97, .5, band), lerp(.86, .27, band), lerp(.7, .14, band)); }
+  body.geometry.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  body.geometry.computeVertexNormals(); body.rotation.z = Math.PI / 2 - .25; g.add(body);
+  g.scale.setScalar(s); g.position.copy(pos); g.rotation.y = rotY; scene.add(g); return g;
+}
+const shells = [makeShell(V(1.35, .035, .85), .14, .5), makeShell(V(.2, .03, .95), .11, 2.2), makeShell(V(-.55, .03, .2), .12, 1.0)];
+shells.forEach(sh => { sh.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(sh); sh.userData.c = bb.getCenter(V()); sh.userData.top = bb.max.y; });
+// peixinhos ao fundo
+const fishes = [];
+{
+  const fm = [0xffd23f, 0x3fa7ff, 0xffffff, 0xff7a3d];
+  for (let i = 0; i < 9; i++) {
+    const f = new THREE.Group(); const m = new THREE.MeshStandardMaterial({ color: fm[i % 4], roughness: .4, metalness: .2 });
+    const b = new THREE.Mesh(new THREE.SphereGeometry(.06, 16, 10), m); b.scale.set(1.8, 1, .55); f.add(b);
+    const t = new THREE.Mesh(new THREE.ConeGeometry(.05, .08, 4).rotateZ(Math.PI / 2), m); t.position.x = -.13; t.scale.z = .3; f.add(t);
+    f.userData = { c: V(-3 + rnd() * 6, .8 + rnd() * 1.6, -3.5 - rnd() * 2.5), r: .6 + rnd() * 1.2, s: .3 + rnd() * .3, p: rnd() * 6 };
+    scene.add(f); fishes.push(f);
+  }
+}
+// partículas em suspensão
+const snow = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0xcff6ff, size: .012, transparent: true, opacity: .55, depthWrite: false }));
+{ const a = []; for (let i = 0; i < 1400; i++) a.push(-4 + rnd() * 8, rnd() * 3.2, -4 + rnd() * 6.5); snow.geometry.setAttribute('position', new THREE.Float32BufferAttribute(a, 3)); scene.add(snow); }
+const bubbles = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: .45, roughness: 0, clearcoat: 1 }), 40);
+bubbles.count = 0; bubbles.frustumCulled = false; scene.add(bubbles);
+
+/* ---------------- recife mais colorido ---------------- */
+scene.background.set(0x0d6a86); scene.fog.color.set(0x0d6a86); scene.fog.density = .2;
+branchCoral(V(-.9, 0, -.55), 0xff4f8b, 3, .16); branchCoral(V(.95, 0, -.45), 0xffb02e, 3, .15); branchCoral(V(-.25, 0, -1.25), 0x9b6bff, 3, .2); branchCoral(V(.4, 0, -1.1), 0xff6f61, 3, .18);
+{
+  const brainC = (pos, r, col) => {
+    const bc = new THREE.Mesh(new THREE.SphereGeometry(r, 64, 32, 0, TAU, 0, Math.PI * .55), new THREE.MeshStandardMaterial({ color: col, roughness: .7 }));
+    const p = bc.geometry.attributes.position; for (let i = 0; i < p.count; i++) { const v = V().fromBufferAttribute(p, i), n = v.clone().normalize(); v.addScaledVector(n, r * .06 * Math.sin(n.x * 40 + Math.sin(n.z * 30) * 2)); p.setXYZ(i, v.x, v.y, v.z); }
+    bc.geometry.computeVertexNormals(); bc.position.copy(pos); bc.castShadow = true; scene.add(bc);
+  };
+  brainC(V(-.75, -.03, -.25), .16, 0x8fc456); brainC(V(.75, -.03, -.75), .2, 0xe0a35a); brainC(V(-.05, -.04, -.75), .14, 0xb0d06a);
+}
+// esponjas-tubo
+for (const [x, z, c] of [[-.6, -.6, 0x8a4fd8], [1.1, -.2, 0xe86a3a], [.2, -.55, 0x5ac0c8]]) {
+  for (let i = 0; i < 3; i++) {
+    const h = .18 + rnd() * .2; const m = new THREE.Mesh(new THREE.CylinderGeometry(.03, .025, h, 20, 1, true), new THREE.MeshStandardMaterial({ color: c, roughness: .8, side: THREE.DoubleSide }));
+    m.position.set(x + (rnd() - .5) * .08, h / 2, z + (rnd() - .5) * .08); m.rotation.set((rnd() - .5) * .3, 0, (rnd() - .5) * .3); m.castShadow = true; scene.add(m);
+  }
+}
+// anêmonas
+const anemones = [];
+function makeAnemone(pos, col, n = 60) {
+  const g = new THREE.Group(); g.position.copy(pos); scene.add(g);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.05, .06, .05, 24), new THREE.MeshStandardMaterial({ color: 0xc86a3a, roughness: .6 })); base.position.y = .025; g.add(base);
+  const tent = new THREE.InstancedMesh(new THREE.CapsuleGeometry(.006, .09, 4, 8).translate(0, .05, 0), new THREE.MeshStandardMaterial({ color: col, roughness: .4, emissive: col, emissiveIntensity: .15 }), n);
+  tent.position.y = .05; g.add(tent);
+  const data = []; for (let i = 0; i < n; i++) { const a = rnd() * TAU, r = Math.sqrt(rnd()) * .045; data.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, a, r, ph: rnd() * 6 }); }
+  anemones.push({ tent, data });
+}
+makeAnemone(V(.85, 0, .05), 0xff8fb3); makeAnemone(V(-.85, 0, .3), 0xb7f27a); makeAnemone(V(.55, 0, -.4), 0xffd06a);
+// toca do camarão
+const BW = V(-.42, 0, .05);
+{
+  const hole = new THREE.Mesh(new THREE.CircleGeometry(.08, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x06100f })); hole.position.copy(BW).add(V(0, .022, 0)); scene.add(hole);
+  const peb = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), rockMat, 26); const m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
+  for (let i = 0; i < 26; i++) { const a = i / 26 * TAU + rnd() * .2, r = .09 + rnd() * .03; q.setFromEuler(new THREE.Euler(rnd() * 3, rnd() * 3, rnd() * 3)); m4.compose(V(BW.x + Math.cos(a) * r, .012, BW.z + Math.sin(a) * r), q, V(1, .7, 1).multiplyScalar(.012 + rnd() * .012)); peb.setMatrixAt(i, m4); }
+  peb.castShadow = true; scene.add(peb);
+}
+
+/* ---------------- o camarão-louva-deus ---------------- */
+const shrimpTex = canvasTex(1024, 256, (g, w, h) => {
+  const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#1f8f7a'); gr.addColorStop(.35, '#2fa45a'); gr.addColorStop(.8, '#4bb04a'); gr.addColorStop(1, '#3f9a48');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  const top = g.createLinearGradient(0, 0, 0, h); top.addColorStop(.15, 'rgba(200,255,180,0)'); top.addColorStop(.25, 'rgba(200,255,180,.35)'); top.addColorStop(.35, 'rgba(200,255,180,0)'); g.fillStyle = top; g.fillRect(0, 0, w, h);
+  for (let k = 1; k < 9; k++) { const x = k / 9 * w * .8; g.fillStyle = 'rgba(10,50,40,.55)'; g.fillRect(x - 3, 0, 6, h); g.fillStyle = 'rgba(255,140,60,.35)'; g.fillRect(x + 3, 0, 4, h); }
+  for (let i = 0; i < 160; i++) { g.fillStyle = 'rgba(20,40,20,.55)'; g.beginPath(); g.arc(w * (.8 + rnd() * .2), rnd() * h, 2 + rnd() * 4, 0, TAU); g.fill(); }
+  for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(${rnd() > .5 ? '220,255,200' : '10,40,30'},.2)`; g.fillRect(rnd() * w, rnd() * h, 2, 2); }
+});
+const eyeTex = canvasTex(128, 256, (g, w, h) => {
+  g.fillStyle = '#4fd07a'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 500; i++) { g.fillStyle = `rgba(${rnd() > .5 ? '20,90,50' : '180,255,200'},.4)`; g.fillRect(rnd() * w, rnd() * h, 2, 2); }
+  g.fillStyle = '#1a3a2a'; g.fillRect(0, h * .46, w, h * .08); g.fillStyle = '#d8f05a'; g.fillRect(0, h * .44, w, h * .02); g.fillRect(0, h * .54, w, h * .02);
+});
+const shrimp = new THREE.Group(); shrimp.rotation.order = 'YXZ'; scene.add(shrimp);
+const shell2 = new THREE.MeshPhysicalMaterial({ map: shrimpTex, roughness: .32, clearcoat: .9, clearcoatRoughness: .2, iridescence: .45, sheen: .3, sheenColor: new THREE.Color(0xb8ffd8) });
+const orange = new THREE.MeshPhysicalMaterial({ color: 0xff6a2a, roughness: .35, clearcoat: .8 });
+const red = new THREE.MeshPhysicalMaterial({ color: 0xe0322a, roughness: .3, clearcoat: .9 });
+const teal = new THREE.MeshPhysicalMaterial({ color: 0x2aa0b0, roughness: .3, clearcoat: .9 });
+const SH = { eyes: [], apps: [], pleo: [] };
+const clubGeo = new THREE.LatheGeometry([[0, 0], [.009, .003], [.0155, .012], [.017, .022], [.0145, .031], [.009, .037], [0, .039]].map(([x, y]) => new THREE.Vector2(x, y)), 28).rotateZ(-Math.PI / 2).scale(1, 1, .8);
+{
+  const sW = curveOf([[0, .03], [.18, .052], [.55, .06], [.85, .052], [1, .024]]), sH = curveOf([[0, .02], [.18, .032], [.55, .038], [.85, .034], [1, .016]]);
+  const bodyG = loft([V(-.27, .05, 0), V(-.13, .054, 0), V(.01, .058, 0), V(.13, .057, 0), V(.22, .053, 0), V(.275, .049, 0)], 140, 32,
+    (t) => ({ w: sW(t), h: sH(t) }), (t, a) => (t < .8 ? .955 + .07 * Math.pow((t * 9 / .8) % 1, 2) : 1) * (1 - .18 * Math.pow(Math.max(0, -Math.sin(a)), 2)) * (1 + .12 * Math.pow(Math.max(0, Math.cos(a) ** 2), 4) * smooth(range(t, .62, .8)) * (1 - smooth(range(t, .9, 1)))), 1);
+  shrimp.add(new THREE.Mesh(bodyG, shell2));
+  // olhos-pedúnculo
+  for (const s of [1, -1]) {
+    const base = V(.262, .07, s * .016), tip = V(.288, .108, s * .03);
+    const stalk = new THREE.Mesh(limbGeo, shell2); placeLimb(stalk, base, tip, .006); shrimp.add(stalk);
+    const eg = new THREE.Group(); eg.position.copy(tip); shrimp.add(eg);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(.0135, 32, 24), new THREE.MeshPhysicalMaterial({ map: eyeTex, roughness: .1, clearcoat: 1, iridescence: .6 })); eye.scale.set(1, 1.35, 1); eg.add(eye);
+    SH.eyes.push({ eg, side: s });
+    // antênulas (3 filamentos) e escamas antenais
+    for (let f = 0; f < 3; f++) {
+      const pts = []; for (let i = 0; i <= 10; i++) { const u = i / 10; pts.push(V(.275 + u * .2, .06 + u * .07 + Math.sin(u * 3 + f) * .01, s * (.01 + u * (.03 + f * .02)))); }
+      shrimp.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 30, .0018, 5), f === 1 ? orange : shell2));
+    }
+    const sc = new THREE.Shape(); sc.absellipse(0, 0, .03, .011, 0, TAU);
+    const scale = new THREE.Mesh(new THREE.ShapeGeometry(sc, 20), new THREE.MeshPhysicalMaterial({ color: 0xff9a6a, roughness: .35, side: THREE.DoubleSide, clearcoat: .6 }));
+    scale.position.set(.28, .055, s * .04); scale.rotation.set(Math.PI / 2 - .3, 0, s * .5); shrimp.add(scale);
+    // patas
+    for (let i = 0; i < 3; i++) {
+      const x = .05 + i * .035, a = V(x, .032, s * .03), k = V(x + .008, .028, s * .058), f = V(x + .012, .002, s * .066);
+      const l1 = new THREE.Mesh(limbGeo, orange), l2 = new THREE.Mesh(limbGeo, orange); placeLimb(l1, a, k, .0045); placeLimb(l2, k, f, .0035); shrimp.add(l1, l2);
+    }
+    // pleópodes
+    for (let i = 0; i < 5; i++) { const p = new THREE.Mesh(new THREE.SphereGeometry(.009, 10, 8), teal); p.scale.set(.5, 1.0, .25); p.position.set(-.2 + i * .035, .033, s * .02); shrimp.add(p); SH.pleo.push(p); }
+    // braços-martelo (apêndices raptoriais)
+    const root = new THREE.Group(); root.position.set(.205, .03, s * .03); shrimp.add(root);
+    const mer = new THREE.Group(); root.add(mer);
+    const Lm = .075, Lp = .062;
+    const merM = new THREE.Mesh(new THREE.CapsuleGeometry(.012, Lm - .02, 6, 14).rotateZ(-Math.PI / 2).translate(Lm / 2, 0, 0), teal); mer.add(merM);
+    for (let k = 0; k < 4; k++) { const d = new THREE.Mesh(new THREE.SphereGeometry(.0025, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffd23f })); d.position.set(.016 + k * .013, .009 * (k % 2 ? 1 : -1), s * .009); mer.add(d); }
+    const joint = new THREE.Group(); joint.position.x = Lm; mer.add(joint);
+    const buildFore = (mat, clubMat) => {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(new THREE.CapsuleGeometry(.0085, Lp - .015, 6, 12).rotateZ(-Math.PI / 2).translate(Lp / 2, 0, 0), mat));
+      const club = new THREE.Mesh(clubGeo, clubMat); club.position.x = Lp - .012; g.add(club);
+      const hook = new THREE.Mesh(new THREE.ConeGeometry(.005, .03, 8).rotateZ(Math.PI / 2), mat); hook.position.set(Lp - .01, -.012, 0); hook.rotation.z = -.4; g.add(hook);
+      return g;
+    };
+    joint.add(buildFore(orange, red));
+    const ghosts = [];
+    if (s > 0) for (let k = 0; k < 7; k++) { const gm = new THREE.MeshBasicMaterial({ color: ACCENT.clone().multiplyScalar(1.4), transparent: true, opacity: 0, depthWrite: false }); const gg = new THREE.Group(); gg.position.x = Lm; gg.add(buildFore(gm, gm)); mer.add(gg); ghosts.push({ g: gg, m: gm }); }
+    // mola e trava (diagrama)
+    let spring = null, latch = null;
+    if (s > 0) {
+      const hp = []; for (let i = 0; i <= 160; i++) { const u = i / 160, a = u * TAU * 6; hp.push(V(u * .05, Math.cos(a) * .011, Math.sin(a) * .011)); }
+      spring = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(hp), 200, .0016, 6), new THREE.MeshBasicMaterial({ color: ACCENT.clone().multiplyScalar(1.5), transparent: true, depthTest: false }));
+      spring.position.set(.012, .016, 0); spring.renderOrder = 30; mer.add(spring);
+      latch = new THREE.Group(); latch.position.set(Lm - .004, .012, 0); joint.parent.add(latch);
+      const lb = new THREE.Mesh(new THREE.BoxGeometry(.004, .028, .02), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthTest: false })); lb.position.y = .01; lb.renderOrder = 31; latch.add(lb);
+    }
+    SH.apps.push({ root, mer, joint, ghosts, spring, latch, side: s });
+  }
+  // leque da cauda
+  const fan = new THREE.Group(); fan.position.set(-.27, .05, 0); shrimp.add(fan);
+  const tel = new THREE.Shape(); tel.moveTo(0, -.025); tel.quadraticCurveTo(-.06, -.03, -.065, 0); tel.quadraticCurveTo(-.06, .03, 0, .025); tel.closePath();
+  const telM = new THREE.Mesh(new THREE.ShapeGeometry(tel, 16).rotateX(-Math.PI / 2), new THREE.MeshPhysicalMaterial({ color: 0x2f9a6a, roughness: .35, clearcoat: .8, side: THREE.DoubleSide })); fan.add(telM);
+  for (const s of [1, -1]) for (const [ang, c] of [[.45, 0xff7a2a], [.85, 0x3a7aff]]) {
+    const u = new THREE.Shape(); u.absellipse(-.035, 0, .035, .012, 0, TAU);
+    const m = new THREE.Mesh(new THREE.ShapeGeometry(u, 16).rotateX(-Math.PI / 2), new THREE.MeshPhysicalMaterial({ color: c, roughness: .35, clearcoat: .8, side: THREE.DoubleSide }));
+    m.rotation.y = s * ang; m.position.y = .002; fan.add(m);
+  }
+  fan.rotation.z = -.15;
+  shrimp.traverse(o => { if (o.isMesh && o.renderOrder < 30) o.castShadow = true; });
+}
+const LM = .075, LP = .062;
+// pose do braço: k = 0 recolhido, 1 golpe estendido
+const mAngOf = (k) => lerp(-.95, .45, k), pAngOf = (k) => lerp(2.9, .05, k);
+
+/* ---------------- o caranguejo valentão ---------------- */
+const crab = new THREE.Group(); scene.add(crab); crab.scale.setScalar(1.15);
+const crabLegs = [], crabClaws = [];
+const cracks = [];
+{
+  const sh = new THREE.MeshPhysicalMaterial({ map: crabTex, roughness: .4, clearcoat: .6 });
+  const shDark = new THREE.MeshPhysicalMaterial({ color: 0xa8401c, roughness: .4, clearcoat: .6 });
+  const clawTip = new THREE.MeshStandardMaterial({ color: 0x2a120a, roughness: .4 });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(.09, 48, 24), sh); body.scale.set(1.3, .5, .9); body.position.y = .07; crab.add(body);
+  for (let i = -3; i <= 3; i++) { const sp = new THREE.Mesh(new THREE.ConeGeometry(.007, .02, 6), sh); sp.position.set(i * .022, .08, .078 - Math.abs(i) * .004); sp.rotation.x = 1.3; crab.add(sp); }
+  for (const s of [1, -1]) {
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(.005, .005, .035, 6), shDark); st.position.set(s * .03, .1, .07); crab.add(st);
+    const e = new THREE.Mesh(new THREE.SphereGeometry(.009, 10, 8), new THREE.MeshPhysicalMaterial({ color: 0x101010, roughness: .05, clearcoat: 1 })); e.position.set(s * .03, .12, .07); crab.add(e);
+    for (let k = 0; k < 4; k++) {
+      const leg = new THREE.Group(); leg.position.set(s * .1, .07, .04 - k * .03); crab.add(leg);
+      const s1 = new THREE.Mesh(limbGeo, sh), s2 = new THREE.Mesh(limbGeo, sh); leg.add(s1, s2);
+      crabLegs.push({ leg, s1, s2, s, k });
+    }
+    const claw = new THREE.Group(); claw.position.set(s * .08, .07, .07); crab.add(claw);
+    const arm1 = new THREE.Mesh(limbGeo, sh); placeLimb(arm1, V(), V(s * .045, .015, .05), .016); claw.add(arm1);
+    const palm = new THREE.Mesh(new THREE.SphereGeometry(.036, 24, 14), sh); palm.scale.set(.85, .75, 1.35); palm.position.set(s * .05, .02, .085); claw.add(palm);
+    const finger = (pts, r) => { const g = new THREE.Group(); const c = new THREE.CatmullRomCurve3(pts); g.add(new THREE.Mesh(new THREE.TubeGeometry(c, 16, r, 8), shDark)); const tip = new THREE.Mesh(new THREE.ConeGeometry(r, .012, 8), clawTip); tip.position.copy(pts.at(-1)); tip.quaternion.setFromUnitVectors(UPV, c.getTangentAt(1)); g.add(tip); return g; };
+    claw.add(finger([V(s * .055, .008, .125), V(s * .062, .0, .155), V(s * .05, .006, .18)], .009));
+    const mov = new THREE.Group(); mov.position.set(s * .045, .03, .12); claw.add(mov);
+    mov.add(finger([V(0, 0, 0), V(s * .008, .006, .03), V(0, -.008, .055)], .008));
+    crabClaws.push({ claw, mov, s });
+  }
+  // rachaduras (aparecem no golpe final)
+  const crackMat = new THREE.MeshBasicMaterial({ color: 0x1a0905 });
+  const top = (x, z) => V(x, .07 + .045 * Math.sqrt(Math.max(0, 1 - (x / .117) ** 2 - (z / .081) ** 2)) + .001, z);
+  for (let c = 0; c < 6; c++) {
+    const pts = []; let x = (rnd() - .5) * .02, z = .055; const a0 = -Math.PI / 2 + (c - 2.5) * .45;
+    for (let i = 0; i < 9; i++) { pts.push(top(x, z)); const a = a0 + (rnd() - .5) * .9; x += Math.cos(a) * .014; z += Math.sin(a) * .014; if (Math.abs(x) > .1 || Math.abs(z) > .075) break; }
+    if (pts.length < 3) continue;
+    const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, .0018, 4), crackMat); m.visible = false; crab.add(m); cracks.push(m);
+  }
+  crab.traverse(o => { if (o.isMesh) o.castShadow = true; });
+}
+function animCrab(t, walking, taunt = 0, raise = 0) {
+  crabLegs.forEach(({ s1, s2, s, k }) => {
+    const ph = t * 9 + k * 1.6 + (s > 0 ? 0 : Math.PI);
+    const lift = walking ? Math.max(0, Math.sin(ph)) * .025 : 0, sw = walking ? Math.cos(ph) * .02 : 0;
+    const knee = V(s * .085, .04 + lift, sw + (k - 1.5) * -.014), foot = V(s * .15, -.066, sw * 1.5 + (k - 1.5) * -.035);
+    placeLimb(s1, V(), knee, .006); placeLimb(s2, knee, foot, .0042);
+  });
+  crabClaws.forEach(({ claw, mov, s }) => {
+    mov.rotation.x = -.15 - .45 * Math.max(0, Math.sin(t * (taunt ? 7 : 3) + s));
+    claw.rotation.x = -raise * (.6 + .2 * Math.sin(t * 5 + s * 2));
+  });
+}
+const S0 = V(-.09, 0, .12);
+shrimp.position.copy(S0); shrimp.updateMatrixWorld(true);
+const HIT0 = (() => { const A = SH.apps[0]; A.mer.rotation.z = mAngOf(1); A.joint.rotation.z = pAngOf(1); shrimp.updateMatrixWorld(true); return A.joint.localToWorld(V(LP + .02, 0, 0)); })();
+const CRAB_P = V(HIT0.x + .21, 0, HIT0.z - .16);
+
+/* ---------------- cavitação: bolhas, flash, ondas ---------------- */
+const cav = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 16, 12), new THREE.MeshPhysicalMaterial({ color: 0xeafcff, transparent: true, opacity: .55, roughness: 0, clearcoat: 1, transmission: 0, depthWrite: false }), 46);
+cav.frustumCulled = false; cav.count = 0; scene.add(cav);
+const cavSeed = Array.from({ length: 46 }, () => [V(rnd() - .5, rnd() - .5, rnd() - .5).multiply(V(.6, 1, 1.4)), .25 + rnd() * .75]);
+const flashTex = canvasTex(128, 128, (g) => { const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.25, 'rgba(200,250,255,.8)'); gr.addColorStop(1, 'rgba(120,220,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); });
+const flash = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: flashTex, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending }));
+flash.renderOrder = 40; scene.add(flash);
+const flashLight = new THREE.PointLight(0xcff6ff, 0, 0, 2); scene.add(flashLight);
+const rings = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.TorusGeometry(1, .04, 8, 48), new THREE.MeshBasicMaterial({ color: ACCENT.clone().multiplyScalar(1.6), transparent: true, depthWrite: false, depthTest: false })); m.renderOrder = 41; scene.add(m); return m; });
+const chips = Array.from({ length: 14 }, () => { const m = new THREE.Mesh(new THREE.TetrahedronGeometry(.008), new THREE.MeshStandardMaterial({ color: 0xc4532a, roughness: .5 })); m.userData = { v: V(rnd() - .3, rnd() * .8 + .2, rnd() - .5).normalize(), sp: .15 + rnd() * .2 }; scene.add(m); return m; });
+
+/* ---------------- estado ---------------- */
+let st, T = 0;
+function reset() {
+  st = {
+    camPos: V(), camTgt: V(), fov: 34, focus: null, aperture: .02, vig: .45,
+    pos: S0.clone(), yaw: 0, pitch: 0, k: [0, 0], kPrev: null, ghost: 0,
+    eyeT: null, crab: CRAB_P.clone(), crabYaw: -Math.PI / 2, crabWalk: false, taunt: 0, raise: 0, crabRoll: 0, crack: 0, chipsT: -1,
+    cav: -1, flashA: 0, flashP: null, ring: [-1, -1], spring: 0, latch: 0, springVis: 0, impact: null,
+  };
+}
+const cam = (p, t, fov) => { st.camPos.copy(p); st.camTgt.copy(t); st.fov = fov; };
+// posição do martelo (lado +z) para um k
+function clubWorld(k) {
+  const A = SH.apps[0];
+  A.mer.rotation.z = mAngOf(k); A.joint.rotation.z = pAngOf(k); shrimp.updateMatrixWorld(true);
+  return A.joint.localToWorld(V(LP + .02, 0, 0));
+}
+const strikeK = (lt, a, dur) => (lt < a ? 0 : lt < a + dur ? Math.pow(range(lt, a, a + dur), 2.2) : Math.max(0, 1 - range(lt, a + dur + .15, a + dur + .6)));
+function placeShrimp() { shrimp.position.copy(st.pos); shrimp.rotation.set(st.pitch, st.yaw, 0); shrimp.updateMatrixWorld(true); }
+const SHOTS = {
+  intro(lt, d) {
+    const k = easeOut(range(lt, .2, 3.2));
+    st.pos = BW.clone().add(V(.04, -.09, 0)).lerp(S0, k); st.pitch = 0; st.yaw = 0;
+    shrimp.rotation.z = 0; st.rollUp = lerp(.55, 0, k);
+    st.crab = null;
+    cam(BW.clone().add(V(.55, .16, .5)).lerp(S0.clone().add(V(.5, .12, .42)), k), BW.clone().add(V(.08, .04, 0)).lerp(S0.clone().add(V(.18, .05, 0)), k), 32);
+  },
+  valentao(lt, d) {
+    st.crab = CRAB_P.clone().add(V(.45, 0, -.05)).lerp(CRAB_P, easeOut(range(lt, 0, 2.6))); st.crabWalk = lt < 2.6;
+    st.taunt = smooth(range(lt, 2.4, 3.0)); st.raise = st.taunt;
+    st.eyeT = st.crab.clone().add(V(0, .1, 0));
+    if (lt < 3.2) cam(V(-.12, .2, .42), st.crab.clone().add(V(-.04, .07, 0)), 34);
+    else { const k = easeInOut(range(lt, 3.2, 6.5)); cam(V(-.72, .42, .85).lerp(V(-.64, .38, .78), k), HIT0.clone().add(V(.08, -.02, -.08)), 30); }
+  },
+  enganado(lt, d) {
+    st.taunt = 1; st.raise = 1; st.eyeT = CRAB_P.clone().add(V(0, .1, 0));
+    st.pitch = -.04 * smooth(range(lt, 1.5, 2.5));
+    const k = easeInOut(lt / d);
+    cam(S0.clone().add(V(.42, .1, .34).lerp(V(.38, .09, .3), k)), S0.clone().add(V(.25, .07, 0)), 30);
+  },
+  soco(lt, d) {
+    st.taunt = 1; st.raise = .15; st.eyeT = CRAB_P.clone().add(V(0, .1, 0));
+    let k = 0;
+    if (lt < 4.6) { k = strikeK(lt, 1.5, 2.1); st.ghost = smooth(range(lt, 1.6, 1.9)) * (1 - smooth(range(lt, 3.6, 4.2))); }
+    else { const ph = (lt - 4.6) % 1.25; k = strikeK(ph, .25, .09); st.ghost = pulse(ph, .25, .7, .05); }
+    st.k[0] = k; st.k[1] = lt > 4.6 ? strikeK((lt - 4.6 + .6) % 1.25, .25, .09) : 0;
+    st.kPrev = (dt) => (lt < 4.6 ? strikeK(lt - dt * 2.2, 1.5, 2.1) : strikeK(((lt - 4.6) % 1.25) - dt * .09, .25, .09));
+    if (k > .97) { st.impact = 1; }
+    cam(HIT0.clone().add(V(-.06, .05, .6)), HIT0.clone().add(V(-.05, -.02, 0)), 34); st.aperture = .012;
+  },
+  mola(lt, d) {
+    st.eyeT = CRAB_P.clone().add(V(0, .1, 0)); st.taunt = 1; st.raise = .15;
+    st.springVis = smooth(range(lt, .6, 1.2)) * (1 - smooth(range(lt, 11.0, 11.8)));
+    st.spring = easeInOut(range(lt, 3.6, 8.6)) * (lt < 9.0 ? 1 : 1 - easeOut(range(lt, 9.0, 9.12)));
+    st.latch = smooth(range(lt, 2.8, 3.4)) * (lt < 9.0 ? 1 : 1 - smooth(range(lt, 9.0, 9.1)));
+    st.k[0] = lt < 9.0 ? 0 : strikeK(lt, 9.0, .12);
+    st.kPrev = (dt) => strikeK(lt - dt * .12, 9.0, .12); st.ghost = pulse(lt, 9.0, 9.7, .05);
+    if (lt > 9.1 && lt < 9.4) st.impact = 1;
+    st.flashA = lt > 9.1 ? Math.exp(-(lt - 9.1) * 6) * .8 : 0;
+    const shake = lt > 9.1 ? Math.exp(-(lt - 9.1) * 8) * .004 : 0;
+    cam(S0.clone().add(V(.25 + Math.sin(T * 80) * shake, .06, .36)), S0.clone().add(V(.26, .045, .03)), 30); st.aperture = .01;
+  },
+  bolhas(lt, d) {
+    st.eyeT = CRAB_P.clone().add(V(0, .1, 0)); st.taunt = 0; st.raise = .15;
+    st.k[0] = lerp(.6, 1, easeInOut(range(lt, 0, 2.0)));
+    st.cav = lt - 2.0;
+    if (lt > 2.0) st.ring[0] = lt - 2.0;
+    if (lt > 5.0) { st.ring[1] = lt - 5.0; st.flashA = Math.exp(-(lt - 5.0) * 4) * 1.2; }
+    if (lt > 2.0 && lt < 2.6) st.flashA = Math.max(st.flashA, Math.exp(-(lt - 2.0) * 8) * .5);
+    const p = clubWorld(1);
+    const k = easeInOut(range(lt, 6.5, 13));
+    cam(p.clone().add(V(lerp(-.02, -.05, k), lerp(.025, .07, k), lerp(.22, .5, k))), p.clone().add(V(-.005, .0, 0)), 30); st.aperture = .008;
+  },
+  racha(lt, d) {
+    st.eyeT = CRAB_P.clone().add(V(0, .08, 0));
+    st.k[0] = strikeK(lt, .1, .1); st.kPrev = (dt) => strikeK(lt - dt * .1, .1, .1); st.ghost = pulse(lt, .1, .6, .05);
+    if (lt > .2) { st.crack = smooth(range(lt, .2, .9)); st.chipsT = lt - .2; st.flashA = Math.exp(-(lt - .2) * 6) * .7; st.impact = 1; }
+    st.crabRoll = easeInOut(range(lt, 1.0, 2.0)) * 1.9;
+    const drag = easeInOut(range(lt, 2.6, 5.5));
+    st.crab = CRAB_P.clone().lerp(BW.clone().add(V(.25, 0, .02)), drag).add(V(0, .03 * st.crabRoll / 1.9, 0));
+    st.pos = S0.clone().lerp(BW.clone().add(V(.05, 0, 0)), drag);
+    st.k[1] = drag > 0 ? .5 : 0;
+    const kc = easeInOut(range(lt, 1.6, 3.2)); cam(CRAB_P.clone().add(V(-.15, .3, .55)).lerp(V(.02, .24, .78), kc), CRAB_P.clone().add(V(0, .07, 0)).lerp(V(.0, .05, .06), kc), 34);
+  },
+  inscreve(lt, d) {
+    st.crab = null; st.yaw = -Math.PI / 2; st.pos = S0.clone().add(V(0, .006 * Math.sin(T * 6), 0));
+    st.eyeT = st.camPos.clone();
+    const punch = strikeK(lt, 2.2, .1);
+    st.k[0] = Math.max(.15 + .12 * Math.max(0, Math.sin(T * 6)), punch); st.k[1] = .15 + .12 * Math.max(0, Math.sin(T * 6 + Math.PI));
+    st.flashA = lt > 2.3 ? Math.exp(-(lt - 2.3) * 6) * .5 : 0; st.flashCam = true;
+    cam(S0.clone().add(V(.04, .12, .78)), S0.clone().add(V(0, .07, .16)), 32);
+  },
+};
+
+/* ---------------- textos ---------------- */
+const textHost = document.getElementById('texts');
+for (const x of TEXTS) {
+  const el = document.createElement('div'); el.className = 'ov' + (x.anchor ? ' lbl' : ''); el.innerHTML = x.html;
+  if (!x.anchor) el.style.setProperty('--y', x.y + 'px');
+  el.style.setProperty('--fs', x.fs + 'px');
+  textHost.appendChild(el); x.el = el; x.a = SEG[x.seg].start + x.from; x.b = SEG[x.seg].start + x.to;
+}
+const anchors = {};
+
+/* ---------------- quadro ---------------- */
+const m4 = new THREE.Matrix4();
+function frame(t) {
+  T = t; reset(); causticU.uTime.value = t;
+  const s = [...SEGMENTS].reverse().find(s => t >= s.start) || SEGMENTS[0];
+  const lt = Math.min(t - s.start, s.dur);
+  placeShrimp();
+  SHOTS[s.id](lt, s.dur);
+  placeShrimp();
+  shrimp.rotation.x = st.pitch; shrimp.rotateZ(st.rollUp || 0); shrimp.updateMatrixWorld(true);
+
+  // braços-martelo
+  SH.apps.forEach((A, i) => {
+    const k = st.k[i] ?? 0;
+    A.mer.rotation.z = mAngOf(k) - (A.spring ? .05 * st.spring : 0); A.joint.rotation.z = pAngOf(k);
+    A.ghosts.forEach((g, j) => {
+      const kp = st.kPrev ? st.kPrev((j + 1) * .12) : k;
+      g.g.rotation.z = pAngOf(clamp(kp)); g.m.opacity = st.ghost * .32 * (1 - j / A.ghosts.length);
+      g.g.visible = st.ghost > .01;
+    });
+    if (A.spring) {
+      A.spring.visible = st.springVis > .01; A.spring.material.opacity = st.springVis; A.spring.scale.set(1 - .55 * st.spring, 1 + .25 * st.spring, 1 + .25 * st.spring);
+      A.latch.visible = st.springVis > .01; A.latch.children[0].material.opacity = st.springVis; A.latch.rotation.z = lerp(-1.4, 0, st.latch);
+    }
+  });
+  SH.pleo.forEach((p, i) => p.rotation.z = Math.sin(t * 9 + i * .8) * .5);
+  shrimp.updateMatrixWorld(true);
+  // olhos
+  SH.eyes.forEach((e, i) => {
+    const tg = st.eyeT || e.eg.getWorldPosition(V()).add(V(Math.sin(t * 1.3 + i * 2) + .6, Math.sin(t * .9 + i) * .6, e.side * (1 + Math.cos(t * 1.1 + i))));
+    e.eg.lookAt(tg);
+  });
+  // caranguejo
+  crab.visible = !!st.crab;
+  if (st.crab) {
+    let p = st.crab.clone();
+    if (st.impact) p.x += .012;
+    crab.position.copy(p); crab.rotation.set(0, st.crabYaw, st.crabRoll, 'YXZ');
+    animCrab(t, st.crabWalk, st.taunt, st.raise);
+    cracks.forEach((c, i) => c.visible = st.crack > i / cracks.length);
+  }
+  chips.forEach((c, i) => { c.visible = st.chipsT >= 0 && st.chipsT < 2; if (c.visible) { const tt = st.chipsT; c.position.copy(CRAB_P).add(V(-.08, .14, 0)).addScaledVector(c.userData.v, c.userData.sp * tt).add(V(0, -.12 * tt * tt, 0)); c.rotation.set(tt * 9 + i, tt * 7, 0); } });
+  // impacto / bolhas
+  const hit = clubWorld(1); SH.apps[0].mer.rotation.z = mAngOf(st.k[0]); SH.apps[0].joint.rotation.z = pAngOf(st.k[0]); shrimp.updateMatrixWorld(true);
+  const bubP = hit.clone().add(V(.012, 0, 0));
+  cav.count = 0;
+  if (st.cav >= 0) {
+    const c = st.cav, grow = easeOut(range(c, 0, 2.4)), coll = range(c, 2.6, 3.0);
+    const sz = grow * (1 - coll * coll);
+    if (sz > .001) { cav.count = cavSeed.length; cavSeed.forEach(([o, r], i) => { m4.compose(bubP.clone().addScaledVector(o, .036 * (1 - coll * .7)), new THREE.Quaternion(), V(1, 1, 1).multiplyScalar(.013 * r * sz)); cav.setMatrixAt(i, m4); }); cav.instanceMatrix.needsUpdate = true; }
+  }
+  flash.visible = st.flashA > .01; flashLight.intensity = st.flashA * 1.5;
+  const fp = st.flashCam ? SH.apps[0].joint.localToWorld(V(LP, 0, 0)) : bubP;
+  flash.position.copy(fp); flashLight.position.copy(fp); flash.quaternion.copy(camera.quaternion); flash.scale.setScalar(.08 + .12 * st.flashA); flash.material.opacity = Math.min(1, st.flashA);
+  rings.forEach((r, i) => { const a = st.ring[i]; r.visible = a >= 0 && a < .9; if (r.visible) { r.position.copy(bubP); r.quaternion.copy(camera.quaternion); r.scale.setScalar(.01 + a * .07); r.material.opacity = 1 - a / .9; } });
+  // recife vivo
+  anemones.forEach(({ tent, data }) => { data.forEach((d, i) => { const e = new THREE.Euler(Math.sin(t * 1.5 + d.ph) * .35 + Math.sin(d.a) * d.r * 9, 0, Math.cos(t * 1.3 + d.ph) * .35 - Math.cos(d.a) * d.r * 9); m4.compose(V(d.x, 0, d.z), new THREE.Quaternion().setFromEuler(e), V(1, 1, 1)); tent.setMatrixAt(i, m4); }); tent.instanceMatrix.needsUpdate = true; });
+  const q0 = new THREE.Quaternion(), e0 = new THREE.Euler();
+  grassData.forEach((g, i) => { e0.set(Math.sin(t * 1.3 + g.ph) * .25, g.rot, Math.cos(t * 1.1 + g.ph) * .2); q0.setFromEuler(e0); m4.compose(g.p, q0, V(1, g.h, 1)); grass.setMatrixAt(i, m4); });
+  grass.instanceMatrix.needsUpdate = true;
+  rays.forEach(r => { r.rotation.z = Math.sin(t * .2 + r.userData.p) * .08; r.rotation.x = Math.cos(t * .17 + r.userData.p) * .06; });
+  fishes.forEach(f => { const u = f.userData, a = t * u.s + u.p; f.position.set(u.c.x + Math.cos(a) * u.r, u.c.y + Math.sin(a * 1.7) * .1, u.c.z + Math.sin(a) * u.r * .4); f.rotation.y = -a - Math.PI / 2; });
+  snow.position.y = -((t * .02) % .5); snow.rotation.y = t * .01;
+
+  // âncoras
+  const A0 = SH.apps[0];
+  anchors.mola = A0.mer.localToWorld(V(.035, .045, 0)); anchors.trava = A0.mer.localToWorld(V(LM + .01, -.03, 0));
+  anchors.hit1 = hit.clone().add(V(-.02, .035, 0)); anchors.bub = bubP.clone().add(V(.01, -.035, 0)); anchors.hit2 = bubP.clone().add(V(.02, .035, 0));
+
+  // câmera
+  camera.position.copy(st.camPos); camera.fov = st.fov; camera.updateProjectionMatrix(); camera.lookAt(st.camTgt); camera.updateMatrixWorld(true);
+  bokeh.uniforms.focus.value = st.focus ?? st.camPos.distanceTo(st.camTgt);
+  bokeh.uniforms.aperture.value = st.aperture;
+  gradePass.uniforms.uVig.value = st.vig; gradePass.uniforms.uTime.value = t;
+
+  for (const x of TEXTS) {
+    if (window.__render) {
+      const k = Math.min(range(t, x.a, x.a + .3), 1 - range(t, x.b - .25, x.b)), e = easeOut(k);
+      x.el.style.transition = 'none'; x.el.style.opacity = k;
+      x.el.style.transform = `translateY(${(1 - e) * 40}px) scale(${.92 + .08 * e})`;
+    } else x.el.classList.toggle('on', t >= x.a && t < x.b);
+    if (x.anchor && anchors[x.anchor]) {
+      const p = anchors[x.anchor].clone().project(camera);
+      x.el.style.left = ((p.x + 1) / 2 * W) + 'px'; x.el.style.top = ((1 - p.y) / 2 * H) + 'px'; x.el.style.translate = '-50% -50%';
+    }
+  }
+  composer.render();
+}
+
+/* ---------------- controle ---------------- */
+const stage = document.getElementById('stage'), startEl = document.getElementById('start');
+const fit = () => stage.style.setProperty('--s', Math.min(innerWidth / W, innerHeight / H));
+addEventListener('resize', fit); fit();
+const params = new URLSearchParams(location.search);
+let playing = false, offset = parseFloat(params.get('t') || '0'), t0 = 0;
+const current = () => playing ? Math.min(TOTAL, offset + (performance.now() - t0) / 1000) : offset;
+function play() { if (playing) return; playing = true; t0 = performance.now(); startEl.classList.add('hide'); }
+function pause() { offset = current(); playing = false; }
+function seek(t) { offset = clamp(t, 0, TOTAL); t0 = performance.now(); }
+startEl.addEventListener('click', play);
+addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); if (!playing) play(); else pause(); }
+  if (e.code === 'KeyR') { seek(0); play(); }
+  if (e.code === 'ArrowRight') seek(current() + 2);
+  if (e.code === 'ArrowLeft') seek(current() - 2);
+});
+window.__total = TOTAL;
+window.__seek = (t) => { playing = false; offset = t; frame(t); };
+window.__ready = true;
+if (params.has('hideui')) startEl.classList.add('hide');
+if (params.has('nobokeh')) bokeh.enabled = false;
+if (params.has('still')) frame(offset);
+else (function loop() { frame(current()); requestAnimationFrame(loop); })();
+</script>
+</body>
+</html>

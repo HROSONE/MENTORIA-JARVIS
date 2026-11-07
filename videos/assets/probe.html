@@ -1,0 +1,9 @@
+<!doctype html><html><body><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three'; import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const g = await new GLTFLoader().loadAsync('https://assets.local/RobotExpressive.glb');
+const bones = [], meshes = []; g.scene.traverse(o => { if (o.isBone) bones.push(o.name); if (o.isMesh) meshes.push([o.name, o.morphTargetDictionary ? Object.keys(o.morphTargetDictionary) : null]); });
+g.scene.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(g.scene);
+const head = g.scene.getObjectByName('Head'); const hp = head ? head.getWorldPosition(new THREE.Vector3()) : null;
+window.__out = JSON.stringify({ bones, meshes, box: [b.min.toArray(), b.max.toArray()], hp: hp && hp.toArray(), anims: g.animations.map(a => [a.name, a.duration.toFixed(2)]), sceneScale: g.scene.scale.toArray(), children: g.scene.children.map(c => [c.name, c.scale.toArray()]) });
+</script></body></html>

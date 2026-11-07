@@ -1,0 +1,322 @@
+/* ===================== O cavalo de madeira (Stalag Luft III, 1943) ===================== */
+const SH = N.s.map(x => [x.k, x.a, x.b]);
+const shotAt = t => SH.find(s => t >= s[1] && t < s[2]) || SH[SH.length - 1];
+const loc = (t, id) => { const s = SH.find(x => x[0] === id); return { L: t - s[1], d: s[2] - s[1], k: (t - s[1]) / (s[2] - s[1]) }; };
+const GRAINV = t => { const j = Math.floor(t * 24); return `<rect x="-200" y="-200" width="1480" height="2320" fill="url(#noiseP)" opacity=".05" transform="translate(${(j * 37) % 200 - 100},${(j * 53) % 200 - 100})"/>`; };
+const HH = (t, k = 1) => [3 * k * noise1(t * 1.3, 1), 3 * k * noise1(t * 1.1, 4)];
+const GND = 1500;   // linha do chão
+
+/* ---------- cenário ---------- */
+function sky(day = 1) { return `<rect x="-1500" y="-1500" width="6800" height="3200" fill="${mix('#0C1430', '#9CC0DE', day)}"/><rect x="-1500" y="700" width="6800" height="900" fill="${mix('#1A2240', '#D8E4EA', day)}" opacity=".7"/>`; }
+function pines(y, n, sc, col, seed = 1) { let o = ''; n = Math.round(n * 1.66); for (let i = 0; i < n; i++) { const x = -1200 + i * (6000 / n) + ((i * 97 * seed) % 60), h = (260 + (i * 53 * seed) % 160) * sc; o += `<path d="M${x} ${y} L${x + 70 * sc} ${y - h} L${x + 140 * sc} ${y}Z" fill="${col}"/>`; } return o; }
+function barracks(x, y, s, day = 1) { return `<g transform="translate(${x},${y}) scale(${s})"><rect x="-400" y="-260" width="800" height="260" fill="${mix('#3A3026', '#8A6E50', day)}" stroke="${OUTL}" stroke-width="5"/>${Array.from({ length: 16 }, (_, i) => `<line x1="${-400 + i * 50}" y1="-260" x2="${-400 + i * 50}" y2="0" stroke="${OUTL}" stroke-width="2" opacity=".35"/>`).join('')}<path d="M-430 -250 L0 -380 L430 -250Z" fill="${mix('#2A2420', '#5A4A3A', day)}" stroke="${OUTL}" stroke-width="5"/>${[-260, -60, 140].map(xx => `<rect x="${xx}" y="-200" width="110" height="90" fill="${mix('#1A2030', '#C8DCE8', day)}" stroke="${OUTL}" stroke-width="4"/>`).join('')}<rect x="300" y="-180" width="70" height="180" fill="#2A2018" stroke="${OUTL}" stroke-width="4"/><rect x="-400" y="-20" width="800" height="40" fill="#2A2420" stroke="${OUTL}" stroke-width="4"/></g>`; }
+function fence(x0, x1, y, h = 520, day = 1) {
+  let o = ''; const c = mix('#2A2420', '#6A5440', day);
+  for (let x = x0; x <= x1; x += 240) o += `<rect x="${x - 12}" y="${y - h}" width="24" height="${h}" fill="${c}" stroke="${OUTL}" stroke-width="3"/><path d="M${x} ${y - h} l40 -50" stroke="${c}" stroke-width="16" stroke-linecap="round"/>`;
+  for (let r = 0; r < 8; r++) { const yy = y - 40 - r * (h - 60) / 7; o += `<line x1="${x0}" y1="${f1(yy)}" x2="${x1}" y2="${f1(yy)}" stroke="#4A4A50" stroke-width="3"/>`; for (let x = x0 + (r % 2) * 30; x < x1; x += 60) o += `<path d="M${x - 7} ${f1(yy - 7)} l14 14 M${x + 7} ${f1(yy - 7)} l-14 14" stroke="#4A4A50" stroke-width="3"/>`; }
+  return o;
+}
+function tower(x, y, s, t, o = {}) {
+  const day = o.day ?? 1;
+  let g = `<g transform="translate(${x},${y}) scale(${s})"><path d="M-110 0 L-70 -620 M110 0 L70 -620 M-100 -150 L90 -350 M100 -150 L-90 -350 M-86 -380 L80 -560 M86 -380 L-80 -560" stroke="${mix('#2A2018', '#5A4430', day)}" stroke-width="18" fill="none"/>`;
+  g += `<rect x="-170" y="-800" width="340" height="190" fill="${mix('#2A2018', '#6A5038', day)}" stroke="${OUTL}" stroke-width="5"/><path d="M-210 -800 L0 -900 L210 -800Z" fill="${mix('#1E1814', '#4A3A2A', day)}" stroke="${OUTL}" stroke-width="5"/><rect x="-150" y="-780" width="300" height="80" fill="#0E0C0A"/>`;
+  if (o.guard !== false) g += `<g transform="translate(${o.gx || 0},-618)">${man({ x: 0, y: 0, s: .55, kind: 'alemao', flip: o.flip || 1, armF: o.armF || [-10, 10], armB: o.armB || [-10, 10], mouth: o.mouth || 0, eyes: o.eyes ?? 1, shadow: 0 })}</g><rect x="-170" y="-700" width="340" height="90" fill="${mix('#2A2018', '#6A5038', day)}" stroke="${OUTL}" stroke-width="5"/>`;
+  if (o.light) { const a = o.light; g += `<g transform="translate(120,-760) rotate(${f1(a)})"><path d="M0 -14 L1800 -260 L1800 260 L0 14Z" fill="url(#beamS)" opacity=".6"/></g><circle cx="120" cy="-760" r="22" fill="#FFF6D8"/>`; }
+  return g + '</g>';
+}
+function sandGround(day = 1) { return `<rect x="-1500" y="${GND}" width="6800" height="1600" fill="${mix('#2A2618', '#C8B48A', day)}"/><rect x="-1500" y="${GND}" width="6800" height="10" fill="#000" opacity=".2"/>${Array.from({ length: 50 }, (_, i) => `<ellipse cx="${-1400 + (i * 173) % 3900}" cy="${GND + 40 + (i * 61) % 500}" rx="${8 + i % 9}" ry="3" fill="${mix('#1A1810', '#A8946A', day)}"/>`).join('')}`; }
+// cavalo de ginástica de madeira (perfil). open: 0..1 mostra o interior (corte); inside: conteúdo
+function horse(x, y, s, o = {}) {
+  const day = o.day ?? 1, wood = mix('#4A3420', '#B8864E', day), woodD = mix('#3A2818', '#8A6038', day), woodL = mix('#5A4430', '#D8A868', day), top = mix('#2A1A10', '#6A3A22', day);
+  let g = `<g transform="translate(${f1(x)},${f1(y)}) scale(${s})"><ellipse cx="30" cy="8" rx="360" ry="30" fill="#000" opacity=".3" filter="url(#b12)"/>`;
+  g += `<path d="M-300 0 L-240 -360 L240 -360 L300 0Z" fill="${o.open ? '#1A120C' : wood}" stroke="${OUTL}" stroke-width="6"/>`;
+  if (o.inside) g += o.inside;
+  if (!o.open) {
+    for (let i = 1; i < 5; i++) g += `<line x1="${-300 + i * 12}" y1="${-i * 72}" x2="${300 - i * 12}" y2="${-i * 72}" stroke="${woodD}" stroke-width="5"/>`;
+    for (let i = 0; i < 5; i++) for (let j = 0; j < 3; j++) { const y0 = -i * 72 - 36, x0 = -200 + j * 160 + (i % 2) * 60; g += `<path d="M${x0} ${y0} q40 ${-8 + j * 4} 90 0 q20 6 40 0" stroke="${woodD}" stroke-width="2.5" fill="none" opacity=".7"/>`; }
+    g += `<path d="M-290 -10 L-236 -350" stroke="${woodL}" stroke-width="10" opacity=".6"/><path d="M290 -10 L236 -350" stroke="#000" stroke-width="16" opacity=".15"/>`;
+    g += `<rect x="-60" y="-220" width="120" height="70" rx="12" fill="${woodD}" stroke="${OUTL}" stroke-width="4"/><rect x="-44" y="-206" width="88" height="14" rx="6" fill="#1A120C" opacity=".6"/>`;
+    for (const [cx, cy] of [[-290, -20], [290, -20], [-244, -340], [244, -340]]) g += `<rect x="${cx - 22}" y="${cy - 22}" width="44" height="44" fill="#7A7A80" stroke="${OUTL}" stroke-width="3" transform="rotate(${cx < 0 ? 10 : -10} ${cx} ${cy})"/><circle cx="${cx}" cy="${cy}" r="5" fill="#2A2A30"/>`;
+    for (let i = 0; i < 4; i++) for (const sx of [-1, 1]) g += `<circle cx="${sx * (270 - i * 12)}" cy="${-36 - i * 72}" r="4" fill="#3A3A40"/>`;
+  } else g += `<path d="M-300 0 L-240 -360 L240 -360 L300 0" fill="none" stroke="${wood}" stroke-width="26"/><path d="M-300 0 L-240 -360 L240 -360 L300 0" fill="none" stroke="${OUTL}" stroke-width="4"/>`;
+  g += `<rect x="-270" y="-410" width="540" height="64" rx="30" fill="${top}" stroke="${OUTL}" stroke-width="5"/><path d="M-240 -398 L240 -398" stroke="#fff" stroke-width="7" opacity=".22" stroke-linecap="round"/><path d="M-250 -360 L250 -360" stroke="${mix('#C8A070', '#E8C890', day)}" stroke-width="3" stroke-dasharray="10 8" opacity=".8"/>`;
+  if (o.poles) g += `<rect x="-560" y="-250" width="1120" height="24" rx="10" fill="${woodD}" stroke="${OUTL}" stroke-width="4"/><path d="M-550 -244 L550 -244" stroke="${woodL}" stroke-width="4" opacity=".6"/>`;
+  return g + '</g>';
+}
+// porta grande do depósito de onde sai o cavalo
+function shed(x, y, open = 0, day = 1) {
+  let g = `<g transform="translate(${x},${y})"><rect x="-520" y="-700" width="1040" height="700" fill="${mix('#3A3026', '#8A6E50', day)}" stroke="${OUTL}" stroke-width="6"/>${Array.from({ length: 21 }, (_, i) => `<line x1="${-520 + i * 52}" y1="-700" x2="${-520 + i * 52}" y2="0" stroke="${OUTL}" stroke-width="2" opacity=".35"/>`).join('')}`;
+  g += `<path d="M-560 -690 L0 -900 L560 -690Z" fill="${mix('#2A2420', '#5A4A3A', day)}" stroke="${OUTL}" stroke-width="6"/><rect x="300" y="-980" width="70" height="200" fill="#4A3A30" stroke="${OUTL}" stroke-width="5"/>`;
+  g += `<rect x="-380" y="-560" width="760" height="560" fill="#140E0A" stroke="${OUTL}" stroke-width="6"/>`;
+  const dw = 380 * (1 - open);
+  g += `<rect x="-380" y="-560" width="${f1(dw)}" height="560" fill="${mix('#4A3A28', '#9A7A54', day)}" stroke="${OUTL}" stroke-width="5"/><rect x="${f1(380 - dw)}" y="-560" width="${f1(dw)}" height="560" fill="${mix('#4A3A28', '#9A7A54', day)}" stroke="${OUTL}" stroke-width="5"/>`;
+  if (dw > 40) g += `<path d="M-380 -560 L${f1(-380 + dw)} 0 M-380 0 L${f1(-380 + dw)} -560 M${f1(380 - dw)} -560 L380 0 M${f1(380 - dw)} 0 L380 -560" stroke="${OUTL}" stroke-width="4" opacity=".6"/>`;
+  return g + '</g>';
+}
+// salto: fase 0..1 (corrida → mãos no cavalo → aterrissa)
+function vault(x0, hx, ph, kind, s = .9) {
+  const run = ph < .45 ? ph / .45 : 1, air = ph >= .45 && ph < .8 ? (ph - .45) / .35 : ph >= .8 ? 1 : 0, land = ph >= .8 ? (ph - .8) / .2 : 0;
+  if (ph < .45) { const W = walkPose(ph * 40, 1.3); return man({ x: lerp(x0, hx - 260 * s, run), y: GND, s, kind, ...W, lean: 14 }); }
+  if (ph < .8) { const x = lerp(hx - 200 * s, hx + 240 * s, air), y = GND - Math.sin(air * Math.PI) * 330 * s; return man({ x, y, s, kind, lean: 30, legF: [80, -10], legB: [-60, -10], armF: [lerp(20, -30, air), 0], armB: [lerp(10, -40, air), 0], shadow: 0 }); }
+  const W = walkPose(land * 6, .6); return man({ x: hx + 260 * s + land * 260, y: GND, s, kind, ...W });
+}
+const sack = (x, y, s = 1) => `<g transform="translate(${f1(x)},${f1(y)}) scale(${s})"><path d="M-40 0 Q-50 -70 -20 -90 L20 -90 Q50 -70 40 0Z" fill="#C8B080" stroke="${OUTL}" stroke-width="4"/><path d="M-22 -90 Q0 -110 22 -90" stroke="${OUTL}" stroke-width="5" fill="none"/></g>`;
+function counterBox(t, n, label, pop = 1) {
+  return `<g transform="translate(540,220) scale(${f1(pop * 100) / 100})"><rect x="-300" y="-118" width="600" height="226" rx="34" fill="#0A0806" opacity=".6"/><rect x="-300" y="-118" width="600" height="226" rx="34" fill="none" stroke="#FFE2A8" stroke-width="4" opacity=".6"/><text x="0" y="40" text-anchor="middle" font-family="'DejaVu Sans Mono',monospace" font-weight="700" font-size="150" fill="#FFF3D6">${n}</text><text x="0" y="92" text-anchor="middle" font-family="'DejaVu Sans',sans-serif" font-weight="700" font-size="40" letter-spacing="10" fill="#FFD27A">${label}</text></g>`;
+}
+function clouds(t, day = 1) { let o = ''; for (let i = 0; i < 6; i++) { const x = ((i * 520 + t * (18 + i * 5)) % 3600) - 1300, y = 120 + (i % 3) * 170, k = .8 + (i % 3) * .3; o += `<g transform="translate(${f1(x)},${y}) scale(${k})" opacity="${op(.85 * day + .1)}"><ellipse cx="0" cy="20" rx="200" ry="44" fill="${mix('#3A4060', '#C8D4E2', day)}"/><ellipse cx="-70" cy="-6" rx="110" ry="60" fill="${mix('#4A5070', '#F4F6F8', day)}"/><ellipse cx="50" cy="-20" rx="130" ry="74" fill="${mix('#4A5070', '#FFFFFF', day)}"/><ellipse cx="150" cy="10" rx="90" ry="46" fill="${mix('#4A5070', '#F0F2F6', day)}"/></g>`; } return o; }
+function birds(t) { let o = ''; for (let i = 0; i < 5; i++) { const x = ((i * 260 + t * 90) % 2800) - 900, y = 420 + Math.sin(t * .8 + i) * 40 + i * 30, f = Math.sin(t * 10 + i) * 14; o += `<path d="M${f1(x - 22)} ${f1(y - f)} Q${f1(x - 10)} ${f1(y - 6)} ${f1(x)} ${f1(y)} Q${f1(x + 10)} ${f1(y - 6)} ${f1(x + 22)} ${f1(y - f)}" stroke="#2A2A30" stroke-width="4" fill="none"/>`; } return o; }
+function smoke(x, y, t) { let o = ''; for (let i = 0; i < 6; i++) { const p = (t * .25 + i / 6) % 1; o += `<circle cx="${f1(x + p * 160 + Math.sin(t + i) * 20)}" cy="${f1(y - p * 420)}" r="${f1(26 + p * 70)}" fill="#E8E8EC" opacity="${op((1 - p) * .45)}"/>`; } return o; }
+const TUFT = Array.from({ length: 70 }, (_, i) => ({ x: -1300 + (i * 271) % 4400, y: (i * 97) % 520, k: .6 + (i % 5) * .2 }));
+function groundDetail(t, day = 1) {
+  let o = '';
+  TUFT.forEach((q, i) => { const y = GND + 30 + q.y, sw = Math.sin(t * 1.5 + i) * 3; o += `<g transform="translate(${q.x},${y}) scale(${q.k})">${[-14, -5, 4, 13].map((dx, j) => `<path d="M${dx - 3} 0 Q${dx + sw} -26 ${dx * 1.5 + sw} ${-38 - (j % 2) * 12} Q${dx + 2 + sw} -26 ${dx + 3} 0Z" fill="${mix('#2A3A20', ['#7A8A3A', '#96A24A', '#5C6A2C'][j % 3], day)}"/>`).join('')}</g>`; if (i % 3 === 0) o += `<ellipse cx="${q.x + 60}" cy="${y + 10}" rx="${10 + i % 7}" ry="${5 + i % 3}" fill="${mix('#2A2418', '#9A8A6A', day)}" stroke="${OUTL}" stroke-width="2" opacity=".8"/>`; });
+  for (let i = 0; i < 26; i++) { const x = -400 + i * 70, y = GND + 70 + (i % 2) * 40; o += `<ellipse cx="${x}" cy="${y}" rx="16" ry="7" fill="#000" opacity=".1"/>`; }
+  return o;
+}
+function yard(t, o = {}) {
+  const day = o.day ?? 1;
+  let s = lay(.05, sky(day) + `<circle cx="1500" cy="260" r="380" fill="url(#gSun)" opacity="${op(.5 * day)}"/>` + clouds(t, day)) + lay(.15, birds(t)) + lay(.25, pines(1240, 26, 1.0, mix('#0E1810', '#3A5A3A', day), 1)) + lay(.35, pines(1300, 20, 1.3, mix('#0A140C', '#2E4A2E', day), 3));
+  s += lay(.6, barracks(-260, 1280, .7, day) + barracks(560, 1260, .55, day) + `<rect x="-40" y="930" width="40" height="110" fill="#4A3A30" stroke="${OUTL}" stroke-width="4"/>` + smoke(-20, 930, t));
+  s += lay(.8, sandGround(day) + groundDetail(t, day));
+  s += lay(.8, `<rect x="-1500" y="1100" width="6800" height="500" fill="#FFF2D8" opacity="${op(.08 * day)}"/>`);
+  return s;
+}
+
+/* ---------- 1. gancho: vista geral → ponto de vista de quem pula → ponto de vista do guarda ---------- */
+function s1wide(t, L) {
+  const [hx, hy] = HH(t);
+  setCam(lerp(860, 900, L / 2.4) + hx, 1080 + hy, lerp(.92, 1.0, easeInOut(L / 2.4)), 0, [540, 1100, 1]);
+  let s = yard(t);
+  s += lay(.9, fence(-1100, 2300, GND - 120, 520) + tower(420, GND - 120, .8, t, { flip: 1 }));
+  s += lay(1, horse(820, GND, 1.0));
+  const kinds = ['pow', 'pow2', 'pow3', 'pow4'];
+  for (let i = 0; i < 4; i++) { const ph = ((L * .62) + i * .25) % 1; s += lay(1, vault(-200, 820, ph, kinds[i])); }
+  return s;
+}
+// braço em primeira pessoa (de baixo da tela até a mão)
+function povArm(x0, y0, x1, y1, side, kind = 'pow') {
+  const C = KIND[kind];
+  return capsule(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2 + 30, 110, 86, C.shirt) + capsule((x0 + x1) / 2, (y0 + y1) / 2 + 30, x1, y1, 86, 70, C.shirt) + capsule(lerp(x0, x1, .82), lerp(y0, y1, .82), x1, y1, 76, 72, mix(C.shirt, '#000000', .14)) +
+    `<g transform="translate(${f1(x1)},${f1(y1)}) scale(${side},1)"><path d="M-70 10 Q-80 -60 -20 -76 L60 -70 Q96 -60 92 -20 L86 30 Q40 50 -40 44Z" fill="${C.skin}" stroke="${OUTL}" stroke-width="5"/>${[-40, -10, 20, 50].map(fx => `<path d="M${fx} -64 L${fx + 6} -110" stroke="${C.skin}" stroke-width="30" stroke-linecap="round"/><path d="M${fx} -64 L${fx + 6} -110" stroke="${OUTL}" stroke-width="34" stroke-linecap="round" opacity="0"/>`).join('')}<path d="M-60 -20 L-110 -60" stroke="${C.skin}" stroke-width="32" stroke-linecap="round"/></g>`;
+}
+function s1pov(t, L) {   // L: 0..1.4
+  const p = L / 1.4, run = Math.min(1, p / .5), hit = range(p, .5, .62), over = range(p, .62, .9), land = range(p, .9, 1);
+  const bob = Math.sin(p * 30) * 22 * (1 - hit) * (p < .5 ? 1 : 0);
+  const lift = easeInOut(over) * 1300 + (land > 0 ? 1300 - Math.sin(land * Math.PI) * 60 : 0) * (land > 0 ? 1 : 0) - (land > 0 ? 1300 * easeInOut(over) : 0);
+  const roll = Math.sin(over * Math.PI) * 10, shake = (hit > 0 && hit < 1 ? 14 : 0) + (land > 0 && land < .4 ? 20 : 0);
+  const sx = shake * noise1(t * 40, 1), sy = shake * noise1(t * 40, 3);
+  // mundo (horizonte em y=800); o cavalo cresce e depois passa por baixo
+  const hw = lerp(260, 1500, easeIn(run)), hy = lerp(1050, 1700, easeIn(run)) + easeInOut(over) * 1400, hh = hw * .5;
+  let w = `<rect x="-600" y="-1400" width="2300" height="2300" fill="#9CC0DE"/>` + clouds(t, 1).replace(/translate\(/g, 'translate(') + `<circle cx="900" cy="300" r="300" fill="url(#gSun)" opacity=".5"/>`;
+  w += pines(800, 30, .7, '#3A5A3A', 2) + fence(-600, 1700, 800, 260) + `<g transform="translate(860,800) scale(.42)">${tower(0, 0, 1, t, { flip: -1 }).replace(/^<g transform="translate\(0,0\) scale\(1\)">/, '<g>')}</g>`;
+  w += `<rect x="-600" y="800" width="2300" height="2300" fill="#C8B48A"/>` + groundDetail(t).replace(new RegExp(String(GND), 'g'), '800');
+  // cavalo visto de trás (trapézio + couro em cima)
+  const top = hy - hh;
+  w += `<g><path d="M${f1(540 - hw / 2)} ${f1(hy)} L${f1(540 - hw * .42)} ${f1(top)} L${f1(540 + hw * .42)} ${f1(top)} L${f1(540 + hw / 2)} ${f1(hy)}Z" fill="#B8864E" stroke="${OUTL}" stroke-width="6"/>${Array.from({ length: 4 }, (_, i) => `<line x1="${f1(540 - hw * (.5 - .02 * (i + 1)))}" y1="${f1(hy - hh * (i + 1) / 5)}" x2="${f1(540 + hw * (.5 - .02 * (i + 1)))}" y2="${f1(hy - hh * (i + 1) / 5)}" stroke="#8A6038" stroke-width="5"/>`).join('')}<rect x="${f1(540 - hw * .46)}" y="${f1(top - hw * .08)}" width="${f1(hw * .92)}" height="${f1(hw * .12)}" rx="${f1(hw * .05)}" fill="#6A3A22" stroke="${OUTL}" stroke-width="6"/><path d="M${f1(540 - hw * .42)} ${f1(top - hw * .06)} L${f1(540 + hw * .42)} ${f1(top - hw * .06)}" stroke="#fff" stroke-width="8" opacity=".2"/></g>`;
+  let o = `<g transform="translate(${f1(sx)},${f1(sy + bob)}) rotate(${f1(roll)} 540 960) translate(0,${f1(-easeInOut(over) * 300 + (land > 0 ? -300 + 300 * land : 0))})">${w}</g>`;
+  // mãos batendo no couro e empurrando
+  if (p > .42 && p < .86) { const k = range(p, .42, .52), push = range(p, .62, .86); const hyH = lerp(2200, top - hw * .05, k) + push * 700; o += povArm(120, 2300, 340, hyH, -1) + povArm(960, 2300, 740, hyH, 1); }
+  // velocidade nos cantos durante a corrida
+  if (p < .5) o += `<g opacity="${op(.25 * run)}">${Array.from({ length: 10 }, (_, i) => `<line x1="${i % 2 ? 0 : 1080}" y1="${300 + i * 150}" x2="${i % 2 ? 160 : 920}" y2="${360 + i * 150}" stroke="#fff" stroke-width="5"/>`).join('')}</g>`;
+  return o;
+}
+// pessoa vista de cima (do alto da torre)
+function topMan(x, y, s, kind, run = 0, ph = 0, air = 0) {
+  const C = KIND[kind], a = Math.sin(ph) * run * 30;
+  return `<g transform="translate(${f1(x)},${f1(y)}) scale(${f1(s * (1 + air * .25) * 100) / 100})"><ellipse cx="${f1(30 + air * 60)}" cy="${f1(40 + air * 70)}" rx="70" ry="40" fill="#000" opacity="${op(.25 - air * .1)}" filter="url(#b12)"/>
+    <path d="M-20 ${f1(10 + a)} L-20 ${f1(80 + a)}" stroke="${C.pants}" stroke-width="28" stroke-linecap="round"/><path d="M20 ${f1(10 - a)} L20 ${f1(80 - a)}" stroke="${C.pantsD}" stroke-width="28" stroke-linecap="round"/>
+    <path d="M-56 ${f1(-10 - a * .6)} L-70 ${f1(40 - a)}" stroke="${C.shirtD}" stroke-width="24" stroke-linecap="round"/><path d="M56 ${f1(-10 + a * .6)} L70 ${f1(40 + a)}" stroke="${C.shirtD}" stroke-width="24" stroke-linecap="round"/>
+    <ellipse cx="0" cy="0" rx="62" ry="34" fill="${C.shirt}" stroke="${OUTL}" stroke-width="4"/><circle cx="0" cy="-6" r="30" fill="${C.hair}" stroke="${OUTL}" stroke-width="4"/><path d="M-12 -24 Q0 -32 12 -24" stroke="#fff" stroke-width="4" opacity=".3" fill="none"/></g>`;
+}
+function s1guard(t, L) {   // L: 0..1.2
+  const [hx, hy] = HH(t, 2);
+  let w = `<rect x="-600" y="-600" width="2300" height="3200" fill="#C8B48A"/>`;
+  for (let i = 0; i < 90; i++) w += `<ellipse cx="${-500 + (i * 173) % 2100}" cy="${-500 + (i * 311) % 3000}" rx="${8 + i % 8}" ry="${5 + i % 4}" fill="#A8946A"/>`;
+  for (let i = 0; i < 50; i++) { const x = -500 + (i * 233) % 2100, y = -500 + (i * 157) % 3000; w += `<g transform="translate(${x},${y})">${[0, 1, 2, 3].map(j => `<path d="M0 0 l${-14 + j * 9} -18" stroke="#7A8A3A" stroke-width="5" stroke-linecap="round"/>`).join('')}</g>`; }
+  w += `<rect x="-600" y="-200" width="2300" height="60" fill="#5A4430"/>${Array.from({ length: 12 }, (_, i) => `<rect x="${-600 + i * 200}" y="-220" width="30" height="100" fill="#6A5440" stroke="${OUTL}" stroke-width="3"/>`).join('')}`;
+  // cavalo visto de cima
+  w += `<g transform="translate(560,1060) scale(1.25)"><ellipse cx="40" cy="40" rx="260" ry="110" fill="#000" opacity=".25" filter="url(#b12)"/><rect x="-250" y="-90" width="500" height="180" rx="10" fill="#B8864E" stroke="${OUTL}" stroke-width="6"/><rect x="-220" y="-56" width="440" height="112" rx="50" fill="#6A3A22" stroke="${OUTL}" stroke-width="5"/><path d="M-200 -30 L200 -30" stroke="#fff" stroke-width="7" opacity=".2"/></g>`;
+  // prisioneiros correndo de baixo para cima da tela e pulando
+  const kinds = ['pow', 'pow2', 'pow3', 'pow4'];
+  for (let i = 0; i < 4; i++) {
+    const ph = ((L * .9) + i * .25) % 1, y = lerp(1800, 280, ph), air = ph > .42 && ph < .66 ? Math.sin((ph - .42) / .24 * Math.PI) : 0;
+    w += topMan(560 + (i % 2 ? 40 : -40), y, 1.2, kinds[i], 1, L * 22 + i, air);
+  }
+  let o = `<g transform="translate(${f1(hx)},${f1(hy)}) rotate(${f1(-4 + Math.sin(t) * 1.2)} 540 960) translate(540,960) scale(${f1(lerp(1.0, 1.12, L / 1.2) * 100) / 100}) translate(-540,-960)">${w}</g>`;
+  // parapeito da torre e braços do guarda (primeiro plano)
+  o += `<rect x="-100" y="1560" width="1300" height="90" fill="#6A5038" stroke="${OUTL}" stroke-width="6"/><rect x="-100" y="1560" width="1300" height="18" fill="#8A6A4A"/><rect x="-100" y="1650" width="1300" height="400" fill="#3A2A1C"/>`;
+  o += capsule(-60, 2100, 280, 1600, 90, 70, KIND.alemao.shirt) + `<circle cx="300" cy="1600" r="64" fill="${KIND.alemao.skin}" stroke="${OUTL}" stroke-width="5"/>` + capsule(1140, 2100, 800, 1600, 90, 70, KIND.alemao.shirt) + `<circle cx="780" cy="1600" r="64" fill="${KIND.alemao.skin}" stroke="${OUTL}" stroke-width="5"/>`;
+  return o;
+}
+function s1(t) {
+  const { L } = loc(t, 'n1');
+  let s;
+  if (L < 2.4) s = s1wide(t, L);
+  else if (L < 3.8) s = s1pov(t, L - 2.4);
+  else s = s1guard(t, L - 3.8);
+  let fx = VIG(.7) + GRAINV(t);
+  for (const c of [2.4, 3.8]) if (L >= c && L < c + .07) fx += `<rect width="1080" height="1920" fill="#fff" opacity="${op(.25 * (1 - (L - c) / .07))}"/>`;
+  return s + fx + (L < .1 ? `<rect width="1080" height="1920" fill="#fff" opacity="${op(.3 * (1 - L / .1))}"/>` : '');
+}
+/* ---------- 2. carregam o cavalo até o canto, perto da cerca; o guarda boceja ---------- */
+function s2(t) {
+  const { L, d, k } = loc(t, 'n2'), [hx, hy] = HH(t);
+  const carry = easeInOut(range(L, .9, 3.3)), hxp = lerp(-700, 900, carry);
+  setCam(lerp(-640, 1000, easeInOut(range(L, .6, 3.4))) + hx, 1080 + hy, lerp(.95, .82, range(L, 0, 1)), 0, [540, 1100, 1]);
+  let s = yard(t);
+  const yawn = range(L, 3.6, 4.0) * (1 - range(L, 4.9, 5.3));
+  s += lay(.9, fence(-300, 2400, GND - 160, 520) + tower(1350, GND - 160, .8, t, { flip: -1, mouth: yawn, armF: yawn ? [170, 20] : [-10, 10], armB: yawn ? [170, 20] : [-10, 10], eyes: yawn > .5 ? 0 : 1 }));
+  s += lay(1, shed(-700, GND - 10, easeInOut(range(L, 0, .7))));
+  const moving = L > .9 && L < 3.3, W = n => walkPose(L * 9 + n, moving ? 1 : 0);
+  const kinds = ['pow', 'pow2', 'pow3', 'pow4'];
+  let c = '';
+  if (L < 3.4) {
+    c += man({ x: hxp - 520, y: GND, s: .85, kind: kinds[0], ...W(0), armF: [20, -40], armB: [10, -30] }) + man({ x: hxp - 380, y: GND, s: .85, kind: kinds[1], ...W(2), armF: [20, -40] });
+    c += horse(hxp, GND - 40 - (moving ? Math.abs(Math.cos(L * 9)) * 5 : 0), 1.0, { poles: true });
+    c += man({ x: hxp + 380, y: GND, s: .85, kind: kinds[2], ...W(1), armF: [-20, -40] }) + man({ x: hxp + 520, y: GND, s: .85, kind: kinds[3], ...W(3), armF: [-20, -40] });
+    if (moving) for (let i = 0; i < 8; i++) { const p = (L * 2 + i * .125) % 1; c += `<circle cx="${f1(hxp - 560 + i * 140)}" cy="${f1(GND - p * 50)}" r="${f1(10 + p * 18)}" fill="#E8DCC0" opacity="${op((1 - p) * .5)}"/>`; }
+  } else { c += horse(900, GND, 1.0); for (let i = 0; i < 3; i++) { const ph = ((L - 3.4) * .8 + i * .33) % 1; c += vault(200, 900, ph, kinds[i]); } }
+  s += lay(1, c);
+  return s + VIG(.7) + GRAINV(t);
+}
+/* ---------- 3. o corte: tinha um homem lá dentro ---------- */
+function s3(t) {
+  const { L, d, k } = loc(t, 'n3'), [hx, hy] = HH(t);
+  setCam(lerp(820, 820, k) + hx, lerp(1250, 1320, k) + hy, lerp(.8, 1.4, easeInOut(range(L, .2, 2.4))), 0, [540, 1250, 1]);
+  let s = yard(t);
+  s += lay(.9, fence(-1100, 2400, GND - 160, 520));
+  const open = range(L, 1.0, 1.6);
+  const inside = man({ x: -20, y: -6, s: .5, kind: 'pow3', drop: 230, lean: 45, legF: [100, -110], legB: [70, -120], armF: [110, 30], armB: [100, 40], shadow: 0, eyes: 1 });
+  s += lay(1, horse(820, GND, 1.0, { open: open > .5, inside: open > .5 ? inside : '' }));
+  if (open > 0 && open < 1) s += lay(1, `<path d="M${f1(820 - 300 + 600 * open)} ${GND - 420} L${f1(820 - 300 + 600 * open)} ${GND}" stroke="#fff" stroke-width="10" opacity=".8"/>`);
+  // pulos continuam por cima
+  const ph = (L * .7) % 1; s += lay(1, vault(200, 820, ph, 'pow'));
+  return s + VIG(.7) + GRAINV(t);
+}
+/* ---------- 4. corte do subsolo: ele cava enquanto os outros pulam ---------- */
+function underground(t, depth, tunnel, day = 1) {
+  let s = `<rect x="-1500" y="${GND}" width="6800" height="1800" fill="#B8A070"/>`;
+  for (let i = 0; i < 6; i++) s += `<rect x="-1500" y="${GND + 160 + i * 230}" width="6800" height="${110 + (i % 2) * 40}" fill="${['#A8905E', '#C8B080', '#9A8458'][i % 3]}" opacity=".6"/>`;
+  for (let i = 0; i < 60; i++) s += `<circle cx="${-1400 + (i * 191) % 3900}" cy="${GND + 60 + (i * 83) % 1500}" r="${4 + i % 6}" fill="#8A7450" opacity=".5"/>`;
+  if (depth > 0) s += `<rect x="740" y="${GND}" width="160" height="${f1(depth)}" fill="#2A1E12" stroke="#5A4428" stroke-width="6"/>`;
+  if (tunnel > 0) s += `<rect x="740" y="${f1(GND + depth - 140)}" width="${f1(tunnel)}" height="140" rx="30" fill="#2A1E12" stroke="#5A4428" stroke-width="6"/>${Array.from({ length: Math.floor(tunnel / 160) }, (_, i) => `<rect x="${760 + i * 160}" y="${f1(GND + depth - 150)}" width="14" height="160" fill="#7A5A34"/>`).join('')}`;
+  return s;
+}
+function s4(t) {
+  const { L, d, k } = loc(t, 'n4'), [hx, hy] = HH(t);
+  setCam(820 + hx, lerp(1450, 1560, k) + hy, lerp(1.05, 1.15, k), 0, [540, 1450, 1]);
+  let s = lay(.05, sky(1)) + lay(.4, pines(1300, 20, 1.3, '#2E4A2E', 3));
+  const depth = lerp(60, 420, easeOut(range(L, .3, d - .3)));
+  s += lay(1, underground(t, depth, 0));
+  // o cavaleiro escondido cavando dentro do poço, sacos ao lado
+  const dig = Math.sin(L * 7);
+  s += lay(1, man({ x: 800, y: GND + depth - 10, s: .55, kind: 'pow3', drop: 220, lean: 50 + 10 * dig, legF: [95, -110], legB: [60, -100], armF: [140 + 20 * dig, -20], armB: [130 + 20 * dig, -10], shadow: 0, held: `<path d="M0 0 q30 -10 60 0 q-10 30 -30 32 q-24 -2 -30 -32Z" fill="#8A8A90" stroke="${OUTL}" stroke-width="3" transform="rotate(${f1(40 + 30 * dig)})"/>` }));
+  const nsacks = Math.floor(range(L, .6, d - .4) * 5);
+  for (let i = 0; i < nsacks; i++) s += lay(1, sack(620 - i * 10, GND - 10 - i * 60, .9));
+  s += lay(1, horse(820, GND, 1.0, { open: true }));
+  // pés pulando por cima (poeira e batida)
+  const ph = (L * .75) % 1; s += lay(1, vault(200, 820, ph, 'pow2'));
+  if (ph > .55 && ph < .65) s += lay(1, `<g opacity=".7">${Array.from({ length: 6 }, (_, i) => `<circle cx="${820 + (i - 2.5) * 50}" cy="${GND - 430}" r="${10 + i % 3 * 4}" fill="#E8DCC0"/>`).join('')}</g>`);
+  return s + VIG(.7) + GRAINV(t);
+}
+/* ---------- 5. tampam o buraco e levam o cavalo pesado de volta ---------- */
+function s5(t) {
+  const { L, d, k } = loc(t, 'n5'), [hx, hy] = HH(t);
+  let s = '';
+  if (L < 2.2) {
+    setCam(860 + hx, 1300 + hy, 1.0, 0, [540, 1300, 1]);
+    s += lay(.05, sky(.8)) + lay(.4, pines(1300, 20, 1.3, '#2E4A2E', 3)) + lay(1, sandGround(.85));
+    const board = easeInOut(range(L, .2, .9)), sand = range(L, 1.0, 1.9);
+    s += lay(1, `<ellipse cx="825" cy="${GND + 4}" rx="95" ry="22" fill="#1A1208"/>` + horse(820, GND - 460, .7, { open: false }).replace('<g transform', '<g opacity="0" transform'));
+    s += lay(1, `<rect x="${f1(lerp(1200, 740, board))}" y="${GND - 6}" width="170" height="22" fill="#8A6038" stroke="${OUTL}" stroke-width="4"/>` + (sand > 0 ? `<path d="M720 ${GND + 10} Q820 ${f1(GND - 30 * sand)} 920 ${GND + 10}Z" fill="#C8B48A"/>` : '') + Array.from({ length: 16 }, (_, i) => { const p = (L * 2 + i * .13) % 1; return sand > 0 && sand < 1 ? `<circle cx="${f1(760 + (i % 8) * 20)}" cy="${f1(GND - 300 + p * 300)}" r="5" fill="#C8B48A"/>` : ''; }).join(''));
+    s += lay(1, man({ x: 1060, y: GND, s: .62, kind: 'pow3', drop: 200, lean: 30, legF: [85, -95], legB: [-10, 95], armF: [lerp(30, 45, board) - 15 * Math.sin(L * 8) * (sand > 0 ? 1 : 0), 0], armB: [25, 10], flip: -1, held: board < 1 ? '' : '' }));
+  } else {
+    const L2 = L - 2.2, k2 = L2 / (d - 2.2);
+    setCam(lerp(900, -250, k2) + hx, 1080 + hy, .85, 0, [540, 1100, 1]);
+    s += yard(t, { day: .85 });
+    const hxp = lerp(900, -400, k2), strain = Math.abs(Math.sin(L2 * 5)) * 18;
+    const kinds = ['pow', 'pow2', 'pow4', 'pow'];
+    let c = man({ x: hxp + 520, y: GND, s: .85, kind: kinds[0], flip: -1, ...walkPose(L2 * 6, .6), lean: -12, armF: [20, -40] }) + man({ x: hxp + 380, y: GND, s: .85, kind: kinds[1], flip: -1, ...walkPose(L2 * 6 + 2, .6), lean: -12, armF: [20, -40] });
+    c += horse(hxp, GND - 30 - strain * .3, 1.0, { poles: true });
+    c += man({ x: hxp - 380, y: GND, s: .85, kind: kinds[2], flip: -1, ...walkPose(L2 * 6 + 1, .6), lean: -12, armF: [-20, -40] }) + man({ x: hxp - 520, y: GND, s: .85, kind: kinds[3], flip: -1, ...walkPose(L2 * 6 + 3, .6), lean: -12, armF: [-20, -40] });
+    // gotas de suor = está pesado
+    for (let i = 0; i < 4; i++) { const p = (L2 * 1.5 + i * .25) % 1; c += `<path d="M${f1(hxp + [520, 380, -380, -520][i] + 40)} ${f1(GND - 900 + p * 80)} q8 14 0 22 q-8 -8 0 -22Z" fill="#9AD0FF" opacity="${op(1 - p)}"/>`; }
+    s += lay(1, c);
+  }
+  return s + VIG(.7) + GRAINV(t);
+}
+/* ---------- 6. o túnel cresce por baixo da cerca (contador de dias) ---------- */
+function s6(t) {
+  const { L, d, k } = loc(t, 'n6'), [hx, hy] = HH(t);
+  setCam(lerp(1000, 1500, easeInOut(k)) + hx, 1500 + hy, .58, 0, [540, 1500, 1]);
+  const cyc = range(L, .1, d - .7), day = .5 + .5 * Math.sin(cyc * Math.PI * 2 * 8 - Math.PI / 2);
+  let s = lay(.05, sky(day)) + lay(.4, pines(1300, 30, 1.3, mix('#0A140C', '#2E4A2E', day), 3));
+  s += lay(1, underground(t, 420, lerp(160, 2000, easeInOut(cyc))) + `<rect x="-1500" y="${GND - 4}" width="6800" height="8" fill="${mix('#2A2618', '#C8B48A', day)}"/>` + fence(2000, 3400, GND, 520, day) + horse(820, GND, 1.0, { day }));
+  const n = Math.max(1, Math.floor(cyc * 98)), fin = range(L, d - .7, d - .4);
+  return s + VIG(.7) + (fin > 0 ? counterBox(t, 3, 'MESES', 1 + .25 * Math.sin(fin * Math.PI)) : counterBox(t, n, n === 1 ? 'DIA' : 'DIAS')) + GRAINV(t);
+}
+/* ---------- 7. a noite da fuga: rastejam e saem do outro lado da cerca ---------- */
+function s7(t) {
+  const { L, d, k } = loc(t, 'n7'), [hx, hy] = HH(t);
+  setCam(lerp(1600, 2500, easeInOut(range(L, 0, 3.4))) + hx, lerp(1560, 1380, easeInOut(range(L, 2.4, 4.2))) + hy, .6, 0, [1600, 1500, 1]);
+  let s = lay(.05, sky(0) + STARS.slice(0, 90).map(q => `<circle cx="${f1(q.x * 1.5 + 600)}" cy="${f1(q.y * .4 - 200)}" r="${q.r}" fill="#fff" opacity=".6"/>`).join('')) + lay(.4, pines(1300, 30, 1.3, '#0A140C', 3));
+  s += lay(1, underground(t, 420, 2000).replace('#B8A070', '#3A3020') + `<rect x="-1500" y="${GND - 4}" width="6800" height="8" fill="#2A2618"/>` + fence(2000, 3400, GND, 520, 0) + `<rect x="2720" y="${GND - 4}" width="140" height="80" fill="#0A0806"/>` + pines(GND, 10, 1.6, '#08100A', 7).replace(/M(-?\d+)/g, (m, x) => `M${+x + 2800}`));
+  // três rastejando no túnel e saindo pelo buraco
+  for (let i = 0; i < 3; i++) {
+    const p = range(L, .2 + i * .5, 3.2 + i * .5), x = lerp(900, 2780, p), out = range(L, 3.2 + i * .5, 3.8 + i * .5);
+    const kind = ['pow', 'pow2', 'pow4'][i];
+    if (out <= 0) s += lay(1, man({ x, y: GND + 400, s: .42, kind, drop: 300, lean: 80, legF: [90 + 20 * Math.sin(L * 9 + i), -90], legB: [80 - 20 * Math.sin(L * 9 + i), -90], armF: [150 + 20 * Math.sin(L * 9 + i), -20], armB: [140, -20], shadow: 0 }));
+    else s += lay(1, man({ x: 2790 + out * 300, y: GND - lerp(-200, 0, Math.min(1, out * 2)), s: .55, kind, ...walkPose(L * 10 + i, out > .5 ? 1.2 : 0), lean: 15, shadow: 0 }));
+  }
+  s += lay(.9, tower(1700, GND, 1.1, t, { day: 0, light: -20 + Math.sin(t * .9) * 25, flip: 1 }));
+  return s + VIG(.9) + GRAINV(t);
+}
+/* ---------- 8. trem e navio até a Suécia ---------- */
+function s8(t) {
+  const { L, d, k } = loc(t, 'n8'), [hx, hy] = HH(t);
+  let s = '';
+  if (L < 1.9) {
+    setCam(540 + hx, 1100 + hy, .75, 0, [540, 1100, 1]);
+    s += lay(.05, sky(.6)) + lay(.3, pines(1250, 30, 1.0, '#2A4430', 2).replace(/M(-?\d+)/g, (m, x) => `M${+x - ((L * 900) % 400)}`));
+    s += lay(1, `<rect x="-1500" y="${GND}" width="6800" height="1600" fill="#4A4438"/><rect x="-1500" y="${GND + 10}" width="6800" height="14" fill="#6A6A70"/>`);
+    const tx = lerp(-600, 300, L / 1.9);
+    let train = '';
+    for (let c = 0; c < 3; c++) { const x = tx + c * 640; train += `<g transform="translate(${f1(x)},${GND})"><rect x="0" y="-380" width="600" height="320" rx="20" fill="#5A2A22" stroke="${OUTL}" stroke-width="5"/><rect x="20" y="-420" width="560" height="44" rx="16" fill="#3A1A16" stroke="${OUTL}" stroke-width="4"/>${[60, 220, 380].map(wx => `<rect x="${wx}" y="-330" width="120" height="110" fill="#C8DCE8" stroke="${OUTL}" stroke-width="4"/>`).join('')}<circle cx="120" cy="-40" r="46" fill="#1A1A1E" stroke="${OUTL}" stroke-width="4"/><circle cx="480" cy="-40" r="46" fill="#1A1A1E" stroke="${OUTL}" stroke-width="4"/></g>`; }
+    // os três na janela do primeiro vagão
+    train += [0, 1, 2].map(i => `<g transform="translate(${f1(tx + 120 + i * 160)},${GND - 270}) scale(.7)"><circle r="40" fill="${['#E6B896', '#ECC4A2', '#EAC0A0'][i]}" stroke="${OUTL}" stroke-width="4"/><path d="M-40 -6 Q-44 -50 0 -52 Q40 -50 40 -10 Q20 -30 0 -30 Q-24 -30 -40 -6Z" fill="${['#3A2616', '#8A5A2A', '#C8A060'][i]}" stroke="${OUTL}" stroke-width="3"/></g>`).join('');
+    s += lay(1, train);
+  } else {
+    const L2 = L - 1.9, k2 = L2 / (d - 1.9);
+    setCam(lerp(500, 600, k2) + hx, 1060 + hy, .72, 0, [540, 1100, 1]);
+    s += lay(.05, sky(1)) + lay(.4, `<path d="M-900 1250 Q-300 1150 300 1220 L300 1300 L-900 1300Z" fill="#5A7A5A"/><g transform="translate(-200,1180)">${Array.from({ length: 5 }, (_, i) => `<rect x="${i * 90}" y="${-60 - (i % 2) * 30}" width="70" height="${60 + (i % 2) * 30}" fill="${['#C8584A', '#E8D8A8', '#C8584A', '#8AA0B8', '#E8D8A8'][i]}" stroke="${OUTL}" stroke-width="3"/>`).join('')}</g>`);
+    s += lay(.7, `<rect x="-1500" y="1290" width="6800" height="1600" fill="#3A6A9A"/>${Array.from({ length: 20 }, (_, i) => `<path d="M${-1400 + i * 200 + ((t * 60) % 200)} ${1340 + (i % 4) * 90} q30 -10 60 0" stroke="#9AC0E8" stroke-width="4" fill="none"/>`).join('')}`);
+    const sx = lerp(1300, 560, easeOut(k2));
+    s += lay(1, `<g transform="translate(${f1(sx)},1330)"><path d="M-420 -80 L420 -80 L340 60 L-360 60Z" fill="#E8E2D4" stroke="${OUTL}" stroke-width="5"/><rect x="-220" y="-220" width="320" height="140" fill="#D8D2C4" stroke="${OUTL}" stroke-width="4"/><rect x="-40" y="-330" width="60" height="110" fill="#2A2A30" stroke="${OUTL}" stroke-width="4"/><rect x="260" y="-380" width="8" height="300" fill="#3A3A40"/>
+      <g transform="translate(268,-380) skewY(${f1(Math.sin(t * 6) * 4)})"><rect width="170" height="110" fill="#2A5AA8" stroke="${OUTL}" stroke-width="4"/><rect x="50" width="32" height="110" fill="#F2C832"/><rect y="38" width="170" height="32" fill="#F2C832"/></g>
+      ${[0, 1, 2].map(i => man({ x: -180 + i * 110, y: -80, s: .32, kind: ['pow', 'pow2', 'pow4'][i], armF: [160 + 15 * Math.sin(t * 8 + i), 10], shadow: 0 })).join('')}</g>`);
+  }
+  return s + VIG(.7) + GRAINV(t);
+}
+/* ---------- 9. de manhã: alarme, o buraco; o cavalo sozinho no pátio ---------- */
+function s9(t) {
+  const { L, d, k } = loc(t, 'n9'), [hx, hy] = HH(t);
+  setCam(lerp(1500, 860, easeInOut(range(L, 1.6, 3.8))) + hx, lerp(1060, 1120, easeInOut(range(L, 1.6, 3.8))) + hy, lerp(.72, 1.0, easeInOut(range(L, 1.6, 4.2))), 0, [540, 1100, 1]);
+  const alarm = Math.sin(t * 12) > 0;
+  let s = yard(t, { day: .9 });
+  s += lay(.9, fence(-1100, 2600, GND - 160, 520) + `<rect x="2000" y="${GND - 170}" width="160" height="60" fill="#1A1408"/>`);
+  // guardas correndo até o buraco, um apontando
+  for (let i = 0; i < 3; i++) { const run = range(L, i * .3, 1.6 + i * .3); s += lay(.95, man({ x: lerp(400 + i * 120, 1800 + i * 110, run), y: GND - 160, s: .7, kind: 'alemao', ...walkPose(L * 11 + i, run < 1 ? 1.3 : 0), armF: run >= 1 && i === 0 ? [100, -10] : [20, 10], mouth: run >= 1 ? 1 : 0 })); }
+  s += lay(1, horse(820, GND, 1.1, { day: .95 }) + `<ellipse cx="820" cy="${GND + 10}" rx="360" ry="30" fill="#000" opacity=".25" filter="url(#b12)"/>`);
+  if (alarm && L < 3.2) s += `<rect width="1080" height="1920" fill="#FF3020" opacity=".12"/>`;
+  return s + VIG(.7) + GRAINV(t);
+}
+const FN = { n1: s1, n2: s2, n3: s3, n4: s4, n5: s5, n6: s6, n7: s7, n8: s8, n9: s9 };
+function frame(t) {
+  D = []; uid = 0;
+  const sh = shotAt(t);
+  let body = FN[sh[0]](t);
+  for (const c of SH.slice(1)) if (t >= c[1] && t < c[1] + .08) body += `<rect width="1080" height="1920" fill="#fff" opacity="${op(.2 * (1 - (t - c[1]) / .08))}"/>`;
+  defsEl.innerHTML = STATIC + objDefs() + `<filter id="manVol" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB"><feOffset in="SourceAlpha" dx="-16" dy="8" result="o1"/><feComposite in="SourceAlpha" in2="o1" operator="out" result="e1"/><feGaussianBlur in="e1" stdDeviation="7" result="b1"/><feComposite in="b1" in2="SourceAlpha" operator="in" result="s1"/><feFlood flood-color="#1A1028" flood-opacity=".38"/><feComposite in2="s1" operator="in" result="sh"/><feOffset in="SourceAlpha" dx="7" dy="-7" result="o2"/><feComposite in="SourceAlpha" in2="o2" operator="out" result="e2"/><feGaussianBlur in="e2" stdDeviation="2.5" result="b2"/><feComposite in="b2" in2="SourceAlpha" operator="in" result="r1"/><feFlood flood-color="#FFF0D0" flood-opacity=".55"/><feComposite in2="r1" operator="in" result="rim"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="sh"/><feMergeNode in="rim"/></feMerge></filter><radialGradient id="gSun"><stop offset="0" stop-color="#FFF4D0" stop-opacity=".9"/><stop offset="1" stop-color="#FFE0A0" stop-opacity="0"/></radialGradient><filter id="bl6" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>` + D.join('');
+  root.innerHTML = body;
+}

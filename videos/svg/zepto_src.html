@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>O Zeptoverso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --accent:#00E5FF; --s:1; }
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s));background:#000}
+  #s{display:block}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+  .ov{position:absolute;left:120px;right:120px;top:var(--y);text-align:center;color:#fff;font-family:'Montserrat',system-ui,sans-serif;font-weight:900;font-size:var(--fs);line-height:1.05;
+    opacity:0;transform:translateY(30px) scale(.94);transition:opacity .2s ease, transform .35s cubic-bezier(.2,.9,.3,1.4);
+    text-shadow:0 8px 34px rgba(0,0,0,.95),0 2px 8px rgba(0,0,0,.8);pointer-events:none}
+  .ov.on{opacity:1;transform:none}
+  .a{color:var(--accent)} .o{color:#FFB347} .r{color:#FF5A6A} .g{color:#5BFF9A}
+  .sub{display:block;font-size:.42em;font-weight:800;letter-spacing:.08em;margin-top:.3em;color:#E8F4FF}
+  .btn{display:inline-block;border:8px solid var(--accent);border-radius:999px;padding:.24em .8em;background:rgba(0,0,0,.5);box-shadow:0 0 60px rgba(0,229,255,.35)}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;font:800 54px 'Montserrat',sans-serif;background:rgba(0,0,0,.55);cursor:pointer;gap:30px;text-align:center}
+  #start small{font-size:30px;opacity:.6}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+<svg id="s" width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="skyBeach" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1E2F6E"/><stop offset=".35" stop-color="#7A4C8C"/><stop offset=".62" stop-color="#F08A5A"/><stop offset=".78" stop-color="#FFC77A"/><stop offset="1" stop-color="#FFE3A8"/></linearGradient>
+  <linearGradient id="seaG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A4E86"/><stop offset=".5" stop-color="#7A5C86"/><stop offset="1" stop-color="#C98A6A"/></linearGradient>
+  <linearGradient id="sandG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2C48A"/><stop offset=".4" stop-color="#C98E5E"/><stop offset="1" stop-color="#5E3A2C"/></linearGradient>
+  <linearGradient id="skyBeach2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B1236"/><stop offset="1" stop-color="#2A1A40"/></linearGradient>
+  <linearGradient id="hull" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#F2F5FA"/><stop offset=".55" stop-color="#D5DBE6"/><stop offset="1" stop-color="#9AA3B5"/></linearGradient>
+  <linearGradient id="chrome" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#9EA8BC"/><stop offset=".55" stop-color="#5E6880"/><stop offset="1" stop-color="#C9D1E0"/></linearGradient>
+  <linearGradient id="tunnelG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A4458"/><stop offset="1" stop-color="#151B28"/></linearGradient>
+  <linearGradient id="landG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0F1E1A"/><stop offset="1" stop-color="#081210"/></linearGradient>
+  <linearGradient id="waterDeep" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0E4A6E"/><stop offset=".5" stop-color="#062338"/><stop offset="1" stop-color="#010812"/></linearGradient>
+  <radialGradient id="glowW"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset=".25" stop-color="#fff" stop-opacity=".45"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  <radialGradient id="glowC"><stop offset="0" stop-color="#E6FDFF" stop-opacity="1"/><stop offset=".2" stop-color="#00E5FF" stop-opacity=".7"/><stop offset="1" stop-color="#00E5FF" stop-opacity="0"/></radialGradient>
+  <radialGradient id="glowM"><stop offset="0" stop-color="#FFE6F4" stop-opacity="1"/><stop offset=".2" stop-color="#FF3FA4" stop-opacity=".7"/><stop offset="1" stop-color="#FF3FA4" stop-opacity="0"/></radialGradient>
+  <radialGradient id="glowO"><stop offset="0" stop-color="#FFF6D8" stop-opacity="1"/><stop offset=".3" stop-color="#FFB347" stop-opacity=".6"/><stop offset="1" stop-color="#FF6A1F" stop-opacity="0"/></radialGradient>
+  <radialGradient id="glowP"><stop offset="0" stop-color="#F4E8FF" stop-opacity="1"/><stop offset=".3" stop-color="#9A5BFF" stop-opacity=".5"/><stop offset="1" stop-color="#5A2BFF" stop-opacity="0"/></radialGradient>
+  <radialGradient id="glowWarm"><stop offset="0" stop-color="#FFF1D0" stop-opacity="1"/><stop offset=".35" stop-color="#FFD9A0" stop-opacity=".5"/><stop offset="1" stop-color="#FFB870" stop-opacity="0"/></radialGradient>
+  <radialGradient id="sunG"><stop offset="0" stop-color="#FFFBE8"/><stop offset=".22" stop-color="#FFE7A6"/><stop offset=".45" stop-color="#FFC06A" stop-opacity=".55"/><stop offset="1" stop-color="#FF9A4A" stop-opacity="0"/></radialGradient>
+  <radialGradient id="cloudE"><stop offset="0" stop-color="#9FC8FF" stop-opacity=".55"/><stop offset=".55" stop-color="#4A7CFF" stop-opacity=".22"/><stop offset="1" stop-color="#2A4CFF" stop-opacity="0"/></radialGradient>
+  <radialGradient id="protonG" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#FF9AA4"/><stop offset=".6" stop-color="#E03A4E"/><stop offset="1" stop-color="#7A1626"/></radialGradient>
+  <radialGradient id="neutronG" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#C8D6FF"/><stop offset=".6" stop-color="#7488C0"/><stop offset="1" stop-color="#2E3A66"/></radialGradient>
+  <radialGradient id="siG" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#FFF0B8"/><stop offset=".6" stop-color="#E0B040"/><stop offset="1" stop-color="#7A5210"/></radialGradient>
+  <radialGradient id="oxG" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#FFB0B0"/><stop offset=".6" stop-color="#E04848"/><stop offset="1" stop-color="#701818"/></radialGradient>
+  <radialGradient id="protonShell"><stop offset=".7" stop-color="#9A5BFF" stop-opacity=".05"/><stop offset=".93" stop-color="#B98AFF" stop-opacity=".35"/><stop offset="1" stop-color="#B98AFF" stop-opacity="0"/></radialGradient>
+  <radialGradient id="vig" cx=".5" cy=".5" r=".72"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".7"/></radialGradient>
+  <radialGradient id="atmo"><stop offset=".86" stop-color="#5EC8FF" stop-opacity="0"/><stop offset=".9" stop-color="#5EC8FF" stop-opacity=".7"/><stop offset="1" stop-color="#5EC8FF" stop-opacity="0"/></radialGradient>
+  <radialGradient id="earthShade" cx=".3" cy=".25" r=".9"><stop offset=".4" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000818" stop-opacity=".85"/></radialGradient>
+  <radialGradient id="nebA"><stop offset="0" stop-color="#7B3FD1" stop-opacity=".55"/><stop offset="1" stop-color="#7B3FD1" stop-opacity="0"/></radialGradient>
+  <radialGradient id="nebB"><stop offset="0" stop-color="#1F8FD8" stop-opacity=".45"/><stop offset="1" stop-color="#1F8FD8" stop-opacity="0"/></radialGradient>
+  <radialGradient id="nebC"><stop offset="0" stop-color="#E0457B" stop-opacity=".35"/><stop offset="1" stop-color="#E0457B" stop-opacity="0"/></radialGradient>
+  <radialGradient id="smokeG" cx=".5" cy=".4" r=".6"><stop offset="0" stop-color="#F3EEE8"/><stop offset=".7" stop-color="#C8C0BA"/><stop offset="1" stop-color="#A89C96"/></radialGradient>
+  <radialGradient id="smokeFire" cx=".5" cy=".8" r=".7"><stop offset="0" stop-color="#FFB060"/><stop offset=".6" stop-color="#D88A5A"/><stop offset="1" stop-color="#8D7A72"/></radialGradient>
+  <linearGradient id="plumeO" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".15" stop-color="#FFF0B0"/><stop offset=".5" stop-color="#FFA040"/><stop offset="1" stop-color="#FF5A1F" stop-opacity="0"/></linearGradient>
+  <filter id="bl3" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
+  <filter id="bl8" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="8"/></filter>
+  <filter id="bl16" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="16"/></filter>
+  <filter id="bl30" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="30"/></filter>
+  <filter id="bl60" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="60"/></filter>
+</defs>
+<defs id="fdefs"></defs>
+<g id="world"></g>
+<g id="post"></g>
+</svg>
+<div id="flash"></div>
+<div id="texts"></div>
+<div id="start">▶ CLIQUE ou ESPAÇO<small>com som · ESPAÇO pausa · R reinicia · ← → pula 5 s</small></div>
+</div>
+<!--AUDIO-->
+<script>
+/*LIB*/
+
+/* ======== LINHA DO TEMPO (segundos) — a mesma do áudio ======== */
+const EV = {
+  macro: 4.0, glitch: 7.0, title: 9.8, dive: 12.0, earth: 56.0, bus: 58.6, galaxy: 61.5, gzoom: 63.2,
+  waves: 67.5, lhc: 75.0, tunnel: 80.0, collide: 83.2, fcc: 86.5, years: 90.5, echo: 97.0, kaon: 105.0, kslow: 109.4, kdecay: 112.0,
+  cards: 116.0, seven: 138.0, bang: 144.0, annih: 146.0, left: 151.0, gal2: 153.5, back: 157.0, beach2: 160.5, endcard: 165.0, end: 171.0,
+};
+const CARD = 5.5;
+const TEXTS = [
+  { from: 7.2, to: 9.5, y: 380, fs: 76, html: 'DENTRO DE UM <span class="o">GRÃO DE AREIA</span>' },
+  { from: 8.1, to: 9.5, y: 480, fs: 76, html: 'EXISTE UM MUNDO QUE <span class="a">NINGUÉM NUNCA VIU</span>' },
+  { from: 9.9, to: 11.9, y: 380, fs: 170, html: '<span class="a">ZEPTOVERSO</span><span class="sub">O UNIVERSO ESCONDIDO A 10⁻²¹ METRO</span>' },
+  { from: 31.9, to: 34.9, y: 470, fs: 70, html: 'QUASE TUDO AQUI DENTRO<br><span class="a">É ESPAÇO VAZIO</span>' },
+  { from: 56.3, to: 58.5, y: 110, fs: 66, html: 'SE UM PRÓTON FOSSE<br><span class="a">DO TAMANHO DA TERRA…</span>' },
+  { from: 58.9, to: 61.3, y: 110, fs: 66, html: '…1 ZEPTÔMETRO SERIA<br><span class="o">DO TAMANHO DE UM ÔNIBUS</span>' },
+  { from: 61.7, to: 63.3, y: 110, fs: 62, html: '1 ZEPTÔMETRO ESTÁ PARA <span class="a">1 METRO</span>…' },
+  { from: 64.0, to: 67.3, y: 110, fs: 62, html: '…ASSIM COMO 1 METRO ESTÁ<br>PARA <span class="a">A VIA LÁCTEA INTEIRA</span>' },
+  { from: 70.2, to: 75.0, y: 90, fs: 64, html: 'PRA ENXERGAR MENOR,<br><span class="o">PRECISA DE MAIS ENERGIA</span>' },
+  { from: 76.2, to: 79.8, y: 90, fs: 70, html: '<span class="a">LHC</span> · 27 KM<span class="sub">CERN · FRONTEIRA FRANÇA–SUÍÇA</span>' },
+  { from: 81.0, to: 83.1, y: 90, fs: 64, html: 'PRÓTONS A <span class="a">99,999999%</span><br>DA VELOCIDADE DA LUZ' },
+  { from: 83.6, to: 86.4, y: 90, fs: 62, html: 'O LHC ENXERGA ATÉ<br><span class="o">UNS 50 ZEPTÔMETROS</span>' },
+  { from: 87.0, to: 90.3, y: 90, fs: 62, html: 'PRA CHEGAR EM 1 ZEPTÔMETRO:<br><span class="a">UMA MÁQUINA AINDA MAIOR</span>' },
+  { from: 93.4, to: 96.9, y: 90, fs: 62, html: 'QUE SÓ DEVE FUNCIONAR<br><span class="r">POR VOLTA DE 2070</span>' },
+  { from: 98.0, to: 104.8, y: 90, fs: 64, html: 'MAS DÁ PRA OUVIR<br><span class="a">OS ECOS</span>' },
+  { from: 105.4, to: 109.2, y: 90, fs: 58, html: 'SÓ <span class="o">1 EM 10 BILHÕES</span> DE KAONS<br>SE DESFAZ DESSE JEITO' },
+  { from: 110.3, to: 113.0, y: 90, fs: 56, html: 'NESSE INSTANTE, PARTÍCULAS DO ZEPTOVERSO<br><span class="a">PODEM ENTRAR NA CONTA</span>' },
+  { from: 113.2, to: 115.9, y: 880, fs: 56, html: 'E MUDAR <span class="o">QUANTAS VEZES</span> ISSO ACONTECE' },
+  { from: 138.4, to: 143.8, y: 90, fs: 70, html: 'OS <span class="a">7 MAGNÍFICOS</span><span class="sub">7 DECAIMENTOS RAROS ESCOLHIDOS PELO FÍSICO ANDRZEJ BURAS (2024)</span>' },
+  { from: 144.6, to: 148.8, y: 90, fs: 62, html: 'NO BIG BANG: <span class="a">MATÉRIA</span> E <span class="r">ANTIMATÉRIA</span>' },
+  { from: 149.0, to: 150.9, y: 90, fs: 62, html: 'QUASE TUDO SE <span class="o">ANIQUILOU</span>' },
+  { from: 151.2, to: 153.4, y: 90, fs: 66, html: 'SOBROU <span class="a">1 EM 1 BILHÃO</span>' },
+  { from: 153.7, to: 156.9, y: 860, fs: 54, html: 'E A FÍSICA DE HOJE <span class="r">NÃO SABE EXPLICAR POR QUÊ</span>' },
+  { from: 161.4, to: 164.9, y: 120, fs: 68, html: 'A RESPOSTA PODE ESTAR<br><span class="a">AQUI DENTRO</span>' },
+  { from: 166.0, to: 171.0, y: 330, fs: 100, html: '<span class="btn">SE INSCREVE</span>' },
+];
+const TOTAL = EV.end;
+const FONT = "Montserrat,'DejaVu Sans',sans-serif";
+const W = 1920, H = 1080, CX = 960, CY = 540;
+
+/* -------- sobrescreve câmera/pós para 16:9 -------- */
+function lay(p, content, filter = '') {
+  const z = CAM.z0 * (1 + (CAM.z / CAM.z0 - 1) * p), x = CAM.x0 + (CAM.x - CAM.x0) * p, y = CAM.y0 + (CAM.y - CAM.y0) * p;
+  return `<g transform="translate(${CX},${CY}) rotate(${f1(CAM.r)}) scale(${Math.round(z * 10000) / 10000}) translate(${f1(-x)},${f1(-y)})"${filter ? ` filter="url(#${filter})"` : ''}>${content}</g>`;
+}
+function post(o = {}) {
+  const { grade = null, gradeMode = 'soft-light', gradeO = .5, vig = 1, grain = .06, t = 0, bars = 0 } = o;
+  const gid = nid('gr');
+  def(`<filter id="${gid}" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="${Math.floor(t * 30) % 997}" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>`);
+  let s = '';
+  if (grade) s += `<rect width="${W}" height="${H}" fill="${grade}" opacity="${gradeO}" style="mix-blend-mode:${gradeMode}"/>`;
+  s += `<rect width="${W}" height="${H}" fill="url(#vig)" opacity="${vig}"/>`;
+  s += `<rect width="${W}" height="${H}" filter="url(#${gid})" opacity="${grain}" style="mix-blend-mode:overlay"/>`;
+  if (bars > 0) s += `<rect width="${W}" height="${f1(70 * bars)}" fill="#000"/><rect y="${f1(H - 70 * bars)}" width="${W}" height="${f1(70 * bars)}" fill="#000"/>`;
+  return s;
+}
+const zoomG = (z, content, cx = CX, cy = CY, r = 0) => `<g transform="translate(${CX},${CY}) rotate(${f1(r)}) scale(${Math.round(z * 10000) / 10000}) translate(${f1(-cx)},${f1(-cy)})">${content}</g>`;
+const txt = (x, y, s, size, fill = '#fff', anchor = 'middle', w = 900, extra = '') => `<text x="${f1(x)}" y="${f1(y)}" text-anchor="${anchor}" font-family="${FONT}" font-weight="${w}" font-size="${size}" fill="${fill}" ${extra}>${s}</text>`;
+const STARS2 = Array.from({ length: 420 }, () => ({ x: rnd() * 2400 - 240, y: rnd() * 1400 - 160, r: .5 + rnd() * 2, p: rnd() * 6 }));
+const stars2 = (t, k = 1) => STARS2.map(s => `<circle cx="${f1(s.x)}" cy="${f1(s.y)}" r="${s.r}" fill="#fff" opacity="${op((.4 + .6 * Math.sin(t * 2 + s.p)) * k)}"/>`).join('');
+
+/* ---------------- 1. praia ---------------- */
+const BOY_X = 760, BOY_Y = 1010, BOY_S = .5;
+const GRAIN = [BOY_X + 184 * BOY_S, BOY_Y - 896 * BOY_S];
+function beach(t, o = {}) {
+  const { flick = 0, smile = 0 } = o;
+  let s = `<rect x="-2000" y="-2000" width="6000" height="5000" fill="url(#skyBeach)"/>`;
+  s += `<circle cx="1360" cy="600" r="420" fill="url(#sunG)"/><circle cx="1360" cy="600" r="66" fill="#FFFBEA"/>`;
+  s += [[300, 260, 260], [900, 180, 200], [1600, 300, 300], [1250, 380, 160]].map(([x, y, w], i) => `<ellipse cx="${f1(x + t * 6 * (i + 1))}" cy="${y}" rx="${w}" ry="${w * .14}" fill="#FFC9A0" opacity=".45"/>`).join('');
+  s += `<rect x="-2000" y="610" width="6000" height="160" fill="url(#seaG)"/>`;
+  for (let i = 0; i < 26; i++) { const y = 616 + i * 6, w = 14 + i * 7 + 20 * Math.sin(t * 3 + i * 1.3); s += `<rect x="${f1(1360 - w / 2 + 8 * Math.sin(t * 2 + i))}" y="${y}" width="${f1(w)}" height="3" fill="#FFE7B0" opacity="${op(.75 - i * .022)}"/>`; }
+  for (let i = 0; i < 5; i++) s += `<path d="M-2000 ${f1(700 + i * 16 + 4 * Math.sin(t + i))} Q 0 ${f1(690 + i * 16)} 4000 ${f1(700 + i * 16)}" stroke="#FFE2C0" stroke-width="2" opacity=".18" fill="none"/>`;
+  s += `<path d="M-2000 760 Q 600 730 1200 748 T 4000 740 V 3000 H -2000Z" fill="url(#sandG)"/>`;
+  s += `<path d="M-2000 760 Q 600 730 1200 748 T 4000 740" stroke="#FFF1D8" stroke-width="5" opacity=".6" fill="none"/>`;
+  for (let i = 0; i < 12; i++) s += `<path d="M${-200 + i * 190} ${820 + (i % 4) * 60} q60 -12 120 0" stroke="#7A4E34" stroke-width="4" opacity=".35" fill="none"/>`;
+  const lit = rig({ amb: '#C08878', k: [1, -.15], sh: '#2A1028', shO: .5, shD: 70, rims: [{ k: [1, -.2], c: '#FFD9A0', w: 14, o: 1, glow: 1 }] });
+  const armR = [lerp(100, 120, flick), lerp(110, 60, flick)];
+  s += person({ x: BOY_X, y: BOY_Y, sc: BOY_S, out: 'shirt', rig: lit, arms: [[10, -8], armR], head: { ex: smile > .5 ? 'feliz' : 'neutro', turn: .45, look: [10, -8], blink: blinkAt(t, 1) }, tilt: 6 });
+  // o grão na ponta do dedo
+  if (flick < .5) {
+    const [gx, gy] = GRAIN, sp = .6 + .4 * Math.sin(t * 7);
+    s += `<g style="mix-blend-mode:screen"><circle cx="${gx}" cy="${gy}" r="${f1(16 * sp)}" fill="url(#glowWarm)"/><path d="M${gx - 18 * sp} ${gy} L${gx + 18 * sp} ${gy} M${gx} ${gy - 18 * sp} L${gx} ${gy + 18 * sp}" stroke="#FFF6D8" stroke-width="1.4" transform="rotate(${f1(t * 40)} ${gx} ${gy})"/></g><circle cx="${gx}" cy="${gy}" r="2.2" fill="#FFE7B0"/>`;
+  }
+  return s;
+}
+/* ---------------- grão em macro ---------------- */
+const GV = Array.from({ length: 11 }, (_, i) => { const a = i / 11 * Math.PI * 2; const r = 330 * (.78 + .3 * Math.sin(i * 2.7) * Math.cos(i * 1.3)); return [CX + Math.cos(a) * r, CY + Math.sin(a) * r * .86]; });
+const BOKEH2 = Array.from({ length: 34 }, () => ({ x: rnd() * 1920, y: rnd() * 1080, r: 30 + rnd() * 110, c: ['#FFD58A', '#FFB35C', '#FFE9C4', '#FF9A5A', '#B08AFF'][Math.floor(rnd() * 5)], o: .12 + rnd() * .3 }));
+function grainShape(t, glow = 0) {
+  let s = '';
+  const fc = ['#F4D9A8', '#E2B97E', '#FBE9C6', '#C9975E', '#EBCB94', '#D9AA72'];
+  for (let i = 0; i < GV.length; i++) { const a = GV[i], b = GV[(i + 1) % GV.length]; const c = [CX + 30 * Math.sin(i), CY - 20 + 20 * Math.cos(i * 2)]; s += `<path d="M${f1(c[0])} ${f1(c[1])} L${f1(a[0])} ${f1(a[1])} L${f1(b[0])} ${f1(b[1])}Z" fill="${fc[i % fc.length]}" opacity=".92"/>`; }
+  s += `<path d="M${GV.map(p => f1(p[0]) + ' ' + f1(p[1])).join(' L')}Z" fill="none" stroke="#FFF6E0" stroke-width="5" opacity=".7"/>`;
+  s += `<g style="mix-blend-mode:screen"><path d="M${f1(GV[7][0])} ${f1(GV[7][1])} L${CX} ${CY - 20} L${f1(GV[8][0])} ${f1(GV[8][1])}Z" fill="#fff" opacity=".35"/><ellipse cx="${CX - 120}" cy="${CY - 150}" rx="90" ry="26" fill="#fff" opacity=".4" transform="rotate(-25 ${CX - 120} ${CY - 150})" filter="url(#bl8)"/></g>`;
+  if (glow > 0) s += `<g style="mix-blend-mode:screen"><circle cx="${CX}" cy="${CY}" r="${f1(40 + 30 * Math.sin(t * 5))}" fill="url(#glowC)" opacity="${op(glow)}"/><circle cx="${CX}" cy="${CY}" r="4" fill="#fff" opacity="${op(glow)}"/></g>`;
+  return s;
+}
+function macroBg(t) {
+  return `<rect width="${W}" height="${H}" fill="#3A2028"/><rect width="${W}" height="${H}" fill="url(#skyBeach)" opacity=".55"/><g style="mix-blend-mode:screen" filter="url(#bl16)">` + BOKEH2.map(b => `<circle cx="${f1(b.x + 20 * Math.sin(t * .5 + b.r))}" cy="${f1(b.y)}" r="${b.r}" fill="${b.c}" opacity="${b.o}"/>`).join('') + `</g>`;
+}
+
+/* ---------------- 2. mergulho de escala ---------------- */
+const KEYS = [[12.0, -2.6], [13.5, -3.0], [16.5, -3.1], [18.5, -5.9], [21.5, -6.0], [23.5, -8.9], [26.0, -9.0], [27.5, -9.95], [31.5, -10.05], [35.0, -13.95], [37.5, -14.05], [39.0, -14.95], [42.5, -15.05], [45.0, -17.95], [47.0, -18.05], [48.5, -19.25], [50.5, -19.35], [53.0, -20.95], [56.0, -21.0]];
+function expAt(t, keys = KEYS) {
+  if (t <= keys[0][0]) return keys[0][1];
+  for (let i = 0; i < keys.length - 1; i++) { const [a, ea] = keys[i], [b, eb] = keys[i + 1]; if (t <= b) return lerp(ea, eb, easeInOut((t - a) / (b - a))); }
+  return keys[keys.length - 1][1];
+}
+const BGS = [[-3, '#2A1A1E'], [-6, '#06222C'], [-9, '#070C22'], [-10, '#040818'], [-12, '#020208'], [-14, '#16050C'], [-15, '#0C0318'], [-18, '#03020A'], [-21, '#000000']];
+function bgAt(s) { for (let i = 0; i < BGS.length - 1; i++) { const [a, ca] = BGS[i], [b, cb] = BGS[i + 1]; if (s >= b) return mix(ca, cb, (a - s) / (a - b)); } return BGS[BGS.length - 1][1]; }
+const LAT = (() => { const a = []; for (let r = -9; r <= 9; r++) for (let c = -12; c <= 12; c++) { const x = CX + c * 90 + (r % 2 ? 45 : 0), y = CY + r * 78; a.push([x, y, (r + c) % 3 === 0 ? 'si' : 'o']); } return a; })();
+const NUC = [[0, 0, 'p'], [-120, -40, 'n'], [110, -60, 'p'], [-40, 120, 'n'], [90, 110, 'p'], [-150, 90, 'p'], [30, -150, 'n'], [-90, -150, 'p'], [160, 40, 'n'], [-200, -20, 'n'], [200, -130, 'p'], [-30, 220, 'p'], [130, 210, 'n'], [-180, 190, 'n'], [60, -260, 'p'], [-160, -230, 'n']];
+const SEA = Array.from({ length: 40 }, () => ({ x: rnd() * 700 - 350, y: rnd() * 700 - 350, p: rnd() * 10, s: .6 + rnd() }));
+const FOAM = Array.from({ length: 160 }, () => ({ x: rnd() * 2000 - 1000, y: rnd() * 1200 - 600, p: rnd() * 10, s: .5 + rnd() * 1.5 }));
+const POLY = Array.from({ length: 9 }, () => ({ x: rnd() * 1800 - 900, y: rnd() * 1000 - 500, r: 40 + rnd() * 120, s: rnd() * 6, v: rnd() < .5 ? -1 : 1 }));
+function layerObj(e, t) {
+  if (e === -3) return grainShape(t, 1);
+  if (e === -6) {
+    let s = '';
+    for (let i = 0; i < 7; i++) { const r = 900 - i * 120; s += `<path d="M${CX - r} ${CY + r * .2} Q${CX - r * .3} ${CY - r * .55} ${CX + r * .2} ${CY - r * .5} T${CX + r} ${CY + r * .1} Q${CX + r * .2} ${CY + r * .6} ${CX - r} ${CY + r * .2}Z" fill="${mix('#5FA8B8', '#D9F2F4', i / 7)}" opacity=".9"/>`; }
+    s += `<g transform="translate(1380,330) rotate(-24)"><path d="M-170 0 q-60 30 -120 -10 M-170 10 q-50 50 -110 40" stroke="#7FD68A" stroke-width="5" fill="none"/><rect x="-170" y="-48" width="340" height="96" rx="48" fill="#5DBB77"/><rect x="-150" y="-30" width="300" height="60" rx="30" fill="#8FE0A0" opacity=".6"/><circle cx="40" cy="0" r="18" fill="#3E9E5E"/></g>`;
+    s += `<g style="mix-blend-mode:screen"><circle cx="${CX}" cy="${CY}" r="24" fill="url(#glowC)"/></g>`;
+    return s;
+  }
+  if (e === -9) {
+    let s = '';
+    for (const [x, y] of LAT) for (const [x2, y2] of LAT) if (x2 > x - 1 && Math.hypot(x2 - x, y2 - y) < 95 && (x2 !== x || y2 !== y)) s += `<line x1="${x}" y1="${y}" x2="${x2}" y2="${y2}" stroke="#7FA0D8" stroke-width="5" opacity=".35"/>`;
+    for (const [x, y, k] of LAT) { const j = 3 * Math.sin(t * 6 + x * .1 + y * .07); s += `<circle cx="${f1(x + j)}" cy="${f1(y - j)}" r="${k === 'si' ? 30 : 20}" fill="url(#${k === 'si' ? 'siG' : 'oxG'})"/>`; }
+    s += `<g style="mix-blend-mode:screen"><circle cx="${CX}" cy="${CY}" r="70" fill="url(#glowC)" opacity=".8"/></g>`;
+    return s;
+  }
+  if (e === -10) {
+    let s = `<circle cx="${CX}" cy="${CY}" r="440" fill="url(#cloudE)"/>`;
+    for (let i = 0; i < 3; i++) s += `<ellipse cx="${CX}" cy="${CY}" rx="420" ry="150" fill="none" stroke="#7FB8FF" stroke-width="3" opacity=".25" transform="rotate(${f1(i * 60 + t * 8)} ${CX} ${CY})"/>`;
+    for (let i = 0; i < 14; i++) { const a = t * (.8 + i * .07) + i * 2.1, r = 140 + (i * 37) % 260; s += `<circle cx="${f1(CX + Math.cos(a) * r)}" cy="${f1(CY + Math.sin(a * 1.3) * r * .8)}" r="10" fill="#BFE0FF" opacity=".35" filter="url(#bl8)"/>`; }
+    s += `<g style="mix-blend-mode:screen"><circle cx="${CX}" cy="${CY}" r="16" fill="url(#glowW)"/><circle cx="${CX}" cy="${CY}" r="2.5" fill="#FFD0D8"/></g>`;
+    return s;
+  }
+  if (e === -14) {
+    let s = `<g style="mix-blend-mode:screen"><circle cx="${CX}" cy="${CY}" r="380" fill="url(#glowO)" opacity=".25"/></g>`;
+    const order = NUC.map((n, i) => [n, i]).sort((a, b) => Math.hypot(b[0][0], b[0][1]) - Math.hypot(a[0][0], a[0][1]));
+    for (const [[x, y, k], i] of order) { const j = 5 * Math.sin(t * 9 + i); s += `<circle cx="${f1(CX + x + j)}" cy="${f1(CY + y - j)}" r="${i === 0 ? 92 : 88}" fill="url(#${k === 'p' ? 'protonG' : 'neutronG'})"/>`; }
+    return s;
+  }
+  if (e === -15) {
+    let s = `<circle cx="${CX}" cy="${CY}" r="430" fill="url(#protonShell)"/>`;
+    const Q = [[CX, CY, '#FF4A5A'], [CX - 230, CY + 150, '#4AFF8A'], [CX + 210, CY + 170, '#4A8AFF']].map(([x, y, c], i) => [x + 14 * Math.sin(t * 3 + i * 2), y + 14 * Math.cos(t * 2.6 + i), c]);
+    const spring = (a, b) => { const n = 18; let d = `M${f1(a[0])} ${f1(a[1])}`; for (let i = 1; i <= n; i++) { const u = i / n, x = lerp(a[0], b[0], u), y = lerp(a[1], b[1], u), nx = -(b[1] - a[1]), ny = b[0] - a[0], L = Math.hypot(nx, ny), w = 16 * Math.sin(u * Math.PI * 9 + t * 12); d += ` L${f1(x + nx / L * w)} ${f1(y + ny / L * w)}`; } return d; };
+    s += `<g style="mix-blend-mode:screen">${[[0, 1], [1, 2], [2, 0]].map(([i, j]) => `<path d="${spring(Q[i], Q[j])}" stroke="#FFE08A" stroke-width="7" fill="none" opacity=".75"/>`).join('')}</g>`;
+    for (const q of SEA) { const ph = (t * q.s + q.p) % 1.6; if (ph < .6) { const k = Math.sin(ph / .6 * Math.PI); s += `<circle cx="${f1(CX + q.x - 10)}" cy="${f1(CY + q.y)}" r="${f1(9 * k)}" fill="#C8A0FF" opacity=".8"/><circle cx="${f1(CX + q.x + 10)}" cy="${f1(CY + q.y)}" r="${f1(9 * k)}" fill="#FF9AD8" opacity=".8"/>`; } }
+    for (const [x, y, c] of Q) s += `<g style="mix-blend-mode:screen"><circle cx="${f1(x)}" cy="${f1(y)}" r="110" fill="${c}" opacity=".25" filter="url(#bl16)"/></g><circle cx="${f1(x)}" cy="${f1(y)}" r="42" fill="${c}"/><circle cx="${f1(x - 12)}" cy="${f1(y - 14)}" r="12" fill="#fff" opacity=".6"/>`;
+    return s;
+  }
+  if (e === -18) {
+    let s = '';
+    for (const f of FOAM) { const ph = (t * f.s + f.p) % 2; if (ph < 1) { const k = Math.sin(ph * Math.PI); s += `<circle cx="${f1(CX + f.x)}" cy="${f1(CY + f.y)}" r="${f1(5 * k)}" fill="${f.p > 5 ? '#FF5A8A' : '#7FD8FF'}" opacity="${op(.7 * k)}"/>`; } }
+    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2 + t * .3; s += `<path d="M${CX} ${CY} q${f1(Math.cos(a) * 160)} ${f1(Math.sin(a) * 160 - 60)} ${f1(Math.cos(a) * 420)} ${f1(Math.sin(a) * 420)}" stroke="#FFE08A" stroke-width="2" opacity=".2" fill="none"/>`; }
+    s += `<g style="mix-blend-mode:screen"><circle cx="${CX}" cy="${CY}" r="160" fill="url(#glowW)" opacity=".7"/><circle cx="${CX}" cy="${CY}" r="7" fill="#fff"/></g>`;
+    return s;
+  }
+  if (e === -21) {
+    let s = '';
+    for (const p of POLY) {
+      const a = t * .3 * p.v + p.s, pts = [];
+      for (let i = 0; i < 6; i++) { const b = a + i * Math.PI / 3; pts.push([CX + p.x + Math.cos(b) * p.r, CY + p.y + Math.sin(b) * p.r * .6 + Math.sin(b * 2 + a) * p.r * .3]); }
+      s += `<path d="M${pts.map(q => f1(q[0]) + ' ' + f1(q[1])).join(' L')}Z M${f1(pts[0][0])} ${f1(pts[0][1])} L${f1(pts[3][0])} ${f1(pts[3][1])} M${f1(pts[1][0])} ${f1(pts[1][1])} L${f1(pts[4][0])} ${f1(pts[4][1])}" stroke="${p.v > 0 ? '#00E5FF' : '#B07BFF'}" stroke-width="2" fill="none" stroke-dasharray="6 8" opacity=".4"/>`;
+    }
+    s += `<g style="mix-blend-mode:screen"><circle cx="${CX}" cy="${CY}" r="260" fill="url(#glowP)" opacity="${op(.35 + .15 * Math.sin(t * 3))}"/></g>`;
+    s += txt(CX, CY + 90, '?', 260, '#E6F8FF', 'middle', 900, `opacity="${op(.75 + .25 * Math.sin(t * 4))}"`);
+    return s;
+  }
+  return '';
+}
+const LAYERS = [-3, -6, -9, -10, -14, -15, -18, -21];
+const SI = [[0, 'm'], [-3, 'mm'], [-6, 'µm'], [-9, 'nm'], [-12, 'pm'], [-15, 'fm'], [-18, 'am'], [-21, 'zm'], [-24, 'ym']];
+function fmtLen(v) { const e = Math.log10(v); for (const [p, u] of SI) if (e >= p) { const n = v / Math.pow(10, p); return (n >= 100 ? Math.round(n) : n >= 10 ? Math.round(n) : Math.round(n * 10) / 10).toString().replace('.', ',') + ' ' + u; } return v.toExponential(1); }
+const SUP = { '-': '⁻', '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' };
+const sup = n => String(n).split('').map(c => SUP[c] || c).join('');
+const LABELS = [
+  [13.5, 16.5, '1 MILÍMETRO', 'UM GRÃO DE AREIA'],
+  [18.8, 21.5, '1 MICRÔMETRO', 'UMA BACTÉRIA TEM UNS 2 µm'],
+  [23.6, 26.0, '1 NANÔMETRO', 'ÁTOMOS DE SILÍCIO E OXIGÊNIO'],
+  [27.6, 29.3, '0,1 NANÔMETRO', 'UM ÁTOMO'],
+  [29.4, 31.5, 'SE O ÁTOMO FOSSE UM ESTÁDIO…', '…O NÚCLEO SERIA UM GRÃO DE AREIA NO MEIO DO CAMPO'],
+  [35.2, 37.5, '10 FEMTÔMETROS', 'O NÚCLEO DO ÁTOMO: PRÓTONS E NÊUTRONS'],
+  [39.2, 42.5, '1 FEMTÔMETRO', 'UM PRÓTON: 3 QUARKS PRESOS POR GLÚONS'],
+  [45.2, 47.0, '1 ATTÔMETRO', 'O QUARK: ATÉ ONDE SABEMOS, UM PONTO'],
+  [48.6, 50.5, '~50 ZEPTÔMETROS', 'ATÉ AQUI O LHC CONSEGUE ENXERGAR', '#FFB347'],
+  [53.0, 56.0, '1 ZEPTÔMETRO', '10⁻²¹ m · O ZEPTOVERSO'],
+];
+function lowerThird(t, a, b, title, sub, col = '#00E5FF') {
+  const k = Math.min(range(t, a, a + .3), 1 - range(t, b - .3, b)); if (k <= 0) return '';
+  const e = easeOut(k), x = 90 - 40 * (1 - e);
+  return `<g opacity="${op(k)}"><rect x="${f1(x - 30)}" y="842" width="10" height="${f1(130 * e)}" fill="${col}"/>
+    ${txt(x, 900, title, 58, '#fff', 'start', 900, 'style="paint-order:stroke" stroke="#000" stroke-opacity=".5" stroke-width="6"')}
+    ${txt(x, 950, sub, 32, col, 'start', 800, 'letter-spacing="2" style="paint-order:stroke" stroke="#000" stroke-opacity=".5" stroke-width="5"')}</g>`;
+}
+function hudScale(s, t, k = 1) {
+  const pxPerM = W / Math.pow(10, s + .5), v = 260 / pxPerM;
+  let h = `<g opacity="${op(k)}">`;
+  h += `<g transform="translate(1600,980)"><line x1="0" y1="0" x2="260" y2="0" stroke="#fff" stroke-width="4"/><line x1="0" y1="-12" x2="0" y2="12" stroke="#fff" stroke-width="4"/><line x1="260" y1="-12" x2="260" y2="12" stroke="#fff" stroke-width="4"/>${txt(130, -22, fmtLen(v), 30, '#fff', 'middle', 800)}</g>`;
+  // régua vertical de escalas
+  const y0 = 120, y1 = 800, X = 1840, yOf = e => lerp(y0, y1, (-e) / 21);
+  h += `<line x1="${X}" y1="${y0}" x2="${X}" y2="${y1}" stroke="#fff" stroke-width="3" opacity=".5"/>`;
+  for (const [e, l] of [[0, 'VOCÊ'], [-3, 'AREIA'], [-6, 'BACTÉRIA'], [-10, 'ÁTOMO'], [-14, 'NÚCLEO'], [-15, 'PRÓTON'], [-18, 'QUARK'], [-19.3, 'LHC'], [-21, 'ZEPTO']]) {
+    const y = yOf(e), on = s <= e + .2;
+    h += `<line x1="${X - 10}" y1="${f1(y)}" x2="${X + 10}" y2="${f1(y)}" stroke="${e === -19.3 ? '#FFB347' : '#fff'}" stroke-width="3" opacity="${on ? 1 : .4}"/>${txt(X - 22, y + 8, l, 20, e === -19.3 ? '#FFB347' : '#fff', 'end', 800, `opacity="${on ? .95 : .4}"`)}`;
+  }
+  h += `<circle cx="${X}" cy="${f1(yOf(s))}" r="11" fill="#00E5FF"/><circle cx="${X}" cy="${f1(yOf(s))}" r="24" fill="#00E5FF" opacity=".3"/>`;
+  const ex = Math.round(s);
+  h += txt(90, 120, `10${sup(ex)} m`, 64, '#fff', 'start', 900, 'opacity=".9"');
+  h += `</g>`;
+  return h;
+}
+function dive(t, keys = KEYS, rev = false) {
+  const s = expAt(t, keys), ds = (expAt(t + .05, keys) - expAt(t - .05, keys)) / .1;
+  let out = `<rect width="${W}" height="${H}" fill="${bgAt(s)}"/>`;
+  if (s > -3.6) out += `<g opacity="${op(range(s, -3.6, -3.0))}">${macroBg(t)}</g>`;
+  if (s < -19) out += `<g opacity="${op(range(s, -19, -20.5) * .7)}">${stars2(t, .5)}</g>`;
+  const speed = Math.abs(ds);
+  if (speed > .3) { const n = 60; for (let i = 0; i < n; i++) { const st = STARS2[i], a = (i / n) * Math.PI * 2 + i, r0 = 100 + ((st.x * 3 + t * 900 * speed) % 900), L = 20 + 60 * speed; out += `<line x1="${f1(CX + Math.cos(a) * r0)}" y1="${f1(CY + Math.sin(a) * r0)}" x2="${f1(CX + Math.cos(a) * (r0 + L))}" y2="${f1(CY + Math.sin(a) * (r0 + L))}" stroke="#CFF6FF" stroke-width="2" opacity="${op(.25 * Math.min(1, speed / 2))}"/>`; } }
+  for (const e of LAYERS) {
+    const lg = e - s;           // log10 da escala do layer
+    const near = e === -9 || e === -14, vin = smooth(range(lg, -1.7, -.6)), vout = 1 - smooth(range(lg, near ? .2 : .6, near ? .7 : 1.35));
+    const o = e === -3 ? vout : e === -21 ? vin : Math.min(vin, vout);
+    if (o <= .01 || lg > 1.6 || lg < -2.2) continue;
+    const sc = Math.pow(10, lg);
+    out += `<g opacity="${op(o)}">${zoomG(sc, layerObj(e, t), CX, CY, lg * 12)}</g>`;
+  }
+  // limite do LHC
+  const lk = pulse(t, 48.3, 50.8, .3) * (rev ? 0 : 1);
+  if (lk > 0) out += `<g opacity="${op(lk)}"><circle cx="${CX}" cy="${CY}" r="300" fill="none" stroke="#FFB347" stroke-width="5" stroke-dasharray="18 14" transform="rotate(${f1(t * 20)} ${CX} ${CY})"/>${txt(CX, CY - 330, 'LIMITE DO LHC', 34, '#FFB347', 'middle', 900)}</g>`;
+  if (!rev) for (const L of LABELS) out += lowerThird(t, L[0], L[1], L[2], L[3], L[4]);
+  out += hudScale(s, t);
+  return out;
+}
+
+/* ---------------- 3. comparações ---------------- */
+function earthBus(t) {
+  let s = `<rect width="${W}" height="${H}" fill="#02030A"/>` + stars2(t, .8);
+  if (t < EV.bus) {
+    const k = range(t, EV.earth, EV.bus);
+    s += zoomG(lerp(1, 1.12, k), earthGlobe(CX, 600, 380, t * .2) + `<g style="mix-blend-mode:screen"><circle cx="${CX}" cy="${600 - 380}" r="${f1(14 + 6 * Math.sin(t * 6))}" fill="url(#glowO)"/></g>`, CX, 600 - 380 * k * .6);
+  } else {
+    const k = range(t, EV.bus, EV.galaxy);
+    s += `<path d="M-200 1160 Q960 620 2120 1160Z" fill="#1E64B8"/><path d="M-200 1160 Q960 620 2120 1160" stroke="#5EC8FF" stroke-width="40" fill="none" opacity=".35" filter="url(#bl16)"/>`;
+    s += `<path d="M300 1100 Q700 860 960 850 Q1300 860 1700 1100Z" fill="#3E9E5E"/><path d="M500 1080 Q800 900 960 890 Q1150 895 1500 1080Z" fill="#4CAF6A"/>`;
+    const bx = 960, by = 850;
+    s += zoomG(lerp(1.0, 1.25, easeInOut(k)), `<g transform="translate(${bx},${by})"><rect x="-150" y="-110" width="300" height="100" rx="22" fill="#F5C021"/><rect x="-130" y="-92" width="200" height="40" rx="6" fill="#26304A"/><rect x="90" y="-92" width="44" height="60" rx="6" fill="#26304A"/>${[-80, -10, 60].map(x => `<line x1="${x}" y1="-92" x2="${x}" y2="-52" stroke="#F5C021" stroke-width="6"/>`).join('')}<circle cx="-90" cy="-8" r="26" fill="#222"/><circle cx="90" cy="-8" r="26" fill="#222"/><circle cx="-90" cy="-8" r="10" fill="#999"/><circle cx="90" cy="-8" r="10" fill="#999"/></g>
+      <g opacity="${op(range(t, EV.bus + .4, EV.bus + .8))}"><line x1="${bx - 150}" y1="${by - 150}" x2="${bx + 150}" y2="${by - 150}" stroke="#FFB347" stroke-width="5"/><line x1="${bx - 150}" y1="${by - 165}" x2="${bx - 150}" y2="${by - 135}" stroke="#FFB347" stroke-width="5"/><line x1="${bx + 150}" y1="${by - 165}" x2="${bx + 150}" y2="${by - 135}" stroke="#FFB347" stroke-width="5"/>${txt(bx, by - 175, '≈ 1 ZEPTÔMETRO', 36, '#FFB347')}</g>`, bx, by - 80);
+  }
+  return s;
+}
+const GAL = Array.from({ length: 1800 }, (_, i) => { const arm = i % 2, u = Math.pow(rnd(), .7), a = u * 4.2 + arm * Math.PI + (rnd() - .5) * .5, r = 30 + u * 520 + (rnd() - .5) * 40; return { x: Math.cos(a) * r, y: Math.sin(a) * r, r: rnd() < .05 ? 2.6 : .8 + rnd() * 1.4, c: u < .2 ? '#FFE7B0' : rnd() < .3 ? '#9FC8FF' : rnd() < .5 ? '#FFFFFF' : '#C9B8FF' }; });
+function galaxy(t, cx, cy, sc, rot, k = 1) {
+  let s = `<g transform="translate(${f1(cx)},${f1(cy)}) rotate(${f1(rot)}) scale(${Math.round(sc * 10000) / 10000},${Math.round(sc * .55 * 10000) / 10000})" opacity="${op(k)}">`;
+  s += `<g style="mix-blend-mode:screen"><circle r="560" fill="url(#nebA)" opacity=".5"/><circle r="200" fill="url(#glowWarm)" opacity=".9"/></g>`;
+  s += GAL.map(g => `<circle cx="${f1(g.x)}" cy="${f1(g.y)}" r="${g.r}" fill="${g.c}" opacity=".85"/>`).join('');
+  return s + '</g>';
+}
+function meterGalaxy(t) {
+  let s = `<rect width="${W}" height="${H}" fill="#03040C"/>`;
+  if (t < EV.gzoom) {
+    const k = range(t, EV.galaxy, EV.gzoom);
+    s += stars2(t, .3);
+    const lit = rig({ amb: '#B0B8E0', k: [-1, -.3], sh: '#05060F', shO: .5, shD: 60, rims: [{ k: [-1, -.3], c: '#9FE8FF', w: 12, o: 1, glow: 1 }] });
+    s += zoomG(lerp(1.15, 1, easeOut(k)), person({ x: 860, y: 1000, sc: .62, out: 'shirt', rig: lit, arms: [[10, -8], [40, -20]], head: { ex: 'feliz', turn: .3, blink: blinkAt(t) } }) +
+      `<g transform="translate(1160,1000)"><rect x="-14" y="-620" width="28" height="620" fill="#F5C021"/>${Array.from({ length: 11 }, (_, i) => `<line x1="-14" y1="${-i * 62}" x2="${i % 5 ? 4 : 18}" y2="${-i * 62}" stroke="#26304A" stroke-width="4"/>`).join('')}${txt(40, -300, '1 METRO', 44, '#F5C021', 'start')}</g>`, CX, 640);
+  } else {
+    const k = range(t, EV.gzoom, EV.waves);
+    s += stars2(t, .9);
+    s += galaxy(t, CX, 560, lerp(.05, 1.0, easeOut(range(t, EV.gzoom, EV.gzoom + 1.4))), t * 3, 1);
+    s += `<g opacity="${op(range(t, EV.gzoom + 1.2, EV.gzoom + 1.6))}"><line x1="${CX - 560}" y1="900" x2="${CX + 560}" y2="900" stroke="#9FE8FF" stroke-width="4"/>${txt(CX, 960, '≈ 100 MIL ANOS-LUZ ≈ 10²¹ METROS', 38, '#9FE8FF', 'middle', 800)}</g>`;
+    if (t < EV.gzoom + .25) { const f = 1 - range(t, EV.gzoom, EV.gzoom + .25); s += `<g style="mix-blend-mode:screen" opacity="${op(f)}">${Array.from({ length: 50 }, (_, i) => { const a = i * 2.4; return `<line x1="${CX}" y1="540" x2="${f1(CX + Math.cos(a) * 1200)}" y2="${f1(540 + Math.sin(a) * 1200)}" stroke="#CFF6FF" stroke-width="3" opacity=".5"/>`; }).join('')}</g>`; }
+  }
+  return s;
+}
+function waves(t) {
+  const k = range(t, EV.waves, EV.lhc);
+  let s = `<rect width="${W}" height="${H}" fill="#04060E"/>`;
+  s += `<g opacity=".25">${Array.from({ length: 24 }, (_, i) => `<line x1="${i * 84}" y1="0" x2="${i * 84}" y2="${H}" stroke="#2AC8FF" stroke-width="1"/>`).join('')}${Array.from({ length: 14 }, (_, i) => `<line x1="0" y1="${i * 84}" x2="${W}" y2="${i * 84}" stroke="#2AC8FF" stroke-width="1"/>`).join('')}</g>`;
+  const ox = 1240, oy = 560;
+  const phase1 = range(t, EV.waves, EV.waves + 3.2), phase2 = range(t, EV.waves + 3.4, EV.lhc - .4);
+  const wave = (lam, amp, col, front, ph) => { let d = ''; for (let x = 0; x <= front; x += 6) d += (x ? ' L' : 'M') + f1(x) + ' ' + f1(oy + amp * Math.sin((x / lam - ph) * Math.PI * 2)); return `<path d="${d}" stroke="${col}" stroke-width="7" fill="none" stroke-linecap="round"/><path d="${d}" stroke="${col}" stroke-width="24" fill="none" opacity=".25" filter="url(#bl8)"/>`; };
+  if (phase1 > 0 && phase2 <= 0) {
+    const front = 2200 * phase1;
+    s += wave(520, 130, '#FF5A6A', front, t * 1.2);
+    s += txt(420, 300, 'POUCA ENERGIA', 46, '#FF5A6A', 'middle', 900) + txt(420, 350, 'ONDA LONGA: PASSA POR CIMA', 30, '#fff', 'middle', 800, 'opacity=".8"');
+    s += `<g opacity=".35"><circle cx="${ox}" cy="${oy}" r="40" fill="#9FE8FF" filter="url(#bl16)"/></g>`;
+  }
+  if (phase2 > 0) {
+    const front = Math.min(ox - 40, 2200 * phase2);
+    s += wave(70, 50, '#7F7BFF', front, t * 6);
+    if (2200 * phase2 > ox - 40) { const r = (2200 * phase2 - ox + 40) * .5; s += `<g style="mix-blend-mode:screen">${[0, 1, 2].map(i => `<circle cx="${ox}" cy="${oy}" r="${f1(r - i * 70)}" fill="none" stroke="#9FE8FF" stroke-width="5" opacity="${op(.7 - i * .2)}"/>`).join('')}</g>`; }
+    const rev = range(2200 * phase2, ox - 40, ox + 200);
+    s += `<g opacity="${op(.35 + .65 * rev)}"><circle cx="${ox}" cy="${oy}" r="40" fill="#9FE8FF"/><circle cx="${ox - 12}" cy="${oy - 12}" r="12" fill="#fff"/><circle cx="${ox + 18}" cy="${oy + 10}" r="9" fill="#2A6BFF"/><circle cx="${ox - 16}" cy="${oy + 16}" r="8" fill="#FF5A8A"/></g>`;
+    s += txt(420, 300, 'MUITA ENERGIA', 46, '#9F9BFF', 'middle', 900) + txt(420, 350, 'ONDA CURTA: BATE E VOLTA', 30, '#fff', 'middle', 800, 'opacity=".8"');
+  }
+  return zoomG(lerp(1.08, 1, easeOut(k)), s);
+}
+
+/* ---------------- 4. LHC / túnel / FCC ---------------- */
+const CITY = Array.from({ length: 260 }, () => { const a = rnd() * Math.PI * 2, r = Math.pow(rnd(), 1.6) * 260; return { x: 640 + Math.cos(a) * r * 1.4, y: 760 + Math.sin(a) * r * .8, r: 1 + rnd() * 2.6 }; });
+const VILL = Array.from({ length: 140 }, () => ({ x: rnd() * 2600 - 340, y: rnd() * 1600 - 260, r: .8 + rnd() * 1.8 }));
+function mapScene(t, o = {}) {
+  const { lhcK = 0, fccK = 0, rot = 0, zoom = 1, tilt = .55, focus = [1000, 520] } = o;
+  let m = `<rect x="-1200" y="-1200" width="4400" height="3600" fill="url(#landG)"/>`;
+  m += `<path d="M-900 -200 Q300 120 1700 -260 L1800 -600 L-900 -600Z" fill="#0A1614"/><path d="M-900 -120 Q300 200 1700 -180" stroke="#1A2E28" stroke-width="40" fill="none"/>`;
+  m += `<path d="M150 980 Q420 760 700 820 Q980 880 1400 1100 Q1100 1200 700 1080 Q400 1000 150 980Z" fill="#0B2A44"/><path d="M150 980 Q420 760 700 820 Q980 880 1400 1100" stroke="#3A7CB8" stroke-width="5" fill="none" opacity=".6"/>`;
+  m += `<path d="M-200 420 Q600 520 1000 470 T2400 520" stroke="#2A3A30" stroke-width="10" fill="none"/><path d="M700 820 Q800 600 1000 520 T1400 200" stroke="#2A3A30" stroke-width="8" fill="none"/>`;
+  m += `<g style="mix-blend-mode:screen">` + CITY.map(c => `<circle cx="${f1(c.x)}" cy="${f1(c.y)}" r="${c.r}" fill="#FFC870" opacity=".8"/>`).join('') + VILL.map(c => `<circle cx="${f1(c.x)}" cy="${f1(c.y)}" r="${c.r}" fill="#FFD9A0" opacity=".5"/>`).join('') + `<circle cx="640" cy="760" r="280" fill="url(#glowWarm)" opacity=".35"/></g>`;
+  const LR = 300, LC = [1000, 520];
+  if (lhcK > 0) m += `<g style="mix-blend-mode:screen"><circle cx="${LC[0]}" cy="${LC[1]}" r="${LR}" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="${f1(1 - lhcK)}" stroke="#00E5FF" stroke-width="22" fill="none" opacity=".45" filter="url(#bl16)" transform="rotate(-90 ${LC[0]} ${LC[1]})"/><circle cx="${LC[0]}" cy="${LC[1]}" r="${LR}" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="${f1(1 - lhcK)}" stroke="#BFF8FF" stroke-width="7" fill="none" transform="rotate(-90 ${LC[0]} ${LC[1]})"/></g>
+    <g opacity="${op(range(lhcK, .8, 1))}">${[0, 1, 2, 3].map(i => { const a = i * Math.PI / 2 + .4; return `<circle cx="${f1(LC[0] + Math.cos(a) * LR)}" cy="${f1(LC[1] + Math.sin(a) * LR)}" r="12" fill="#fff"/>`; }).join('')}</g>`;
+  if (fccK > 0) { const FR = LR * 3.37, FC = [LC[0] - 380, LC[1] + 520]; m += `<g style="mix-blend-mode:screen"><circle cx="${FC[0]}" cy="${FC[1]}" r="${f1(FR)}" pathLength="1" stroke-dasharray="${f1(fccK)} 1" stroke="#FFB347" stroke-width="30" fill="none" opacity=".4" filter="url(#bl16)" transform="rotate(-60 ${FC[0]} ${FC[1]})"/><circle cx="${FC[0]}" cy="${FC[1]}" r="${f1(FR)}" pathLength="1" stroke-dasharray="${f1(fccK)} 1" stroke="#FFD9A0" stroke-width="9" fill="none" transform="rotate(-60 ${FC[0]} ${FC[1]})"/></g>`; }
+  const mapT = `translate(${CX},${CY}) scale(${f1(zoom * 1000) / 1000},${f1(zoom * tilt * 1000) / 1000}) rotate(${f1(rot)}) translate(${-focus[0]},${-focus[1]})`;
+  let s = `<rect width="${W}" height="${H}" fill="#03050C"/><rect width="${W}" height="400" fill="#0A1230"/><g transform="${mapT}">${m}</g>`;
+  s += `<rect width="${W}" height="${H}" fill="url(#vig)"/>`;
+  return s;
+}
+function tunnel(t) {
+  const k = range(t, EV.tunnel, EV.collide);
+  let s = `<rect width="${W}" height="${H}" fill="#0B0F18"/>`;
+  const vx = CX + 120, vy = CY - 40, f = 380;
+  // anéis do túnel, do fundo para frente
+  const off = (t * 9) % 1;
+  for (let i = 30; i >= 1; i--) {
+    const z = i - off, sc = f / (z * 60 + 40); if (sc > 12) continue;
+    const w = 1500 * sc, h = 1100 * sc, x = lerp(vx, CX, Math.min(1, sc / 4)), y = lerp(vy, CY, Math.min(1, sc / 4));
+    s += `<rect x="${f1(x - w / 2)}" y="${f1(y - h / 2)}" width="${f1(w)}" height="${f1(h)}" rx="${f1(500 * sc)}" fill="none" stroke="#3A4560" stroke-width="${f1(Math.max(1, 14 * sc))}" opacity="${op(.15 + .6 * Math.min(1, sc))}"/>`;
+    s += `<rect x="${f1(x - 120 * sc)}" y="${f1(y - h / 2 + 10 * sc)}" width="${f1(240 * sc)}" height="${f1(22 * sc)}" fill="#FFF1D0" opacity="${op(Math.min(1, sc * 1.4))}"/>`;
+  }
+  s += `<path d="M${vx} ${vy} L${W + 300} ${H - 200} L${W + 300} ${H + 300} L${vx} ${vy + 8}Z" fill="#2F6BFF" opacity=".85"/><path d="M${vx} ${vy} L${W + 300} ${H - 200}" stroke="#9FC8FF" stroke-width="10" opacity=".7"/>`;
+  s += `<path d="M${vx} ${vy + 30} L-300 ${H + 260} L${W + 300} ${H + 260}Z" fill="#141A26"/><path d="M${vx} ${vy + 30} L${CX - 500} ${H}" stroke="#F5C021" stroke-width="6" opacity=".6"/>`;
+  // feixes de prótons
+  for (let i = 0; i < 6; i++) { const u = ((t * 1.8 + i / 6) % 1), sc = Math.pow(u, 3) * 8; const x = lerp(vx, W + 200, Math.pow(u, 3)), y = lerp(vy + 4, H - 140, Math.pow(u, 3)); s += `<g style="mix-blend-mode:screen"><ellipse cx="${f1(x)}" cy="${f1(y)}" rx="${f1(10 + 120 * sc)}" ry="${f1(4 + 18 * sc)}" fill="url(#glowC)" transform="rotate(28 ${f1(x)} ${f1(y)})"/></g>`; }
+  s += `<g style="mix-blend-mode:screen"><circle cx="${vx}" cy="${vy}" r="200" fill="url(#glowC)" opacity=".35"/></g>`;
+  return zoomG(lerp(1, 1.2, easeIn(k)), s, vx, vy);
+}
+const TRK = Array.from({ length: 34 }, () => ({ a: rnd() * Math.PI * 2, c: (rnd() - .5) * .006, L: 300 + rnd() * 600, col: ['#00E5FF', '#FFB347', '#5BFF9A', '#FF5A8A', '#FFFFFF'][Math.floor(rnd() * 5)] }));
+function collision(t) {
+  const k = range(t, EV.collide, EV.fcc), g = easeOut(range(t, EV.collide, EV.collide + .8));
+  let s = `<rect width="${W}" height="${H}" fill="#03050C"/>`;
+  const R = [[140, '#3A4560'], [230, '#2E5A40'], [320, '#5A3A20'], [430, '#203A6A']];
+  for (const [r, c] of R.reverse()) s += `<circle cx="${CX}" cy="${CY}" r="${r}" fill="none" stroke="${c}" stroke-width="70" opacity=".6"/>`;
+  for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; s += `<rect x="${f1(CX + Math.cos(a) * 500 - 40)}" y="${f1(CY + Math.sin(a) * 500 - 20)}" width="80" height="40" fill="#203A6A" stroke="#4A7CFF" stroke-width="3" transform="rotate(${f1(a * 57.3)} ${f1(CX + Math.cos(a) * 500)} ${f1(CY + Math.sin(a) * 500)})"/>`; }
+  s += `<g style="mix-blend-mode:screen">`;
+  for (const tr of TRK) {
+    const L = tr.L * g; let d = `M${CX} ${CY}`, x = CX, y = CY, a = tr.a;
+    for (let l = 0; l < L; l += 12) { a += tr.c * 12; x += Math.cos(a) * 12; y += Math.sin(a) * 12; d += ` L${f1(x)} ${f1(y)}`; }
+    s += `<path d="${d}" stroke="${tr.col}" stroke-width="3.5" fill="none" opacity=".9"/>`;
+    if (g > .8) { const r0 = 300 + (tr.L % 120); s += `<rect x="${f1(CX + Math.cos(tr.a) * r0 - 8)}" y="${f1(CY + Math.sin(tr.a) * r0 - 8)}" width="16" height="${f1(30 + tr.L / 20)}" fill="${tr.col}" opacity=".5" transform="rotate(${f1(tr.a * 57.3 - 90)} ${f1(CX + Math.cos(tr.a) * r0)} ${f1(CY + Math.sin(tr.a) * r0)})"/>`; }
+  }
+  s += `<circle cx="${CX}" cy="${CY}" r="${f1(60 + 400 * (1 - g))}" fill="url(#glowW)" opacity="${op(1 - g * .7)}"/></g>`;
+  return zoomG(lerp(1.25, 1.05, easeOut(k)), s, CX, CY, lerp(-6, 4, k));
+}
+function yearsScene(t) {
+  const k = range(t, EV.years, EV.echo);
+  let s = mapScene(t, { lhcK: 1, fccK: 1, rot: 10 + 8 * k, zoom: .32, tilt: .6, focus: [700, 900] });
+  s += `<rect width="${W}" height="${H}" fill="#000" opacity=".5"/>`;
+  const y = Math.round(lerp(2026, 2070, easeInOut(range(t, EV.years + .4, EV.years + 3.2))));
+  s += txt(CX, 640, y, 300, '#fff', 'middle', 900, 'style="paint-order:stroke" stroke="#000" stroke-width="12" letter-spacing="10"');
+  s += txt(CX, 740, `+${y - 2026} ANOS DE ESPERA`, 48, '#FFB347', 'middle', 900);
+  s += txt(CX, 330, 'META: ~200 TeV · 1 ZEPTÔMETRO', 40, '#9FE8FF', 'middle', 800, `opacity="${op(range(t, EV.years, EV.years + .5))}"`);
+  return s;
+}
+
+/* ---------------- 5. ecos ---------------- */
+function echoScene(t) {
+  const k = range(t, EV.echo, EV.kaon);
+  let s = `<rect width="${W}" height="${H}" fill="url(#waterDeep)"/>`;
+  s += `<g style="mix-blend-mode:screen" filter="url(#bl30)">${[0, 1, 2, 3, 4].map(i => `<path d="M${300 + i * 330} -50 L${200 + i * 330 + 40 * Math.sin(t + i)} 1100 L${400 + i * 330 + 40 * Math.sin(t + i)} 1100Z" fill="#7FD8FF" opacity=".06"/>`).join('')}</g>`;
+  for (let i = 0; i < 40; i++) { const st = STARS2[i]; s += `<circle cx="${f1((st.x + t * 10) % 1920)}" cy="${f1((st.y - t * 30 * st.r) % 1080 + 1080) % 1080}" r="${f1(st.r * 1.2)}" fill="#BFF4FF" opacity=".25"/>`; }
+  // estrutura escondida no fundo
+  const hid = `<path d="M1000 1080 L1080 760 L1160 820 L1240 600 L1330 700 L1420 520 L1520 680 L1600 640 L1700 1080Z"/>`;
+  const sx = 340, sy = 380, P = 1.6;
+  let echo = '';
+  for (let i = 0; i < 4; i++) { const tt = t - EV.echo - .3 - i * P; if (tt < 0) continue; const r = tt * 900; if (r > 1800) continue; echo += `<circle cx="${sx}" cy="${sy}" r="${f1(r)}" fill="none" stroke="#9FF4FF" stroke-width="${f1(6 * (1 - r / 1800))}" opacity="${op(.8 * (1 - r / 1800))}"/>`; }
+  const reveal = clamp((t - EV.echo - .9) / 4);
+  s += `<g style="mix-blend-mode:screen">${echo}</g>`;
+  s += `<g fill="#0A2A3E" stroke="#9FF4FF" stroke-width="4" opacity="${op(.15 + .85 * reveal)}" stroke-dasharray="${f1(2000 * reveal)} 3000">${hid}</g>`;
+  s += `<g transform="translate(${f1(sx + 20 * Math.sin(t * .8))},${sy})"><ellipse rx="150" ry="46" fill="#2A3550"/><rect x="-30" y="-80" width="70" height="44" rx="12" fill="#2A3550"/><circle cx="90" cy="0" r="12" fill="#FFE08A"/><path d="M-150 0 L-190 -30 L-190 30Z" fill="#2A3550"/></g>`;
+  s += `<g style="mix-blend-mode:screen"><path d="M${sx + 100} ${sy} L1100 ${sy - 140} L1100 ${sy + 140}Z" fill="#FFE08A" opacity=".08" filter="url(#bl16)"/></g>`;
+  return zoomG(lerp(1, 1.08, k), s);
+}
+function kaonScene(t) {
+  let s = `<rect width="${W}" height="${H}" fill="#05030C"/>`;
+  s += `<g filter="url(#bl60)"><circle cx="400" cy="300" r="400" fill="url(#nebC)"/><circle cx="1500" cy="800" r="420" fill="url(#nebB)"/></g>`;
+  if (t < EV.kslow) {
+    const k = range(t, EV.kaon, EV.kslow);
+    for (let i = 0; i < 70; i++) { const st = STARS2[i], y = 300 + (st.y % 480), x = ((st.x * 2 + t * 1400 * (1 + 3 * k)) % 2300) - 200; s += `<g style="mix-blend-mode:screen"><line x1="${f1(x - 60 * (1 + 3 * k))}" y1="${f1(y)}" x2="${f1(x)}" y2="${f1(y)}" stroke="#FFB347" stroke-width="10" opacity=".25" stroke-linecap="round"/></g><circle cx="${f1(x)}" cy="${f1(y)}" r="12" fill="#FFB347"/>`; }
+    const n = Math.round(Math.pow(10, lerp(1, 10, Math.pow(k, 1.3))));
+    s += txt(CX, 980, `KAONS: ${n.toLocaleString('pt-BR')}`, 56, '#FFB347', 'middle', 900, 'style="paint-order:stroke" stroke="#000" stroke-width="10"');
+  } else {
+    const k = range(t, EV.kslow, EV.cards), z = lerp(1, 1.4, easeOut(range(t, EV.kslow, EV.kslow + 1)));
+    let c = '';
+    const x0 = CX, y0 = CY;
+    if (t < EV.kdecay) {
+      const w = range(t, EV.kslow + .6, EV.kdecay);
+      c += `<g style="mix-blend-mode:screen"><circle cx="${x0}" cy="${y0}" r="160" fill="url(#glowO)"/></g><circle cx="${x0}" cy="${y0}" r="60" fill="#FFB347"/>${txt(x0, y0 + 16, 'K⁺', 50, '#26180A')}`;
+      if (w > 0) { const a = t * 6; c += `<circle cx="${x0}" cy="${y0}" r="${f1(180 * easeOut(w))}" fill="none" stroke="#B07BFF" stroke-width="5" stroke-dasharray="14 10" opacity=".9"/><g style="mix-blend-mode:screen"><circle cx="${f1(x0 + Math.cos(a) * 180 * easeOut(w))}" cy="${f1(y0 + Math.sin(a) * 180 * easeOut(w))}" r="48" fill="url(#glowP)"/></g>${txt(x0 + Math.cos(a) * 180 * easeOut(w), y0 + Math.sin(a) * 180 * easeOut(w) + 14, '?', 44, '#fff')}`; }
+    } else {
+      const d = easeOut(range(t, EV.kdecay, EV.kdecay + 1.6));
+      c += `<g style="mix-blend-mode:screen"><circle cx="${x0}" cy="${y0}" r="${f1(60 + 500 * d)}" fill="none" stroke="#FFB347" stroke-width="${f1(10 * (1 - d))}"/></g>`;
+      const pi = [x0 + 520 * d, y0 - 200 * d], n1 = [x0 - 360 * d, y0 + 300 * d], n2 = [x0 + 120 * d, y0 + 380 * d];
+      c += `<line x1="${x0}" y1="${y0}" x2="${f1(pi[0])}" y2="${f1(pi[1])}" stroke="#4A8AFF" stroke-width="5" opacity=".6"/><circle cx="${f1(pi[0])}" cy="${f1(pi[1])}" r="48" fill="#4A8AFF"/>${txt(pi[0], pi[1] + 14, 'π⁺', 40, '#fff')}`;
+      for (const n of [n1, n2]) c += `<line x1="${x0}" y1="${y0}" x2="${f1(n[0])}" y2="${f1(n[1])}" stroke="#E6F2FF" stroke-width="3" stroke-dasharray="8 10" opacity=".5"/><circle cx="${f1(n[0])}" cy="${f1(n[1])}" r="34" fill="#E6F2FF" opacity=".35"/>${txt(n[0], n[1] + 12, 'ν', 34, '#fff', 'middle', 900, 'opacity=".8"')}`;
+    }
+    s += zoomG(z, c, x0, y0);
+  }
+  return s;
+}
+
+/* ---------------- 6. descobertas ---------------- */
+const CARDS = [
+  { y: '2023', exp: 'BELLE II', at: 'KEK · JAPÃO', what: ['MÉSON B → KAON + 2 NEUTRINOS'], res: ['ACONTECEU MAIS DO QUE', 'O PREVISTO (2,7σ)'], badge: 'INDÍCIO', bc: '#FFB347', parts: [['B', '#B07BFF'], ['K', '#FFB347'], ['ν', '#E6F2FF'], ['ν', '#E6F2FF']] },
+  { y: '2024', exp: 'NA62', at: 'CERN · SUÍÇA', what: ['KAON → PÍON + 2 NEUTRINOS'], res: ['VISTO PELA 1ª VEZ: 1 EM 10 BILHÕES', '~50% ACIMA DO PREVISTO (AINDA NA MARGEM)'], badge: 'EM ABERTO', bc: '#FFB347', parts: [['K', '#FFB347'], ['π', '#4A8AFF'], ['ν', '#E6F2FF'], ['ν', '#E6F2FF']] },
+  { y: '2025', exp: 'LHCb', at: 'CERN · SUÍÇA', what: ['MATÉRIA E ANTIMATÉRIA SE COMPORTAM', 'DIFERENTE EM BÁRIONS (5,2σ)'], res: ['PRIMEIRA VEZ NA HISTÓRIA', 'MAS PEQUENO DEMAIS PRO UNIVERSO'], badge: 'CONFIRMADO', bc: '#5BFF9A', parts: [['Λb', '#5BFF9A'], ['Λ̄b', '#FF5A8A']] },
+  { y: '2025', exp: 'MÚON g-2', at: 'FERMILAB · EUA', what: ['O DESVIO MAIS FAMOSO DA FÍSICA'], res: ['SUMIU COM A NOVA PREVISÃO', 'TEÓRICA'], badge: 'ALARME FALSO', bc: '#FF5A6A', parts: [['μ', '#9FE8FF']] },
+];
+function cardScene(t) {
+  const i = Math.min(3, Math.floor((t - EV.cards) / CARD)), C = CARDS[i], lt = t - EV.cards - i * CARD, k = lt / CARD;
+  const ent = easeOut(range(lt, 0, .5)), ex = range(lt, CARD - .25, CARD);
+  let s = `<rect width="${W}" height="${H}" fill="#04060E"/>`;
+  s += `<g filter="url(#bl60)"><circle cx="${f1(400 + 100 * k)}" cy="300" r="420" fill="url(#${['nebA', 'nebB', 'nebB', 'nebC'][i]})"/><circle cx="1500" cy="800" r="380" fill="url(#${['nebC', 'nebA', 'nebA', 'nebB'][i]})"/></g>`;
+  s += `<g opacity=".18">${Array.from({ length: 24 }, (_, j) => `<line x1="${j * 84}" y1="0" x2="${j * 84}" y2="${H}" stroke="#9FE8FF" stroke-width="1"/>`).join('')}</g>`;
+  s += txt(80 + 60 * k, 640, C.y, 420, '#fff', 'start', 900, 'opacity=".07"');
+  let c = '';
+  c += txt(140, 300, `${C.y} · ${C.exp}`, 72, '#fff', 'start', 900) + txt(140, 356, C.at, 34, '#9FE8FF', 'start', 800, 'letter-spacing="3"');
+  C.what.forEach((w, j) => c += txt(140, 470 + j * 52, w, 42, '#fff', 'start', 800));
+  C.res.forEach((w, j) => c += txt(140, 640 + j * 50, w, 38, '#E8F4FF', 'start', 800, 'opacity=".85"'));
+  const bk = backOut(range(lt, .9, 1.4));
+  c += `<g transform="translate(300,800) scale(${f1(bk * 100) / 100})"><rect x="-170" y="-46" width="340" height="80" rx="40" fill="${C.bc}" opacity=".18" stroke="${C.bc}" stroke-width="5"/>${txt(0, 12, C.badge, 38, C.bc)}</g>`;
+  // ilustração de partículas
+  let ill = '';
+  const px = 1420, py = 520;
+  if (C.parts.length === 4) {
+    const d = easeOut(range(lt, .5, 1.6));
+    ill += `<circle cx="${px - 240 * (1 - d) - 120}" cy="${py}" r="70" fill="${C.parts[0][1]}"/>${txt(px - 240 * (1 - d) - 120, py + 20, C.parts[0][0], 54, '#14101C')}`;
+    [[200, -170], [230, 150], [60, 230]].forEach(([dx, dy], j) => { const p = C.parts[j + 1]; const x = px - 120 + dx * d, y = py + dy * d; ill += `<line x1="${px - 120}" y1="${py}" x2="${f1(x)}" y2="${f1(y)}" stroke="${p[1]}" stroke-width="4" ${p[0] === 'ν' ? 'stroke-dasharray="8 10" opacity=".6"' : ''}/><circle cx="${f1(x)}" cy="${f1(y)}" r="${p[0] === 'ν' ? 34 : 54}" fill="${p[1]}" opacity="${p[0] === 'ν' ? .4 : 1}"/>${txt(x, y + 14, p[0], 40, p[0] === 'ν' ? '#fff' : '#14101C')}`; });
+  } else if (C.parts.length === 2) {
+    const r = range(lt, .5, 3);
+    [[-180, '#5BFF9A', 'MATÉRIA', 1], [180, '#FF5A8A', 'ANTIMATÉRIA', .9755]].forEach(([dx, col, lab, rate]) => {
+      ill += `<circle cx="${px + dx}" cy="${py - 80}" r="80" fill="${col}" opacity=".9"/>${txt(px + dx, py - 60, dx < 0 ? 'Λb' : 'Λ̄b', 50, '#14101C')}${txt(px + dx, py + 60, lab, 28, col)}`;
+      ill += `<rect x="${px + dx - 40}" y="${f1(py + 330 - 220 * r * rate)}" width="80" height="${f1(220 * r * rate)}" fill="${col}" opacity=".7"/>`;
+    });
+    ill += `<line x1="${px - 260}" y1="${py + 330}" x2="${px + 260}" y2="${py + 330}" stroke="#fff" stroke-width="3"/>`;
+  } else {
+    const r = range(lt, .4, 3.2);
+    ill += `<g transform="translate(${px - 60},${py + 40})"><line x1="-260" y1="0" x2="260" y2="0" stroke="#fff" stroke-width="3" opacity=".6"/>
+      ${txt(-200, 60, 'MEDIDA', 28, '#9FE8FF', 'middle', 800)}${txt(200, 60, 'PREVISÃO', 28, '#FFB347', 'middle', 800)}
+      <circle cx="${f1(lerp(-200, -10, 0))}" cy="-40" r="30" fill="#9FE8FF"/><circle cx="${f1(lerp(200, 10, easeInOut(r)))}" cy="-40" r="30" fill="#FFB347"/>
+      <line x1="-200" y1="-90" x2="${f1(lerp(200, 10, easeInOut(r)))}" y2="-90" stroke="#FF5A6A" stroke-width="4" opacity="${op(1 - r)}"/>${txt(0, -110, 'DIFERENÇA', 26, '#FF5A6A', 'middle', 800, `opacity="${op(1 - r)}"`)}</g>`;
+  }
+  c += ill;
+  s += `<g transform="translate(${f1(-200 * (1 - ent) - 1920 * easeIn(ex))},0)" opacity="${op(ent)}">${c}</g>`;
+  s += txt(CX, 1040, 'σ (SIGMA) = O QUANTO É IMPROVÁVEL SER SÓ ACASO · 3σ = INDÍCIO · 5σ = DESCOBERTA', 24, '#fff', 'middle', 700, 'opacity=".55"');
+  return s;
+}
+function sevenScene(t) {
+  const k = range(t, EV.seven, EV.bang);
+  let s = `<rect width="${W}" height="${H}" fill="#02030A"/>` + stars2(t, .7);
+  const P = [[520, 640], [700, 560], [880, 600], [1040, 520], [1180, 380], [1400, 420], [1360, 620]];
+  const n = Math.min(7, Math.floor(range(t, EV.seven + .3, EV.seven + 3.2) * 7.99));
+  s += `<g style="mix-blend-mode:screen">`;
+  for (let i = 0; i < n - 1; i++) s += `<line x1="${P[i][0]}" y1="${P[i][1]}" x2="${P[i + 1][0]}" y2="${P[i + 1][1]}" stroke="#9FE8FF" stroke-width="3" opacity=".6"/>`;
+  for (let i = 0; i < n; i++) s += `<circle cx="${P[i][0]}" cy="${P[i][1]}" r="${f1(70 + 10 * Math.sin(t * 3 + i))}" fill="url(#glowC)"/><circle cx="${P[i][0]}" cy="${P[i][1]}" r="9" fill="#fff"/>`;
+  s += `</g>`;
+  return zoomG(lerp(1.15, 1, easeOut(k)), s, CX, 540, lerp(-4, 2, k));
+}
+const PAIRS = Array.from({ length: 160 }, () => ({ x: rnd() * 1920, y: rnd() * 1080, a: rnd() * 6.28, d: 30 + rnd() * 120, t: rnd() * 4, keep: rnd() < .04 }));
+function bangScene(t) {
+  let s = `<rect width="${W}" height="${H}" fill="#020106"/>`;
+  if (t < EV.annih) {
+    const k = range(t, EV.bang, EV.annih);
+    s += `<g style="mix-blend-mode:screen"><circle cx="${CX}" cy="${CY}" r="${f1(50 + 1600 * easeOut(k))}" fill="url(#glowO)" opacity="${op(1 - k * .5)}"/><circle cx="${CX}" cy="${CY}" r="${f1(20 + 600 * easeOut(k))}" fill="url(#glowW)"/></g>`;
+    return s;
+  }
+  if (t < EV.gal2) {
+    const k = range(t, EV.annih, EV.left);
+    s += `<g style="mix-blend-mode:screen"><rect width="${W}" height="${H}" fill="#FF8A3C" opacity="${op(.25 * (1 - k))}"/></g>`;
+    for (const p of PAIRS) {
+      const lt = (t - EV.annih) - p.t * .9, sep = lt < 0 ? p.d : Math.max(0, p.d * (1 - lt / .9));
+      const gone = lt > .9 && !(p.keep && t > EV.left - .3);
+      const cx = p.x, cy = p.y;
+      if (lt > .9 && lt < 1.3) s += `<g style="mix-blend-mode:screen"><circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(20 + 120 * (lt - .9))}" fill="url(#glowW)" opacity="${op(1 - (lt - .9) / .4)}"/></g>`;
+      if (p.keep) { s += `<circle cx="${f1(cx + Math.cos(p.a) * Math.max(sep, lt > .9 ? 0 : sep))}" cy="${f1(cy + Math.sin(p.a) * sep)}" r="9" fill="#00E5FF"/>`; if (t > EV.left) s += `<g style="mix-blend-mode:screen"><circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(40 + 10 * Math.sin(t * 5 + p.x))}" fill="url(#glowC)"/></g>`; if (!gone && lt <= .9) s += `<circle cx="${f1(cx - Math.cos(p.a) * sep)}" cy="${f1(cy - Math.sin(p.a) * sep)}" r="9" fill="#FF3FA4"/>`; continue; }
+      if (gone) continue;
+      s += `<circle cx="${f1(cx + Math.cos(p.a) * sep)}" cy="${f1(cy + Math.sin(p.a) * sep)}" r="9" fill="#00E5FF"/><circle cx="${f1(cx - Math.cos(p.a) * sep)}" cy="${f1(cy - Math.sin(p.a) * sep)}" r="9" fill="#FF3FA4"/>`;
+    }
+    return zoomG(lerp(1, 1.06, range(t, EV.annih, EV.gal2)), s);
+  }
+  const k = range(t, EV.gal2, EV.back);
+  s += stars2(t, .6) + galaxy(t, CX, 560, lerp(.2, 1.05, easeOut(k)), t * 4, 1);
+  return s;
+}
+function backScene(t) {
+  // volta do zepto para o grão (rápido), depois praia
+  if (t < EV.beach2) {
+    const keys = [[EV.back, -21], [EV.beach2 - .2, -3.0], [EV.beach2, -3.0]];
+    return dive(t, keys, true);
+  }
+  const k = range(t, EV.beach2, EV.endcard);
+  setCam(lerp(GRAIN[0], 960, easeInOut(k)), lerp(GRAIN[1], 560, easeInOut(k)), lerp(8, 1.0, easeOut(range(t, EV.beach2, EV.beach2 + 2.6))), 0, [GRAIN[0], GRAIN[1], 8]);
+  const B = beach(t, { smile: t > EV.beach2 + 1.8 ? 1 : 0, flick: easeOut(range(t, EV.endcard - 1.2, EV.endcard - .6)) });
+  return lay(1, B);
+}
+function endCard(t) {
+  const k = range(t, EV.endcard, EV.end);
+  let s = `<rect width="${W}" height="${H}" fill="#02030A"/>` + stars2(t, .8);
+  s += `<g style="mix-blend-mode:screen"><circle cx="${CX}" cy="400" r="${f1(220 + 20 * Math.sin(t * 2))}" fill="url(#glowP)" opacity=".6"/></g>`;
+  s += txt(CX, 210, 'ZEPTOVERSO', 90, '#00E5FF', 'middle', 900, 'letter-spacing="12" opacity=".9"');
+  const src = ['FONTES: CERN (NA62, 2024 · LHCb, Nature 2025) · BELLE II / KEK (2023)', 'FERMILAB MUON g-2 (2025) · A. BURAS, arXiv:2411.03440 · POPULAR MECHANICS (2026)'];
+  src.forEach((l, i) => s += txt(CX, 880 + i * 44, l, 26, '#fff', 'middle', 700, 'opacity=".6"'));
+  return s;
+}
+
+/* ---------------- quadro ---------------- */
+function frame(t) {
+  D = []; uid = 0;
+  let Wd = '', P = { t }, flash = 0, shake = 0;
+  if (t < EV.macro) {
+    const k = range(t, 0, EV.macro);
+    setCam(lerp(980, GRAIN[0], easeInOut(k)), lerp(560, GRAIN[1], easeInOut(k)), lerp(1.0, 3.2, easeInOut(k)) * lerp(1, 2.5, easeIn(range(t, EV.macro - .6, EV.macro))), lerp(-2, 1, k), [980, 560, 1.0]);
+    Wd = lay(1, beach(t));
+    P = { t, grade: '#FF9A3C', gradeO: .18, bars: 1 };
+    if (t < .3) flash = 0;
+  } else if (t < EV.glitch) {
+    const k = range(t, EV.macro, EV.glitch);
+    Wd = macroBg(t) + zoomG(lerp(1.0, 1.35, easeInOut(k)) * lerp(1, 6, easeIn(range(t, EV.glitch - .6, EV.glitch))), grainShape(t, range(t, EV.macro + 1, EV.macro + 2)), CX, CY, lerp(-3, 4, k));
+    if (t < EV.macro + .2) flash = .6 * (1 - range(t, EV.macro, EV.macro + .2));
+    P = { t, grade: '#FF9A3C', gradeO: .15, bars: 1 };
+  } else if (t < EV.dive) {
+    let s = `<rect width="${W}" height="${H}" fill="#020208"/>`;
+    const g = Math.sin(t * 37) > .6 || (t > EV.title - .25 && t < EV.title);
+    if (g || t < EV.glitch + .25) s += layerObj(-21, t).replace(/#00E5FF/g, '#FF3FA4');
+    s += `<g opacity=".5">${layerObj(-21, t)}</g>`;
+    Wd = `<g transform="translate(${g ? f1(noise1(t * 50) * 30) : 0},0)">${s}</g>`;
+    if (t > EV.title && t < EV.title + .2) flash = .7 * (1 - range(t, EV.title, EV.title + .2));
+    P = { t, bars: 1 };
+  } else if (t < EV.earth) {
+    Wd = dive(t);
+    P = { t, vig: .8 };
+  } else if (t < EV.galaxy) { Wd = earthBus(t); if (t < EV.earth + .2) flash = .5 * (1 - range(t, EV.earth, EV.earth + .2)); }
+  else if (t < EV.waves) Wd = meterGalaxy(t);
+  else if (t < EV.lhc) Wd = waves(t);
+  else if (t < EV.tunnel) { const k = range(t, EV.lhc, EV.tunnel); Wd = mapScene(t, { lhcK: easeInOut(range(t, EV.lhc + .4, EV.lhc + 2.4)), rot: lerp(-12, 6, k), zoom: lerp(1.25, 1.05, easeOut(k)) * lerp(1, 3, easeIn(range(t, EV.tunnel - .6, EV.tunnel))), tilt: lerp(.62, .5, k) }); P = { t, bars: 1 }; }
+  else if (t < EV.collide) { Wd = tunnel(t); P = { t, bars: 1, grade: '#2F6BFF', gradeO: .15 }; }
+  else if (t < EV.fcc) { Wd = collision(t); if (t < EV.collide + .15) flash = 1 - range(t, EV.collide, EV.collide + .15); shake = 6 * (1 - range(t, EV.collide, EV.collide + .6)); P = { t, bars: 1 }; }
+  else if (t < EV.years) { const k = range(t, EV.fcc, EV.years); Wd = mapScene(t, { lhcK: 1, fccK: easeInOut(range(t, EV.fcc + .4, EV.years - .4)), rot: lerp(6, 10, k), zoom: lerp(.9, .32, easeInOut(range(t, EV.fcc, EV.fcc + 2.5))), tilt: .6, focus: [lerp(1000, 700, easeInOut(range(t, EV.fcc, EV.fcc + 2.5))), lerp(520, 900, easeInOut(range(t, EV.fcc, EV.fcc + 2.5)))] }); P = { t, bars: 1 }; }
+  else if (t < EV.echo) { Wd = yearsScene(t); P = { t, bars: 1 }; }
+  else if (t < EV.kaon) { Wd = echoScene(t); if (t < EV.echo + .2) flash = .4 * (1 - range(t, EV.echo, EV.echo + .2)); P = { t, grade: '#2AC8FF', gradeO: .12 }; }
+  else if (t < EV.cards) { Wd = kaonScene(t); if (t > EV.kdecay && t < EV.kdecay + .15) flash = .5; P = { t }; }
+  else if (t < EV.seven) { Wd = cardScene(t); P = { t, vig: .7 }; }
+  else if (t < EV.bang) Wd = sevenScene(t);
+  else if (t < EV.back) { Wd = bangScene(t); if (t < EV.bang + .3) flash = 1 - range(t, EV.bang, EV.bang + .3); if (t < EV.annih) shake = 8; }
+  else if (t < EV.endcard) { Wd = backScene(t); if (t >= EV.beach2) P = { t, grade: '#FF9A3C', gradeO: .18, bars: 1 }; if (t > EV.beach2 - .1 && t < EV.beach2 + .2) flash = .7 * (1 - range(t, EV.beach2 - .1, EV.beach2 + .2)); }
+  else Wd = endCard(t);
+  const sx = shake ? noise1(t * 30, 1) * shake * 2 : 0, sy = shake ? noise1(t * 30, 5) * shake * 2 : 0;
+  const world = document.getElementById('world');
+  world.setAttribute('transform', `translate(${f1(sx)},${f1(sy)})`);
+  world.innerHTML = Wd;
+  document.getElementById('post').innerHTML = post(P);
+  document.getElementById('fdefs').innerHTML = D.join('');
+  document.getElementById('flash').style.opacity = flash;
+  for (const x of TEXTS) {
+    if (window.__render) { const kk = Math.min(range(t, x.from, x.from + .15), 1 - range(t, x.to - .2, x.to)), e = easeOut(kk); x.el.style.transition = 'none'; x.el.style.opacity = kk; x.el.style.transform = `translateY(${(1 - e) * 30}px) scale(${.94 + .06 * e})`; }
+    else x.el.classList.toggle('on', t >= x.from && t < x.to);
+  }
+}
+
+/* ---------------- textos + controle ---------------- */
+const textHost = document.getElementById('texts');
+for (const x of TEXTS) { const el = document.createElement('div'); el.className = 'ov'; el.innerHTML = x.html; el.style.setProperty('--y', x.y + 'px'); el.style.setProperty('--fs', x.fs + 'px'); textHost.appendChild(el); x.el = el; }
+const params = new URLSearchParams(location.search);
+const stage = document.getElementById('stage'), startEl = document.getElementById('start');
+const fit = () => stage.style.setProperty('--s', Math.min(innerWidth / W, innerHeight / H));
+addEventListener('resize', fit); fit();
+const audio = window.AUDIO_SRC ? new Audio(window.AUDIO_SRC) : null;
+let playing = false, offset = parseFloat(params.get('t') || '0'), t0 = 0;
+const current = () => playing ? Math.min(TOTAL, offset + (performance.now() - t0) / 1000) : offset;
+function play() { if (playing) return; playing = true; t0 = performance.now(); startEl.classList.add('hide'); if (audio) { audio.currentTime = offset; audio.play(); } }
+function pause() { offset = current(); playing = false; if (audio) audio.pause(); }
+startEl.addEventListener('click', play);
+addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); if (!playing) play(); else pause(); }
+  if (e.code === 'KeyR') { pause(); offset = 0; play(); }
+  if (e.code === 'ArrowRight') { const p = playing; pause(); offset = Math.min(TOTAL, offset + 5); if (p) play(); }
+  if (e.code === 'ArrowLeft') { const p = playing; pause(); offset = Math.max(0, offset - 5); if (p) play(); }
+});
+window.__total = TOTAL;
+window.__seek = (t) => { playing = false; offset = t; frame(t); };
+window.__ready = true;
+if (params.has('hideui')) startEl.classList.add('hide');
+if (params.has('still')) frame(offset);
+else (function loop() { frame(current()); requestAnimationFrame(loop); })();
+</script>
+</body>
+</html>

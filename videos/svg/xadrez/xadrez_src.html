@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>O xadrez do diretor</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s,1));background:#000}
+  svg{display:block}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font:800 54px sans-serif;background:rgba(0,0,0,.55);cursor:pointer}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+<svg id="s" width="1080" height="1920" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
+<defs id="defs"></defs>
+<g id="root"></g>
+</svg>
+<div id="start">▶ CLIQUE (com som)</div>
+</div>
+<!--AUDIO-->
+<!--NARR-->
+<script>
+/*LIB*/
+const W = 1080, H = 1920;
+function lay(p, content, filter = '') {
+  const z = CAM.z0 * (1 + (CAM.z / CAM.z0 - 1) * p), x = CAM.x0 + (CAM.x - CAM.x0) * p, y = CAM.y0 + (CAM.y - CAM.y0) * p;
+  return `<g transform="translate(540,960) rotate(${f1(CAM.r)}) scale(${Math.round(z * 1000) / 1000}) translate(${f1(-x)},${f1(-y)})"${filter ? ` filter="url(#${filter})"` : ''}>${content}</g>`;
+}
+const N = window.NARR, S = Object.fromEntries(N.s.map(x => [x.k, x]));
+const T = k => S[k].t0, E = k => S[k].t1, TOTAL = N.total;
+const R = (() => { let s = 23; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+/*SHARED*/
+
+/* ===================== peças, xícara, mãos, chaves, cães ===================== */
+const LIGHT = '#E9D7B0', LIGHTD = '#B89A6A', STAIN = '#5A3418', STAIND = '#2E1A0C';
+function piece(type, x, y, s, k = 0, rot = 0) {   // k: quanto já está escurecida pelo café
+  const c = mix(LIGHT, STAIN, k), cd = mix(LIGHTD, STAIND, k);
+  let p = `<ellipse cx="0" cy="4" rx="70" ry="16" fill="#000" opacity=".35"/><path d="M-62 0 L62 0 L56 -26 L-56 -26Z" fill="${cd}"/><rect x="-58" y="-34" width="116" height="14" rx="6" fill="${c}"/>`;
+  if (type === 'peao') p += `<path d="M-38 -34 Q-20 -90 -16 -120 L16 -120 Q20 -90 38 -34Z" fill="${c}"/><rect x="-30" y="-128" width="60" height="12" rx="6" fill="${cd}"/><circle cx="0" cy="-158" r="32" fill="${c}"/>`;
+  if (type === 'rei') p += `<path d="M-44 -34 Q-24 -120 -22 -190 L22 -190 Q24 -120 44 -34Z" fill="${c}"/><rect x="-38" y="-204" width="76" height="16" rx="7" fill="${cd}"/><path d="M-34 -204 Q0 -250 34 -204Z" fill="${c}"/><rect x="-7" y="-286" width="14" height="50" rx="4" fill="${c}"/><rect x="-22" y="-272" width="44" height="14" rx="4" fill="${c}"/>`;
+  if (type === 'dama') p += `<path d="M-44 -34 Q-24 -120 -22 -180 L22 -180 Q24 -120 44 -34Z" fill="${c}"/><rect x="-38" y="-194" width="76" height="16" rx="7" fill="${cd}"/><path d="M-40 -194 L-46 -240 L-24 -214 L-12 -250 L0 -216 L12 -250 L24 -214 L46 -240 L40 -194Z" fill="${c}"/><circle cx="0" cy="-262" r="10" fill="${c}"/>`;
+  if (type === 'cavalo') p += `<path d="M-44 -34 Q-40 -80 -30 -100 Q-50 -130 -40 -170 Q-30 -220 10 -240 L20 -262 L30 -236 Q60 -220 66 -170 L70 -130 Q58 -118 40 -126 Q20 -130 20 -110 Q34 -70 44 -34Z" fill="${c}"/><circle cx="18" cy="-196" r="6" fill="${cd}"/><path d="M-30 -190 Q-10 -230 10 -238" stroke="${cd}" stroke-width="6" fill="none"/>`;
+  p += `<path d="M-30 -40 Q-14 -100 -14 -150" stroke="#fff" stroke-width="7" fill="none" opacity="${op(.25 + .25 * k)}" stroke-linecap="round"/>`;
+  return `<g transform="translate(${f1(x)},${f1(y)}) rotate(${f1(rot)}) scale(${f1(s * 1000) / 1000})">${p}</g>`;
+}
+function steam(x, y, t, n = 3, col = '#E8E0D0', k = 1, sc = 1) {
+  let o = '';
+  for (let i = 0; i < n; i++) { const ph = (t * .5 + i / n) % 1; o += `<path d="M${f1(x + (i - 1) * 30 * sc)} ${f1(y - ph * 260 * sc)} q${f1(30 * sc)} ${f1(-40 * sc)} 0 ${f1(-80 * sc)} q${f1(-30 * sc)} ${f1(-40 * sc)} 0 ${f1(-80 * sc)}" stroke="${col}" stroke-width="${f1(10 * sc)}" fill="none" stroke-linecap="round" opacity="${op(Math.sin(ph * Math.PI) * .45 * k)}" filter="url(#b4)"/>`; }
+  return o;
+}
+function cup(x, y, s, t, liquidY = 0) {
+  return `<g transform="translate(${x},${y}) scale(${s})"><ellipse cx="0" cy="250" rx="260" ry="50" fill="#000" opacity=".45" filter="url(#b12)"/>
+  <path d="M-200 0 L-170 240 Q0 280 170 240 L200 0Z" fill="#E8E2D6"/><path d="M-200 0 L-170 240 Q-120 256 -80 262 L-110 0Z" fill="#000" opacity=".15"/><path d="M200 40 Q300 40 300 130 Q300 210 190 200" stroke="#E8E2D6" stroke-width="34" fill="none"/>
+  <ellipse cx="0" cy="0" rx="200" ry="56" fill="#F4EFE6"/><ellipse cx="0" cy="${f1(6 + liquidY)}" rx="178" ry="46" fill="#1E0F06"/><ellipse cx="-60" cy="${f1(-6 + liquidY)}" rx="60" ry="10" fill="#7A4A2A" opacity=".6"/>
+  <path d="M120 40 Q140 140 120 230" stroke="#fff" stroke-width="10" opacity=".35" fill="none" stroke-linecap="round"/></g>`;
+}
+function hand(x, y, s, rot, col = '#5A3A2A', rim = '#FFC27A') {  // mão pinçando, vista de lado
+  const id = rig({ amb: '#ffffff', k: [-1, -.2], shO: .3, shD: 10, rims: [{ c: rim, k: [1, -.4], w: 6, o: .9 }] });
+  return `<g transform="translate(${f1(x)},${f1(y)}) rotate(${f1(rot)}) scale(${f1(s * 1000) / 1000})" filter="url(#${id})">
+    <path d="M-60 -520 L60 -520 L58 -150 L-58 -150Z" fill="#7A3A18"/><path d="M-60 -520 L60 -520 L58 -420 L-58 -420Z" fill="#000" opacity=".15"/>
+    <path d="M-62 -170 Q-80 -60 -50 -10 Q-30 20 0 30 Q40 22 56 -20 Q72 -80 60 -170Z" fill="${col}"/>
+    <path d="M-50 -40 Q-80 0 -60 40 Q-50 62 -30 50 Q-20 20 -30 -20Z" fill="${col}"/>
+    <path d="M40 -30 Q70 10 40 56 Q26 70 14 56 Q20 20 10 -10Z" fill="${col}"/></g>`;
+}
+function keyRing(x, y, s, t, soap = 0, swing = 0) {
+  const c = soap ? '#EDE6D2' : '#C9CDD4', cd = soap ? '#C8BFA6' : '#7A808A', sh = soap ? '#fff' : '#fff';
+  let o = `<g transform="translate(${f1(x)},${f1(y)}) scale(${s})"><circle cx="0" cy="0" r="46" fill="none" stroke="${cd}" stroke-width="12"/><circle cx="0" cy="0" r="46" fill="none" stroke="${c}" stroke-width="6"/>`;
+  for (let i = 0; i < 4; i++) { const a = -20 + i * 18 + Math.sin(t * 5 + i) * 6 * swing; o += `<g transform="rotate(${f1(a)}) translate(0,46)"><circle cx="0" cy="40" r="34" fill="${c}" stroke="${cd}" stroke-width="5"/><circle cx="0" cy="40" r="12" fill="#14161c"/><rect x="-11" y="70" width="22" height="${130 + i * 14}" rx="${soap ? 9 : 3}" fill="${c}" stroke="${cd}" stroke-width="4"/><path d="M11 ${120 + i * 14} h22 v18 h-12 v14 h12 v18 h-22" fill="${c}" stroke="${cd}" stroke-width="4"/><path d="M-4 80 L-4 ${180 + i * 14}" stroke="${sh}" stroke-width="4" opacity="${soap ? .5 : .7}"/></g>`; }
+  return o + '</g>';
+}
+function dog(x, y, s, t, ph = 0, sniff = 0, col = '#0b0b10', rim = '#BFD4FF') {
+  const a = Math.sin(t * 9 + ph), hd = sniff * (8 + 6 * Math.sin(t * 14 + ph));
+  const leg = (lx, k) => `<path d="M${lx} -150 L${f1(lx + 20 * k)} -60 L${f1(lx + 8 * k)} 0" stroke="${col}" stroke-width="22" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const id = rig({ amb: '#ffffff', k: [-1, .3], shO: 0, rims: [{ c: rim, k: [1, -.6], w: 6, o: 1, glow: true }] });
+  return `<g transform="translate(${f1(x)},${f1(y)}) scale(${f1(s * 1000) / 1000})" filter="url(#${id})">${leg(-110, a)}${leg(-80, -a)}${leg(110, -a)}${leg(140, a)}
+    <path d="M-150 -160 Q-160 -230 -60 -240 L120 -236 Q190 -230 190 -160 Q180 -120 120 -120 L-110 -120 Q-150 -124 -150 -160Z" fill="${col}"/>
+    <path d="M-150 -200 Q-210 -230 -230 -290" stroke="${col}" stroke-width="18" fill="none" stroke-linecap="round"/>
+    <g transform="translate(170,-220) rotate(${f1(20 + hd * 3)})"><path d="M0 -30 Q40 -70 90 -50 L170 -10 Q180 20 150 30 L60 40 Q0 40 -10 0Z" fill="${col}"/><path d="M40 -60 L50 -120 L80 -60Z" fill="${col}"/><circle cx="168" cy="6" r="12" fill="#222"/></g></g>`;
+}
+function rain(t, k = 1, n = 140) {
+  let o = ''; for (let i = 0; i < n; i++) { const x = (i * 97.3) % 1300 - 110, sp = 1600 + (i % 7) * 120, y = ((i * 211) % 2100 + t * sp) % 2100 - 100; o += `<line x1="${f1(x)}" y1="${f1(y)}" x2="${f1(x - 14)}" y2="${f1(y + 70)}" stroke="#BFD0EE" stroke-width="${2 + i % 2}" opacity="${op((.25 + (i % 5) * .08) * k)}"/>`; }
+  return o;
+}
+function board(cx, cy, w, h, persp = .7, rot = 0) {   // tabuleiro em perspectiva simples (trapézio)
+  let o = `<g transform="translate(${cx},${cy}) rotate(${rot})">`;
+  const topW = w * persp, P = (u, v) => [lerp(-topW / 2, -w / 2, v) + u * lerp(topW, w, v), -h / 2 + v * h];
+  const [a0, a1] = [P(0, 0), P(1, 0)], [b0, b1] = [P(0, 1), P(1, 1)];
+  o += `<path d="M${f1(a0[0] - 26)} ${f1(a0[1] - 18)} L${f1(a1[0] + 26)} ${f1(a1[1] - 18)} L${f1(b1[0] + 36)} ${f1(b1[1] + 26)} L${f1(b0[0] - 36)} ${f1(b0[1] + 26)}Z" fill="#3A2412"/><path d="M${f1(b0[0] - 36)} ${f1(b0[1] + 26)} L${f1(b1[0] + 36)} ${f1(b1[1] + 26)} L${f1(b1[0] + 36)} ${f1(b1[1] + 50)} L${f1(b0[0] - 36)} ${f1(b0[1] + 50)}Z" fill="#24160A"/>`;
+  for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { const p1 = P(i / 8, j / 8), p2 = P((i + 1) / 8, j / 8), p3 = P((i + 1) / 8, (j + 1) / 8), p4 = P(i / 8, (j + 1) / 8); o += `<path d="M${f1(p1[0])} ${f1(p1[1])} L${f1(p2[0])} ${f1(p2[1])} L${f1(p3[0])} ${f1(p3[1])} L${f1(p4[0])} ${f1(p4[1])}Z" fill="${(i + j) % 2 ? '#6E4524' : '#D9BE8A'}"/>`; }
+  return { svg: o + '</g>', P: (u, v) => { const p = P(u, v); const c = Math.cos(rot * Math.PI / 180), s = Math.sin(rot * Math.PI / 180); return [cx + p[0] * c - p[1] * s, cy + p[0] * s + p[1] * c]; } };
+}
+
+/* ===================== cenas ===================== */
+const SH = [['coffee', 0, T('b2') - .1], ['yard', T('b2') - .1, T('b3') - .1], ['drop', T('b3') - .1, T('b4') - .1], ['swap', T('b4') - .1, T('b5') - .1],
+  ['mate', T('b5') - .1, T('b6') - .1], ['lights', T('b6') - .1, T('b6') + 4.6], ['door', T('b6') + 4.6, T('b6') + 7.3], ['rain', T('b6') + 7.3, TOTAL]];
+const shotAt = t => SH.find(s => t >= s[1] && t < s[2]) || SH[SH.length - 1];
+const loc = (t, id) => { const s = SH.find(x => x[0] === id); return { L: t - s[1], d: s[2] - s[1], k: (t - s[1]) / (s[2] - s[1]) }; };
+const GRAINV = t => { const j = Math.floor(t * 24); return `<rect x="-200" y="-200" width="1480" height="2320" fill="url(#noiseP)" opacity=".06" transform="translate(${(j * 37) % 200 - 100},${(j * 53) % 200 - 100})"/>`; };
+
+// 1. gancho: mão mergulha o cavalo no café (close)
+function sCoffee(t) {
+  const { L, d, k } = loc(t, 'coffee');
+  setCam(540, lerp(1020, 980, k), lerp(1.12, 1.3, easeInOut(k)), lerp(-1, 1, k), [540, 1000, 1]);
+  let s = `<rect width="1080" height="1920" fill="#0D0A0C"/>`;
+  s += lay(.4, `<g filter="url(#b12)">${bars(-300, 1400, 0, 1900, 9, '#1A1820', '#6A6A80')}</g><ellipse cx="300" cy="500" rx="700" ry="600" fill="url(#gWarm)" opacity=".55"/>`);
+  // guarda passa ao fundo e olha
+  const gx = lerp(-300, 1300, range(L, 1.2, 5.5));
+  s += lay(.4, `<g filter="url(#b4)" opacity=".85">${sil({ x: gx, y: 1300, s: .7, kind: 'soldado', ph: L * 5, walk: 1, col: '#0A0A10', shadow: 0 })}</g>`);
+  s += lay(1, `<rect x="-400" y="1240" width="1900" height="900" fill="#3A2614"/><rect x="-400" y="1240" width="1900" height="16" fill="#5A3A20"/>${Array.from({ length: 8 }, (_, i) => `<line x1="-400" y1="${1300 + i * 80}" x2="1500" y2="${1296 + i * 82}" stroke="#2A1A0C" stroke-width="4"/>`).join('')}`);
+  // peças já escurecidas ao lado + uma clara esperando
+  s += lay(1, piece('peao', 150, 1420, .9, 1) + piece('rei', 260, 1480, .9, 1) + piece('dama', 900, 1460, .9, .35) + piece('peao', 980, 1560, .9, 0));
+  s += lay(1, cup(560, 1180, 1.25, t) + steam(560, 1110, t, 3, '#E8E0D0', 1, 1.2));
+  // mergulho do cavalo (ciclo): desce, fica, sobe pingando
+  const cyc = (L % 3.3) / 3.3, dip = cyc < .3 ? easeInOut(cyc / .3) : cyc < .55 ? 1 : 1 - easeInOut((cyc - .55) / .35);
+  const py = lerp(800, 1330, dip), kk = Math.min(1, .55 + Math.floor(L / 3.3) * .25 + (cyc > .55 ? .2 : 0));
+  s += lay(1, `<clipPath id="above"><rect x="-400" y="-400" width="2000" height="1588"/></clipPath>`);
+  s += lay(1, `<g clip-path="url(#above)">${piece('cavalo', 560, py, 1.2, kk)}</g>` + hand(560 + 30, py - 330, 1.05, 8));
+  if (cyc > .55 && cyc < .95) { for (let i = 0; i < 3; i++) { const q = ((cyc - .55) / .4 * 3 + i / 3) % 1; s += lay(1, `<ellipse cx="${560 + (i - 1) * 16}" cy="${f1(py + 10 + q * 120)}" rx="7" ry="11" fill="#1E0F06" opacity="${op(1 - q)}"/>`); } }
+  // ondinhas no café quando entra
+  const rip = cyc > .25 && cyc < .7 ? range(cyc, .25, .7) : 0;
+  if (rip) s += lay(1, `<ellipse cx="560" cy="1188" rx="${f1(40 + 160 * rip)}" ry="${f1(10 + 36 * rip)}" fill="none" stroke="#7A4A2A" stroke-width="4" opacity="${op(1 - rip)}"/>`);
+  return s + VIG() + GRAINV(t);
+}
+// 2. o pátio: sexta-feira, partida com o diretor; cheiro sobe do tabuleiro
+function sYard(t) {
+  const { L, d, k } = loc(t, 'yard');
+  const close = easeInOut(range(L, d * .45, d * .7));
+  setCam(lerp(540, 560, close), lerp(1100, 1180, close), lerp(.95, 1.6, close), 0, [540, 1100, 1]);
+  let s = lay(.05, `<rect x="-800" y="-800" width="2700" height="3600" fill="url(#skyGrey)"/>`);
+  s += lay(.25, `<rect x="-800" y="500" width="2700" height="700" fill="#5A5A60"/>${Array.from({ length: 14 }, (_, i) => `<rect x="${-800 + i * 200}" y="500" width="196" height="700" fill="#62626A"/>`).join('')}<rect x="-800" y="470" width="2700" height="40" fill="#3A3A40"/>${Array.from({ length: 40 }, (_, i) => `<path d="M${-800 + i * 70} 470 l20 -30 l20 30" stroke="#2A2A30" stroke-width="5" fill="none"/>`).join('')}`);
+  s += lay(.25, `<g transform="translate(980,700)"><rect x="-40" y="-560" width="80" height="560" fill="#2E2E36"/><rect x="-110" y="-640" width="220" height="100" fill="#26262E"/><rect x="-80" y="-620" width="160" height="40" fill="#8AA" opacity=".4"/></g>`);
+  s += lay(.5, `<rect x="-800" y="1150" width="2700" height="1400" fill="#7A7468"/>`);
+  // mesa
+  const bd = board(540, 1300, 420, 220, .72);
+  const smell = `<g opacity="${op(.4 + .6 * close)}">${steam(470, 1240, t, 2, '#8A5A2A', 1, .9)}${steam(610, 1250, t + .4, 2, '#8A5A2A', 1, .9)}</g>`;
+  // diretor (esquerda, fundo) e detento (direita, primeiro plano)
+  s += lay(1, sil({ x: 200, y: 1560, s: .62, kind: 'soldado', sit: 1, flip: 1, col: '#141A2A', rim: '#DDE6FF', rimK: [-1, -.3], armF: [-75, -20], armB: [-60, -40], lean: 8 }));
+  s += lay(1, `<rect x="250" y="1330" width="580" height="40" rx="10" fill="#4A3020"/><rect x="290" y="1370" width="30" height="300" fill="#3A2416"/><rect x="760" y="1370" width="30" height="300" fill="#3A2416"/>` + bd.svg);
+  // peças no tabuleiro
+  const pcs = [['rei', .55, .1], ['dama', .4, .15], ['peao', .2, .3], ['peao', .7, .28], ['cavalo', .6, .5], ['rei', .45, .85], ['peao', .3, .7], ['dama', .7, .75]];
+  s += lay(1, pcs.map(([ty, u, v]) => { const [x, y] = bd.P(u, v); return piece(ty, x, y + 6, lerp(.3, .42, v), 1); }).join('') + smell);
+  s += lay(1, sil({ x: 900, y: 1640, s: .78, kind: 'homem', sit: 1, flip: -1, col: '#5A2A10', rim: '#FFB070', rimK: [1, -.3], armF: [-80, -20], armB: [-60, -40], lean: 10 }));
+  // chaveiro do diretor brilhando
+  s += lay(1, keyRing(250, 1500, .28, t, 0, .3));
+  return s + VIG() + GRAINV(t);
+}
+// 3. o rei cai perto do sapato
+function shoe(x, y, s) { return `<g transform="translate(${x},${y}) scale(${s})"><path d="M-60 -420 L90 -420 L96 -110 Q260 -100 300 -30 L300 0 L-70 0 L-70 -110Z" fill="#16141A"/><path d="M96 -110 Q260 -100 300 -30" stroke="#8A8AA0" stroke-width="7" fill="none" opacity=".7"/><ellipse cx="220" cy="-50" rx="50" ry="16" fill="#fff" opacity=".25"/><rect x="-74" y="-16" width="378" height="20" rx="4" fill="#08080A"/><path d="M-60 -420 L90 -420 L90 -360 L-60 -360Z" fill="#1E2436"/></g>`; }
+function sDrop(t) {
+  const { L, d, k } = loc(t, 'drop');
+  setCam(lerp(560, 520, k), lerp(1300, 1360, k), lerp(1.0, 1.2, easeInOut(k)), 0, [540, 1300, 1]);
+  let s = `<rect width="1080" height="1920" fill="#5A564E"/>`;
+  s += lay(.6, `<rect x="-600" y="300" width="2300" height="560" fill="#3A2416"/><rect x="-600" y="300" width="2300" height="30" fill="#4A3020"/><g filter="url(#b12)">${piece('peao', 300, 300, .8, 1)}${piece('dama', 700, 300, .8, 1)}</g>`);
+  s += lay(.9, `<rect x="-600" y="1500" width="2300" height="900" fill="#8A847A"/>${Array.from({ length: 30 }, (_, i) => `<ellipse cx="${-600 + (i * 173) % 2300}" cy="${1550 + (i * 61) % 300}" rx="${6 + i % 5}" ry="3" fill="#6A645A"/>`).join('')}`);
+  s += lay(1, shoe(330, 1600, 1.0));
+  // rei: cai da mesa (câmera lenta), quica e rola até o sapato
+  const f = range(L, .6, 2.1), y = f < .75 ? lerp(330, 1580, easeIn(f / .75)) : 1580 - Math.abs(Math.sin((f - .75) / .25 * Math.PI)) * 120 * (1 - (f - .75) / .25);
+  const x = lerp(760, 690, f) - Math.max(0, L - 2.1) * 30 * (1 - range(L, 2.1, 3.2));
+  const rot = f * 300 + Math.max(0, L - 2.1) * 120 * (1 - range(L, 2.1, 3.2));
+  s += lay(1, piece('rei', x, y, .9, 1, Math.min(rot, 90)));
+  if (f > .74 && f < .9) s += lay(1, `<ellipse cx="${f1(x)}" cy="1590" rx="${f1(30 + 400 * (f - .74))}" ry="12" fill="none" stroke="#C8C0B0" stroke-width="4" opacity="${op(1 - (f - .74) / .16)}"/>`);
+  return s + VIG() + GRAINV(t);
+}
+// 4. a troca do chaveiro (close no cinto)
+function sSwap(t) {
+  const { L, d, k } = loc(t, 'swap');
+  setCam(540, lerp(980, 940, k), lerp(1.0, 1.15, easeInOut(k)), lerp(2, -2, k), [540, 960, 1]);
+  const bend = easeInOut(range(L, 0, .9));
+  let s = `<rect width="1080" height="1920" fill="#4A463E"/>`;
+  // costas/quadril do diretor inclinando
+  s += lay(1, `<g transform="rotate(${f1(-bend * 14)} 540 900)"><path d="M-200 300 L1300 300 L1300 1300 L-200 1300Z" fill="#141A2A"/><path d="M-200 300 L1300 300 L1300 380 L-200 380Z" fill="#000" opacity=".2"/><rect x="-200" y="760" width="1500" height="110" fill="#0E0C10"/><rect x="380" y="770" width="140" height="90" rx="8" fill="#8A8070"/><rect x="408" y="790" width="84" height="50" rx="4" fill="#0E0C10"/>
+    <path d="M-200 870 L1300 870 L1300 1500 L-200 1500Z" fill="#1A2236"/><path d="M700 870 L720 1500" stroke="#0E1320" stroke-width="8"/></g>`);
+  // chaveiro: verdadeiro sobe (mão leva), cópia de sabão desce no lugar
+  const take = easeInOut(range(L, 1.4, 2.4)), put = easeInOut(range(L, 2.6, 3.6));
+  const ax = 760, ay = 860;
+  s += lay(1, `<rect x="${ax - 10}" y="${ay - 70}" width="20" height="80" fill="#5A5048"/>`);
+  if (take < 1) s += lay(1, keyRing(ax + take * 260, ay - take * 420, 1.15, t, 0, 1));
+  if (put > 0) s += lay(1, keyRing(lerp(ax + 320, ax, put), lerp(ay + 300, ay, put), 1.15, t, 1, 1));
+  // mão do detento entrando pela direita/baixo
+  const hx = lerp(1300, ax + 60, easeOut(range(L, .9, 1.5))) + take * 200 - put * 140, hy = lerp(1500, ay + 260, easeOut(range(L, .9, 1.5))) - take * 300 + put * 200;
+  s += lay(1, hand(hx, hy, 1.0, -150 + take * 30));
+  // linhas de velocidade
+  if (take > 0 && take < 1 || put > 0 && put < 1) s += `<g opacity=".35">${Array.from({ length: 8 }, (_, i) => `<line x1="${200 + i * 100}" y1="${300 + (i * 97) % 900}" x2="${600 + i * 100}" y2="${200 + (i * 97) % 900}" stroke="#fff" stroke-width="3"/>`).join('')}</g>`;
+  // tensão: escurece as bordas
+  return s + VIG(1.3) + GRAINV(t);
+}
+// 5. xeque-mate e o diretor vai embora rindo
+function sMate(t) {
+  const { L, d, k } = loc(t, 'mate');
+  let s = '';
+  if (L < 2.6) {
+    setCam(540, lerp(980, 940, L / 2.6), lerp(1.2, 1.35, L / 2.6), 0, [540, 960, 1]);
+    s += `<rect width="1080" height="1920" fill="#5A564E"/>`;
+    const bd = board(540, 1000, 900, 760, .82);
+    s += lay(1, bd.svg);
+    const [kx, ky] = bd.P(.56, .3), [qx0, qy0] = bd.P(.2, .9), [qx1, qy1] = bd.P(.56, .55);
+    const mv = easeInOut(range(L, .5, 1.4));
+    s += lay(1, piece('peao', ...bd.P(.3, .2), .8, 1) + piece('peao', ...bd.P(.75, .25), .8, 1) + piece('rei', kx, ky, .95, 1, mv > .95 ? 70 * easeOut(range(L, 1.5, 1.9)) : 0) + piece('cavalo', ...bd.P(.7, .7), 1, 1) + piece('dama', lerp(qx0, qx1, mv), lerp(qy0, qy1, mv) - Math.sin(mv * Math.PI) * 80, 1.05, 1));
+    s += lay(1, hand(lerp(qx0, qx1, mv) - 20, lerp(qy0, qy1, mv) - 360 - Math.sin(mv * Math.PI) * 80, 1.1, -6, '#C8907A', '#FFE0B0').replace('#7A3A18', '#1A2236'));
+  } else {
+    const L2 = L - 2.6;
+    setCam(lerp(500, 600, L2 / 3), 1100, lerp(1.0, 1.15, L2 / 3), 0, [540, 1100, 1]);
+    s += lay(.05, `<rect x="-800" y="-800" width="2700" height="3600" fill="url(#skyGrey)"/>`);
+    s += lay(.4, `<rect x="-800" y="1150" width="2700" height="1400" fill="#7A7468"/><rect x="-800" y="400" width="2700" height="760" fill="#5A5A60"/>`);
+    const laugh = Math.abs(Math.sin(L2 * 12)) * 10 * (1 - range(L2, 1.5, 2.5));
+    const wx = lerp(560, 140, easeIn(range(L2, .8, 3)));
+    s += lay(1, sil({ x: wx, y: 1700 - laugh, s: .9, kind: 'soldado', flip: -1, ph: L2 * 4, walk: range(L2, .6, 1), lean: -laugh * .6, col: '#141A2A', rim: '#DDE6FF', rimK: [1, -.3] }) + keyRing(wx + 40, 1700 - 470 * .9, .34, t, 1, 1));
+    // detento sentado, mão escondendo as chaves verdadeiras sob a mesa
+    s += lay(1, `<rect x="560" y="1460" width="700" height="44" rx="10" fill="#4A3020"/>` + sil({ x: 930, y: 1780, s: .9, kind: 'homem', sit: 1, flip: -1, col: '#5A2A10', rim: '#FFB070', rimK: [1, -.3], armF: [-30, -50], armB: [-60, -40], lean: 6 }) + `<g opacity="${op(range(L2, 1, 1.6))}">${keyRing(820, 1560, .3, t, 0, .2)}<circle cx="820" cy="1580" r="70" fill="#fff" opacity=".08" filter="url(#b12)"/></g>`);
+  }
+  return s + VIG() + GRAINV(t);
+}
+// 6. luzes do bloco apagam; cães farejam o corredor
+function sLights(t) {
+  const { L, d, k } = loc(t, 'lights');
+  setCam(540, lerp(900, 980, k), lerp(1.0, 1.12, k), 0, [540, 940, 1]);
+  const off = i => L > .2 + i * .22;
+  let s = `<rect width="1080" height="1920" fill="#08080C"/>`;
+  // corredor em perspectiva com celas dos dois lados
+  let c = `<path d="M-200 1900 L380 900 L700 900 L1280 1900Z" fill="#1A1A20"/><path d="M-200 -200 L380 600 L700 600 L1280 -200Z" fill="#101016"/>`;
+  c += `<path d="M-200 -200 L380 600 L380 900 L-200 1900Z" fill="#14141A"/><path d="M1280 -200 L700 600 L700 900 L1280 1900Z" fill="#14141A"/><rect x="380" y="600" width="320" height="300" fill="#0A0A0E"/>`;
+  for (let i = 0; i < 6; i++) { const z = i / 6, xl = lerp(-200, 380, z), xr = lerp(1280, 700, z), yt = lerp(-200, 600, z), yb = lerp(1900, 900, z); c += `<line x1="${f1(xl)}" y1="${f1(yt)}" x2="${f1(xl)}" y2="${f1(yb)}" stroke="#2A2A34" stroke-width="${f1(lerp(26, 6, z))}"/><line x1="${f1(xr)}" y1="${f1(yt)}" x2="${f1(xr)}" y2="${f1(yb)}" stroke="#2A2A34" stroke-width="${f1(lerp(26, 6, z))}"/>`; }
+  // lâmpadas do teto apagando uma a uma
+  for (let i = 0; i < 6; i++) { const z = i / 6 + .05, y = lerp(-100, 590, z), w = lerp(220, 50, z), on = !off(5 - i); c += `<rect x="${f1(540 - w / 2)}" y="${f1(y)}" width="${f1(w)}" height="${f1(w * .12)}" fill="${on ? '#FFF6D8' : '#22222A'}"/>${on ? `<ellipse cx="540" cy="${f1(y + w * .8)}" rx="${f1(w * 1.6)}" ry="${f1(w * 1.1)}" fill="url(#gWarm)" opacity=".5"/>` : ''}`; }
+  s += lay(1, c);
+  const dark = range(L, 1.5, 1.8);
+  s += `<rect width="1080" height="1920" fill="#000" opacity="${op(dark * .55)}"/>`;
+  // cão(s) e guarda com lanterna avançando pelo corredor
+  const adv = range(L, 1.6, d), dz = lerp(.25, .95, adv);
+  const sniff = 1, gx = 540;
+  if (L > 1.6) {
+    s += lay(1, `<path d="M${gx + 60} ${f1(lerp(900, 1500, dz) - 420 * dz)} L${-200} 1900 L700 1900Z" fill="url(#beamF2)" opacity=".5"/>`);
+    s += lay(1, dog(lerp(520, 300, adv), lerp(920, 1640, dz), lerp(.25, .95, dz), t, 0, sniff) + dog(lerp(600, 720, adv), lerp(930, 1700, dz), lerp(.25, 1.0, dz), t, 2, sniff, '#0b0b10', '#FFD9A0'));
+    s += lay(1, sil({ x: lerp(560, 600, adv), y: lerp(900, 1500, dz) - 0, s: lerp(.2, .75, dz), kind: 'soldado', ph: L * 4, walk: 1, col: '#06060A', rim: '#BFD4FF', rimK: [1, -.2], light: true, shadow: .2 }));
+    // fio de cheiro de café saindo de uma cela à direita; cães passam reto
+    s += lay(1, steam(980, 1300, t, 3, '#8A5A2A', .9, 1.3));
+  }
+  return s + VIG() + GRAINV(t);
+}
+// 7. a chave verdadeira na fechadura
+function sDoor(t) {
+  const { L, d, k } = loc(t, 'door');
+  setCam(540, 960, lerp(1.0, 1.2, easeInOut(k)), 0, [540, 960, 1]);
+  const turn = easeInOut(range(L, .9, 1.4)), open = easeInOut(range(L, 1.8, d));
+  let s = `<rect width="1080" height="1920" fill="#0A0A10"/>`;
+  s += lay(1, `<rect x="-200" y="-200" width="1500" height="2400" fill="#2A2C34"/>${Array.from({ length: 12 }, (_, i) => `<circle cx="${80 + (i % 3) * 460}" cy="${200 + Math.floor(i / 3) * 480}" r="16" fill="#1A1C22"/>`).join('')}<rect x="300" y="760" width="480" height="420" rx="20" fill="#3A3C44"/><rect x="300" y="760" width="480" height="420" rx="20" fill="none" stroke="#1A1C22" stroke-width="10"/><path d="M540 880 a40 40 0 1 1 1 0 L570 1060 L510 1060Z" fill="#050508"/>`);
+  // chave entrando e girando
+  const kx = 540, ky = lerp(1420, 940, easeOut(range(L, 0, .8)));
+  s += lay(1, `<g transform="translate(${kx},${f1(ky)}) rotate(${f1(turn * 90)})"><circle cx="0" cy="300" r="70" fill="#C9CDD4" stroke="#7A808A" stroke-width="10"/><circle cx="0" cy="300" r="24" fill="#2A2C34"/><rect x="-16" y="0" width="32" height="240" fill="#C9CDD4" stroke="#7A808A" stroke-width="6"/><path d="M-4 20 L-4 230" stroke="#fff" stroke-width="6" opacity=".7"/></g>` + (() => { const th = turn * Math.PI / 2, bx = kx - 300 * Math.sin(th), by = ky + 300 * Math.cos(th), ox = -30 * Math.sin(th) * -1, oy = 30 * Math.cos(th); return hand(bx - 30 * Math.sin(th), by + 30 * Math.cos(th), 1.1, 180 + turn * 90); })());
+  if (turn > .95) s += `<g opacity="${op(1 - range(L, 1.4, 1.8))}"><circle cx="540" cy="940" r="120" fill="#fff" opacity=".25" filter="url(#b30)"/></g>`;
+  // porta abre: luz fria e chuva lá fora
+  if (open > 0) s += `<path d="M${f1(540 - 700 * open)} 0 L${f1(540 + 700 * open)} 0 L${f1(540 + 900 * open)} 1920 L${f1(540 - 900 * open)} 1920Z" fill="#9FB4D8" opacity="${op(open * .6)}"/>` + `<g opacity="${op(open)}">${rain(t, .8)}</g>`;
+  return s + VIG() + GRAINV(t);
+}
+// 8. saindo caminhando pela chuva (corte seco no fim)
+function sRain(t) {
+  const { L, d, k } = loc(t, 'rain');
+  setCam(540, lerp(1000, 940, k), lerp(1.05, 1.0, k), 0, [540, 980, 1]);
+  let s = lay(.05, `<rect x="-800" y="-800" width="2700" height="3600" fill="url(#skyRain)"/>`);
+  s += lay(.3, `<rect x="-800" y="560" width="2700" height="900" fill="#2A2E3A"/>${Array.from({ length: 14 }, (_, i) => `<rect x="${-800 + i * 200}" y="560" width="196" height="900" fill="#30343F"/>`).join('')}<rect x="-800" y="530" width="2700" height="40" fill="#1E2028"/><rect x="380" y="900" width="320" height="560" fill="#0A0C12"/><rect x="380" y="900" width="320" height="560" fill="#9FB4D8" opacity=".25"/>`);
+  s += lay(.6, `<rect x="-800" y="1440" width="2700" height="1000" fill="#1A1E28"/>${Array.from({ length: 9 }, (_, i) => `<ellipse cx="${-200 + i * 190}" cy="${1560 + (i % 3) * 110}" rx="${120 + (i % 4) * 30}" ry="18" fill="#5A6A8A" opacity=".35"/>`).join('')}`);
+  // poste de luz
+  s += lay(.8, `<rect x="880" y="700" width="20" height="900" fill="#0A0A10"/><path d="M890 710 L800 710" stroke="#0A0A10" stroke-width="16"/><ellipse cx="800" cy="730" rx="30" ry="12" fill="#FFE6B0"/><path d="M780 730 L820 730 L980 1600 L620 1600Z" fill="url(#beamW2)" opacity=".5"/>`);
+  // ele caminha de costas, se afastando
+  const z = lerp(1.0, .55, easeIn(k)), y = lerp(1760, 1480, easeIn(k));
+  s += lay(1, sil({ x: lerp(540, 600, k), y, s: z * .9, kind: 'homem', ph: L * 4.4, walk: 1, col: '#5A2A10', rim: '#BFD4FF', rimK: [1, -.4], shadow: .3 }) + `<ellipse cx="${f1(lerp(540, 600, k))}" cy="${f1(y + 40)}" rx="${f1(120 * z)}" ry="${f1(14 * z)}" fill="#8AA0C8" opacity=".25"/>`);
+  s += rain(t, 1.1, 200);
+  return s + VIG() + GRAINV(t);
+}
+const FN = { coffee: sCoffee, yard: sYard, drop: sDrop, swap: sSwap, mate: sMate, lights: sLights, door: sDoor, rain: sRain };
+/*RENDER*/
+</script>
+</body>
+</html>

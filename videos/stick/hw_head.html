@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A Origem do Halloween</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --accent:#ffb02e; --s:1; }
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s));background:#000}
+  #c{display:block;width:1080px;height:1920px}
+  #flash{position:absolute;inset:0;background:radial-gradient(circle,#f3d9ff 0%,#9b4dff 55%,#2a0a4a 100%);opacity:0;pointer-events:none}
+  .ov{position:absolute;left:40px;right:40px;top:var(--y);text-align:center;color:#fff;font-family:'Montserrat',system-ui,sans-serif;font-weight:900;font-size:var(--fs);line-height:1.05;
+    opacity:0;transform:translateY(40px) scale(.92);transition:opacity .25s ease, transform .45s cubic-bezier(.2,.9,.3,1.25);
+    text-shadow:0 10px 40px rgba(0,0,0,.85),0 2px 8px rgba(0,0,0,.8);pointer-events:none}
+  .ov.on{opacity:1;transform:none}
+  .a{color:var(--accent)}
+  .sub{display:block;font-size:.4em;letter-spacing:.12em;margin-top:.25em;color:#ffe2b0}
+  .tag{display:inline-block;border:8px solid var(--accent);border-radius:28px;padding:.2em .55em;background:rgba(20,8,30,.55)}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;font:800 54px 'Montserrat',sans-serif;background:rgba(0,0,0,.55);cursor:pointer;gap:30px;text-align:center}
+  #start small{font-size:30px;opacity:.6}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="flash"></div>
+  <div id="texts"></div>
+  <div id="start">▶ CLIQUE ou ESPAÇO<small>com som · ESPAÇO pausa · R reinicia</small></div>
+</div>
+<!--AUDIO-->
+<!--SKIN-->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* ======== LINHA DO TEMPO (segundos) — a mesma usada para gerar o áudio ======== */
+const EV = {
+  // 1. cidade
+  howl: 1.0, walk0: 2.8, walk1: 7.0, knock: 7.4,
+  // 2. a porta
+  creak: 9.0, peek: 10.2, giggle: 10.5, hopIn: 11.3, floor: 12.6, fall: 13.5, flash1: 14.6,
+  // 3. celtas
+  celt: 15.0, sheet: 21.5, sweets: 24.5, tRun: 28.0, flash2: 30.6,
+  // 4. idade média
+  med: 31.0, knockMed: 33.5, blend: 37.0, wink: 41.0, tRun2: 42.0, flash3: 44.6,
+  // 5. o nome
+  church: 45.0, name1: 48.0, name2: 50.0, name3: 52.0, flash4: 54.6,
+  // 6. fazenda
+  farm: 55.0, carve: 57.0, candle: 61.0, compare: 62.5, hug: 65.5, flash5: 68.6,
+  // 7. de volta
+  home: 69.0, candy: 71.0, end: 78.0,
+};
+const TEXTS = [
+  { from: 15.8, to: 21.0, y: 170, fs: 120, html: '<span class="a">SAMHAIN</span><span class="sub">FESTA DOS CELTAS · "FIM DO VERÃO"</span>' },
+  { from: 22.2, to: 25.2, y: 190, fs: 76,  html: 'FANTASIA DE <span class="a">FANTASMA</span>' },
+  { from: 25.4, to: 28.6, y: 190, fs: 76,  html: '<span class="a">DOCES</span> PARA OS ESPÍRITOS' },
+  { from: 31.8, to: 36.4, y: 170, fs: 110, html: '<span class="a">IDADE MÉDIA</span><span class="sub">DE PORTA EM PORTA · LANTERNAS DE NABO</span>' },
+  { from: 45.8, to: 47.8, y: 170, fs: 92,  html: '<span class="a">ANOS 700–800</span><span class="sub">DIA DE TODOS OS SANTOS</span>' },
+  { from: 48.0, to: 49.9, y: 210, fs: 96,  html: '<span class="tag">ALL HALLOWS\' EVE</span>' },
+  { from: 50.0, to: 51.9, y: 210, fs: 96,  html: '<span class="tag">ALL HALLOW E\'EN</span>' },
+  { from: 52.0, to: 54.5, y: 210, fs: 110, html: '<span class="tag a">HALLOWEEN</span>' },
+  { from: 55.6, to: 60.4, y: 170, fs: 100, html: '<span class="a">ANOS 1800</span><span class="sub">AMÉRICA DO NORTE</span>' },
+  { from: 61.2, to: 65.2, y: 170, fs: 88, html: '<span style="white-space:nowrap">NABO <span class="a">→</span> ABÓBORA</span>' },
+];

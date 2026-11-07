@@ -1,0 +1,41 @@
+{
+ "total": 34.35,
+ "s": [
+  {
+   "k": "b1",
+   "txt": "Na vida real, esses três presos juntaram mais de cinquenta capas de chuva escondidas dentro de Alcatraz, a prisão mais segura do mundo.",
+   "t0": 0.1,
+   "t1": 5.71
+  },
+  {
+   "k": "b2",
+   "txt": "Eles roubavam ou conseguiam com outros presos, uma de cada vez, e os guardas nunca perceberam o que estava sumindo.",
+   "t0": 5.76,
+   "t1": 10.64
+  },
+  {
+   "k": "b3",
+   "txt": "Mas, toda noite, eles usavam o calor dos canos de vapor pra derreter a borracha das capas e colar uma na outra em segredo.",
+   "t0": 10.69,
+   "t1": 16.54
+  },
+  {
+   "k": "b4",
+   "txt": "No meio tempo, eles juntaram cabelo da barbearia da prisão e colaram em cabeças falsas feitas de sabão, papel higiênico e tinta.",
+   "t0": 16.59,
+   "t1": 21.96
+  },
+  {
+   "k": "b5",
+   "txt": "Quando o guarda passou na ronda da madrugada e olhou pelas grades, viu os três dormindo profundamente e seguiu em frente.",
+   "t0": 22.01,
+   "t1": 27.13
+  },
+  {
+   "k": "b6",
+   "txt": "Naquela hora, os três já estavam no telhado, com um bote feito de capas de chuva, entrando na baía de São Francisco. E nunca mais foram encontrados pelo FBI.",
+   "t0": 27.18,
+   "t1": 34.25
+  }
+ ]
+}

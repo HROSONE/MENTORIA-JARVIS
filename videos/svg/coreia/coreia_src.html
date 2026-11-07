@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Preso por uma Bíblia</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s,1));background:#000}
+  svg{display:block}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font:800 54px sans-serif;background:rgba(0,0,0,.55);cursor:pointer}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+<svg id="s" width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+<defs id="defs"></defs>
+<g id="root"></g>
+</svg>
+<div id="start">▶ CLIQUE (com som)</div>
+</div>
+<!--AUDIO-->
+<!--NARR-->
+<script>
+/*LIB*/
+/* ===== 16:9: câmera centrada em (960,540) ===== */
+const W = 1920, H = 1080;
+function lay(p, content, filter = '') {
+  const z = CAM.z0 * (1 + (CAM.z / CAM.z0 - 1) * p), x = CAM.x0 + (CAM.x - CAM.x0) * p, y = CAM.y0 + (CAM.y - CAM.y0) * p;
+  return `<g transform="translate(960,540) rotate(${f1(CAM.r)}) scale(${Math.round(z * 1000) / 1000}) translate(${f1(-x)},${f1(-y)})"${filter ? ` filter="url(#${filter})"` : ''}>${content}</g>`;
+}
+const N = window.NARR, S = Object.fromEntries(N.s.map(x => [x.k, x]));
+const T = k => S[k].t0, E = k => S[k].t1, TOTAL = N.total;
+const R = (() => { let s = 11; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+const hand = (t, k = 1, s = 0) => [noise1(t * .7, s) * 5 * k, noise1(t * .6, s + 3) * 4 * k];
+
+/* ===================== personagens em silhueta ===================== */
+// tipos: homem, mulher, crianca, soldado. Origem nos pés. Altura adulta ~ 1000.
+function limbP(x, y, ang, l, w0, w1) {
+  const c = Math.cos(ang * Math.PI / 180), sn = Math.sin(ang * Math.PI / 180), ex = x - sn * l, ey = y + c * l;
+  return { d: `M${f1(x + c * w0)} ${f1(y + sn * w0)} L${f1(ex + c * w1)} ${f1(ey + sn * w1)} Q${f1(ex - sn * w1 * .9)} ${f1(ey + c * w1 * .9)} ${f1(ex - c * w1)} ${f1(ey - sn * w1)} L${f1(x - c * w0)} ${f1(y - sn * w0)} Q${f1(x + sn * w0 * .9)} ${f1(y - c * w0 * .9)} ${f1(x + c * w0)} ${f1(y + sn * w0)}Z`, ex, ey };
+}
+function sil(o) {
+  const P = Object.assign({ x: 0, y: 0, s: 1, flip: 1, kind: 'homem', ph: 0, walk: 0, lean: 0, col: '#0d0a10', rim: null, rimK: [1, -.3], armF: null, armB: null, sit: 0, carry: false, light: false, shadow: .35 }, o);
+  const kid = P.kind === 'crianca', sold = P.kind === 'soldado', fem = P.kind === 'mulher';
+  const B = P.col, a = Math.sin(P.ph) * P.walk;
+  const hip = kid ? 330 : 500, legL1 = kid ? 165 : 255, legL2 = kid ? 150 : 245, sh = kid ? 600 : 860, headR = kid ? 92 : 78;
+  let s = '';
+  // pernas
+  const leg = (ang, sitK) => {
+    const a1 = lerp(ang, -85, sitK), th = limbP(0, -hip, a1, legL1, kid ? 30 : 44, kid ? 24 : 34);
+    const a2 = lerp(a1 - Math.max(0, -ang) * 1.2 - 4, 5, sitK), shn = limbP(th.ex, th.ey, a2, legL2, kid ? 23 : 33, kid ? 18 : 26);
+    const bx = shn.ex, by = shn.ey, bw = kid ? .6 : 1;
+    return `<path d="${th.d}" fill="${B}"/><path d="${shn.d}" fill="${B}"/><path d="M${f1(bx + 34 * bw)} ${f1(by - 30 * bw)} L${f1(bx + 34 * bw)} ${f1(by + 14 * bw)} L${f1(bx - 74 * bw)} ${f1(by + 14 * bw)} Q${f1(bx - 80 * bw)} ${f1(by - 12 * bw)} ${f1(bx - 46 * bw)} ${f1(by - 22 * bw)}Z" fill="${B}"/>`;
+  };
+  const sitY = P.sit * (legL1 * .95);
+  let legs = leg(26 * a, P.sit) + leg(-26 * a, P.sit);
+  if (fem) legs += `<path d="M-96 ${-hip - 40} L96 ${-hip - 40} L${f1(120 + 20 * Math.abs(a))} ${-hip + 330} L${f1(-120 - 20 * Math.abs(a))} ${-hip + 330}Z" fill="${B}"/>`;
+  if (sold) legs += `<path d="M-100 ${-hip - 60} L100 ${-hip - 60} L118 ${-hip + 210} L-118 ${-hip + 210}Z" fill="${B}"/>`;
+  // tronco
+  const tw = kid ? 82 : 110;
+  let up = `<path d="M${-tw * .5} ${-sh} C${-tw - 6} ${-sh + 40} ${-tw} ${-sh + 180} ${-tw * .8} ${-hip + 30} L${tw * .8} ${-hip + 30} C${tw} ${-sh + 180} ${tw + 6} ${-sh + 40} ${tw * .5} ${-sh}Z" fill="${B}"/>`;
+  up += `<rect x="-26" y="${-sh - 50}" width="52" height="70" rx="18" fill="${B}"/>`;
+  // cabeça
+  const hy = -sh - 50 - headR * .85;
+  up += `<ellipse cx="0" cy="${f1(hy)}" rx="${headR * .9}" ry="${headR}" fill="${B}"/><path d="M${-headR * .9} ${f1(hy)} L${-headR * 1.12} ${f1(hy + 18)} L${-headR * .85} ${f1(hy + 26)}Z" fill="${B}"/>`;
+  if (fem) up += `<circle cx="${headR * .8}" cy="${f1(hy - 10)}" r="${headR * .55}" fill="${B}"/><path d="M${-headR} ${f1(hy - 20)} Q0 ${f1(hy - headR * 1.4)} ${headR} ${f1(hy - 20)}" fill="${B}"/>`;
+  if (sold) up += `<path d="M${-headR * 1.35} ${f1(hy - headR * .55)} Q0 ${f1(hy - headR * 1.75)} ${headR * 1.35} ${f1(hy - headR * .55)} L${headR * 1.0} ${f1(hy - headR * .35)} L${-headR * 1.6} ${f1(hy - headR * .2)}Z" fill="${B}"/><rect x="${-headR}" y="${f1(hy - headR * .6)}" width="${headR * 2}" height="${headR * .35}" fill="${B}"/>`;
+  if (P.kind === 'homem') up += `<path d="M${-headR * .95} ${f1(hy - 8)} Q${-headR * .7} ${f1(hy - headR * 1.25)} ${headR * .3} ${f1(hy - headR * 1.08)} Q${headR * 1.05} ${f1(hy - headR * .8)} ${headR * .92} ${f1(hy)}Z" fill="${B}"/>`;
+  // braços
+  const al = kid ? 130 : 185, fl = kid ? 115 : 165, aw = kid ? 22 : 30;
+  const arm = (side, A, Bn) => { const u = limbP(side * (tw * .7), -sh + 30, A, al, aw, aw * .8), f = limbP(u.ex, u.ey, A + Bn, fl, aw * .8, aw * .7); return { s: `<path d="${u.d}" fill="${B}"/><path d="${f.d}" fill="${B}"/><circle cx="${f1(f.ex)}" cy="${f1(f.ey)}" r="${aw}" fill="${B}"/>`, x: f.ex, y: f.ey }; };
+  const AB = P.armB || [-18 * a + 6, -16], AF = P.armF || (P.carry ? [-60, -70] : [18 * a - 4, 18 * a + 10]);
+  const armB = arm(1, AB[0], AB[1]), armF = arm(-1, AF[0], AF[1]);
+  let extra = '';
+  if (P.carry) extra += `<g transform="translate(${f1(armF.x - 20)},${f1(armF.y + 120)}) scale(.62) rotate(-10)">${sil({ kind: 'crianca', col: B, shadow: 0, sit: .6, armF: [-40, -60], armB: [-40, -50] }).replace(/^<g[^>]*>/, '<g>')}</g>`;
+  if (P.light) extra += `<g transform="translate(${f1(armF.x)},${f1(armF.y)})"><rect x="-14" y="-10" width="60" height="22" rx="6" fill="#22202a"/><path d="M46 -12 L1400 -260 L1400 360 L46 14Z" fill="url(#beamF)" opacity=".75"/></g>`;
+  const body = `<g transform="translate(0,${f1(sitY)}) rotate(${f1(P.lean)} 0 ${-hip})">${armB.s}${up}${armF.s}${extra}</g>`;
+  let rimF = '';
+  if (P.rim) rimF = ` filter="url(#${rig({ amb: '#ffffff', k: [-P.rimK[0], -P.rimK[1]], shO: 0, rims: [{ c: P.rim, k: P.rimK, w: 7, o: 1, glow: true }] })})"`;
+  return `<g transform="translate(${f1(P.x)},${f1(P.y)}) scale(${f1(P.s * P.flip * 1000) / 1000},${f1(P.s * 1000) / 1000})">${P.shadow ? `<ellipse cx="0" cy="8" rx="${kid ? 110 : 170}" ry="24" fill="#000" opacity="${P.shadow}" filter="url(#b12)"/>` : ''}<g${rimF}>${legs}${body}</g></g>`;
+}
+
+function hug(o) {  // sentado no chão abraçando os joelhos, de perfil (virado para a direita)
+  const P = Object.assign({ x: 0, y: 0, s: 1, flip: 1, col: '#0b0d14', rim: '#AFC6FF', rimK: [1, -.6], adult: 0, breath: 0, eyes: 0, look: 0 }, o);
+  const a = P.adult, B = P.col, hr = lerp(88, 62, a), L = lerp(1, 1.45, a), br = P.breath * 5;
+  const sh = [lerp(-30, -50, a), lerp(-250, -340, a) - br], kn = [lerp(95, 150, a), lerp(-205, -290, a)], ft = [lerp(140, 215, a), 0], hip = [-50, -40];
+  let s = '';
+  s += `<path d="M${hip[0] - 70} 0 Q${hip[0] - 110} ${f1(sh[1] * .5)} ${sh[0] - 40} ${f1(sh[1] + 10)} Q${sh[0] + 20} ${f1(sh[1] - 40)} ${sh[0] + 70} ${f1(sh[1] + 10)} L${kn[0] - 30} ${kn[1] + 40} L${hip[0] + 60} -10 L${hip[0] + 60} 0Z" fill="${B}"/>`; // costas e tronco
+  s += `<path d="M${hip[0]} -60 L${kn[0]} ${kn[1] - 28} Q${kn[0] + 36} ${kn[1] - 10} ${kn[0] + 30} ${kn[1] + 30} L${ft[0] - 10} -26 L${ft[0] + 40} -18 Q${ft[0] + 50} 0 ${ft[0] + 30} 4 L${ft[0] - 60} 4 L${hip[0]} 0Z" fill="${B}"/>`; // perna
+  s += `<path d="M${sh[0] + 10} ${f1(sh[1] + 20)} Q${kn[0] - 30} ${kn[1] + 30} ${kn[0] + 30} ${kn[1] + 70} L${kn[0] + 34} ${kn[1] + 100} Q${kn[0] - 40} ${kn[1] + 80} ${sh[0] - 20} ${f1(sh[1] + 70)}Z" fill="${B}"/><circle cx="${kn[0] + 30}" cy="${kn[1] + 86}" r="${f1(26 * L * .8)}" fill="${B}"/>`; // braço
+  const hx = sh[0] + lerp(70, 60, a) + P.look * 10, hy = sh[1] - hr * .55 + br;
+  s += `<ellipse cx="${f1(hx)}" cy="${f1(hy)}" rx="${f1(hr)}" ry="${f1(hr * 1.02)}" fill="${B}"/><path d="M${f1(hx + hr * .92)} ${f1(hy - 4)} L${f1(hx + hr * 1.14)} ${f1(hy + 16)} L${f1(hx + hr * .88)} ${f1(hy + 24)}Z" fill="${B}"/>`;
+  s += `<rect x="${f1(hx - 22)}" y="${f1(hy + hr * .6)}" width="44" height="${f1(hr * .7)}" fill="${B}"/>`;
+  if (P.eyes) s += `<circle cx="${f1(hx + hr * .62)}" cy="${f1(hy - 4)}" r="${f1(hr * .075)}" fill="#DDE8FF" opacity="${op(P.eyes)}"/>`;
+  const id = rig({ amb: '#ffffff', k: [-P.rimK[0], -P.rimK[1]], shO: 0, rims: [{ c: P.rim, k: P.rimK, w: 7, o: 1, glow: true }] });
+  return `<g transform="translate(${f1(P.x)},${f1(P.y)}) scale(${f1(P.s * P.flip * 1000) / 1000},${f1(P.s * 1000) / 1000})"><ellipse cx="40" cy="8" rx="230" ry="28" fill="#000" opacity=".4" filter="url(#b12)"/><g filter="url(#${id})">${s}</g></g>`;
+}
+/* ===================== objetos ===================== */
+function bible(x, y, s, open = 0, rot = 0, glow = 0) {
+  let o = `<g transform="translate(${x},${y}) rotate(${rot}) scale(${s})">`;
+  if (glow) o += `<ellipse cx="0" cy="0" rx="420" ry="300" fill="url(#gWarm)" opacity="${op(glow)}"/>`;
+  o += `<ellipse cx="10" cy="150" rx="300" ry="40" fill="#000" opacity=".45" filter="url(#b12)"/>`;
+  if (open < .5) {
+    o += `<path d="M-230 -150 L230 -150 Q250 -150 250 -130 L250 130 Q250 150 230 150 L-230 150Z" fill="#E9DFC6"/><path d="M-230 -150 L230 -150 L230 120 L-230 120Z" fill="#3A1C14"/>`;
+    for (let i = 0; i < 6; i++) o += `<line x1="-226" y1="${124 + i * 4}" x2="244" y2="${124 + i * 4}" stroke="#C9A86A" stroke-width="1.5" opacity=".7"/>`;
+    o += `<path d="M-238 -158 L238 -158 Q252 -158 252 -144 L252 110 Q252 124 238 124 L-238 124 Q-252 124 -252 110 L-252 -144 Q-252 -158 -238 -158Z" fill="#4A2216" stroke="#2A0E08" stroke-width="5"/>`;
+    o += `<path d="M-252 -150 L-210 -150 L-210 118 L-252 118Z" fill="#000" opacity=".25"/><rect x="-200" y="-130" width="420" height="230" rx="6" fill="none" stroke="#B88A3A" stroke-width="4" opacity=".75"/>`;
+    o += `<path d="M10 -100 L10 70 M-40 -40 L60 -40" stroke="#D9AE52" stroke-width="12" stroke-linecap="round"/>`;
+  } else {
+    const k = (open - .5) * 2;
+    o += `<path d="M0 -150 Q-120 -175 -300 -150 L-300 140 Q-120 115 0 140Z" fill="#F0E6CC" stroke="#8a7a5a" stroke-width="2"/><path d="M0 -150 Q120 -175 300 -150 L300 140 Q120 115 0 140Z" fill="#F4EBD3" stroke="#8a7a5a" stroke-width="2"/>`;
+    for (let i = 0; i < 14; i++) { o += `<line x1="-270" y1="${-120 + i * 17}" x2="-30" y2="${-118 + i * 17}" stroke="#6a5a40" stroke-width="3" opacity=".35"/><line x1="30" y1="${-118 + i * 17}" x2="270" y2="${-120 + i * 17}" stroke="#6a5a40" stroke-width="3" opacity=".35"/>`; }
+    o += `<path d="M0 -150 L0 140" stroke="#9a8a6a" stroke-width="4"/>`;
+  }
+  return o + '</g>';
+}
+const SNOW = Array.from({ length: 160 }, () => ({ x: R() * 2400 - 240, y: R() * 1300, r: 1.5 + R() * 4.5, s: R() * 6, v: .5 + R() }));
+const snow = (t, k = 1, wind = 40) => SNOW.map(q => { const y = (q.y + t * 70 * q.v) % 1300 - 110, x = (q.x + t * wind * q.v + Math.sin(t + q.s) * 25 + 2400) % 2400 - 240; return `<circle cx="${f1(x)}" cy="${f1(y)}" r="${q.r}" fill="#EEF3FF" opacity="${op((.35 + .5 * (q.r / 6)) * k)}"/>`; }).join('');
+const DUST = Array.from({ length: 70 }, () => ({ x: R() * 1920, y: R() * 1080, r: 1.2 + R() * 3.5, s: R() * 6 }));
+const dust = (t, col = '#FFE6B0', k = 1) => DUST.map(q => `<circle cx="${f1((q.x + Math.sin(t * .4 + q.s) * 40 + t * 6) % 1920)}" cy="${f1((q.y - t * 10 * (.5 + q.s / 6) + 1080 * 6) % 1080)}" r="${q.r}" fill="${col}" opacity="${op((.2 + .3 * Math.sin(t * 2 + q.s)) * k)}"/>`).join('');
+const VIG = (k = 1) => `<rect width="1920" height="1080" fill="url(#vig)" opacity="${k}"/>`;
+const GRAIN = t => { const j = Math.floor(t * 24); return `<rect x="-200" y="-200" width="2320" height="1480" fill="url(#noiseP)" opacity=".06" transform="translate(${(j * 37) % 200 - 100},${(j * 53) % 200 - 100})"/>`; };
+const FADE = (k, c = '#000') => k > 0 ? `<rect width="1920" height="1080" fill="${c}" opacity="${op(k)}"/>` : '';
+function bars(x0, x1, y0, y1, n, col = '#1b1d24', hi = '#7D8FB8') {
+  let o = ''; const st = (x1 - x0) / (n - 1);
+  for (let i = 0; i < n; i++) { const x = x0 + i * st; o += `<rect x="${f1(x - 14)}" y="${y0}" width="28" height="${y1 - y0}" rx="8" fill="${col}"/><rect x="${f1(x - 10)}" y="${y0}" width="6" height="${y1 - y0}" fill="${hi}" opacity=".45"/>`; }
+  o += `<rect x="${x0 - 40}" y="${y0 + 40}" width="${x1 - x0 + 80}" height="26" rx="8" fill="${col}"/><rect x="${x0 - 40}" y="${y1 - 140}" width="${x1 - x0 + 80}" height="26" rx="8" fill="${col}"/>`;
+  return o;
+}
+// cela: parede de pedra, janela alta com grade, luz da lua
+function cell(t, o = {}) {
+  const day = o.day || 0, season = o.season ?? -1, tally = o.tally || 0;
+  const wall = mix('#141826', '#3A3A44', day), wallL = mix('#20263A', '#5A5A66', day);
+  let s = `<rect x="-600" y="-400" width="3200" height="1900" fill="${wall}"/>`;
+  for (let r = 0; r < 14; r++) for (let c = 0; c < 16; c++) { const x = -600 + c * 200 + (r % 2) * 100, y = -400 + r * 100; s += `<rect x="${x + 4}" y="${y + 4}" width="192" height="92" rx="10" fill="${wallL}" opacity="${f1(.25 + ((r * 7 + c * 3) % 5) * .06)}"/>`; }
+  // janela
+  const wx = 1180, wy = 120, ww = 300, wh = 220;
+  const sky = season < 0 ? mix('#3A5A9A', '#BFD8FF', day) : ['#DDE8F8', '#8FC0E8', '#F2B880', '#B8C8D8'][season % 4];
+  s += `<rect x="${wx - 20}" y="${wy - 20}" width="${ww + 40}" height="${wh + 40}" fill="#0A0C14"/><rect x="${wx}" y="${wy}" width="${ww}" height="${wh}" fill="${sky}"/>`;
+  if (season === 0 || season === 3) s += Array.from({ length: 18 }, (_, i) => `<circle cx="${f1(wx + (i * 53 + t * 30) % ww)}" cy="${f1(wy + (i * 37 + t * 60) % wh)}" r="3" fill="#fff"/>`).join('');
+  if (season === 1) s += `<path d="M${wx} ${wy + wh} Q${wx + 80} ${wy + 120} ${wx + 160} ${wy + wh} Q${wx + 230} ${wy + 140} ${wx + ww} ${wy + wh}Z" fill="#4A7A3A"/>`;
+  for (let i = 1; i < 5; i++) s += `<rect x="${wx + i * ww / 5 - 7}" y="${wy}" width="14" height="${wh}" fill="#0A0C14"/>`;
+  s += `<rect x="${wx}" y="${wy + wh / 2 - 7}" width="${ww}" height="14" fill="#0A0C14"/>`;
+  // feixe de luz
+  s += `<path d="M${wx} ${wy} L${wx + ww} ${wy} L${wx - 80} 1100 L${wx - 640} 1100Z" fill="url(#beamM)" opacity="${f1(.55 + .25 * day)}"/>`;
+  s += `<path d="M${wx} ${wy} L${wx + ww} ${wy} L${wx - 80} 1100 L${wx - 640} 1100Z" fill="url(#bars8)" opacity=".35"/>`;
+  // chão
+  s += `<rect x="-600" y="900" width="3200" height="700" fill="${mix('#0D1018', '#2A2A30', day)}"/><rect x="-600" y="900" width="3200" height="10" fill="#000" opacity=".4"/>`;
+  s += `<path d="M${wx - 640} 1100 L${wx - 80} 1100 L${wx + 20} 900 L${wx - 420} 900Z" fill="#9AB4FF" opacity="${f1(.12 + .08 * day)}"/>`;
+  // marcas na parede (contagem dos dias)
+  let tm = '';
+  for (let i = 0; i < tally; i++) { const g = Math.floor(i / 5), j = i % 5, gx = 260 + (g % 9) * 82, gy = 420 + Math.floor(g / 9) * 90; tm += j < 4 ? `<line x1="${gx + j * 14}" y1="${gy}" x2="${gx + j * 14 + 2}" y2="${gy + 56}" stroke="#C8CCD8" stroke-width="5" stroke-linecap="round" opacity=".6"/>` : `<line x1="${gx - 8}" y1="${gy + 44}" x2="${gx + 56}" y2="${gy + 10}" stroke="#C8CCD8" stroke-width="5" stroke-linecap="round" opacity=".6"/>`; }
+  return s + tm;
+}
+// mapa estilizado da península coreana (lon/lat → px)
+const PJ = (lon, lat) => [f1((lon - 119.5) * 300), f1((43.6 - lat) * 370)];
+const KOREA = [[124.3, 39.9], [125.5, 40.6], [126.9, 41.7], [128.1, 41.5], [128.9, 42.0], [129.7, 42.45], [130.65, 42.4], [129.9, 41.6], [129.7, 40.9], [128.6, 40.1], [127.6, 39.7], [127.4, 39.2], [128.4, 38.6], [129.0, 37.8], [129.45, 36.8], [129.45, 35.9], [129.3, 35.3], [129.0, 35.05], [128.4, 34.85], [127.5, 34.6], [126.5, 34.4], [126.3, 35.1], [126.6, 35.9], [126.8, 36.7], [126.4, 37.0], [126.6, 37.45], [126.1, 37.75], [125.3, 37.7], [124.75, 38.1], [125.15, 38.65], [125.0, 39.2], [124.7, 39.6]];
+const DMZ = [[126.1, 37.75], [126.65, 37.8], [127.1, 38.2], [127.8, 38.3], [128.35, 38.6]];
+const CHINA = [[117, 45], [131.5, 45], [131.2, 43.3], [130.65, 42.4], [129.7, 42.45], [128.9, 42.0], [128.1, 41.5], [126.9, 41.7], [125.5, 40.6], [124.3, 39.9], [123.0, 39.6], [121.9, 39.05], [121.2, 38.75], [121.5, 39.4], [122.2, 40.4], [121.0, 40.9], [119.5, 39.9], [118.0, 39.2], [117, 39]];
+const JAPAN = [[129.6, 33.2], [130.9, 33.9], [131.9, 34.6], [133.5, 35.5], [135.5, 35.6], [137, 37], [140, 40], [140, 45], [145, 45], [145, 30], [130.2, 30.8], [129.8, 32.6]];
+const poly = (pts, attr) => `<path d="M${pts.map(p => PJ(...p).join(' ')).join(' L')}Z" ${attr}/>`;
+const NK_CLIP = [...KOREA.slice(0, 12), ...DMZ.slice().reverse().slice(0, 5).reverse().reverse(), ...KOREA.slice(26)];
+function nkPoly() { // norte = da fronteira até a DMZ
+  const north = [...KOREA.slice(0, 13), ...DMZ.slice().reverse(), ...KOREA.slice(27)];
+  return north;
+}
+const CITIES = [ // lon, lat, peso (luz)
+  [126.98, 37.56, 1.0], [129.05, 35.17, .7], [128.6, 35.87, .6], [126.85, 35.16, .45], [127.38, 36.35, .5], [127.15, 37.3, .7], [126.7, 37.45, .7], [127.5, 37.7, .4], [128.9, 37.75, .3], [129.35, 36.0, .35], [126.5, 36.8, .3], [127.9, 36.6, .3], [128.2, 35.2, .35],
+  [121.6, 38.92, .8], [123.43, 41.8, .9], [124.4, 40.13, .45], [122.1, 41.1, .4], [125.3, 43.85, .7], [126.6, 45, .5], [130.4, 33.6, .8], [129.9, 33.0, .4], [132.5, 34.4, .6], [118.2, 39.6, .6], [117.2, 39.1, .9], [120.4, 36.1, .9], [119.5, 37.4, .4]];
+
+/* ===================== cenas ===================== */
+const SH = [
+  ['cell', 0, T('h3') - .15], ['bible', T('h3') - .15, T('h4') - .15], ['cell2', T('h4') - .15, T('a1') - .4],
+  ['village', T('a1') - .4, T('a3') - .3], ['inside', T('a3') - .3, T('b1') - .3],
+  ['statue', T('b1') - .3, T('b4') - .3], ['portraits', T('b4') - .3, T('b5') - .2], ['enemy', T('b5') - .2, T('c1') - .3],
+  ['net', T('c1') - .3, T('c3') - .2], ['tv', T('c3') - .2, E('c3') + .25], ['boots', E('c3') + .25, T('d1') - .05],
+  ['tour', T('d1') - .05, T('e1') - .3], ['speaker', T('e1') - .3, T('e2') - .2], ['dream', T('e2') - .2, T('f1') - .3],
+  ['block', T('f1') - .3, T('g1') - .3], ['door', T('g1') - .3, T('g2') - .2], ['gens', T('g2') - .2, T('g4') - .2], ['truck', T('g4') - .2, T('i1') - .3],
+  ['camp', T('i1') - .3, T('j1') - .3], ['report', T('j1') - .3, T('j3') - .3], ['years', T('j3') - .3, T('j5') - .2], ['book', T('j5') - .2, T('k1') - .4],
+  ['map', T('k1') - .4, TOTAL]];
+const shotAt = t => SH.find(s => t >= s[1] && t < s[2]) || SH[SH.length - 1];
+const loc = (t, id) => { const s = SH.find(x => x[0] === id); return { L: t - s[1], d: s[2] - s[1], k: (t - s[1]) / (s[2] - s[1]) }; };
+
+// 1. cela: o bebê sentado sozinho
+function sCell(t) {
+  const { L, d, k } = loc(t, 'cell');
+  setCam(lerp(890, 900, k), lerp(700, 690, k), lerp(1.75, 1.95, k), 0, [960, 600, 1]);
+  let s = lay(1, cell(t, { tally: 37 }));
+  s += lay(1, hug({ x: 880, y: 930, s: .62, breath: Math.sin(t * 1.6), eyes: range(t, .3, 1.2) }));
+  s += lay(1.25, bars(-200, 2200, -300, 1500, 12, '#0c0e14', '#6A7CA6'));
+  return s + dust(t, '#C8D8FF', .6) + VIG() + GRAIN(t);
+}
+// 2. a Bíblia sob uma vela
+function sBible(t) {
+  const { L, k } = loc(t, 'bible');
+  setCam(960, 560, lerp(1.25, 1.05, easeOut(k)), lerp(-2, 1, k), [960, 560, 1]);
+  const fl = .85 + .15 * Math.sin(t * 13) * Math.sin(t * 7.3);
+  let s = `<rect width="1920" height="1080" fill="#0B0705"/>`;
+  s += lay(1, `<ellipse cx="960" cy="600" rx="900" ry="520" fill="url(#gWarm)" opacity="${op(.7 * fl)}"/><rect x="-400" y="640" width="2800" height="900" fill="#2A170C"/>${Array.from({ length: 9 }, (_, i) => `<line x1="-400" y1="${700 + i * 50}" x2="2400" y2="${690 + i * 52}" stroke="#1A0D06" stroke-width="3"/>`).join('')}` + bible(940, 640, 1.2, 0, -6, .8 * fl) + candle(1450, 620, 1.2, t));
+  return s + VIG() + GRAIN(t);
+}
+function candle(x, y, s, t, on = 1) {
+  const fl = Math.sin(t * 13) * .5 + Math.sin(t * 21) * .5;
+  return `<g transform="translate(${x},${y}) scale(${s})"><ellipse cx="0" cy="-150" rx="260" ry="260" fill="url(#gWarm)" opacity="${op(.6 * on)}"/><rect x="-28" y="-150" width="56" height="160" rx="8" fill="#EDE2C8"/><path d="M-28 -150 Q0 -140 28 -150 L28 -130 Q0 -122 -28 -132Z" fill="#fff" opacity=".6"/><line x1="0" y1="-150" x2="0" y2="-168" stroke="#222" stroke-width="3"/>${on > 0 ? `<path d="M0 ${-238 - fl * 6} Q${18 + fl * 3} -190 0 -166 Q${-18 + fl * 3} -190 0 ${-238 - fl * 6}Z" fill="#FFD27A" opacity="${op(on)}"/><path d="M0 -205 Q8 -186 0 -170 Q-8 -186 0 -205Z" fill="#fff" opacity="${op(on)}"/>` : ''}</g>`;
+}
+// 3. a cela, afastando: "você está completamente enganado"
+function sCell2(t) {
+  const { L, k } = loc(t, 'cell2');
+  setCam(lerp(900, 960, easeInOut(k)), lerp(700, 540, easeInOut(k)), lerp(1.7, .95, easeInOut(k)), 0, [960, 600, 1]);
+  let s = lay(1, cell(t, { tally: 37 }));
+  s += lay(1, hug({ x: 880, y: 930, s: .62, breath: Math.sin(t * 1.6), eyes: 1 }));
+  s += lay(1.25, bars(-200, 2200, -300, 1500, 12, '#0c0e14', '#6A7CA6'));
+  return s + VIG() + GRAIN(t) + FADE(range(L, loc(t, 'cell2').d - .5, loc(t, 'cell2').d));
+}
+// 4. vila na neve, 2009
+function house(x, y, s, win = 1) {
+  return `<g transform="translate(${x},${y}) scale(${s})"><path d="M-260 0 L-260 -220 L260 -220 L260 0Z" fill="#3A3540"/><path d="M-330 -210 Q0 -260 330 -210 L280 -330 Q0 -370 -280 -330Z" fill="#23202A"/><path d="M-330 -210 Q0 -262 330 -210" stroke="#E8EEF8" stroke-width="16" fill="none" opacity=".85"/><path d="M-282 -330 Q0 -372 282 -330" stroke="#E8EEF8" stroke-width="12" fill="none" opacity=".9"/>
+  <rect x="-200" y="-170" width="120" height="100" fill="${win ? '#FFB860' : '#1a1820'}"/><rect x="60" y="-170" width="120" height="100" fill="${win ? '#FFC470' : '#1a1820'}"/><path d="M-140 -170 V-70 M-200 -120 H-80 M120 -170 V-70 M60 -120 H180" stroke="#2a2018" stroke-width="7"/>${win ? `<ellipse cx="-20" cy="-120" rx="380" ry="200" fill="url(#gWarm)" opacity=".35"/>` : ''}<rect x="-40" y="-160" width="70" height="160" fill="#2a2430"/></g>`;
+}
+function sVillage(t) {
+  const { L, k } = loc(t, 'village');
+  setCam(lerp(1050, 900, easeInOut(k)), lerp(520, 600, easeInOut(k)), lerp(1.0, 1.35, easeInOut(k)), 0, [960, 560, 1]);
+  let s = `<rect x="-500" y="-500" width="3000" height="2200" fill="#0C1428"/>`;
+  s += lay(.1, `<rect x="-800" y="-600" width="3600" height="1300" fill="url(#skyN)"/><circle cx="1500" cy="200" r="160" fill="url(#gMoon)"/><circle cx="1500" cy="200" r="46" fill="#EEF2FF"/>` + STARS.slice(0, 120).map(q => `<circle cx="${f1(q.x * .9)}" cy="${f1(q.y * .25 - 200)}" r="${q.r * .7}" fill="#fff" opacity="${op(.4 + .4 * Math.sin(t * 2 + q.p))}"/>`).join(''));
+  s += lay(.3, `<path d="M-800 560 L-300 300 L100 480 L500 260 L900 470 L1300 300 L1800 500 L2600 330 L2600 900 L-800 900Z" fill="#1E2A44"/><path d="M-300 300 L-200 352 L-250 360 L-330 318Z M500 260 L600 316 L540 322 L470 290Z M1300 300 L1390 346 L1330 352 Z" fill="#DDE6F6" opacity=".7"/>`);
+  s += lay(.6, `<rect x="-800" y="700" width="3600" height="900" fill="#C9D4E8"/>` + house(300, 760, .55, 0) + house(1650, 750, .5, 0) + house(-100, 770, .45, 0));
+  s += lay(1, `<rect x="-800" y="820" width="3600" height="900" fill="#DCE4F2"/>` + house(980, 860, 1.1, 1) + `<path d="M-800 870 Q960 840 2600 880" stroke="#fff" stroke-width="30" fill="none" opacity=".5"/>`);
+  s += snow(t, 1, 30);
+  return s + VIG() + GRAIN(t);
+}
+// 5. dentro da casa: pais lendo à luz de vela, bebê dormindo
+function sInside(t) {
+  const { L, k } = loc(t, 'inside');
+  setCam(lerp(900, 980, easeInOut(k)), lerp(600, 560, easeInOut(k)), lerp(1.2, 1.05, easeInOut(k)), 0, [960, 560, 1]);
+  const fl = .9 + .1 * Math.sin(t * 11);
+  let s = `<rect x="-500" y="-500" width="3000" height="2200" fill="#120B08"/>`;
+  s += lay(.6, `<rect x="-500" y="-200" width="3000" height="1100" fill="#24160E"/>${Array.from({ length: 30 }, (_, i) => `<line x1="${-500 + i * 110}" y1="-200" x2="${-500 + i * 110}" y2="900" stroke="#1A0F0A" stroke-width="5"/>`).join('')}<rect x="-500" y="880" width="3000" height="800" fill="#2E1C10"/>`);
+  s += lay(1, `<ellipse cx="960" cy="640" rx="${f1(820 * fl)}" ry="${f1(520 * fl)}" fill="url(#gWarm)" opacity=".7"/>`);
+  // tábua do assoalho levantada com o esconderijo
+  s += lay(1, `<path d="M1180 960 L1460 960 L1430 990 L1210 990Z" fill="#0A0604"/><g transform="translate(1180,960) rotate(-28)"><rect x="0" y="-20" width="280" height="22" fill="#5A3A22"/></g>`);
+  s += lay(1, candle(960, 870, .7, t));
+  const rimW = '#FFC27A';
+  s += lay(1, sil({ x: 720, y: 950, s: .6, kind: 'homem', sit: 1, lean: 14, col: '#120B08', rim: rimW, rimK: [1, -.4], armF: [-55, -50], armB: [-40, -60] }));
+  s += lay(1, sil({ x: 1200, y: 950, s: .6, kind: 'mulher', flip: -1, sit: 1, lean: 12, col: '#120B08', rim: rimW, rimK: [1, -.4], armF: [-50, -60], armB: [-45, -55] }));
+  s += lay(1, bible(960, 800, .32, 1, 0));
+  // bebê dormindo num colchonete, respirando
+  const br = 1 + .03 * Math.sin(t * 2.2);
+  s += lay(1, `<g transform="translate(560,1010)"><rect x="-200" y="-30" width="420" height="60" rx="26" fill="#6A4A3A"/><g transform="scale(1,${br})"><ellipse cx="40" cy="-52" rx="120" ry="44" fill="#8A6A5A"/><circle cx="-110" cy="-58" r="40" fill="#1a1010"/></g><path d="M-170 -40 Q0 -110 200 -40" fill="#B8907A" opacity=".9"/></g>`);
+  return s + VIG() + GRAIN(t) + FADE(1 - range(L, 0, .4));
+}
+// 6. estátuas gigantes e pessoas se curvando
+function statueFig(x, y, s, armUp, col) {
+  return `<g transform="translate(${x},${y}) scale(${s})">${sil({ kind: 'homem', col, shadow: 0, armF: armUp ? [-150, -20] : [6, 4], armB: [10, 8] })}<path d="M-150 -420 L150 -420 L190 0 L-190 0Z" fill="${col}"/></g>`;
+}
+function sStatue(t) {
+  const { L, k } = loc(t, 'statue');
+  setCam(lerp(960, 960, k), lerp(380, 560, easeInOut(k)), lerp(1.25, 1.0, easeInOut(k)), 0, [960, 560, 1]);
+  let s = lay(.05, `<rect x="-800" y="-800" width="3600" height="2400" fill="url(#skyDawn)"/><circle cx="960" cy="560" r="420" fill="url(#gSun)"/>`);
+  s += lay(.25, `<path d="M-800 640 Q200 560 960 600 Q1700 560 2700 640 L2700 1200 L-800 1200Z" fill="#3A2A30"/>`);
+  // pedestal e estátuas (silhuetas contra o nascer do sol)
+  const col = '#1C1210';
+  s += lay(.5, `<rect x="560" y="560" width="800" height="70" fill="${col}"/><rect x="520" y="620" width="880" height="40" fill="${col}"/>` + statueFig(780, 560, .5, true, col) + statueFig(1140, 560, .5, false, col) + `<g opacity=".5">${statueFig(780, 560, .5, true, 'none')}</g>`);
+  s += lay(.5, `<path d="M-800 660 L2700 660 L2700 1300 L-800 1300Z" fill="#4A3A36"/>`);
+  // fileiras de pessoas curvando
+  let crowd = '';
+  for (let r = 0; r < 4; r++) for (let i = 0; i < 18; i++) {
+    const x = 120 + i * 98 + (r % 2) * 49, y = 760 + r * 90, sc = .13 + r * .03;
+    const bow = Math.max(0, Math.sin((L - .6 - r * .15) * 1.3)) * 55 * range(L, .6, 1.2);
+    crowd += sil({ x, y, s: sc, kind: i % 3 === 0 ? 'mulher' : 'homem', flip: -1, lean: -bow, col: '#120C0C', shadow: .25 });
+  }
+  s += lay(.85, crowd);
+  // flores no pé da estátua
+  s += lay(.5, Array.from({ length: 30 }, (_, i) => `<circle cx="${600 + i * 25}" cy="${666 + (i % 3) * 4}" r="9" fill="${['#E8455A', '#FFD06A', '#FF8A4A'][i % 3]}"/>`).join(''));
+  return s + `<rect width="1920" height="1080" fill="#FF8A3A" opacity=".08"/>` + VIG() + GRAIN(t);
+}
+// 7. retratos na parede sendo limpos
+function sPortraits(t) {
+  const { L, k } = loc(t, 'portraits');
+  setCam(lerp(960, 960, k), lerp(480, 520, k), lerp(1.25, 1.1, easeInOut(k)), 0, [960, 520, 1]);
+  let s = lay(.8, `<rect x="-400" y="-400" width="2800" height="2000" fill="#3A3A2E"/>${Array.from({ length: 30 }, (_, i) => `<rect x="${-400 + i * 100}" y="-400" width="50" height="2000" fill="#36362A"/>`).join('')}`);
+  const frame = (x) => `<g transform="translate(${x},420)"><rect x="-190" y="-240" width="380" height="480" fill="#7A5A28"/><rect x="-170" y="-220" width="340" height="440" fill="#C9A24A"/><rect x="-150" y="-200" width="300" height="400" fill="url(#portG)"/>
+    <g fill="#2A2A30" opacity=".85"><ellipse cx="0" cy="-40" rx="76" ry="92"/><path d="M-140 200 Q-140 70 0 60 Q140 70 140 200Z"/></g><rect x="-150" y="-200" width="300" height="400" fill="url(#shine)" opacity=".5"/></g>`;
+  s += lay(1, `<ellipse cx="960" cy="420" rx="700" ry="420" fill="url(#gWarm)" opacity=".35"/>` + frame(740) + frame(1180));
+  // mão com pano limpando
+  const wx = 1180 + Math.sin(L * 6) * 90, wy = 420 + Math.cos(L * 6) * 60;
+  s += lay(1, `<g transform="translate(${f1(wx)},${f1(wy)})"><path d="M10 10 L330 300 L390 250 L60 -30Z" fill="#2A2018"/><path d="M330 300 L390 250 L440 300 L380 350Z" fill="#E8E0D0" opacity=".6"/><path d="M-70 -50 Q-10 -90 60 -40 Q80 30 20 60 Q-60 70 -90 20Z" fill="#E8E0D0"/><path d="M-60 -20 Q0 -40 50 -10" stroke="#C8C0B0" stroke-width="5" fill="none"/></g>`);
+  return s + VIG() + GRAIN(t);
+}
+// 8. inimigo do Estado: a Bíblia sob luz vermelha, sombras ao redor
+function sEnemy(t) {
+  const { L, k } = loc(t, 'enemy');
+  setCam(960, 560, lerp(1.0, 1.3, easeInOut(k)), 0, [960, 560, 1]);
+  const red = range(L, 2.2, 3.5);
+  let s = `<rect width="1920" height="1080" fill="${mix('#0B0705', '#1A0204', red)}"/>`;
+  s += lay(1, `<ellipse cx="960" cy="600" rx="700" ry="400" fill="${red > 0 ? 'url(#gRed)' : 'url(#gWarm)'}" opacity="${op(.7)}"/><rect x="-400" y="680" width="2800" height="900" fill="${mix('#2A170C', '#200608', red)}"/>` + bible(960, 680, .9, 0, 4, 0));
+  // sombras de figuras se aproximando por todos os lados
+  let sh = '';
+  for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2 + .3, r = lerp(1300, 700, easeInOut(range(L, 1.5 + i * .12, 6))); sh += `<g transform="translate(${f1(960 + Math.cos(a) * r)},${f1(640 + Math.sin(a) * r * .45)}) rotate(${f1(a * 57 + 90)})" opacity=".85" filter="url(#b12)"><ellipse rx="70" ry="260" fill="#000"/><circle cy="-300" r="70" fill="#000"/></g>`; }
+  s += lay(1, sh);
+  return s + VIG(1.2) + GRAIN(t);
+}
+// 9. rede: o mundo conectado, a Coreia do Norte apagada
+function mapBase(lit = 1, nk = '#0A0D16') {
+  let s = `<rect x="-2000" y="-2000" width="7000" height="6000" fill="#04070F"/>`;
+  s += poly(CHINA, `fill="#0F1626" stroke="#2A3A5A" stroke-width="3"`) + poly(JAPAN, `fill="#0F1626" stroke="#2A3A5A" stroke-width="3"`);
+  s += poly(KOREA, `fill="#111A2C" stroke="#2A3A5A" stroke-width="3"`);
+  s += poly(nkPoly(), `fill="${nk}" stroke="#3A4A6A" stroke-width="3"`);
+  return s;
+}
+function cityLights(t, k = 1, nkGlow = 0) {
+  let s = '';
+  CITIES.forEach(([lo, la, w], i) => { const [x, y] = PJ(lo, la); s += `<circle cx="${x}" cy="${y}" r="${f1(130 * w)}" fill="url(#gCity)" opacity="${op(k * (.7 + .3 * Math.sin(t * 2 + i)))}"/><circle cx="${x}" cy="${y}" r="${f1(10 + 12 * w)}" fill="#FFE9B0" opacity="${op(k)}"/>`; });
+  // muitos pontinhos no Sul
+  for (let i = 0; i < 160; i++) { const lo = 126.4 + ((i * 7919) % 1000) / 1000 * 3, la = 34.7 + ((i * 3571) % 1000) / 1000 * 3.0; if (la > 37.8 - (lo - 126) * .25) continue; const [x, y] = PJ(lo, la); s += `<circle cx="${x}" cy="${y}" r="${f1(5 + (i % 4) * 2)}" fill="#FFD890" opacity="${op(k * .6)}"/>`; }
+  const [px, py] = PJ(125.75, 39.03); s += `<circle cx="${px}" cy="${py}" r="${f1(5 + 20 * nkGlow)}" fill="#FFD890" opacity="${op(.5 + .3 * nkGlow)}"/>`;
+  return s;
+}
+function sNet(t) {
+  const { L, k } = loc(t, 'net');
+  const [cx, cy] = PJ(127.2, 39.0);
+  setCam(lerp(+cx - 600, +cx, easeInOut(range(L, 0, 4))), lerp(+cy + 500, +cy, easeInOut(range(L, 0, 4))), lerp(.3, .5, easeInOut(range(L, 0, 7))), 0, [+cx, +cy, .4]);
+  let s = lay(1, mapBase() + cityLights(t, 1));
+  // linhas de internet entre cidades (param na fronteira do norte)
+  let ln = '';
+  const C = CITIES.map(([a, b]) => PJ(a, b).map(Number));
+  for (let i = 0; i < C.length; i++) for (let j = i + 1; j < C.length; j++) { if ((i * 7 + j * 3) % 4) continue; const [x1, y1] = C[i], [x2, y2] = C[j]; const ph = (t * .6 + i * .1) % 1; ln += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#4FC8FF" stroke-width="2.5" opacity=".35"/><circle cx="${f1(lerp(x1, x2, ph))}" cy="${f1(lerp(y1, y2, ph))}" r="5" fill="#BFF0FF"/>`; }
+  s += lay(1, `<g opacity="${op(range(L, .5, 1.5))}">${ln}</g>`);
+  // o norte: muro de luz vermelha em volta + rede interna minúscula
+  const wall = range(L, 3.5, 4.5);
+  s += lay(1, poly(nkPoly(), `fill="#05070C" stroke="#FF4A4A" stroke-width="${f1(4 + 6 * wall)}" opacity="${op(.3 + .7 * wall)}" stroke-dasharray="18 10"`));
+  const inner = [[125.75, 39.03], [126.5, 39.9], [127.5, 39.9], [129.0, 41.5], [126.0, 40.5]].map(p => PJ(...p).map(Number));
+  let il = ''; inner.forEach((p, i) => { const q = inner[(i + 1) % inner.length]; il += `<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="#7AFFB0" stroke-width="3" opacity=".6"/>`; il += `<circle cx="${p[0]}" cy="${p[1]}" r="9" fill="#7AFFB0"/>`; });
+  s += lay(1, `<g opacity="${op(range(L, 6, 7))}">${il}</g>`);
+  return s + VIG() + GRAIN(t);
+}
+// 10. TV escondida à noite, lanterna passando lá fora
+function sTv(t) {
+  const { L, d, k } = loc(t, 'tv');
+  setCam(lerp(900, 960, k), lerp(560, 540, k), lerp(1.15, 1.35, easeInOut(k)), 0, [960, 560, 1]);
+  const flick = .7 + .3 * Math.sin(t * 17) * Math.sin(t * 5.3);
+  let s = `<rect width="1920" height="1080" fill="#05060A"/>`;
+  s += lay(.7, `<rect x="1300" y="160" width="420" height="380" fill="#0E1424"/><path d="M1300 160 L1720 160 L1720 540 L1300 540Z" fill="none" stroke="#1C2236" stroke-width="20"/><path d="M1290 140 Q1500 260 1730 140 L1730 560 L1290 560Z" fill="#2A2030" opacity=".92"/>`);
+  // lanterna varrendo a janela
+  const sw = range(L, 3.5, 6.5); if (sw > 0 && sw < 1) s += lay(.7, `<ellipse cx="${f1(1250 + sw * 520)}" cy="350" rx="140" ry="110" fill="#FFF6D8" opacity="${op(.6 * Math.sin(sw * Math.PI))}" filter="url(#b30)"/>`);
+  s += lay(1, `<rect x="-400" y="760" width="2800" height="800" fill="#0B0A10"/><g transform="translate(760,640)"><rect x="-210" y="-160" width="420" height="300" rx="30" fill="#1C1A20"/><rect x="-180" y="-136" width="330" height="250" rx="16" fill="#7FB8FF" opacity="${op(flick)}"/><circle cx="175" cy="-60" r="10" fill="#333"/><rect x="-150" y="140" width="300" height="60" fill="#151318"/></g><ellipse cx="760" cy="640" rx="760" ry="520" fill="url(#gTv)" opacity="${op(.7 * flick)}"/>`);
+  s += lay(1, hug({ x: 1180, y: 990, s: .75, flip: -1, adult: 1, col: '#05060A', rim: '#8FC8FF', rimK: [1, -.3] }));
+  return s + VIG() + GRAIN(t) + FADE(range(L, d - .2, d));
+}
+// 11. transição: bota batendo na outra
+function sBoots(t) {
+  const { L, d } = loc(t, 'boots');
+  setCam(960, 600, lerp(1.0, 1.06, L / d), 0, [960, 600, 1]);
+  const click = easeIn(range(L, .1, .35)), sep = 1 - click;
+  let s = `<rect width="1920" height="1080" fill="#0A0A0E"/>` + lay(1, `<rect x="-400" y="820" width="2800" height="800" fill="#2A2A30"/><ellipse cx="960" cy="830" rx="600" ry="50" fill="#000" opacity=".5" filter="url(#b12)"/>`);
+  const boot = (x, fl) => `<g transform="translate(${x},830) scale(${fl},1)"><path d="M-110 -620 L130 -620 L120 -540 L-100 -540Z" fill="#2A3024"/><path d="M-100 -560 L120 -560 L132 -170 Q250 -160 300 -70 Q312 -30 300 0 L-104 0 L-104 -170Z" fill="url(#bootG)"/><path d="M132 -170 Q250 -160 300 -70" stroke="#8A8A98" stroke-width="6" fill="none" opacity=".6"/><ellipse cx="230" cy="-80" rx="50" ry="18" fill="#fff" opacity=".18"/><path d="M-104 -60 L300 -60" stroke="#000" stroke-width="10" opacity=".5"/><rect x="-108" y="-18" width="416" height="22" rx="4" fill="#08080A"/><rect x="-108" y="-40" width="110" height="40" fill="#0A0A0C"/>${[-500, -440, -380, -320, -260].map(y => `<path d="M-10 ${y} L60 ${y + 20} M60 ${y} L-10 ${y + 20}" stroke="#5A5A64" stroke-width="5"/>`).join('')}<path d="M100 -540 L110 -180" stroke="#9A9AA8" stroke-width="8" opacity=".45"/></g>`;
+  s += lay(1, boot(f1(820 - 120 * sep), -1) + boot(f1(1100 + 120 * sep), 1));
+  if (L > .35 && L < .6) s += `<rect width="1920" height="1080" fill="#fff" opacity="${op(.25 * (1 - range(L, .35, .6)))}"/>`;
+  return s + VIG() + GRAIN(t);
+}
+// 12. turistas vigiados num bulevar vazio
+function building(x, w, h, c) { let s = `<rect x="${x}" y="${-h}" width="${w}" height="${h}" fill="${c}"/>`; for (let yy = -h + 30; yy < -30; yy += 46) for (let xx = x + 20; xx < x + w - 30; xx += 44) s += `<rect x="${xx}" y="${yy}" width="22" height="26" fill="#000" opacity=".18"/>`; return s; }
+function sTour(t) {
+  const { L, k } = loc(t, 'tour');
+  setCam(lerp(700, 1200, easeInOut(k)), lerp(600, 620, k), lerp(1.0, 1.2, easeInOut(k)), 0, [960, 600, 1]);
+  let s = lay(.05, `<rect x="-800" y="-800" width="3600" height="2400" fill="url(#skyDay)"/>`);
+  s += lay(.35, `<g transform="translate(0,720)">${building(-400, 300, 520, '#B9C9C2')}${building(-60, 260, 640, '#E2C9B8')}${building(240, 320, 460, '#C8D4E2')}${building(600, 280, 720, '#E8D8C0')}${building(920, 340, 520, '#BCD2C4')}${building(1300, 260, 600, '#E4CCD2')}${building(1600, 380, 480, '#CAD6E6')}${building(2020, 300, 680, '#E2D6BE')}</g>`);
+  s += lay(.6, `<rect x="-800" y="720" width="3600" height="900" fill="#8E9098"/><rect x="-800" y="720" width="3600" height="40" fill="#C8C8C8"/>${Array.from({ length: 30 }, (_, i) => `<rect x="${-800 + i * 160}" y="880" width="90" height="12" fill="#E8E8E8" opacity=".7"/>`).join('')}`);
+  // ônibus de turismo
+  s += lay(1, `<g transform="translate(${f1(500 + L * 20)},940)"><rect x="-320" y="-230" width="640" height="220" rx="30" fill="#E8E4D8"/><rect x="-300" y="-205" width="600" height="80" rx="10" fill="#2A3A4A"/><rect x="-320" y="-90" width="640" height="26" fill="#2E6AB0"/><circle cx="-190" cy="-10" r="44" fill="#1a1a1a"/><circle cx="190" cy="-10" r="44" fill="#1a1a1a"/></g>`);
+  // grupo: guias nas pontas, turistas no meio
+  let g = '';
+  const gx = 1100 + L * 16;
+  for (let i = 0; i < 6; i++) g += sil({ x: gx + i * 70, y: 1010 + (i % 2) * 14, s: .3, kind: i % 2 ? 'mulher' : 'homem', ph: L * 4 + i, walk: .6, col: ['#3A4A6A', '#6A3A3A', '#3A5A4A', '#5A4A3A', '#4A3A5A', '#2A4A5A'][i], shadow: .3 });
+  g += sil({ x: gx - 90, y: 1012, s: .32, kind: 'mulher', ph: L * 4, walk: .6, col: '#1A1A22', armF: [-150, -10], shadow: .3 }) + `<rect x="${f1(gx - 140)}" y="${f1(1012 - 390)}" width="60" height="40" fill="#C83A3A" opacity=".9"/>`;
+  g += sil({ x: gx + 470, y: 1012, s: .32, kind: 'homem', ph: L * 4 + 1, walk: .6, col: '#1A1A22', shadow: .3 });
+  // morador na calçada vira de costas
+  const turn = range(L, 4, 5);
+  g += sil({ x: 1820, y: 770, s: .26, kind: 'homem', flip: turn > .5 ? 1 : -1, ph: L * 3, walk: turn, col: '#2A2A30', shadow: .2 });
+  s += lay(1, g);
+  return s + VIG(.8) + GRAIN(t);
+}
+// 13. alto-falantes: controle
+function sSpeaker(t) {
+  const { L, k } = loc(t, 'speaker');
+  setCam(lerp(1100, 960, easeInOut(k)), lerp(420, 540, easeInOut(k)), lerp(1.3, 1.0, easeInOut(k)), 0, [960, 540, 1]);
+  let s = lay(.05, `<rect x="-800" y="-800" width="3600" height="2400" fill="url(#skyDusk)"/>`);
+  s += lay(.3, `<g transform="translate(0,820)">${building(-400, 300, 420, '#2A2A36')}${building(-60, 260, 560, '#30303C')}${building(240, 320, 380, '#26262F')}${building(600, 280, 620, '#2C2C38')}${building(920, 340, 420, '#262632')}${building(1300, 260, 520, '#30303A')}${building(1600, 380, 400, '#282834')}</g>`);
+  s += lay(.6, `<rect x="-800" y="820" width="3600" height="900" fill="#1A1A22"/>`);
+  // poste com alto-falantes, ondas
+  let w = ''; for (let i = 0; i < 4; i++) { const r = ((L * 220 + i * 120) % 480); w += `<path d="M${1210 + r * .2} ${250 - r * .6} Q${1260 + r} 300 ${1210 + r * .2} ${350 + r * .6}" stroke="#FFD27A" stroke-width="5" fill="none" opacity="${op(1 - r / 480)}"/>`; }
+  s += lay(1, `<rect x="1080" y="200" width="24" height="900" fill="#0A0A0E"/><path d="M1104 230 L1200 200 L1230 300 L1104 290Z" fill="#0E0E12"/><path d="M1080 230 L984 200 L954 300 L1080 290Z" fill="#0E0E12"/>${w}`);
+  // pessoas em fila, cabeças baixas
+  let p = ''; for (let i = 0; i < 12; i++) p += sil({ x: -100 + ((i * 180 + L * 60) % 2200), y: 960 + (i % 3) * 30, s: .28 + (i % 3) * .04, kind: i % 2 ? 'mulher' : 'homem', ph: L * 4 + i, walk: .8, lean: -8, col: '#08080C', shadow: .3 });
+  s += lay(1, p);
+  return s + VIG() + GRAIN(t);
+}
+// 14. "não sonha com ele": criança na janela, o mundo lá fora apagado
+function sDream(t) {
+  const { L, k } = loc(t, 'dream');
+  setCam(960, 540, lerp(1.0, 1.15, easeInOut(k)), 0, [960, 540, 1]);
+  let s = `<rect width="1920" height="1080" fill="#05060A"/>`;
+  s += lay(.4, `<rect x="560" y="200" width="800" height="560" fill="#0C1020"/>` + STARS.slice(0, 50).map(q => `<circle cx="${f1(560 + (q.x % 800 + 800) % 800)}" cy="${f1(200 + (q.y % 400 + 400) % 400)}" r="${q.r * .6}" fill="#fff" opacity=".5"/>`).join('') + `<rect x="560" y="660" width="800" height="100" fill="#06070C"/>`);
+  s += lay(1, `<path d="M0 0 H1920 V1080 H0Z M560 200 V760 H1360 V200Z" fill="#0A0A10" fill-rule="evenodd"/><rect x="940" y="200" width="40" height="560" fill="#0A0A10"/><rect x="560" y="460" width="800" height="30" fill="#0A0A10"/>`);
+  s += lay(1, sil({ x: 960, y: 1180, s: .62, kind: 'crianca', col: '#000', rim: '#7A90C8', rimK: [0, -1], armF: [-150, -20], armB: [-150, -20] }));
+  return s + VIG() + GRAIN(t) + FADE(range(L, loc(t, 'dream').d - .4, loc(t, 'dream').d));
+}
+// 15. prédio à noite: vizinhos espiando
+function sBlock(t) {
+  const { L, k } = loc(t, 'block');
+  setCam(lerp(960, 1080, easeInOut(k)), lerp(540, 620, easeInOut(k)), lerp(1.0, 1.6, easeInOut(range(L, 5, 13))), 0, [960, 540, 1]);
+  let s = `<rect x="-800" y="-800" width="3600" height="2400" fill="#070912"/>`;
+  s += lay(1, `<rect x="160" y="40" width="1600" height="1200" fill="#151824"/>`);
+  let w = '';
+  for (let r = 0; r < 7; r++) for (let c = 0; c < 9; c++) {
+    const x = 240 + c * 170, y = 100 + r * 130, id = r * 9 + c, on = ((id * 37) % 7) < 3, fam = id === 31;
+    const col = fam ? '#FFB860' : on ? '#C8B890' : '#0B0D16';
+    w += `<rect x="${x}" y="${y}" width="110" height="84" fill="${col}" opacity="${on || fam ? .9 : 1}"/>`;
+    if (on && !fam) { const peek = Math.max(0, Math.sin(L * .9 + id)); w += `<rect x="${x}" y="${y}" width="${f1(55 - 30 * peek)}" height="84" fill="#5A4A3A"/><rect x="${f1(x + 55 + 30 * peek)}" y="${y}" width="${f1(55 - 30 * peek)}" height="84" fill="#5A4A3A"/><g transform="translate(${f1(x + 55 + (peek - .5) * 20)},${y + 84})"><path d="M-30 0 Q-30 -26 0 -28 Q30 -26 30 0Z" fill="#1A140E"/><ellipse cx="0" cy="-42" rx="15" ry="17" fill="#1A140E"/></g>`; }
+    if (fam) w += `<ellipse cx="${x + 55}" cy="${y + 42}" rx="200" ry="140" fill="url(#gWarm)" opacity=".35"/>`;
+  }
+  s += lay(1, w);
+  // um vizinho sai e caminha até um prédio com estrela vermelha
+  const go = range(L, 7, 13);
+  if (go > 0) s += lay(1, `<rect x="-200" y="1000" width="2400" height="400" fill="#0A0C14"/>` + sil({ x: lerp(900, 1700, go), y: 1080, s: .28, kind: 'homem', ph: L * 4, walk: 1, col: '#000', rim: '#FF5A5A', rimK: [1, -.2] }) + `<g transform="translate(1850,1080)"><rect x="-120" y="-300" width="300" height="300" fill="#10121A"/><path d="M30 -260 l14 30 33 4 -24 23 6 33 -29 -16 -29 16 6 -33 -24 -23 33 -4Z" fill="#E8303A"/><circle cx="30" cy="-230" r="120" fill="#E8303A" opacity=".2" filter="url(#b30)"/></g>`);
+  return s + VIG() + GRAIN(t);
+}
+// 16. a porta: caminhão, botas na neve, porta arrombada
+function sDoor(t) {
+  const { L, d, k } = loc(t, 'door');
+  setCam(lerp(900, 1000, easeInOut(k)), lerp(560, 600, k), lerp(1.0, 1.25, easeInOut(k)), 0, [960, 560, 1]);
+  let s = `<rect x="-800" y="-800" width="3600" height="2400" fill="#070A14"/>`;
+  s += lay(.6, `<rect x="-800" y="720" width="3600" height="900" fill="#AEB8CC"/>` + house(1200, 760, 1.25, 1));
+  // faróis
+  s += lay(1, `<path d="M-200 700 L700 580 L700 1000 L-200 900Z" fill="url(#beamH)" opacity=".8"/>`);
+  // soldados caminhando com lanternas
+  for (let i = 0; i < 3; i++) s += lay(1, sil({ x: lerp(200 + i * 150, 900 + i * 110, easeOut(range(L, 0, 3.2))), y: 990 + i * 18, s: .52, kind: 'soldado', ph: L * 5 + i, walk: 1 - range(L, 3, 3.4), col: '#06070C', rim: '#FFF0C8', rimK: [-1, -.2], light: i === 1 }));
+  // a porta arromba: luz explode
+  const bang = range(L, 3.6, 3.75);
+  if (bang > 0) s += `<rect width="1920" height="1080" fill="#FFF6E0" opacity="${op((1 - range(L, 3.75, 4.4)) * .7)}"/>`;
+  s += snow(t, .8, 50);
+  return s + VIG() + GRAIN(t);
+}
+// 17. três gerações: a Bíblia no chão na luz da lanterna; avô, pais, bebê
+function sGens(t) {
+  const { L, k } = loc(t, 'gens');
+  setCam(lerp(960, 960, k), lerp(600, 560, k), lerp(1.2, 1.0, easeInOut(k)), 0, [960, 560, 1]);
+  let s = `<rect x="-500" y="-500" width="3000" height="2200" fill="#06050A"/>`;
+  s += lay(1, `<rect x="-500" y="820" width="3000" height="900" fill="#140C08"/><path d="M-200 0 L700 700 L1200 1100 L-200 1100Z" fill="url(#beamF2)" opacity=".85"/>` + bible(760, 930, .4, 1, 18));
+  // família em fila (3 gerações), iluminadas pela lanterna
+  const fam = [{ x: 1180, k: 'homem', s: .5, lean: 10 }, { x: 1360, k: 'homem', s: .56 }, { x: 1530, k: 'mulher', s: .53, carry: true }];
+  const show = i => range(L, .3 + i * 1.6, 1.0 + i * 1.6);
+  fam.forEach((f, i) => { const a = show(i); if (a > 0) s += lay(1, `<g opacity="${op(a)}">${sil({ x: f.x, y: 1000, s: f.s, kind: f.k, lean: f.lean || 0, carry: f.carry, armF: f.carry ? null : [-10, -8], col: '#08060A', rim: '#FFF0C8', rimK: [-1, -.1] })}</g>`); });
+  return s + VIG() + GRAIN(t);
+}
+// 18. levados no caminhão
+function sTruck(t) {
+  const { L, d, k } = loc(t, 'truck');
+  setCam(lerp(960, 1100, easeInOut(k)), 560, lerp(1.0, 1.1, k), 0, [960, 560, 1]);
+  let s = `<rect x="-800" y="-800" width="3600" height="2400" fill="#060912"/>`;
+  s += lay(.4, `<path d="M-800 600 L-200 380 L300 520 L800 340 L1400 500 L2000 360 L2700 560 L2700 900 L-800 900Z" fill="#141C30"/>`);
+  s += lay(.7, `<rect x="-800" y="760" width="3600" height="900" fill="#9EA8BC"/>`);
+  const drive = easeIn(range(L, d - 3.4, d - .4));
+  const tx = 1250 + drive * 1400;
+  s += lay(1, `<g transform="translate(${f1(tx)},960)"><rect x="-420" y="-360" width="560" height="320" fill="#2A3226"/><path d="M-420 -360 Q-140 -420 140 -360" fill="#3A4232"/><rect x="150" y="-280" width="250" height="240" rx="20" fill="#232A20"/><rect x="200" y="-260" width="140" height="90" fill="#8AA0C0" opacity=".4"/><circle cx="-280" cy="-30" r="66" fill="#0A0A0A"/><circle cx="270" cy="-30" r="66" fill="#0A0A0A"/><rect x="380" y="-120" width="30" height="40" fill="#FFF0C8"/><path d="M410 -120 L1400 -260 L1400 160 L410 -80Z" fill="url(#beamF)" opacity=".7"/><rect x="-440" y="-60" width="40" height="22" fill="#C82A2A"/></g>`);
+  // família levada até a traseira do caminhão, escoltada
+  const walk = range(L, 0, 3.2);
+  if (drive < .05) {
+    s += lay(1, sil({ x: lerp(400, 820, walk), y: 1000, s: .46, kind: 'soldado', ph: L * 5, walk: 1 - range(L, 3, 3.4), col: '#05060A', rim: '#C8D8FF', rimK: [1, -.2] }));
+    s += lay(1, sil({ x: lerp(250, 700, walk), y: 1004, s: .44, kind: 'homem', ph: L * 5 + 1, walk: 1 - range(L, 3, 3.4), lean: 8, col: '#05060A', rim: '#C8D8FF', rimK: [1, -.2] }));
+    s += lay(1, sil({ x: lerp(110, 580, walk), y: 1008, s: .42, kind: 'mulher', ph: L * 5 + 2, walk: 1 - range(L, 3, 3.4), carry: true, col: '#05060A', rim: '#C8D8FF', rimK: [1, -.2] }));
+    s += lay(1, sil({ x: lerp(-60, 430, walk), y: 1012, s: .46, kind: 'soldado', ph: L * 5 + 3, walk: 1 - range(L, 3, 3.4), col: '#05060A', rim: '#C8D8FF', rimK: [1, -.2] }));
+  }
+  s += snow(t, 1, 80);
+  return s + VIG() + GRAIN(t) + FADE(range(L, d - .6, d));
+}
+// 19. campo de prisioneiros nas montanhas
+function sCamp(t) {
+  const { L, k } = loc(t, 'camp');
+  setCam(lerp(700, 1100, easeInOut(k)), lerp(480, 560, easeInOut(k)), lerp(1.05, 1.25, easeInOut(k)), 0, [960, 560, 1]);
+  let s = lay(.05, `<rect x="-800" y="-800" width="3600" height="2400" fill="url(#skyN)"/>`);
+  s += lay(.15, `<path d="M-800 520 L-400 160 L0 420 L500 100 L900 380 L1300 140 L1800 400 L2300 180 L2800 480 L2800 1000 L-800 1000Z" fill="#1A2236"/><path d="M-400 160 L-320 230 L-380 236 L-460 210Z M500 100 L590 170 L520 176 L430 150Z M1300 140 L1390 210 L1320 214 L1240 190Z M2300 180 L2380 240 L2320 244Z" fill="#E8EEF8" opacity=".8"/>`);
+  s += lay(.4, `<rect x="-800" y="620" width="3600" height="900" fill="#BAC4D6"/>` + Array.from({ length: 9 }, (_, i) => `<g transform="translate(${-200 + i * 300},640)"><rect x="0" y="-90" width="240" height="90" fill="#2A2E38"/><path d="M-12 -86 L120 -140 L252 -86Z" fill="#3A3E48"/><path d="M-12 -86 L120 -140 L252 -86" stroke="#EEF2FA" stroke-width="10" fill="none"/></g>`).join(''));
+  // prisioneiros em fila, curvados, carregando sacos
+  let p = ''; for (let i = 0; i < 16; i++) { const x = ((-300 + i * 150 + L * 40) % 2400) - 300; p += sil({ x, y: 760, s: .17, kind: 'homem', ph: L * 3 + i, walk: .7, lean: -16, armF: [-30, -60], armB: [-20, -50], col: '#1A1C24', shadow: .2 }) + `<ellipse cx="${f1(x + 14)}" cy="${f1(760 - 150)}" rx="26" ry="20" fill="#3A3A40"/>`; }
+  s += lay(.6, p);
+  // cerca e torres com holofotes
+  let f = ''; for (let i = 0; i < 26; i++) f += `<rect x="${-600 + i * 130}" y="760" width="12" height="260" fill="#0A0C12"/>`;
+  for (let r = 0; r < 6; r++) { f += `<line x1="-600" y1="${790 + r * 40}" x2="2800" y2="${790 + r * 40}" stroke="#20242E" stroke-width="3"/>`; for (let i = 0; i < 70; i++) f += `<path d="M${-600 + i * 52 + (r % 2) * 26 - 6} ${784 + r * 40} l12 12 M${-600 + i * 52 + (r % 2) * 26 + 6} ${784 + r * 40} l-12 12" stroke="#20242E" stroke-width="3"/>`; }
+  const tower = (x, ph) => { const a = Math.sin(t * .7 + ph) * 35; return `<g transform="translate(${x},1020)"><path d="M-60 0 L-30 -520 L30 -520 L60 0" stroke="#0A0C12" stroke-width="16" fill="none"/><path d="M-50 -100 L50 -260 M50 -100 L-50 -260 M-40 -300 L40 -440 M40 -300 L-40 -440" stroke="#0A0C12" stroke-width="8"/><rect x="-90" y="-640" width="180" height="120" fill="#0E1018"/><path d="M-110 -640 L0 -700 L110 -640Z" fill="#0E1018"/><g transform="translate(0,-580) rotate(${f1(90 + a)})"><path d="M0 -20 L1600 -260 L1600 260 L0 20Z" fill="url(#beamS)" opacity=".55"/></g><circle cx="0" cy="-580" r="22" fill="#FFF6D8"/></g>`; };
+  s += lay(1, f + tower(220, 0) + tower(1700, 2));
+  s += snow(t, .9, 40);
+  return s + VIG() + GRAIN(t);
+}
+// 20. relatório: documento com uma foto em branco
+function sReport(t) {
+  const { L, k } = loc(t, 'report');
+  setCam(lerp(960, 1000, k), lerp(560, 520, k), lerp(1.05, 1.3, easeInOut(k)), lerp(-1.5, 0, k), [960, 540, 1]);
+  let s = `<rect width="1920" height="1080" fill="#0C0A08"/>` + lay(1, `<ellipse cx="900" cy="480" rx="900" ry="600" fill="url(#gWarm)" opacity=".45"/><rect x="-400" y="-400" width="2800" height="2000" fill="#2A1E14" opacity=".55"/>`);
+  let doc = `<g transform="translate(960,560) rotate(-4)"><rect x="-380" y="-470" width="760" height="980" fill="#F2EEE4"/><rect x="-380" y="-470" width="760" height="90" fill="#2A3A5A"/>`;
+  for (let i = 0; i < 18; i++) doc += `<rect x="-320" y="${-330 + i * 40}" width="${f1(i % 5 === 4 ? 300 : 620)}" height="12" rx="4" fill="#8A8A90" opacity=".55"/>`;
+  doc += `<rect x="90" y="-330" width="200" height="250" fill="#D8D4CC" stroke="#9A968C" stroke-width="4"/><g transform="translate(190,-90) scale(.2)">${sil({ kind: 'crianca', col: '#9A968C', shadow: 0 }).replace(/translate\([^)]*\) scale\([^)]*\)/, '')}</g>`;
+  doc += `<rect x="-330" y="${f1(-170 + 0)}" width="${f1(560 * range(L, 1.5, 3))}" height="30" fill="#FFE44A" opacity=".5"/></g>`;
+  s += lay(1, doc);
+  s += lay(1, `<rect x="-200" y="-200" width="2400" height="1500" fill="url(#shine)" opacity=".12"/>`);
+  return s + VIG() + GRAIN(t);
+}
+// 21. os anos passando na cela: o menino cresce
+function sYears(t) {
+  const { L, d, k } = loc(t, 'years');
+  setCam(lerp(960, 920, k), lerp(560, 600, k), lerp(1.0, 1.15, easeInOut(k)), 0, [960, 560, 1]);
+  const yrs = easeInOut(range(L, .4, d - 1.2)) * 17;
+  const season = Math.floor(yrs * 4) % 4, day = .5 + .5 * Math.sin(yrs * 25);
+  let s = lay(1, cell(t * 3, { tally: Math.floor(37 + yrs * 18), season, day: day * .6 }));
+  const g = yrs / 17;  // criança → jovem
+  s += lay(1, hug({ x: 880, y: 930, s: lerp(.62, 1.05, g), adult: g, breath: Math.sin(t * 1.6), eyes: .6 }));
+  s += lay(1.25, bars(-200, 2200, -300, 1500, 12, '#0c0e14', '#6A7CA6'));
+  return s + VIG() + GRAIN(t) + `<rect width="1920" height="1080" fill="#fff" opacity="${op(Math.abs(Math.sin(yrs * 4 * Math.PI)) < .08 && yrs > .1 && yrs < 16.9 ? .05 : 0)}"/>`;
+}
+// 22. o livro que ele nem sabia ler: a vela apaga
+function sBook(t) {
+  const { L, d, k } = loc(t, 'book');
+  setCam(960, 600, lerp(1.0, 1.25, easeInOut(k)), 0, [960, 600, 1]);
+  const off = range(L, d - 2.2, d - 1.6);
+  let s = `<rect width="1920" height="1080" fill="#0B0705"/>`;
+  s += lay(1, `<ellipse cx="960" cy="600" rx="900" ry="520" fill="url(#gWarm)" opacity="${op(.7 * (1 - off))}"/><rect x="-400" y="640" width="2800" height="900" fill="${mix('#2A170C', '#0a0604', off)}"/>` + bible(900, 700, 1.05, 1, -4) + candle(1450, 660, 1.1, t, 1 - off));
+  // pequena mão de criança sobre a página
+  s += lay(1, `<g transform="translate(780,650) scale(.6)" opacity="${op(1 - off * .8)}"><ellipse cx="0" cy="0" rx="46" ry="38" fill="#C8907A"/>${[-34, -14, 6, 26].map((x, i) => `<rect x="${x - 8}" y="${-62 - (i === 1 || i === 2 ? 8 : 0)}" width="18" height="44" rx="9" fill="#C8907A"/>`).join('')}<rect x="38" y="-20" width="34" height="16" rx="8" fill="#C8907A" transform="rotate(-30 38 -20)"/></g>`);
+  if (off > 0) s += `<g opacity="${op(off * (1 - range(L, d - 1.6, d)))}"><path d="M1450 440 Q1430 380 1460 320 Q1490 260 1450 200" stroke="#888" stroke-width="5" fill="none" opacity=".5"/></g>`;
+  return s + VIG() + GRAIN(t) + FADE(range(L, d - .6, d) * .9);
+}
+// 23. o mapa de noite: a Coreia do Norte apagada
+function sMap(t) {
+  const { L, d, k } = loc(t, 'map');
+  const [cx, cy] = PJ(127.6, 38.6);
+  setCam(+cx, +cy, lerp(.55, .33, easeInOut(range(L, 0, d - 1))), 0, [+cx, +cy, .5]);
+  let s = lay(1, mapBase(1, '#03050A') + cityLights(t, 1, 0));
+  return s + VIG() + GRAIN(t) + FADE(range(L, d - .8, d));
+}
+const FN = { cell: sCell, bible: sBible, cell2: sCell2, village: sVillage, inside: sInside, statue: sStatue, portraits: sPortraits, enemy: sEnemy, net: sNet, tv: sTv, boots: sBoots, tour: sTour, speaker: sSpeaker, dream: sDream, block: sBlock, door: sDoor, gens: sGens, truck: sTruck, camp: sCamp, report: sReport, years: sYears, book: sBook, map: sMap };
+
+/* ===================== defs e render ===================== */
+let NOISE = '';
+(function () { const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'), im = x.createImageData(256, 256); for (let i = 0; i < im.data.length; i += 4) { const v = Math.random() * 255; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; } x.putImageData(im, 0, 0); NOISE = c.toDataURL(); })();
+const STATIC = `<filter id="b12" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="12"/></filter>
+<filter id="b30" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="30"/></filter>
+<radialGradient id="vig" cx=".5" cy=".5" r=".75"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".8"/></radialGradient>
+<radialGradient id="gWarm"><stop offset="0" stop-color="#FFD9A0" stop-opacity=".85"/><stop offset=".4" stop-color="#FFB060" stop-opacity=".3"/><stop offset="1" stop-color="#FF8A30" stop-opacity="0"/></radialGradient>
+<radialGradient id="gRed"><stop offset="0" stop-color="#FF4A3A" stop-opacity=".7"/><stop offset=".5" stop-color="#B0101A" stop-opacity=".3"/><stop offset="1" stop-color="#600008" stop-opacity="0"/></radialGradient>
+<radialGradient id="gTv"><stop offset="0" stop-color="#9FD0FF" stop-opacity=".5"/><stop offset="1" stop-color="#3A6AFF" stop-opacity="0"/></radialGradient>
+<radialGradient id="gSun"><stop offset="0" stop-color="#FFF0C0" stop-opacity="1"/><stop offset=".3" stop-color="#FFB060" stop-opacity=".6"/><stop offset="1" stop-color="#FF7A30" stop-opacity="0"/></radialGradient>
+<radialGradient id="gMoon"><stop offset="0" stop-color="#DDE6FF" stop-opacity=".6"/><stop offset="1" stop-color="#9AB0FF" stop-opacity="0"/></radialGradient>
+<radialGradient id="gCity"><stop offset="0" stop-color="#FFE0A0" stop-opacity=".9"/><stop offset=".4" stop-color="#FFB050" stop-opacity=".35"/><stop offset="1" stop-color="#FF9030" stop-opacity="0"/></radialGradient>
+<linearGradient id="skyN" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#05081A"/><stop offset=".7" stop-color="#16244A"/><stop offset="1" stop-color="#2A3A66"/></linearGradient>
+<linearGradient id="skyDawn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A2E5A"/><stop offset=".5" stop-color="#C8605A"/><stop offset=".8" stop-color="#FFB070"/><stop offset="1" stop-color="#FFD8A0"/></linearGradient>
+<linearGradient id="skyDay" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7FA8D8"/><stop offset="1" stop-color="#D8E4EE"/></linearGradient>
+<linearGradient id="skyDusk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1A1A3A"/><stop offset=".6" stop-color="#6A3A4A"/><stop offset="1" stop-color="#C8705A"/></linearGradient>
+<linearGradient id="beamM" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFD4FF" stop-opacity=".45"/><stop offset="1" stop-color="#BFD4FF" stop-opacity="0"/></linearGradient>
+<linearGradient id="beamF" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFF6D8" stop-opacity=".8"/><stop offset="1" stop-color="#FFF6D8" stop-opacity="0"/></linearGradient>
+<linearGradient id="beamF2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF6D8" stop-opacity=".6"/><stop offset="1" stop-color="#FFF6D8" stop-opacity=".05"/></linearGradient>
+<linearGradient id="beamH" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFF6D8" stop-opacity=".7"/><stop offset="1" stop-color="#FFF6D8" stop-opacity="0"/></linearGradient>
+<linearGradient id="beamS" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#F4F8FF" stop-opacity=".8"/><stop offset="1" stop-color="#F4F8FF" stop-opacity="0"/></linearGradient>
+<linearGradient id="bootG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0E0D10"/><stop offset=".6" stop-color="#26242A"/><stop offset="1" stop-color="#3A3840"/></linearGradient>
+<linearGradient id="portG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E8E0C8"/><stop offset="1" stop-color="#B8A888"/></linearGradient>
+<linearGradient id="shine" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".8"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<pattern id="bars8" width="60" height="2000" patternUnits="userSpaceOnUse"><rect x="0" y="0" width="14" height="2000" fill="#000"/></pattern>
+<pattern id="noiseP" width="256" height="256" patternUnits="userSpaceOnUse"><image href="${NOISE}" width="256" height="256"/></pattern>`;
+const defsEl = document.getElementById('defs'), root = document.getElementById('root');
+function frame(t) {
+  D = []; uid = 0;
+  const sh = shotAt(t);
+  let body = FN[sh[0]](t);
+  for (const c of SH.slice(1)) if (t >= c[1] && t < c[1] + .07 && !['bible', 'cell2', 'inside', 'boots', 'tour'].includes(c[0])) body += `<rect width="1920" height="1080" fill="#fff" opacity="${op(.15 * (1 - (t - c[1]) / .07))}"/>`;
+  defsEl.innerHTML = STATIC + D.join('');
+  root.innerHTML = body;
+}
+const params = new URLSearchParams(location.search);
+const stage = document.getElementById('stage'), startEl = document.getElementById('start');
+const fit = () => stage.style.setProperty('--s', Math.min(innerWidth / 1920, innerHeight / 1080));
+addEventListener('resize', fit); fit();
+const audio = window.AUDIO_SRC ? new Audio(window.AUDIO_SRC) : null;
+let playing = false, offset = parseFloat(params.get('t') || '0'), t0 = 0;
+const current = () => playing ? Math.min(TOTAL, offset + (performance.now() - t0) / 1000) : offset;
+function play() { if (playing) return; playing = true; t0 = performance.now(); startEl.classList.add('hide'); if (audio) { audio.currentTime = offset; audio.play(); } }
+startEl.addEventListener('click', play);
+window.__total = TOTAL;
+window.__seek = t => { playing = false; offset = t; frame(t); };
+window.__ready = true;
+if (params.has('hideui')) startEl.classList.add('hide');
+if (params.has('still')) frame(offset); else (function loop() { frame(current()); requestAnimationFrame(loop); })();
+</script>
+</body>
+</html>

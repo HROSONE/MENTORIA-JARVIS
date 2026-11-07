@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mike, a galinha sem cabeça</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s,1));background:#000}
+  svg{display:block}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font:800 54px sans-serif;background:rgba(0,0,0,.55);cursor:pointer}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+<svg id="s" width="1080" height="1920" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <filter id="sepia" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".39 .77 .19 0 0  .35 .69 .17 0 0  .27 .53 .13 0 0  0 0 0 1 0"/><feComponentTransfer><feFuncR type="linear" slope="1.1" intercept="-.03"/><feFuncG type="linear" slope="1.03" intercept="-.03"/><feFuncB type="linear" slope=".88" intercept="-.02"/></feComponentTransfer></filter>
+  <filter id="warm" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1.1 .05 0 0 .02  0 1 0 0 0  0 0 .85 0 0  0 0 0 1 0"/></filter>
+  <filter id="xray" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".1 .2 .1 0 0  .2 .45 .2 0 .05  .3 .6 .3 0 .12  0 0 0 1 0"/></filter>
+  <filter id="bl6" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+  <filter id="bl14" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+  <filter id="bl30" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="30"/></filter>
+  <radialGradient id="vig" cx=".5" cy=".5" r=".75"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".8"/></radialGradient>
+  <radialGradient id="glowC"><stop offset="0" stop-color="#E6FDFF" stop-opacity="1"/><stop offset=".3" stop-color="#5FE6FF" stop-opacity=".6"/><stop offset="1" stop-color="#5FE6FF" stop-opacity="0"/></radialGradient>
+  <radialGradient id="glowW"><stop offset="0" stop-color="#FFF6E0" stop-opacity=".9"/><stop offset="1" stop-color="#FFB060" stop-opacity="0"/></radialGradient>
+  <radialGradient id="spot"><stop offset="0" stop-color="#FFF6E0" stop-opacity=".5"/><stop offset="1" stop-color="#FFF6E0" stop-opacity="0"/></radialGradient>
+  <linearGradient id="leak" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFB060" stop-opacity=".5"/><stop offset=".45" stop-color="#FF7040" stop-opacity="0"/></linearGradient>
+  <linearGradient id="grassG" x1="0" y1="0" x2="0" y2="1"><stop offset=".83" stop-color="#fff" stop-opacity="0"/><stop offset=".9" stop-color="#fff" stop-opacity="1"/></linearGradient>
+  <mask id="grassM" maskUnits="userSpaceOnUse" x="0" y="0" width="1400" height="933"><rect width="1400" height="933" fill="url(#grassG)"/></mask>
+</defs>
+<g id="scenes"></g>
+<g id="fx"></g>
+</svg>
+<div id="start">▶ CLIQUE (com som)</div>
+</div>
+<!--AUDIO-->
+<!--NARR-->
+<!--GAL-->
+<script>
+const N = window.NARR;   // tempos de cada frase da narração
+const S = Object.fromEntries(N.s.map(x => [x.k, x]));
+const TOTAL = N.total;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const range = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = x => 1 - Math.pow(1 - clamp(x), 3);
+const easeInOut = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const lerp = (a, b, k) => a + (b - a) * k;
+const f1 = x => Math.round(x * 10) / 10;
+const nz = (t, s = 0) => Math.sin(t * 1.7 + s) * .5 + Math.sin(t * 3.1 + s * 2.3) * .3 + Math.sin(t * 7.3 + s * .7) * .2;
+
+/* ---- cenas (fotos fixas; por quadro só mudamos visibilidade e câmera) ---- */
+// cada cena: [início, fim, montagem]
+const IMG = (href, w, h, extra = '') => `<image href="${href}" x="0" y="0" width="${w}" height="${h}" ${extra}/>`;
+const SC = [];
+function scene(id, from, to, inner, filter = '') { SC.push({ id, from, to }); return `<g id="${id}" style="display:none"><g id="${id}_cam"${filter ? ` filter="url(#${filter})"` : ''}>${inner}</g><g id="${id}_dyn"></g></g>`; }
+const G = window.GAL;  // galinha vetorizada a partir das fotos (coordenadas em pixels da foto)
+const uid = (svg, s) => svg.replace(/ id="[^"]*"/, '');
+const FRONT = s => `<g id="fb${s}"><g id="fl${s}"></g><g id="fr${s}"></g><g id="fc${s}">${uid(G.frente_corpo)}</g></g>`;
+// pernas desenhadas com os pontos medidos na foto (quadril, jarrete, pé)
+function leg(hx, hy, kx, ky, fx, fy, lift) {
+  fy -= lift; ky -= lift * .5; const sk = '#6b5652', c1 = '#e0d4cf', c2 = '#b3a29e';
+  let o = `<path d="M${f1(hx - 13)} ${f1(hy)}Q${f1(kx - 17)} ${f1(ky)} ${f1(fx - 9)} ${f1(fy)}L${f1(fx + 9)} ${f1(fy)}Q${f1(kx + 17)} ${f1(ky)} ${f1(hx + 13)} ${f1(hy)}Z" fill="${c1}" stroke="${sk}" stroke-width="3" stroke-linejoin="round"/>`;
+  o += `<path d="M${f1(kx + 4)} ${f1(ky)}Q${f1((kx + fx) / 2 + 6)} ${f1((ky + fy) / 2)} ${f1(fx + 5)} ${f1(fy)}" fill="none" stroke="${c2}" stroke-width="8" stroke-linecap="round"/>`;
+  for (let i = 1; i < 8; i++) { const k = i / 8, x = lerp(kx, fx, k), y = lerp(ky, fy, k); o += `<path d="M${f1(x - 7)} ${f1(y)}q7 5 14 0" fill="none" stroke="${sk}" stroke-width="1.6" opacity=".55"/>`; }
+  const toe = (dx, dy) => `<path d="M${f1(fx)} ${f1(fy)}l${f1(dx)} ${f1(dy)}" stroke="${sk}" stroke-width="13" stroke-linecap="round"/><path d="M${f1(fx)} ${f1(fy)}l${f1(dx)} ${f1(dy)}" stroke="${c1}" stroke-width="8" stroke-linecap="round"/>`;
+  return toe(-30, 20 - lift * .2) + toe(30, 20 - lift * .2) + toe(0, 30 - lift * .4) + toe(4, -10) + o;
+}
+function walk(s, t, sp = 6, amp = 1) {
+  const ph = Math.sin(t * sp), b = Math.abs(Math.cos(t * sp)) * 6 * amp;
+  const lL = Math.max(0, ph) * 34 * amp, lR = Math.max(0, -ph) * 34 * amp;
+  document.getElementById('fl' + s).innerHTML = leg(880, 600, 884, 700, 890, 800 + 40, lL);
+  document.getElementById('fr' + s).innerHTML = leg(962, 615, 968, 725, 955, 846, lR);
+  document.getElementById('fc' + s).setAttribute('transform', `translate(0,${f1(-b)}) rotate(${f1(1.5 * ph * amp)} 920 560)`);
+}
+const EYE = `<g><path d="M703 282Q720 264 741 279Q722 299 703 282Z" fill="#5a1c16"/><ellipse cx="721" cy="281" rx="13.5" ry="11.5" fill="#d27a1c"/><ellipse cx="721" cy="281" rx="13.5" ry="11.5" fill="none" stroke="#7a3a10" stroke-width="2"/><ellipse cx="722" cy="281" rx="8" ry="7.5" fill="#f2a43a" opacity=".6"/><circle cx="722" cy="281" r="5.6" fill="#0d0705"/><circle cx="725.5" cy="277.5" r="2.4" fill="#fff" opacity=".9"/><path d="M704 280Q721 264 740 278" fill="none" stroke="#7a2018" stroke-width="2.5" stroke-linecap="round"/></g>`;
+const HEAD = `<g class="head">${uid(G.cabeca)}${EYE}</g>`;
+const P1 = IMG('px_375510_bg.jpg', 1400, 932) + HEAD;
+const P1H = s => IMG('px_18846312_bg.jpg', 1400, 933) + `<ellipse cx="930" cy="858" rx="150" ry="16" fill="#000" opacity=".35" filter="url(#bl6)"/>` + FRONT(s);
+// capim procedural na frente da galinha de lado
+const GR = Array.from({ length: 340 }, (_, i) => { const r = k => (((i + 1) * 9301 + k * 49297) % 233280) / 233280; return { x: 300 + r(1) * 900, y: 940 + r(2) * 20, h: 90 + r(3) * r(3) * 330, w: 1.4 + r(4) * 2.6, lean: (r(6) - .5) * 70, c: ['#4f7a2a', '#6a9a36', '#88b44a', '#3d6420', '#a8c868', '#577f2c'][i % 6], p: r(5) * 6 }; });
+const grass = t => GR.map(g => { const sw = 8 * Math.sin(t * 1.4 + g.p) + g.lean; const tx = g.x + sw, ty = g.y - g.h; return `<path d="M${f1(g.x - g.w)} ${f1(g.y)}Q${f1(g.x + sw * .2 - g.w * .6)} ${f1(g.y - g.h * .55)} ${f1(tx)} ${f1(ty)}Q${f1(g.x + sw * .2 + g.w * .6)} ${f1(g.y - g.h * .55)} ${f1(g.x + g.w)} ${f1(g.y)}Z" fill="${g.c}"/>`; }).join('');
+const T = k => S[k].t0;
+const cut = [0, T('s3') - .05, T('s4') - .1, T('s5') - .05, T('s6') - .05, T('s7') - .05, T('s8') - .05, T('s9') - .05, T('s10') - .1, T('s11') - .05, T('s13') - .05, T('s14') - .05, T('s15') - .1, TOTAL];
+let html = '';
+html += scene('c1', cut[0], cut[1], P1);                                    // close + machado
+html += scene('c2', cut[1], cut[2], P1H('2'));                                   // sem cabeça (cor)
+html += scene('c3', cut[2], cut[3], IMG('px_976847.jpg', 1400, 933), 'sepia');      // 1945, celeiro
+html += scene('c4', cut[3], cut[4], IMG('px_8540948.jpg', 1400, 2100) , 'sepia');   // fazendeiro
+html += scene('c5', cut[4], cut[5], IMG('px_58902_bg.jpg', 1400, 933) + `<g id="ladoChk">${uid(G.lado)}</g><image href="px_58902.jpg" x="0" y="0" width="1400" height="933" mask="url(#grassM)"/>`, 'sepia'); // manhã seguinte
+html += scene('c6', cut[5], cut[6], IMG('px_10753180.jpg', 1400, 1963), 'sepia');   // conta-gotas
+html += scene('c7', cut[6], cut[7], IMG('px_2002338.jpg', 1400, 2100) + `<g id="c7chk"><ellipse cx="880" cy="860" rx="230" ry="34" fill="#000" opacity=".5"/>${FRONT('7')}</g>`, 'sepia'); // circo
+html += scene('c8', cut[7], cut[8], P1H('8'), 'sepia');                          // um ano e meio
+html += scene('c9', cut[8], cut[9], P1);                                    // como é possível?
+html += scene('c10', cut[9], cut[10], P1, 'xray');                         // raio-x
+html += scene('c11', cut[10], cut[11], P1H('11'), 'warm');                       // tinha tudo pra viver
+html += scene('c12', cut[11], cut[12], IMG('px_12809923.jpg', 1400, 1682)); // festa
+html += scene('c13', cut[12], cut[13], P1);                                 // se inscreve
+document.getElementById('scenes').innerHTML = html;
+
+// câmera: centro (cx, cy) na foto, escala z, rotação r
+function cam(id, cx, cy, z, r = 0, hand = 1, t = 0) {
+  const hx = 6 * nz(t * .7, id.length) * hand, hy = 5 * nz(t * .6, id.length + 3) * hand;
+  document.getElementById(id + '_cam').setAttribute('transform', `translate(${f1(540 + hx)},${f1(960 + hy)}) rotate(${f1(r)}) scale(${Math.round(z * 1000) / 1000}) translate(${f1(-cx)},${f1(-cy)})`);
+}
+const dyn = (id, s) => document.getElementById(id + '_dyn').innerHTML = s;
+const fx = document.getElementById('fx');
+const SEED = Array.from({ length: 40 }, (_, i) => ((i * 7919) % 1000) / 1000);
+
+function frame(t) {
+  for (const c of SC) document.getElementById(c.id).style.display = (t >= c.from && t < c.to) ? '' : 'none';
+  let flash = 0, shake = 0, sep = false, fxs = '';
+  const k = c => { const s = SC.find(x => x.id === c); return range(t, s.from, s.to); };
+  // c1: close no rosto, sombra do machado sobe e desce
+  if (t < cut[1]) {
+    const kk = k('c1'), swing = range(t, T('s2') + .35, T('s2') + .75);
+    cam('c1', lerp(735, 728, kk), lerp(345, 300, kk), lerp(3.0, 3.6, easeInOut(kk)) * (swing > 0 ? 1 + .06 * swing : 1), lerp(-2, 1, kk), 1, t);
+    const ax = lerp(-40, 20, range(t, 0, T('s2') + .3)), ay = lerp(-200, 120, easeOut(swing));
+    dyn('c1', `<g filter="url(#bl14)" opacity="${f1(.5 + .3 * range(t, .6, T('s2')))}" transform="translate(${f1(880 + ax)},${f1(200 + ay)}) rotate(${f1(lerp(22, 62, easeOut(swing)))}) scale(1.5)"><rect x="-30" y="-80" width="60" height="1000" rx="26" fill="#020100"/><path d="M-30 -100 L-360 -60 L-380 290 L-30 220Z" fill="#020100"/></g><rect width="1080" height="1920" fill="url(#leak)"/>`);
+    if (t > T('s2') + .72) flash = range(t, T('s2') + .72, T('s2') + .78) * (1 - range(t, T('s2') + .78, T('s2') + 1.2));
+    if (t > T('s2') + .72 && t < T('s2') + 1.1) { shake = 14; fxs += `<rect width="1080" height="1920" fill="#000" opacity="${f1(.9 * (1 - range(t, T('s2') + .9, cut[1])))}"/>`; }
+  }
+  // c2: andando sem cabeça, cor
+  else if (t < cut[2]) { const kk = k('c2'); walk('2', t); cam('c2', lerp(880, 890, kk), lerp(470, 480, kk), lerp(2.25, 2.5, easeOut(kk)), lerp(1.5, -1, kk), 1.4, t); dyn('c2', ''); }
+  else if (t < cut[3]) { const kk = k('c3'); cam('c3', lerp(520, 820, easeInOut(kk)), 466, lerp(2.4, 2.2, kk), 0, 1, t); sep = true; }
+  else if (t < cut[4]) { const kk = k('c4'); cam('c4', lerp(700, 720, kk), lerp(1250, 1050, easeInOut(kk)), lerp(1.7, 1.45, kk), lerp(1, -1, kk), 1, t); sep = true; }
+  else if (t < cut[5]) {
+    const kk = k('c5'), bob = Math.abs(Math.sin(t * 6)) * 14, peck = Math.max(0, Math.sin(t * 3.2)) * 10;
+    document.getElementById('ladoChk').setAttribute('transform', `translate(${f1(-6 * Math.sin(t * 2))},${f1(-bob * .3)}) rotate(${f1(peck)} 700 700)`);
+    cam('c5', lerp(820, 600, kk), 466, lerp(2.15, 2.4, easeInOut(kk)), lerp(-1, 1, kk), 1, t); sep = true;
+  }
+  else if (t < cut[6]) {
+    const kk = k('c6'), dropY = ((t - cut[5]) * .9 % 1);
+    cam('c6', lerp(700, 640, kk), lerp(900, 1000, kk), lerp(1.25, 1.55, easeInOut(kk)), 0, 1, t);
+    dyn('c6', `<g filter="url(#sepia)"><ellipse cx="${f1(560)}" cy="${f1(lerp(1080, 1900, dropY * dropY))}" rx="26" ry="34" fill="#E8DCC8" opacity="${f1(.8 * (dropY > .05 ? 1 : 0))}"/></g>`); sep = true;
+  }
+  else if (t < cut[7]) {
+    const kk = k('c7');
+    document.getElementById('c7chk').setAttribute('transform', `translate(${f1(-120 + 80 * kk)},${f1(1330 - 30 * Math.abs(Math.sin(t * 6)))}) scale(.8)`); walk('7', t, 7);
+    cam('c7', lerp(700, 660, kk), lerp(1500, 1560, kk), lerp(1.35, 1.6, easeInOut(kk)), lerp(-1.5, 1, kk), 1, t);
+    const fl = Math.sin(t * 23) > .7 ? .25 : 0;
+    dyn('c7', `<rect x="-2000" y="-2000" width="5000" height="5000" fill="#fff" opacity="${fl}"/><ellipse cx="540" cy="1460" rx="380" ry="120" fill="url(#spot)"/>`); sep = true;
+  }
+  else if (t < cut[8]) {
+    const kk = k('c8'), day = .5 + .5 * Math.sin(kk * 18); walk('8', t, 5);
+    cam('c8', lerp(880, 900, kk), lerp(480, 466, kk), lerp(2.5, 2.2, easeInOut(kk)), 0, 1, t);
+    dyn('c8', `<rect width="1080" height="1920" fill="#000" opacity="${f1(.5 * (1 - day))}"/>`); sep = true;
+  }
+  else if (t < cut[9]) { const kk = k('c9'); cam('c9', lerp(720, 728, kk), lerp(282, 278, kk), lerp(3.4, 4.4, easeInOut(kk)), lerp(1, -1, kk), .6, t); dyn('c9', ''); }
+  else if (t < cut[10]) {
+    const kk = k('c10'), z = lerp(4.0, 4.6, easeInOut(kk)), cx0 = 730, cy0 = 280;
+    cam('c10', cx0, cy0, z, 0, .5, t);
+    const sx = x => 540 + (x - cx0) * z, sy = y => 960 + (y - cy0) * z;
+    const cutK = range(t, T('s11') + 1.2, T('s11') + 2.2), clot = range(t, T('s12'), T('s12') + 1.2);
+    let o = `<rect width="1080" height="1920" fill="#021018" opacity=".25"/>`;
+    o += `<ellipse cx="${f1(sx(745))}" cy="${f1(sy(265))}" rx="${f1(70 * z)}" ry="${f1(58 * z)}" fill="none" stroke="#9FF4FF" stroke-width="5" opacity=".55" stroke-dasharray="14 10"/>`;
+    o += `<g style="mix-blend-mode:screen"><ellipse cx="${f1(sx(768))}" cy="${f1(sy(258))}" rx="${f1(30 * z)}" ry="${f1(24 * z)}" fill="url(#glowC)" opacity=".8"/></g>`;
+    const bs = .6 + .4 * Math.sin(t * 6);
+    o += `<g style="mix-blend-mode:screen"><ellipse cx="${f1(sx(782))}" cy="${f1(sy(292))}" rx="${f1(14 * z)}" ry="${f1(20 * z)}" fill="#5FFFB0" opacity="${f1(.35 + .4 * bs * range(t, T('s11') + .5, T('s11') + 1))}"/></g>`;
+    if (cutK > 0) o += `<line x1="${f1(sx(730))}" y1="${f1(sy(150))}" x2="${f1(lerp(sx(730), sx(790), cutK))}" y2="${f1(lerp(sy(150), sy(410), cutK))}" stroke="#FF4A4A" stroke-width="10" stroke-dasharray="26 16" stroke-linecap="round"/>`;
+    if (clot > 0) { const cxp = sx(800), cyp = sy(380); o += `<circle cx="${f1(cxp)}" cy="${f1(cyp)}" r="${f1(lerp(90, 34, easeOut(clot)))}" fill="none" stroke="#FFB0A0" stroke-width="6" opacity="${f1(1 - .5 * clot)}"/>` + Array.from({ length: 10 }, (_, i) => { const a = i * .63; return `<line x1="${f1(cxp + Math.cos(a) * 34)}" y1="${f1(cyp + Math.sin(a) * 34)}" x2="${f1(cxp + Math.cos(a + 2) * 34)}" y2="${f1(cyp + Math.sin(a + 2) * 34)}" stroke="#FF8A7A" stroke-width="4" opacity="${f1(clot)}"/>`; }).join('') + `<circle cx="${f1(cxp)}" cy="${f1(cyp)}" r="${f1(22 * clot)}" fill="#B83A3A" opacity=".8"/>`; }
+    dyn('c10', o);
+  }
+  else if (t < cut[11]) { const kk = k('c11'); walk('11', t, 4, .7); cam('c11', lerp(890, 880, kk), lerp(470, 480, kk), lerp(2.2, 2.6, easeInOut(kk)), lerp(-1, 1, kk), 1, t); dyn('c11', `<rect width="1080" height="1920" fill="url(#leak)"/><ellipse cx="300" cy="300" rx="600" ry="500" fill="url(#glowW)" opacity=".35"/>`); }
+  else if (t < cut[12]) {
+    const kk = k('c12');
+    cam('c12', lerp(720, 860, kk), lerp(820, 860, kk), lerp(2.0, 2.3, easeInOut(kk)), lerp(1, -1, kk), 1, t);
+    dyn('c12', Array.from({ length: 30 }, (_, i) => `<circle cx="${f1((SEED[i % 40] * 1300 + i * 37) % 1080)}" cy="${f1(((i * 131) % 1920 + t * 40 * (1 + SEED[i % 40])) % 1920)}" r="${f1(14 + 30 * SEED[(i + 3) % 40])}" fill="${['#FFD070', '#FF7AA0', '#7FE6FF', '#FFF0C0'][i % 4]}" opacity=".35" filter="url(#bl6)"/>`).join(''));
+  }
+  else { const kk = k('c13'); cam('c13', lerp(712, 724, kk), lerp(286, 280, kk), lerp(3.2, 3.5, easeOut(kk)), 0, .8, t); dyn('c13', ''); }
+  // cortes: flash curto
+  for (const c of cut.slice(1, -1)) if (t >= c && t < c + .1) flash = Math.max(flash, .35 * (1 - (t - c) / .1));
+  // filme antigo nas cenas de 1945
+  const sx = shake ? nz(t * 40, 1) * shake : 0, sy2 = shake ? nz(t * 40, 4) * shake : 0;
+  document.getElementById('scenes').setAttribute('transform', `translate(${f1(sx)},${f1(sy2)})`);
+  if (sep) { const j = Math.floor(t * 24); fxs += Array.from({ length: 3 }, (_, i) => { const x = (SEED[(j + i * 7) % 40] * 1080); return `<line x1="${f1(x)}" y1="0" x2="${f1(x + 4)}" y2="1920" stroke="#fff" stroke-width="${1 + i % 2}" opacity="${f1(.1 + .1 * SEED[(j + i) % 40])}"/>`; }).join('') + `<rect width="1080" height="1920" fill="#2A1A08" opacity="${f1(.04 + .03 * SEED[j % 40])}"/>`; }
+  fxs += `<rect width="1080" height="1920" fill="url(#vig)"/>`;
+  if (flash > 0) fxs += `<rect width="1080" height="1920" fill="#fff" opacity="${f1(flash)}"/>`;
+  fx.innerHTML = fxs;
+}
+
+/* ---- controle ---- */
+const params = new URLSearchParams(location.search);
+const stage = document.getElementById('stage'), startEl = document.getElementById('start');
+const fit = () => stage.style.setProperty('--s', Math.min(innerWidth / 1080, innerHeight / 1920));
+addEventListener('resize', fit); fit();
+const audio = window.AUDIO_SRC ? new Audio(window.AUDIO_SRC) : null;
+let playing = false, offset = parseFloat(params.get('t') || '0'), t0 = 0;
+const current = () => playing ? Math.min(TOTAL, offset + (performance.now() - t0) / 1000) : offset;
+function play() { if (playing) return; playing = true; t0 = performance.now(); startEl.classList.add('hide'); if (audio) { audio.currentTime = offset; audio.play(); } }
+startEl.addEventListener('click', play);
+window.__total = TOTAL;
+window.__seek = t => { playing = false; offset = t; frame(t); };
+// espera todas as fotos decodificarem antes de liberar o render
+Promise.all([...document.querySelectorAll('image')].map(im => new Promise(r => { const i = new Image(); i.onload = i.onerror = () => (i.decode ? i.decode().catch(() => { }).then(r) : r()); i.src = im.getAttribute('href'); }))).then(() => {
+  window.__ready = true;
+  if (params.has('hideui')) startEl.classList.add('hide');
+  if (params.has('still')) frame(offset); else (function loop() { frame(current()); requestAnimationFrame(loop); })();
+});
+</script>
+</body>
+</html>

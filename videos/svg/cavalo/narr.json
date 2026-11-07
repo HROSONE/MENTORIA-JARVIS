@@ -1,0 +1,77 @@
+{
+ "total": 44.4,
+ "s": [
+  {
+   "k": "n1",
+   "txt": "Na vida real, três prisioneiros fugiram de um campo nazista usando um cavalo de ginástica.",
+   "t0": 0.1,
+   "t1": 4.7,
+   "a": 0,
+   "b": 5.0
+  },
+  {
+   "k": "n2",
+   "txt": "Todo dia, eles levavam o cavalo pro mesmo canto do pátio, perto da cerca, e passavam horas pulando.",
+   "t0": 5.1,
+   "t1": 10.1,
+   "a": 5.0,
+   "b": 10.4
+  },
+  {
+   "k": "n3",
+   "txt": "Mas o cavalo não estava vazio. Tinha um homem escondido lá dentro.",
+   "t0": 10.5,
+   "t1": 14.5,
+   "a": 10.4,
+   "b": 14.8
+  },
+  {
+   "k": "n4",
+   "txt": "Enquanto os outros pulavam, ele cavava um túnel bem embaixo do cavalo e enchia sacos com a areia.",
+   "t0": 14.9,
+   "t1": 19.9,
+   "a": 14.8,
+   "b": 20.2
+  },
+  {
+   "k": "n5",
+   "txt": "No fim do dia, tampavam o buraco e levavam o cavalo de volta, com o homem e a terra lá dentro.",
+   "t0": 20.3,
+   "t1": 25.3,
+   "a": 20.2,
+   "b": 25.6
+  },
+  {
+   "k": "n6",
+   "txt": "Durante mais de três meses, o túnel foi crescendo, até passar por baixo da cerca.",
+   "t0": 25.7,
+   "t1": 30.1,
+   "a": 25.6,
+   "b": 30.4
+  },
+  {
+   "k": "n7",
+   "txt": "Numa noite de outubro de 1943, os três entraram no túnel e saíram do outro lado da cerca.",
+   "t0": 30.5,
+   "t1": 35.3,
+   "a": 30.4,
+   "b": 35.6
+  },
+  {
+   "k": "n8",
+   "txt": "E os três conseguiram fugir pra Suécia e voltar pra casa.",
+   "t0": 35.7,
+   "t1": 39.3,
+   "a": 35.6,
+   "b": 39.6
+  },
+  {
+   "k": "n9",
+   "txt": "E o cavalo de madeira ficou lá no pátio, como se nada tivesse acontecido.",
+   "t0": 39.7,
+   "t1": 44.1,
+   "a": 39.6,
+   "b": 44.4
+  }
+ ]
+}

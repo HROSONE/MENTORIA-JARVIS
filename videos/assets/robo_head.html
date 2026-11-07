@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>O Vale da Estranheza</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --accent:#00E5FF; --s:1; }
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s));background:#000}
+  #c{display:block;width:1080px;height:1920px;transform-origin:50% 45%}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+  #alarm{position:absolute;inset:0;opacity:0;pointer-events:none;box-shadow:inset 0 0 220px 60px rgba(255,30,40,.9)}
+  #vhs{position:absolute;inset:0;opacity:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 2px,transparent 2px 6px);}
+  #vhs b{position:absolute;left:60px;top:90px;color:#fff;font:900 90px 'Montserrat',sans-serif}
+  #graph{position:absolute;left:70px;top:150px;width:940px;height:620px;opacity:0;pointer-events:none;background:rgba(10,12,20,.72);border-radius:36px;border:3px solid rgba(255,255,255,.12)}
+  #graph text{font-family:'Montserrat',sans-serif;font-weight:800;fill:#fff}
+  .ov{position:absolute;left:40px;right:40px;top:var(--y);text-align:center;color:#fff;font-family:'Montserrat',system-ui,sans-serif;font-weight:900;font-size:var(--fs);line-height:1.02;
+    opacity:0;transform:translateY(40px) scale(.9);transition:opacity .2s ease, transform .35s cubic-bezier(.2,.9,.3,1.4);
+    text-shadow:0 10px 40px rgba(0,0,0,.9),0 2px 8px rgba(0,0,0,.8);pointer-events:none}
+  .ov.on{opacity:1;transform:none}
+  .a{color:var(--accent)}
+  .r{color:#ff4a5a}
+  .sub{display:block;font-size:.36em;letter-spacing:.12em;margin-top:.2em}
+  .btn{display:inline-block;border:10px solid var(--accent);border-radius:999px;padding:.28em .75em;background:rgba(0,0,0,.5);box-shadow:0 0 60px rgba(0,229,255,.35)}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;font:800 54px 'Montserrat',sans-serif;background:rgba(0,0,0,.55);cursor:pointer;gap:30px;text-align:center}
+  #start small{font-size:30px;opacity:.6}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <svg id="graph" viewBox="0 0 940 620">
+    <line x1="90" y1="520" x2="890" y2="520" stroke="#fff" stroke-opacity=".5" stroke-width="4"/>
+    <line x1="90" y1="70" x2="90" y2="520" stroke="#fff" stroke-opacity=".5" stroke-width="4"/>
+    <text x="490" y="585" text-anchor="middle" font-size="34">PARECIDO COM HUMANO →</text>
+    <text x="50" y="300" text-anchor="middle" font-size="34" transform="rotate(-90 50 300)">SIMPATIA →</text>
+    <path id="gcurve" fill="none" stroke="#00E5FF" stroke-width="10" stroke-linecap="round" d="M100 470 C 260 420, 420 300, 560 230 C 610 205, 640 250, 665 400 C 680 480, 700 500, 730 430 C 770 330, 820 150, 870 110"/>
+    <text id="gvale" x="690" y="475" text-anchor="middle" font-size="30" fill="#ff4a5a" style="fill:#ff4a5a" opacity="0">VALE</text>
+    <circle id="gdot" r="22" fill="#fff" stroke="#00E5FF" stroke-width="8" cx="100" cy="470"/>
+  </svg>
+  <div id="alarm"></div>
+  <div id="flash"></div>
+  <div id="vhs"><b>⏪</b></div>
+  <div id="texts"></div>
+  <div id="start">▶ CLIQUE ou ESPAÇO<small>com som · ESPAÇO pausa · R reinicia</small></div>
+</div>
+<!--AUDIO-->
+<!--SKIN-->
+<!--GLB-->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* ======== LINHA DO TEMPO (segundos) — a mesma do áudio ======== */
+const EV = {
+  wave0: .2, scream: 1.0, flee: 1.9, why: 3.2,
+  cute: 5.6, clap1: 6.6,
+  graph: 9.4, maskOn: 12.6, scream2: 13.6, human: 17.4, clap2: 18.4, mori: 21.6,
+  rewind: 26.0, reveal: 27.0, stare: 27.2, jerk: 30.6, alarm: 33.8,
+  off: 37.6, thumbs: 38.6, end: 43.5,
+};
+const TEXTS = [
+  { from: 1.0, to: 3.0,  y: 230, fs: 190, html: '<span class="r">AAAH!</span>' },
+  { from: 3.2, to: 5.5,  y: 210, fs: 150, html: 'POR QUÊ<span class="a">?</span>' },
+  { from: 6.6, to: 9.2,  y: 220, fs: 150, html: '<span class="a">FOFO</span>' },
+  { from: 13.8, to: 17.2, y: 1560, fs: 92,  html: '<span class="r">VALE DA</span><br>ESTRANHEZA' },
+  { from: 21.8, to: 25.8, y: 1540, fs: 120, html: '<span class="a">1970</span><span class="sub">MASAHIRO MORI · JAPÃO</span>' },
+  { from: 27.6, to: 30.4, y: 200, fs: 96,  html: 'O ROSTO<br><span class="a">QUASE ACERTA</span>' },
+  { from: 30.8, to: 33.6, y: 200, fs: 96,  html: 'O MOVIMENTO<br><span class="r">ERRA</span>' },
+  { from: 34.0, to: 37.4, y: 200, fs: 84,  html: 'O CÉREBRO<br><span class="r">DISPARA O ALARME</span>' },
+  { from: 38.8, to: 43.5, y: 1560, fs: 110, html: '<span class="btn">SE INSCREVE</span>' },
+];

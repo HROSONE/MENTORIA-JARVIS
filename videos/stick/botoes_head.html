@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Botões de Mentira</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --accent:#00E5FF; --s:1; }
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s));background:#000}
+  #c{display:block;width:1080px;height:1920px}
+  .ov{position:absolute;left:50px;right:50px;top:var(--y);text-align:center;color:#fff;font-family:'Montserrat',system-ui,sans-serif;font-weight:900;font-size:var(--fs);line-height:1;
+    opacity:0;transform:translateY(40px) scale(.92);transition:opacity .25s ease, transform .45s cubic-bezier(.2,.9,.3,1.25);
+    text-shadow:0 10px 40px rgba(0,0,0,.8),0 2px 8px rgba(0,0,0,.7);pointer-events:none}
+  .ov.on{opacity:1;transform:none}
+  .a{color:var(--accent)}
+  .sub{display:block;font-size:.32em;letter-spacing:.1em;margin-top:.2em}
+  .btn{display:inline-block;border:10px solid var(--accent);border-radius:999px;padding:.28em .75em;background:rgba(0,0,0,.45);box-shadow:0 0 60px rgba(0,229,255,.35)}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;font:800 54px 'Montserrat',sans-serif;background:rgba(0,0,0,.55);cursor:pointer;gap:30px;text-align:center}
+  #start small{font-size:30px;opacity:.6}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="texts"></div>
+  <div id="start">▶ CLIQUE ou ESPAÇO<small>ESPAÇO pausa · R reinicia · ← → avança/volta 2s</small></div>
+</div>
+<!--SKIN-->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* =====================================================================
+   ROTEIRO / TEMPOS — ajuste "dur" (segundos) para casar com a sua fala.
+   ===================================================================== */
+const SEGMENTS = [
+  { id:'intro',     dur:4.5 },  // "Você aperta esse botão com toda a força… mas talvez ele não faça absolutamente nada."
+  { id:'elevador',  dur:14.0 }, // "O botão de fechar a porta do elevador, por exemplo. Nos Estados Unidos, desde 1990, uma lei exige que a porta fique aberta tempo suficiente pra qualquer pessoa entrar. Por isso, em muitos elevadores esse botão foi desligado. Ele só funciona no modo de emergência, com a chave dos bombeiros."
+  { id:'semaforo',  dur:13.0 }, // "E o botão do semáforo? Em Nova York, no começo dos anos 2000, a prefeitura admitiu que mais de 2.500 dos 3.250 botões de pedestre não faziam nada. Os sinais já eram controlados por computador."
+  { id:'termostato',dur:8.0 },  // "E em alguns escritórios, até o termostato da parede é de mentira."
+  { id:'porque',    dur:10.0 }, // "Mas então por que eles continuam lá? Porque apertar um botão te dá a sensação de controle. E a espera fica menos irritante."
+  { id:'inscreve',  dur:5.5 },  // "Se você gostou, se inscreve. Esse botão aqui funciona de verdade."
+];
+const TEXTS = [
+  { seg:'intro',      from:2.2, to:4.5,  y:240,  fs:200, html:'<span class="a">NADA</span>' },
+  { seg:'elevador',   from:1.6, to:4.4,  y:220,  fs:220, html:'<span class="a">1990</span>' },
+  { seg:'elevador',   from:5.4, to:9.0,  y:220,  fs:120, html:'<span class="a">DESLIGADO</span>' },
+  { seg:'elevador',   from:9.8, to:14.0, y:200,  fs:100, html:'SÓ COM A<br><span class="a">CHAVE</span>' },
+  { seg:'semaforo',   from:4.8, to:10.0, y:200,  fs:210, html:'<span class="a">2.500</span><span class="sub">DE 3.250 BOTÕES · NOVA YORK</span>' },
+  { seg:'semaforo',   from:10.2, to:13.0, y:220, fs:100, html:'<span class="a">COMPUTADOR</span>' },
+  { seg:'termostato', from:4.4, to:8.0,  y:220,  fs:120, html:'DE <span class="a">MENTIRA</span>' },
+  { seg:'porque',     from:0.5, to:3.4,  y:220,  fs:150, html:'POR QUÊ<span class="a">?</span>' },
+  { seg:'porque',     from:4.0, to:9.8,  y:200,  fs:100, html:'SENSAÇÃO DE<br><span class="a">CONTROLE</span>' },
+  { seg:'inscreve',   from:1.6, to:5.5,  y:1560, fs:110, html:'<span class="btn">SE INSCREVE</span>' },
+];

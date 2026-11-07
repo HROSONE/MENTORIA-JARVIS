@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A Dentadura da Vovó</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --accent:#00E5FF; --s:1; }
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;
+    transform:translate(-50%,-50%) scale(var(--s));background:#000}
+  #c{display:block;width:1080px;height:1920px}
+  .ov{position:absolute;left:50px;right:50px;top:var(--y);text-align:center;color:#fff;
+    font-family:'Montserrat',system-ui,sans-serif;font-weight:900;font-size:var(--fs);line-height:1;
+    opacity:0;transform:translateY(40px) scale(.92);
+    transition:opacity .25s ease, transform .45s cubic-bezier(.2,.9,.3,1.25);
+    text-shadow:0 10px 40px rgba(0,0,0,.85),0 2px 8px rgba(0,0,0,.7);pointer-events:none}
+  .ov.on{opacity:1;transform:none}
+  .a{color:var(--accent)}
+  .btn{display:inline-block;border:10px solid var(--accent);border-radius:999px;padding:.28em .75em;
+    background:rgba(0,0,0,.45);box-shadow:0 0 60px rgba(0,229,255,.35)}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;
+    color:#fff;font:800 54px 'Montserrat',sans-serif;background:rgba(0,0,0,.55);cursor:pointer;gap:30px;text-align:center}
+  #start small{font-size:30px;font-weight:800;opacity:.6}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="texts"></div>
+  <div id="start">▶ CLIQUE ou ESPAÇO<small>ESPAÇO pausa · R reinicia · ← → avança/volta 2s</small></div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+/* =====================================================================
+   ROTEIRO / TEMPOS — ajuste "dur" (segundos) para casar com a sua fala.
+   ===================================================================== */
+const SEGMENTS = [
+  { id:'molho',      dur:4.5 },  // "Você é a chapra da sua avó." (vovó põe a chapa de molho no copo)
+  { id:'semvoce',    dur:5.5 },  // "Sem você a sua avó não consegue comer absolutamente nada sólido." (morde a maçã sem dentes, dói, desiste)
+  { id:'arcada',     dur:6.0 },  // "Você é o que os dentistas chamam de arcada dentária, mas para que você serve exatamente?"
+  { id:'incisivos',  dur:17.0 }, // "...dentões de coelho... quadrilha dos cortadores... Os incisivos... morder uma maçã" (marca de mordida)
+  { id:'caninos',    dur:9.0 },  // "...estes são os caninos... maiores e afiados... não servem para transformar a sua avó em uma vampira"
+  { id:'rasgar',     dur:6.0 },  // "Na verdade, eles te ajudam a rasgar a comida e puxar melhor para dentro da boca." (carne descendo)
+  { id:'premolares', dur:8.0 },  // "Estes aqui são os pré-molares... prensas hidráulicas... esmagar o alimento..."
+  { id:'molares',    dur:7.0 },  // "...os molares, são eles que trituram... pedacinhos minúsculos."
+  { id:'sisos',      dur:6.5 },  // "E estes são os sisos... auxiliam na mastigação... reserva e quase ninguém tem eles direito,"
+  { id:'colocar',    dur:4.5 },  // "...mas a sua vovó tem." (tira a dentadura do copo e coloca na boca)
+  { id:'inscreve',   dur:5.0 },  // "E se você gostou de aprender o papel de cada dente, se inscreve." (sorriso + joinha)
+];
+const TEXTS = [
+  { seg:'semvoce',    from:2.4, to:5.3, y:200,  fs:120, html:'NADA <span class="a">SÓLIDO</span>' },
+  { seg:'arcada',     from:0.6, to:3.7, y:200,  fs:120, html:'ARCADA<br><span class="a">DENTÁRIA</span>' },
+  { seg:'arcada',     from:4.0, to:6.0, y:180,  fs:280, html:'<span class="a">?</span>' },
+  { seg:'incisivos',  from:9.3, to:11.6, y:200, fs:130, html:'<span class="a">INCISIVOS</span>' },
+  { seg:'incisivos',  from:11.8, to:13.2, y:200, fs:130, html:'CORTAM' },
+  { seg:'caninos',    from:1.0, to:4.8, y:200,  fs:140, html:'<span class="a">CANINOS</span>' },
+  { seg:'rasgar',     from:1.4, to:4.0, y:200,  fs:140, html:'RASGAR' },
+  { seg:'premolares', from:0.6, to:3.4, y:200,  fs:115, html:'<span class="a">PRÉ-MOLARES</span>' },
+  { seg:'premolares', from:3.8, to:6.4, y:200,  fs:130, html:'ESMAGAR' },
+  { seg:'molares',    from:0.4, to:2.8, y:200,  fs:140, html:'<span class="a">MOLARES</span>' },
+  { seg:'molares',    from:3.2, to:5.6, y:200,  fs:130, html:'TRITURAM' },
+  { seg:'sisos',      from:0.8, to:3.4, y:200,  fs:150, html:'<span class="a">SISOS</span>' },
+  { seg:'sisos',      from:3.6, to:6.3, y:200,  fs:130, html:'RESERVA' },
+  { seg:'inscreve',   from:0.6, to:5.0, y:1500, fs:110, html:'<span class="btn">SE INSCREVE</span>' },
+];
+const ACCENT = new THREE.Color('#00E5FF');
+
+let acc = 0; for (const s of SEGMENTS) { s.start = acc; acc += s.dur; }
+const TOTAL = acc;
+const SEG = Object.fromEntries(SEGMENTS.map(s => [s.id, s]));
+
+/* ---------------- utilidades ---------------- */
+const TAU = Math.PI * 2;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const range = (t, a, b) => clamp((t - a) / (b - a));
+const smooth = x => { x = clamp(x); return x * x * (3 - 2 * x); };
+const easeInOut = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const easeOut = x => 1 - Math.pow(1 - clamp(x), 3);
+const lerp = (a, b, k) => a + (b - a) * k;
+const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const UPV = V(0, 1, 0), ZV = V(0, 0, 1);
+const qE = (x, y, z) => new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z, 'YXZ'));
+const qLook = (dir) => new THREE.Quaternion().setFromUnitVectors(ZV, dir.clone().normalize());
+let seed = 21; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const bez = (a, b, c, k) => a.clone().multiplyScalar((1 - k) ** 2).addScaledVector(b, 2 * k * (1 - k)).addScaledVector(c, k * k);
+const pulse = (t, a, b, f = .25) => Math.min(range(t, a, a + f), 1 - range(t, b - f, b));
+
+/* ---------------- renderer ---------------- */
+const W = 1080, H = 1920;
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: false, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H, false);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const MAXANI = renderer.capabilities.getMaxAnisotropy();
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1c1a22);
+scene.fog = new THREE.Fog(0x1c1a22, 12, 30);
+const camera = new THREE.PerspectiveCamera(40, W / H, 0.01, 80);
+
+const rt = new THREE.WebGLRenderTarget(W, H, { type: THREE.HalfFloatType, samples: 4 });
+const postMat = new THREE.ShaderMaterial({
+  uniforms: { tDiffuse: { value: rt.texture }, uRes: { value: new THREE.Vector2(W, H) }, uVig: { value: .35 }, uTime: { value: 0 }, uTint: { value: new THREE.Vector3(1, 1, 1) } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float uVig,uTime; uniform vec2 uRes; uniform vec3 uTint; varying vec2 vUv;
+    void main(){
+      vec3 col = texture2D(tDiffuse, vUv).rgb * uTint;
+      float v = length((vUv-0.5)*vec2(1.0,1.15));
+      col *= 1.0 - uVig*smoothstep(0.3, 0.95, v);
+      float gr = fract(sin(dot(vUv*uRes + uTime*61.0, vec2(12.9898,78.233)))*43758.5453);
+      col += (gr-0.5)*0.01;
+      gl_FragColor = vec4(max(col,0.0),1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`
+});
+const postScene = new THREE.Scene();
+postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), postMat));
+const postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+/* ---------------- texturas ---------------- */
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = MAXANI; return t;
+}
+const tileTex = canvasTex(256, 256, (g) => {
+  g.fillStyle = '#b9c9c4'; g.fillRect(0, 0, 256, 256);
+  for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) {
+    const gr = g.createLinearGradient(x * 128, y * 128, x * 128 + 128, y * 128 + 128);
+    gr.addColorStop(0, '#e4efec'); gr.addColorStop(1, '#cddcd8');
+    g.fillStyle = gr; g.fillRect(x * 128 + 4, y * 128 + 4, 120, 120);
+  }
+});
+tileTex.repeat.set(16, 8);
+const woodTex = canvasTex(512, 512, (g) => {
+  g.fillStyle = '#8a5a36'; g.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 1400; i++) { g.fillStyle = `rgba(${rnd() > .5 ? '255,210,160' : '40,20,10'},.07)`; g.fillRect(0, rnd() * 512, 512, 1 + rnd() * 3); }
+});
+woodTex.repeat.set(3, 1);
+const knitTex = canvasTex(128, 128, (g) => {
+  g.fillStyle = '#7d5f9c'; g.fillRect(0, 0, 128, 128);
+  g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 2;
+  for (let y = 0; y < 128; y += 8) for (let x = 0; x < 128; x += 8) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + 4, y + 8); g.lineTo(x + 8, y); g.stroke(); }
+});
+knitTex.repeat.set(4, 4);
+
+/* ---------------- luzes ---------------- */
+const hemi = new THREE.HemisphereLight(0xfff0dd, 0x4a3a40, 1.0); scene.add(hemi);
+const key = new THREE.DirectionalLight(0xfff1e0, 2.2);
+key.position.set(-4, 9, 7); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -4, right: 4, top: 5, bottom: -2, near: 1, far: 30 });
+key.shadow.bias = -0.0005; key.shadow.normalBias = 0.01; scene.add(key);
+const lamp = new THREE.PointLight(0xffc98a, 40, 0, 2); lamp.position.set(0, 6.5, 0.8); scene.add(lamp);
+const rim = new THREE.DirectionalLight(0xbfd8ff, 1.0); rim.position.set(3, 4, -6); scene.add(rim);
+const vampLight = new THREE.PointLight(0x9a2cff, 0, 0, 2); scene.add(vampLight);
+const vampRed = new THREE.PointLight(0xff1030, 0, 0, 2); scene.add(vampRed);
+
+/* ---------------- cozinha ---------------- */
+const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: .7, ...o });
+const shadowAll = (o, cast = true) => o.traverse(m => { if (m.isMesh) { m.castShadow = cast; m.receiveShadow = true; } });
+{
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(40, 20), std(0xffffff, { map: tileTex, roughness: .35 }));
+  wall.position.set(0, 5, -3.2); wall.receiveShadow = true; scene.add(wall);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), std(0x3a3434)); floor.rotation.x = -Math.PI / 2; floor.position.y = -3.5; scene.add(floor);
+  // janela à noite com lua
+  const win = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.4), new THREE.MeshBasicMaterial({ color: 0x1b2a55 })); win.position.set(2.9, 3.4, -3.15); scene.add(win);
+  const moon = new THREE.Mesh(new THREE.CircleGeometry(.28, 32), new THREE.MeshBasicMaterial({ color: 0xfff6d8 })); moon.position.set(3.5, 3.9, -3.14); scene.add(moon);
+  for (let i = 0; i < 14; i++) { const st = new THREE.Mesh(new THREE.CircleGeometry(.018, 6), new THREE.MeshBasicMaterial({ color: 0xffffff })); st.position.set(1.8 + rnd() * 2.2, 2.4 + rnd() * 2.1, -3.14); scene.add(st); }
+  const frameM = std(0xf3efe6);
+  for (const [x, y, w, h] of [[2.9, 4.65, 2.8, .14], [2.9, 2.15, 2.8, .14], [1.55, 3.4, .14, 2.6], [4.25, 3.4, .14, 2.6], [2.9, 3.4, .08, 2.4], [2.9, 3.4, 2.6, .08]]) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, .1), frameM); b.position.set(x, y, -3.1); scene.add(b);
+  }
+  // armário de cima
+  const cab = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.6, .8), std(0x6f8f86, { roughness: .5 })); cab.position.set(-2.6, 4.6, -2.8); scene.add(cab);
+  for (const x of [-3.4, -1.8]) { const k = new THREE.Mesh(new THREE.SphereGeometry(.06, 12, 8), std(0xd4b37a, { metalness: .8, roughness: .3 })); k.position.set(x, 4.1, -2.38); scene.add(k); }
+  // bancada
+  const top = new THREE.Mesh(new THREE.BoxGeometry(9, .16, 2.4), std(0xffffff, { map: woodTex, roughness: .45 }));
+  top.position.set(0, -.08, .5); scene.add(top);
+  const front = new THREE.Mesh(new THREE.BoxGeometry(8.8, 3.3, 2.2), std(0x6f8f86, { roughness: .6 })); front.position.set(0, -1.8, .45); scene.add(front);
+  for (let i = -3; i <= 3; i++) { const l = new THREE.Mesh(new THREE.BoxGeometry(.04, 3.0, .02), std(0x56706a)); l.position.set(i * 1.25, -1.8, 1.56); scene.add(l); }
+  // luminária
+  const shade = new THREE.Mesh(new THREE.ConeGeometry(.9, .8, 32, 1, true), std(0xe9e1d0, { side: THREE.DoubleSide })); shade.position.set(0, 7.1, .8); scene.add(shade);
+  // fruteira e vaso
+  const bowl = new THREE.Mesh(new THREE.SphereGeometry(.5, 32, 16, 0, TAU, Math.PI / 2, Math.PI / 2), std(0xd9d2c4, { side: THREE.DoubleSide, roughness: .3 }));
+  bowl.position.set(-2.6, .45, -.3); scene.add(bowl);
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(.3, .24, .55, 24), std(0xb5643c)); pot.position.set(3.7, .27, -.4); scene.add(pot);
+  for (let i = 0; i < 9; i++) { const lf = new THREE.Mesh(new THREE.SphereGeometry(.18, 12, 8), std(0x4e8a45)); lf.scale.set(.6, 1.4, .4); lf.position.set(3.7 + (rnd() - .5) * .4, .8 + rnd() * .4, -.4 + (rnd() - .5) * .4); lf.rotation.set(rnd() - .5, rnd() * 3, rnd() - .5); scene.add(lf); }
+  shadowAll(scene);
+}
+
+/* ---------------- maçã ---------------- */
+function appleGeo(bitten) {
+  const g = new THREE.SphereGeometry(.2, 64, 48);
+  const pos = g.attributes.position, col = [];
+  const c = V(0, .05, 1).normalize(), e1 = V(1, 0, 0), e2 = V().crossVectors(c, e1).normalize();
+  const v = V();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i); const u = v.clone().normalize();
+    let r = .2 * (1 - .1 * Math.pow(Math.max(0, u.y), 8)) * (1 - .06 * Math.max(0, -u.y));
+    let flesh = 0;
+    if (bitten) {
+      const ang = u.angleTo(c), az = Math.atan2(u.dot(e1), u.dot(e2));
+      const edge = .6 + .07 * Math.abs(Math.sin(az * 5));
+      if (ang < edge) { r -= .07 * Math.sqrt(1 - (ang / edge) ** 2) + .01; flesh = 1; }
+    }
+    u.multiplyScalar(r); u.y *= .93; pos.setXYZ(i, u.x, u.y, u.z);
+    if (flesh) col.push(.97, .9, .66);
+    else { const k = .5 + .5 * u.y / .2; col.push(lerp(.62, .78, k), lerp(.05, .12, k), lerp(.04, .06, k)); }
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals();
+  return g;
+}
+const apple = new THREE.Group(); scene.add(apple);
+const appleMesh = new THREE.Mesh(appleGeo(false), new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: .35, clearcoat: .6 }));
+apple.add(appleMesh);
+const appleWhole = appleMesh.geometry, appleBitten = appleGeo(true);
+{
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(.012, .015, .1, 8), std(0x4a3020)); stem.position.y = .2; stem.rotation.z = .2; apple.add(stem);
+  const leaf = new THREE.Mesh(new THREE.SphereGeometry(.05, 12, 8), std(0x4f9a3c)); leaf.scale.set(1, .25, .5); leaf.position.set(.05, .22, 0); leaf.rotation.z = -.4; apple.add(leaf);
+}
+apple.traverse(m => m.renderOrder = 3);
+// pedaço de maçã (para os pré-molares / molares)
+const chunk = new THREE.Group(); scene.add(chunk);
+{
+  const flesh = new THREE.Mesh(new RoundedBoxGeometry(.075, .06, .06, 3, .012), std(0xf6e4a8, { roughness: .5 })); chunk.add(flesh);
+  const skin = new THREE.Mesh(new THREE.BoxGeometry(.076, .008, .061), std(0xb3121a, { roughness: .35 })); skin.position.y = .03; chunk.add(skin);
+}
+const crumbs = new THREE.InstancedMesh(new THREE.BoxGeometry(.011, .009, .011), std(0xf6e4a8, { roughness: .5 }), 110);
+crumbs.visible = false; scene.add(crumbs);
+const crumbSeed = Array.from({ length: 110 }, () => [rnd(), rnd(), rnd(), rnd()]);
+// carne
+const meat = new THREE.Group(); scene.add(meat);
+const meatParts = [];
+for (let i = 0; i < 2; i++) {
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(new RoundedBoxGeometry(.2, .11, .17, 3, .03), std(0x7a3a20, { roughness: .55 })); g.add(m);
+  const fat = new THREE.Mesh(new RoundedBoxGeometry(.2, .025, .172, 2, .01), std(0xf1dcc4, { roughness: .5 })); fat.position.y = .03; g.add(fat);
+  g.traverse(o => o.renderOrder = 3); meat.add(g); meatParts.push(g);
+}
+const fiberMat = std(0x8a4428);
+const fibers = [0, 1, 2].map(() => { const f = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 6), fiberMat); f.renderOrder = 3; meat.add(f); return f; });
+
+/* ---------------- copo d'água ---------------- */
+const G = V(-0.95, 0, 0.15);
+{
+  const glass = new THREE.Mesh(new THREE.CylinderGeometry(.36, .31, 1.0, 48, 1, true),
+    new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: .16, roughness: .03, clearcoat: 1, side: THREE.DoubleSide, depthWrite: false }));
+  glass.position.copy(G).add(V(0, .5, 0)); glass.renderOrder = 5; scene.add(glass);
+  const rimG = new THREE.Mesh(new THREE.TorusGeometry(.36, .012, 8, 48), new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: .5, roughness: .05 }));
+  rimG.rotation.x = Math.PI / 2; rimG.position.copy(G).add(V(0, 1.0, 0)); scene.add(rimG);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.31, .31, .05, 48), new THREE.MeshPhysicalMaterial({ color: 0xe8f6ff, transparent: true, opacity: .35, roughness: .05 }));
+  base.position.copy(G).add(V(0, .025, 0)); scene.add(base);
+  const water = new THREE.Mesh(new THREE.CylinderGeometry(.345, .305, .62, 48),
+    new THREE.MeshPhysicalMaterial({ color: 0xa9dcff, transparent: true, opacity: .2, roughness: .05, depthWrite: false }));
+  water.position.copy(G).add(V(0, .36, 0)); water.renderOrder = 4; scene.add(water);
+}
+const WATER_Y = .67;
+const bubbles = [];
+for (let i = 0; i < 16; i++) {
+  const b = new THREE.Mesh(new THREE.SphereGeometry(.012 + rnd() * .016, 10, 8), new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: .55, roughness: 0 }));
+  b.userData = { x: (rnd() - .5) * .4, z: (rnd() - .5) * .4, p: rnd(), s: .25 + rnd() * .3 }; b.renderOrder = 6; scene.add(b); bubbles.push(b);
+}
+const drops = [];
+for (let i = 0; i < 6; i++) { const d = new THREE.Mesh(new THREE.SphereGeometry(.016, 8, 6), new THREE.MeshPhysicalMaterial({ color: 0xcfeeff, transparent: true, opacity: .7, roughness: 0 })); d.userData = { x: (rnd() - .5) * .3, z: (rnd() - .5) * .2, p: rnd() }; scene.add(d); drops.push(d); }
+
+/* ---------------- a dentadura ---------------- */
+const archCurve = new THREE.CatmullRomCurve3([[-.46, -.72], [-.45, -.45], [-.38, -.12], [-.24, .12], [-.1, .225], [0, .24], [.1, .225], [.24, .12], [.38, -.12], [.45, -.45], [.46, -.72]].map(([x, z]) => V(x, 0, z)));
+const ARCH_LEN = archCurve.getLength();
+const TYPES = ['inc', 'inc', 'can', 'pre', 'pre', 'mol', 'mol', 'sis'];
+const WID = [.15, .115, .13, .12, .115, .17, .155, .145];
+const gumMat = new THREE.MeshPhysicalMaterial({ color: 0xe0707e, roughness: .3, clearcoat: .9, clearcoatRoughness: .2 });
+const teeth = [];
+function taper(g, h, fx, fz) {
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const t = clamp(p.getY(i) / h); p.setX(i, p.getX(i) * fx(t)); p.setZ(i, p.getZ(i) * fz(t)); }
+  return g;
+}
+function makeTooth(i, w, mat) {
+  const g = new THREE.Group(); const type = TYPES[i]; let h;
+  const add = (geo, x = 0, y = 0, z = 0, s = [1, 1, 1]) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.scale.set(...s); g.add(m); return m; };
+  if (type === 'inc') {
+    h = i === 0 ? .25 : .22;
+    add(taper(new RoundedBoxGeometry(w * .9, h, .075, 3, .028).translate(0, h / 2, 0), h, t => lerp(.8, 1.04, t), t => lerp(1.35, .55, t)));
+  } else if (type === 'can') {
+    h = .27;
+    const prof = [[0, 0], [.055, 0], [.068, .08], [.06, .16], [.03, .23], [.004, .265], [0, .27]].map(([x, y]) => new THREE.Vector2(x, y));
+    add(new THREE.LatheGeometry(prof, 20), 0, 0, 0, [w / .136 * .9, 1, .85]);
+  } else if (type === 'pre') {
+    h = .19;
+    add(new RoundedBoxGeometry(w * .9, h, .15, 3, .04).translate(0, h / 2, 0));
+    for (const z of [-.035, .035]) add(new THREE.SphereGeometry(.04, 12, 8), 0, h - .01, z, [1.1, .7, 1]);
+  } else {
+    h = type === 'sis' ? .16 : .17;
+    const d = type === 'sis' ? .16 : .18;
+    add(new RoundedBoxGeometry(w * .9, h, d, 3, .045).translate(0, h / 2, 0));
+    for (const x of [-1, 1]) for (const z of [-1, 1]) add(new THREE.SphereGeometry(.042, 12, 8), x * w * .2, h - .012, z * d * .24, [1, .65, 1]);
+  }
+  g.userData.h = h;
+  return g;
+}
+function buildArch(upper, withTeeth = true, mat = gumMat) {
+  const arch = new THREE.Group();
+  const gum = new THREE.Mesh(new THREE.TubeGeometry(archCurve, 120, .058, 14), mat);
+  gum.scale.y = 1.2; gum.position.y = -.032; arch.add(gum);
+  for (const u of [0, 1]) { const cap = new THREE.Mesh(new THREE.SphereGeometry(.058, 14, 10), mat); cap.position.copy(archCurve.getPointAt(u)).add(V(0, -.032, 0)); cap.scale.y = 1.2; arch.add(cap); }
+  if (upper) {
+    const sh = new THREE.Shape(archCurve.getPoints(60).map(p => new THREE.Vector2(p.x, -p.z)));
+    const pal = new THREE.Mesh(new THREE.ShapeGeometry(sh).rotateX(-Math.PI / 2), mat); pal.position.y = -.075; arch.add(pal);
+    pal.material = mat;
+  }
+  if (withTeeth) for (const s of [-1, 1]) {
+    let d = 0;
+    for (let i = 0; i < 8; i++) {
+      const w = WID[i]; const u = .5 + s * (d + w / 2) / ARCH_LEN; d += w + .004;
+      const p = archCurve.getPointAt(u), t = archCurve.getTangentAt(u), out = V().crossVectors(t, UPV).normalize();
+      const mat = new THREE.MeshPhysicalMaterial({ color: 0xf7f2e4, roughness: .22, clearcoat: .9, clearcoatRoughness: .15, emissive: ACCENT, emissiveIntensity: 0 });
+      const tooth = makeTooth(i, w, mat); tooth.position.copy(p); tooth.rotation.y = Math.atan2(out.x, out.z);
+      tooth.userData = { ...tooth.userData, i, type: TYPES[i], upper, side: s, mat };
+      arch.add(tooth); teeth.push(tooth);
+    }
+  }
+  return arch;
+}
+function makeDenture(withTeeth = true, mat = gumMat, gap = .19) {
+  const root = new THREE.Group();
+  const upP = new THREE.Group(); upP.position.set(0, .006, -.72); root.add(upP);
+  const up = buildArch(true, withTeeth, mat); up.position.set(0, gap, .735); up.scale.y = -1; upP.add(up);
+  const loP = new THREE.Group(); loP.position.set(0, -.006, -.72); root.add(loP);
+  const lo = buildArch(false, withTeeth, mat); lo.position.set(0, -gap, .72); loP.add(lo);
+  root.scale.setScalar(.55);
+  root.traverse(m => m.renderOrder = 2);
+  return { root, upP, loP };
+}
+const dent = makeDenture(true);
+scene.add(dent.root);
+const toothTop = (tooth) => tooth.localToWorld(V(0, tooth.userData.h, 0));
+const findTooth = (i, upper, side) => teeth.find(t => t.userData.i === i && t.userData.upper === upper && t.userData.side === side);
+
+/* ---------------- vovó ---------------- */
+const SKIN = new THREE.Color(0xf0c2a2), PALE = new THREE.Color(0xc9d3d8);
+const skinMat = std(SKIN.getHex(), { roughness: .6 });
+const knitMat = std(0xffffff, { map: knitTex, roughness: .9 });
+const H0 = V(0, 3.0, -1.2);
+const SR = V(-.95, 1.95, -1.3), SL = V(.95, 1.95, -1.3);
+const M_LOCAL = V(0, -.47, .88), N_LOCAL = M_LOCAL.clone().normalize();
+const DM_LOCAL = M_LOCAL.clone().add(V(0, -.02, -.25));
+const DQ_LOCAL = qE(.1, 0, 0);
+const body = new THREE.Group(); scene.add(body);
+const head = new THREE.Group(); head.position.copy(H0); scene.add(head);
+const face = {};
+{
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(.9, 1.0, 8, 24), knitMat); torso.scale.set(1.15, 1, .75); torso.position.set(0, 1.0, -1.3); body.add(torso);
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(.42, .09, 10, 32), std(0xf6f1ea)); collar.rotation.x = Math.PI / 2 - .2; collar.position.set(0, 2.02, -1.25); body.add(collar);
+  for (let i = 0; i < 15; i++) { const a = Math.PI * (.15 + .7 * i / 14); const p = new THREE.Mesh(new THREE.SphereGeometry(.045, 12, 8), std(0xfaf6ee, { roughness: .15, metalness: .2 })); p.position.set(Math.cos(a) * .5, 1.86 - Math.sin(a) * .22, -1.25 + Math.sin(a) * .5); body.add(p); }
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(.28, .32, .6, 16), skinMat); neck.position.set(0, 2.15, -1.25); body.add(neck);
+  for (const s of [SR, SL]) { const j = new THREE.Mesh(new THREE.SphereGeometry(.3, 16, 12), knitMat); j.position.copy(s); body.add(j); }
+  shadowAll(body);
+
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 48), skinMat); skull.scale.set(.95, 1.02, .98); head.add(skull);
+  const chin = new THREE.Mesh(new THREE.SphereGeometry(.45, 40, 30), skinMat); chin.scale.set(1.25, .85, .9); chin.position.set(0, -.6, .5); head.add(chin);
+  const hairM = std(0xd9d9dc, { roughness: .8 });
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(1.04, 48, 24, 0, TAU, 0, Math.PI * .5), hairM); hair.rotation.x = -.45; hair.position.set(0, .03, -.04); head.add(hair);
+  for (let i = 0; i < 7; i++) { const c = new THREE.Mesh(new THREE.SphereGeometry(.22, 16, 12), hairM); const a = -1.3 + i * .43; c.position.set(Math.sin(a) * .85, .55 + Math.cos(a) * .12, Math.cos(a) * .55 - .1); head.add(c); }
+  const bun = new THREE.Mesh(new THREE.SphereGeometry(.42, 24, 16), hairM); bun.position.set(0, .95, -.45); head.add(bun);
+  face.cheekMat = new THREE.MeshStandardMaterial({ color: 0xf08a8a, roughness: .7, transparent: true, opacity: .5 });
+  for (const s of [-1, 1]) {
+    const ch = new THREE.Mesh(new THREE.SphereGeometry(.2, 16, 12), face.cheekMat); ch.scale.set(1, .7, .3); ch.position.set(s * .5, -.2, .8); ch.lookAt(V(s * 1.2, -.4, 2)); head.add(ch);
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(.2, 16, 12), skinMat); ear.scale.set(.45, 1, .7); ear.position.set(s * .93, 0, 0); head.add(ear);
+  }
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(.17, 20, 14), skinMat); nose.scale.set(1, 1.1, 1); nose.position.set(0, -.1, .98); head.add(nose);
+  face.eyes = []; face.irisMat = std(0x4a3222, { roughness: .3, emissive: 0xff0000, emissiveIntensity: 0 });
+  face.brows = [];
+  const goldM = std(0xd4af6a, { metalness: .9, roughness: .25 });
+  for (const s of [-1, 1]) {
+    const eg = new THREE.Group(); eg.position.set(s * .32, .17, .87); head.add(eg);
+    eg.add(new THREE.Mesh(new THREE.SphereGeometry(.13, 20, 14), std(0xfbfbf6, { roughness: .2 })));
+    const iris = new THREE.Mesh(new THREE.SphereGeometry(.075, 16, 12), face.irisMat); iris.position.z = .085; eg.add(iris);
+    const hl = new THREE.Mesh(new THREE.SphereGeometry(.022, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff })); hl.position.set(.03, .03, .155); eg.add(hl);
+    face.eyes.push(eg);
+    const brow = new THREE.Mesh(new THREE.CapsuleGeometry(.03, .2, 4, 8).rotateZ(Math.PI / 2), std(0xbdbdbd)); brow.position.set(s * .32, .4, .9); head.add(brow); face.brows.push(brow);
+    const rimG = new THREE.Mesh(new THREE.TorusGeometry(.2, .022, 8, 32), goldM); rimG.position.set(s * .32, .17, 1.0); head.add(rimG);
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(.2, 32), new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: .12, roughness: 0 })); lens.position.set(s * .32, .17, 1.0); head.add(lens);
+    const temple = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, .9, 6), goldM); temple.rotation.x = Math.PI / 2; temple.position.set(s * .52, .2, .58); temple.rotation.y = s * .25; head.add(temple);
+  }
+  const bridge = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, .25, 6), goldM); bridge.rotation.z = Math.PI / 2; bridge.position.set(0, .2, 1.03); head.add(bridge);
+  // traços de dor (cor de destaque)
+  face.pain = new THREE.Group(); head.add(face.pain);
+  for (let i = 0; i < 3; i++) { const l = new THREE.Mesh(new THREE.CapsuleGeometry(.018, .16, 4, 8), new THREE.MeshBasicMaterial({ color: ACCENT.clone().multiplyScalar(1.5) })); const a = -.6 + i * .6; l.position.set(-1.05 - Math.cos(a) * .12, -.25 + Math.sin(a) * .2, .45); l.rotation.z = a + Math.PI / 2; face.pain.add(l); }
+  head.traverse(m => { if (m !== skull && m !== chin && m !== hair && m !== bun) m.renderOrder = 3; });
+  shadowAll(head);
+}
+// boca: buraco que "abre" a cabeça para mostrar os dentes
+const holeMat = new THREE.ShaderMaterial({
+  vertexShader: `varying vec2 vP; void main(){ vP=position.xy; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+  fragmentShader: `uniform vec2 uSize; varying vec2 vP; void main(){ float r=length(vP/uSize); gl_FragColor=vec4(mix(vec3(.22,.03,.05),vec3(.06,0.,.01),clamp(r,0.,1.)),1.); gl_FragDepth=1.0; }`,
+  uniforms: { uSize: { value: new THREE.Vector2(1, 1) } }, depthFunc: THREE.AlwaysDepth, side: THREE.DoubleSide
+});
+const mouth = new THREE.Group(); mouth.position.copy(M_LOCAL).addScaledVector(N_LOCAL, .012); mouth.lookAt(N_LOCAL.clone().multiplyScalar(5)); head.add(mouth);
+const hole = new THREE.Mesh(new THREE.BufferGeometry(), holeMat); hole.renderOrder = 1; mouth.add(hole);
+const lipMat = std(0xc56f72, { roughness: .45 });
+const lips = new THREE.Mesh(new THREE.BufferGeometry(), lipMat); lips.renderOrder = 3; mouth.add(lips);
+const tongue = new THREE.Mesh(new THREE.SphereGeometry(.17, 20, 14), std(0xc4484f, { roughness: .4 }));
+tongue.scale.set(1, .4, 1.2); tongue.position.copy(DM_LOCAL).add(V(0, -.07, -.12)); tongue.renderOrder = 2; head.add(tongue);
+const gums = makeDenture(false, new THREE.MeshPhysicalMaterial({ color: 0xd8707c, roughness: .35, clearcoat: .6 }), .045);
+gums.root.position.copy(DM_LOCAL); gums.root.quaternion.copy(DQ_LOCAL); head.add(gums.root);
+function mouthShape(w, h, smile, purse) {
+  const pts = [];
+  for (let i = 0; i < 64; i++) {
+    const a = i / 64 * TAU, x = Math.cos(a) * w / 2, y0 = Math.sin(a) * h / 2;
+    const k = (x / (w / 2)) ** 2;
+    let y = y0 + smile * .07 * k - purse * .012 * Math.sin(a * 9) * (1 - k);
+    if (smile > 0 && y0 < 0) y += smile * .03 * k;
+    pts.push(V(x, y, 0));
+  }
+  return pts;
+}
+function setMouth(w, h, smile, purse) {
+  const pts = mouthShape(w, h, smile, purse);
+  const pos = [0, 0, 0]; const idx = [];
+  pts.forEach((p, i) => { pos.push(p.x, p.y, 0); idx.push(0, i + 1, (i + 1) % 64 + 1); });
+  hole.geometry.dispose(); const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); hole.geometry = g;
+  holeMat.uniforms.uSize.value.set(w / 2, Math.max(h / 2, .01));
+  const lp = mouthShape(w + .03, h + .03, smile, purse);
+  lips.geometry.dispose(); lips.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(lp, true), 96, lerp(.035, .022, purse), 10, true);
+  hole.visible = h > .025;
+}
+
+/* ---------------- mãos e braços ---------------- */
+function makeHand(mat = skinMat) {
+  const g = new THREE.Group(); g.rotation.order = 'YXZ';
+  g.add(new THREE.Mesh(new RoundedBoxGeometry(.3, .09, .3, 3, .04), mat));
+  g.userData.fingers = [];
+  for (const [x, len] of [[-.105, .13], [-.035, .16], [.035, .17], [.105, .15]]) {
+    const piv = new THREE.Group(); piv.position.set(x, 0, .14);
+    const f = new THREE.Mesh(new THREE.CapsuleGeometry(.037, len, 4, 8).rotateX(Math.PI / 2), mat); f.position.z = len / 2 + .03; piv.add(f); g.add(piv); g.userData.fingers.push(piv);
+  }
+  const tp = new THREE.Group(); tp.position.set(.15, -.02, -.02); tp.rotation.set(.3, .9, 0);
+  const th = new THREE.Mesh(new THREE.CapsuleGeometry(.042, .11, 4, 8).rotateX(Math.PI / 2), mat); th.position.z = .09; tp.add(th); g.add(tp); g.userData.thumb = tp;
+  const wr = new THREE.Mesh(new THREE.CylinderGeometry(.1, .11, .15, 14).rotateX(Math.PI / 2), mat); wr.position.z = -.19; g.add(wr);
+  shadowAll(g); g.traverse(m => m.renderOrder = 3);
+  return g;
+}
+const GRIP = V(0, -.19, .1), WRIST = V(0, 0, -.27);
+const hand = makeHand(); scene.add(hand);
+const limbGeo = new THREE.CylinderGeometry(1, 1, 1, 16);
+function makeArm() {
+  const u = new THREE.Mesh(limbGeo, knitMat), f = new THREE.Mesh(limbGeo, knitMat), j = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), knitMat);
+  const cuff = new THREE.Mesh(new THREE.TorusGeometry(.13, .04, 8, 20), std(0xf6f1ea));
+  const g = new THREE.Group(); g.add(u, f, j, cuff); shadowAll(g); g.traverse(m => m.renderOrder = 3); scene.add(g);
+  return { g, u, f, j, cuff };
+}
+function placeLimb(m, a, b, r) {
+  const d = b.clone().sub(a), len = d.length();
+  m.position.copy(a).addScaledVector(d, .5); m.scale.set(r, len, r); m.quaternion.setFromUnitVectors(UPV, d.normalize());
+}
+function solveArm(arm, S, Wp, pole) {
+  const L1 = 1.25, L2 = 1.25;
+  const dir = Wp.clone().sub(S); const d = Math.min(dir.length(), L1 + L2 - .001); dir.normalize();
+  const a = (L1 * L1 - L2 * L2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+  const p = pole.clone().addScaledVector(dir, -pole.dot(dir)).normalize();
+  const E = S.clone().addScaledVector(dir, a).addScaledVector(p, h);
+  placeLimb(arm.u, S, E, .2); placeLimb(arm.f, E, Wp, .16); arm.j.position.copy(E); arm.j.scale.setScalar(.19);
+  arm.cuff.position.copy(Wp); arm.cuff.quaternion.setFromUnitVectors(ZV, Wp.clone().sub(E).normalize());
+}
+const armR = makeArm();
+{ // braço esquerdo apoiado na bancada
+  const lh = makeHand(); lh.scale.x = -1; lh.position.set(.95, .07, -.05); lh.rotation.y = -.3; scene.add(lh);
+  lh.userData.fingers.forEach(f => f.rotation.x = .25); lh.updateMatrixWorld(true);
+  solveArm(makeArm(), SL, lh.localToWorld(WRIST.clone()), V(1, -.5, -.2));
+}
+// mão de "joinha" (a dentadura comemorando)
+const thumbs = new THREE.Group(); scene.add(thumbs);
+{
+  const glove = std(0xffffff, { roughness: .5 });
+  const fist = new THREE.Mesh(new RoundedBoxGeometry(.2, .2, .17, 4, .06), glove); thumbs.add(fist);
+  for (let i = 0; i < 4; i++) { const k = new THREE.Mesh(new THREE.CapsuleGeometry(.038, .1, 4, 8).rotateZ(Math.PI / 2), glove); k.position.set(.035, .07 - i * .047, .09); thumbs.add(k); }
+  const th = new THREE.Mesh(new THREE.CapsuleGeometry(.045, .13, 4, 10), glove); th.position.set(-.05, .17, .02); th.rotation.z = .15; thumbs.add(th);
+  const cuff = new THREE.Mesh(new THREE.CylinderGeometry(.11, .12, .08, 20), glove); cuff.position.y = -.14; thumbs.add(cuff);
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, .35, 10), std(0xf4f0e6)); arm.position.set(.02, -.33, 0); arm.rotation.z = .3; thumbs.add(arm);
+  shadowAll(thumbs);
+}
+const sparkle = new THREE.Group(); scene.add(sparkle);
+for (const r of [0, Math.PI / 2]) { const p = new THREE.Mesh(new THREE.PlaneGeometry(.025, .16), new THREE.MeshBasicMaterial({ color: ACCENT.clone().multiplyScalar(2), transparent: true, side: THREE.DoubleSide })); p.rotation.z = r; sparkle.add(p); }
+// guardanapo do "palco" da dentadura
+const HERO = V(2.3, 0, .7);
+{ const nap = new THREE.Mesh(new RoundedBoxGeometry(1.1, .03, .95, 2, .01), std(0xf4f1ea, { roughness: .9 })); nap.position.copy(HERO).add(V(0, .015, 0)); nap.rotation.y = .1; nap.receiveShadow = true; scene.add(nap); }
+const HERO_Y = .19;
+
+// a ordem de desenho é por malha (o buraco da boca depende disso)
+scene.traverse(o => { if (!o.isMesh && !o.isInstancedMesh) o.renderOrder = 0; });
+
+/* ---------------- estado por quadro ---------------- */
+let st, T = 0;
+const Q_DOWN = qE(0, .25, 0), Q_SIDE = qE(-.35, -.2, Math.PI / 2);
+const REST_T = V(-1.05, -.09, -.05);
+function reset() {
+  st = {
+    camPos: V(), camTgt: V(), fov: 40, vig: .35, tint: V(1, 1, 1),
+    head: { rx: .05, ry: 0, rz: 0 },
+    face: { open: 0, smile: .15, squint: 0, pain: 0, angry: 0, pale: 0, purse: 0, painLines: 0 },
+    hand: { t: REST_T.clone(), q: Q_DOWN.clone(), curl: .25, vis: true },
+    dent: { mode: 'mouth', pos: null, q: null, openUp: 0, openLo: 0, k: 0 },
+    hl: () => 0, fang: 1, canineScale: 1,
+    apple: null, meat: null, chunk: null, crumbs: null, thumbs: 0, sparkle: 0, bubbles: 0, drops: 0
+  };
+}
+const cam = (p, t, fov) => { st.camPos.copy(p); st.camTgt.copy(t); st.fov = fov; };
+function applyHead() {
+  head.rotation.set(st.head.rx, st.head.ry, st.head.rz, 'YXZ');
+  head.updateMatrixWorld(true);
+}
+const MW = (off = 0) => head.localToWorld(M_LOCAL.clone().addScaledVector(N_LOCAL, off));
+const NW = () => N_LOCAL.clone().applyQuaternion(head.quaternion);
+const mouthPose = () => ({ pos: head.localToWorld(DM_LOCAL.clone()), q: head.quaternion.clone().multiply(DQ_LOCAL) });
+const heroPose = (yaw = 0, lift = 0) => ({ pos: HERO.clone().add(V(0, HERO_Y + lift, 0)), q: qE(0, yaw, 0) });
+const holdHand = (target, q = Q_SIDE, curl = .9) => Object.assign(st.hand, { t: target.clone(), q: q.clone(), curl });
+
+function applyDent() {
+  const d = st.dent;
+  if (d.mode === 'mouth') { const p = mouthPose(); dent.root.position.copy(p.pos); dent.root.quaternion.copy(p.q); }
+  else { dent.root.position.copy(d.pos); dent.root.quaternion.copy(d.q); }
+  dent.upP.rotation.x = -(d.openUp || 0);
+  dent.loP.rotation.x = d.mode === 'mouth' ? st.face.open * .3 : (d.openLo || 0);
+  dent.root.updateMatrixWorld(true);
+}
+/* ---------------- cenas do roteiro ---------------- */
+const SHOTS = {
+  // "Você é a chapra da sua avó." — põe a dentadura de molho no copo
+  molho(lt, d) {
+    st.head = { rx: .28, ry: -.25, rz: 0 }; applyHead();
+    Object.assign(st.face, { purse: 1, smile: .25 });
+    const top = G.clone().add(V(0, 1.45, 0)), surf = G.clone().add(V(0, WATER_Y - .02, 0)), bottom = G.clone().add(V(0, .17, 0));
+    let p;
+    if (lt < 1.6) p = top.lerp(surf, easeInOut(range(lt, 0, 1.6)));
+    else p = surf.lerp(bottom, easeOut(range(lt, 1.6, 3.0)));
+    const wob = (1 - range(lt, 1.6, 3.2)) * Math.sin(lt * 7) * .15;
+    st.dent = { ...st.dent, mode: 'free', pos: p, q: qE(.1 + wob, .25, wob * .5) };
+    if (lt < 1.75) holdHand(p, Q_DOWN, lerp(.9, .15, range(lt, 1.55, 1.75)));
+    else { const k = easeInOut(range(lt, 1.8, 3.2)); holdHand(surf.clone().lerp(REST_T, k), Q_DOWN, lerp(.15, .25, k)); }
+    st.bubbles = range(lt, 1.6, 1.9);
+    const k = easeInOut(lt / d);
+    cam(V(-.3, 2.0, 5.4).lerp(V(-.55, 1.6, 4.3), k), V(-.5, 1.6, -.3).lerp(V(-.75, 1.1, 0), k), 42);
+  },
+  // "Sem você a sua avó não consegue comer absolutamente nada sólido."
+  semvoce(lt, d) {
+    const shake = range(lt, 2.3, 3.4) > 0 && lt < 3.4 ? Math.sin((lt - 2.3) * 30) * .1 * (1 - range(lt, 2.3, 3.4)) : 0;
+    st.head = { rx: lerp(.02, .18, range(lt, 3.6, 4.6)), ry: -.12 + shake, rz: 0 }; applyHead();
+    st.dent = { ...st.dent, mode: 'free', pos: G.clone().add(V(0, .17, 0)), q: qE(.1, .25, 0) };
+    st.bubbles = 1;
+    const open = Math.max(smooth(range(lt, 1.2, 1.8)) * (1 - smooth(range(lt, 1.95, 2.2))) * .75, pulse(lt, 2.0, 2.5, .15) * .3);
+    const pain = smooth(range(lt, 2.25, 2.5));
+    Object.assign(st.face, { purse: 1, open, smile: lerp(.15, -.25, pain), squint: pain * (1 - .6 * range(lt, 3.6, 4.4)), pain, painLines: pulse(lt, 2.3, 3.5, .1) });
+    const A0 = V(-.55, 1.15, .35), A1 = MW(.33), A2 = MW(.2);
+    let p;
+    if (lt < 1.5) p = A0.clone().lerp(A1, easeInOut(range(lt, .2, 1.5)));
+    else if (lt < 2.4) p = A1.clone().lerp(A2, pulse(lt, 1.85, 2.4, .2));
+    else p = A1.clone().lerp(A0, easeInOut(range(lt, 3.4, 5.0)));
+    st.apple = { pos: p, q: qLook(NW().negate()), bitten: false };
+    holdHand(p, Q_SIDE, .9);
+    const mw = MW(0);
+    cam(mw.clone().add(V(.65, .25, 2.45)), mw.clone().add(V(-.12, .02, .2)), 38);
+  },
+  // "Você é o que os dentistas chamam de arcada dentária, mas para que você serve exatamente?"
+  arcada(lt, d) {
+    st.dent = { ...st.dent, mode: 'free', ...heroPose(lerp(.7, -.5, easeInOut(lt / d))) };
+    const a = lerp(-.25, .25, easeInOut(lt / d));
+    cam(HERO.clone().add(V(Math.sin(a) * 1.95, .9, Math.cos(a) * 1.95)), HERO.clone().add(V(0, .16, 0)), 32);
+  },
+  // incisivos: dentões de coelho, amiguinhos, em cima e embaixo — e a mordida na maçã
+  incisivos(lt, d) {
+    if (lt < 13) {
+      const open = smooth(range(lt, 5.8, 6.6)) * .22;
+      st.dent = { ...st.dent, mode: 'free', ...heroPose(0), openUp: open };
+      const c1 = smooth(range(lt, .3, .8)), c2 = smooth(range(lt, 3.5, 4.0)), c3 = smooth(range(lt, 6.0, 6.6));
+      st.hl = (t) => t.userData.type !== 'inc' ? 0 : t.userData.upper ? (t.userData.i === 0 ? c1 : c2) : c3;
+      const k = easeInOut(lt / 13);
+      cam(HERO.clone().add(V(lerp(.12, -.1, k), .3, lerp(1.35, 1.15, k))), HERO.clone().add(V(0, .19, .1)), 30);
+      st.apple = null;
+    } else {
+      const l = lt - 13;
+      st.head = { rx: .02, ry: .15, rz: 0 }; applyHead();
+      const bite = pulse(l, .55, 1.4, .25);
+      Object.assign(st.face, { open: Math.max(bite * .7, l > 2 ? Math.abs(Math.sin(l * 6)) * .14 : 0), smile: .2 });
+      st.hl = (t) => t.userData.type === 'inc' ? .7 * (1 - range(l, 2.5, 3.5)) : 0;
+      const far = MW(.5).add(V(-.1, -.12, 0)), near = MW(.32), inb = MW(.2);
+      let p, bitten = l > 1.25;
+      if (l < .9) p = far.clone().lerp(near, easeInOut(range(l, 0, .9)));
+      else if (l < 1.3) p = near.clone().lerp(inb, pulse(l, .95, 1.4, .18));
+      else p = near.clone().lerp(far, easeInOut(range(l, 1.3, 2.0)));
+      const toCam = st.camPos.clone().sub(p);
+      const qa = qLook(NW().negate()), qb = qLook(V(.9, .1, 2.2));
+      st.apple = { pos: p, q: qa.slerp(qb, easeInOut(range(l, 1.4, 2.4))), bitten };
+      holdHand(p, Q_SIDE, .9);
+      const mw = MW(0);
+      cam(mw.clone().add(V(.85, .15, 2.15)), mw.clone().add(V(-.18, -.05, .25)), 38);
+    }
+  },
+  // caninos + a vovó vampira
+  caninos(lt, d) {
+    if (lt < 5.5) {
+      st.dent = { ...st.dent, mode: 'free', ...heroPose(-.5), openUp: .2 }; applyDent();
+      const g = smooth(range(lt, .3, .9));
+      st.hl = (t) => t.userData.type === 'can' ? g : 0;
+      st.canineScale = 1 + .14 * pulse(lt, 2.4, 4.8, .5);
+      const k = easeInOut(lt / 5.5);
+      const c = findTooth(2, true, 1); const tgt = c ? c.getWorldPosition(V()) : HERO.clone();
+      cam(HERO.clone().add(V(lerp(.75, .55, k), .38, lerp(.95, .8, k))), tgt.add(V(0, -.02, 0)), 30);
+    } else {
+      const l = lt - 5.5, v = smooth(range(l, 0, .5));
+      st.head = { rx: -.05 + Math.sin(l * 25) * .01 * v, ry: .05, rz: .04 }; applyHead();
+      Object.assign(st.face, { open: .58 * smooth(range(l, .2, .7)), smile: .2, angry: v, pale: v });
+      st.fang = lerp(1, 2.0, v);
+      st.hl = (t) => t.userData.type === 'can' ? .35 * v : 0;
+      st.vamp = v; st.vig = lerp(.35, .8, v);
+      const mw = MW(0);
+      cam(mw.clone().add(V(.2, -.55, 2.3)), mw.clone().add(V(0, .3, 0)), 40);
+    }
+  },
+  // "Na verdade, eles te ajudam a rasgar a comida e puxar melhor para dentro da boca."
+  rasgar(lt, d) {
+    st.head = { rx: .02 + .1 * pulse(lt, 4.0, 5.2, .4), ry: .2 - .08 * pulse(lt, 1.4, 2.4, .3), rz: 0 }; applyHead();
+    const n = NW(), dir = n.clone().add(V(-.9, -.15, 0)).normalize();
+    const bite = smooth(range(lt, .55, .95)) * (1 - smooth(range(lt, 1.05, 1.3)));
+    const swallow = pulse(lt, 2.4, 3.6, .25);
+    Object.assign(st.face, { open: Math.max(bite * .55, .12 + swallow * .2), smile: .1 });
+    if (lt > 1.3 && lt < 2.4) st.face.open = .12;
+    if (lt > 3.6) st.face.open = Math.abs(Math.sin(lt * 6)) * .1 * (1 - range(lt, 5, 5.6));
+    st.hl = (t) => t.userData.type === 'can' ? .8 * pulse(lt, .7, 3.2, .3) : 0;
+    const mw = MW(0);
+    const Bin = mw.clone().addScaledVector(dir, .1), Bout = mw.clone().addScaledVector(dir, .6);
+    const pull = easeInOut(range(lt, 1.4, 2.4));
+    const Bp = lt < 1.0 ? Bout.clone().lerp(Bin, easeInOut(range(lt, 0, 1.0))) : lt < 2.4 ? Bin.clone() : Bin.clone().lerp(MW(-.08), easeInOut(range(lt, 2.4, 3.4)));
+    const Ap = (lt < 1.0 ? Bp.clone() : Bin.clone()).addScaledVector(dir, .2 + pull * .32);
+    const bScale = 1 - smooth(range(lt, 2.6, 3.5));
+    st.meat = { A: Ap, B: Bp, q: new THREE.Quaternion().setFromUnitVectors(V(1, 0, 0), dir.clone().negate()), bScale, fiber: lt > 1.3 && lt < 1.95 ? range(lt, 1.3, 1.95) : -1 };
+    holdHand(Ap.clone().addScaledVector(dir, .08), Q_SIDE, .9);
+    cam(mw.clone().add(V(.75, .1, 2.15)), mw.clone().add(V(-.3, -.05, .25)), 40);
+  },
+  // pré-molares: prensa hidráulica
+  premolares(lt, d) {
+    const openUp = lt < 3.6 ? .5 * smooth(range(lt, 0, 1)) : lt < 6 ? lerp(.5, .085, easeInOut(range(lt, 3.6, 5.3))) : lerp(.085, .5, easeInOut(range(lt, 6, 6.6)));
+    st.dent = { ...st.dent, mode: 'free', ...heroPose(-.25), openUp }; applyDent();
+    const g = smooth(range(lt, .3, .9));
+    st.hl = (t) => t.userData.type === 'pre' ? g : 0;
+    const sq = smooth(range(lt, 4.55, 5.3));
+    st.chunk = { at: [[3, 4], lt > 6.6 ? [5, 6] : null, easeInOut(range(lt, 6.6, 7.8))], squash: sq };
+    const pm = findTooth(3, false, 1).getWorldPosition(V());
+    cam(pm.clone().add(V(.6, .5, .55)), pm.clone().add(V(-.03, .05, 0)), 32);
+  },
+  // molares: trituram — pedacinhos minúsculos
+  molares(lt, d) {
+    const chomps = lt > 2.6 && lt < 5.0 ? Math.abs(Math.cos((lt - 2.6) / 2.4 * Math.PI * 3)) : 1;
+    const openUp = lt < 2.6 ? .5 : lt < 5.0 ? lerp(.07, .5, chomps) : lerp(.07, .4, easeInOut(range(lt, 5.0, 5.6)));
+    st.dent = { ...st.dent, mode: 'free', ...heroPose(-.25), openUp }; applyDent();
+    const g = smooth(range(lt, .2, .7));
+    st.hl = (t) => t.userData.type === 'mol' ? g : 0;
+    const burst = 4.4;
+    if (lt < burst) st.chunk = { at: [[5, 6], null, 0], squash: .55 + .3 * range(lt, 2.6, burst) };
+    else st.crumbs = lt - burst;
+    const m = findTooth(5, false, 1).getWorldPosition(V());
+    const k = easeInOut(range(lt, 4.8, 7));
+    cam(m.clone().add(V(lerp(.6, .38, k), lerp(.5, .38, k), lerp(.45, .3, k))), m.clone().add(V(-.04, .04, 0)), 32);
+  },
+  // sisos: a reserva
+  sisos(lt, d) {
+    st.dent = { ...st.dent, mode: 'free', ...heroPose(0), openUp: .45 };
+    const g = smooth(range(lt, .4, 1.0));
+    st.hl = (t) => t.userData.type === 'sis' ? g : 0;
+    st.crumbs = 3;
+    const k = easeInOut(lt / d);
+    cam(HERO.clone().add(V(lerp(.25, -.25, k), 1.35, -1.45)), HERO.clone().add(V(0, .12, -.12)), 36);
+  },
+  // "...mas a sua vovó tem." — tira a dentadura do copo e coloca na boca
+  colocar(lt, d) {
+    st.head = { rx: lerp(.22, .02, easeInOut(range(lt, .8, 2.0))), ry: lerp(-.25, .05, easeInOut(range(lt, .8, 2.2))), rz: 0 }; applyHead();
+    const inside = smooth(range(lt, 2.5, 2.75));
+    const open = smooth(range(lt, 1.7, 2.1)) * (1 - smooth(range(lt, 2.75, 3.0))) * .75;
+    Object.assign(st.face, { purse: 1 - inside, open, smile: lerp(.1, .9, smooth(range(lt, 3.0, 3.6))) });
+    const bottom = G.clone().add(V(0, .17, 0)), up = G.clone().add(V(0, 1.6, 0)), front = MW(.42);
+    const mp = mouthPose();
+    let pos, q;
+    if (lt < 1.0) { pos = bottom; q = qE(.1, .25, 0); }
+    else if (lt < 2.2) { const k = easeInOut(range(lt, 1.0, 2.2)); pos = bez(bottom, up, front, k); q = qE(.1, .25, 0).slerp(mp.q, k); }
+    else { const k = easeInOut(range(lt, 2.2, 2.75)); pos = front.clone().lerp(mp.pos, k); q = mp.q; }
+    if (lt >= 2.75) st.dent = { ...st.dent, mode: 'mouth' };
+    else st.dent = { ...st.dent, mode: 'free', pos, q };
+    st.drops = lt > 1.0 && lt < 2.4 ? 1 : 0; st.dropOrigin = pos;
+    st.bubbles = 1 - range(lt, 1.0, 1.5);
+    if (lt < 1.0) holdHand(REST_T.clone().lerp(bottom, easeInOut(range(lt, 0, .95))), Q_DOWN, lerp(.25, .9, range(lt, .8, 1.0)));
+    else if (lt < 2.8) holdHand(pos.clone().add(V(-.1, 0, .02)), Q_DOWN, .9);
+    else holdHand(front.clone().lerp(REST_T, easeInOut(range(lt, 2.8, 3.9))), Q_DOWN, .2);
+    const k = easeInOut(range(lt, 2.0, 3.6)), mw = MW(0);
+    cam(V(-.3, 2.1, 4.8).lerp(mw.clone().add(V(.35, .15, 2.6)), k), V(-.5, 1.7, -.3).lerp(mw.clone().add(V(0, .15, 0)), k), 42);
+  },
+  // "E se você gostou... se inscreve." — sorriso + joinha
+  inscreve(lt, d) {
+    const b = Math.abs(Math.sin(lt * 5.5));
+    st.dent = { ...st.dent, mode: 'free', ...heroPose(Math.sin(lt * 2) * .12, b * .04), openUp: .1 + .14 * b };
+    st.thumbs = easeOut(range(lt, .3, .8)); st.sparkle = pulse(lt, .7, 1.6, .2);
+    cam(HERO.clone().add(V(.08, .32, 2.45)), HERO.clone().add(V(.08, .38, 0)), 30);
+  },
+};
+
+/* ---------------- textos ---------------- */
+const textHost = document.getElementById('texts');
+for (const x of TEXTS) {
+  const el = document.createElement('div'); el.className = 'ov'; el.innerHTML = x.html;
+  el.style.setProperty('--y', x.y + 'px'); el.style.setProperty('--fs', x.fs + 'px');
+  textHost.appendChild(el); x.el = el; x.a = SEG[x.seg].start + x.from; x.b = SEG[x.seg].start + x.to;
+}
+
+/* ---------------- quadro ---------------- */
+const m4 = new THREE.Matrix4();
+function frame(t) {
+  T = t; reset();
+  const s = [...SEGMENTS].reverse().find(s => t >= s.start) || SEGMENTS[0];
+  const lt = Math.min(t - s.start, s.dur);
+  applyHead();
+  SHOTS[s.id](lt, s.dur);
+  applyHead();
+
+  // rosto
+  const f = st.face;
+  const w = lerp(.32, .21, f.purse) * (1 + .3 * Math.max(0, f.smile));
+  const h = lerp(.018, .36, f.open) + (1 - f.purse) * Math.max(0, f.smile) * .17 * (1 - f.open);
+  setMouth(w, h, f.smile, f.purse);
+  face.eyes.forEach(e => e.scale.set(1, lerp(1, .15, f.squint), 1));
+  face.brows.forEach((b, i) => { const sgn = i ? 1 : -1; b.rotation.z = sgn * (f.pain * .35 - f.angry * .45); b.position.y = .4 + f.pain * .05 - f.angry * .04; });
+  face.pain.visible = f.painLines > .01; face.pain.scale.setScalar(.8 + .3 * f.painLines);
+  skinMat.color.copy(SKIN).lerp(PALE, f.pale); face.cheekMat.opacity = .5 * (1 - f.pale);
+  face.irisMat.emissiveIntensity = f.pale * 2.5; face.irisMat.color.setHex(f.pale > .5 ? 0x400000 : 0x4a3222);
+  const vamp = st.vamp || 0;
+  vampLight.intensity = vamp * 3; vampLight.position.copy(MW(0)).add(V(0, -1.2, 1.6));
+  vampRed.intensity = vamp * 8; vampRed.position.copy(H0).add(V(1.8, .5, -1.5));
+  lamp.intensity = 40 * (1 - .7 * vamp); hemi.intensity = 1 - .6 * vamp;
+  st.tint.set(1, 1 - .12 * vamp, 1 + .04 * vamp);
+
+  // dentadura
+  const d = st.dent; applyDent();
+  const inMouth = d.mode === 'mouth';
+  gums.loP.rotation.x = f.open * .3;
+  gums.root.visible = !inMouth && f.purse > .5;
+  for (const tooth of teeth) {
+    tooth.userData.mat.emissiveIntensity = st.hl(tooth) * 1.1;
+    const can = tooth.userData.type === 'can';
+    tooth.scale.set(can ? st.canineScale : 1, can ? st.canineScale * (tooth.userData.upper ? st.fang : 1) : 1, can ? st.canineScale : 1);
+  }
+  dent.root.updateMatrixWorld(true);
+
+  // mão direita
+  const hp = st.hand;
+  hand.quaternion.copy(hp.q); hand.position.copy(hp.t).sub(GRIP.clone().applyQuaternion(hp.q));
+  hand.userData.fingers.forEach(fg => fg.rotation.x = hp.curl * 1.1); hand.userData.thumb.rotation.x = .3 + hp.curl * .6;
+  hand.updateMatrixWorld(true);
+  solveArm(armR, SR, hand.localToWorld(WRIST.clone()), V(-1, -.6, -.3));
+
+  // maçã
+  apple.visible = !!st.apple;
+  if (st.apple) { apple.position.copy(st.apple.pos); apple.quaternion.copy(st.apple.q); appleMesh.geometry = st.apple.bitten ? appleBitten : appleWhole; }
+  // carne
+  meat.visible = !!st.meat;
+  if (st.meat) {
+    const M = st.meat;
+    meatParts[0].position.copy(M.A); meatParts[1].position.copy(M.B);
+    meatParts.forEach(p => p.quaternion.copy(M.q)); meatParts[1].scale.setScalar(Math.max(.001, M.bScale));
+    const xa = V(1, 0, 0).applyQuaternion(M.q);
+    fibers.forEach((fb, i) => {
+      fb.visible = M.fiber >= 0;
+      if (fb.visible) { const o = V(0, (i - 1) * .03, (i - 1) * .04).applyQuaternion(M.q); placeLimb(fb, M.A.clone().addScaledVector(xa, .1).add(o), M.B.clone().addScaledVector(xa, -.1).add(o), .012 * (1 - M.fiber * .7)); }
+    });
+  }
+  // pedaço de maçã / farelos
+  chunk.visible = !!st.chunk;
+  if (st.chunk) {
+    const [a, b, k] = st.chunk.at;
+    const posOf = (ids) => ids.map(i => toothTop(findTooth(i, false, 1))).reduce((s, v) => s.add(v), V()).multiplyScalar(1 / ids.length);
+    let p = posOf(a); if (b) p.lerp(posOf(b), k);
+    const sq = st.chunk.squash || 0;
+    chunk.position.copy(p).add(V(0, .03 * (1 - sq * .6), 0)); chunk.scale.set(1 + sq * .5, 1 - sq * .6, 1 + sq * .4);
+    chunk.quaternion.copy(dent.root.quaternion);
+  }
+  crumbs.visible = st.crumbs != null;
+  if (crumbs.visible) {
+    const base = [5, 6].map(i => toothTop(findTooth(i, false, 1))).reduce((s, v) => s.add(v), V()).multiplyScalar(.5);
+    const tau = st.crumbs, q = new THREE.Quaternion();
+    crumbSeed.forEach(([a, b, c, e], i) => {
+      const ang = a * TAU, sp = .03 + b * .11;
+      const p = base.clone().add(V(Math.cos(ang) * sp * Math.min(1, tau * 4), 0, Math.sin(ang) * sp * Math.min(1, tau * 4)));
+      const fall = e > .45 ? Math.min(.2, 3 * Math.max(0, tau - .1) ** 2) : 0;
+      p.y += .01 + c * .015 - fall;
+      if (p.y < .04) p.y = .04;
+      q.setFromEuler(new THREE.Euler(a * 6, b * 6, c * 6));
+      m4.compose(p, q, V(1, 1, 1).multiplyScalar(.7 + c * .8)); crumbs.setMatrixAt(i, m4);
+    });
+    crumbs.instanceMatrix.needsUpdate = true;
+  }
+  // bolhas e gotas
+  bubbles.forEach(b => {
+    const u = b.userData, ph = (T * u.s + u.p) % 1;
+    b.visible = st.bubbles > .01 && (st.dent.mode !== 'mouth');
+    b.position.set(G.x + u.x * .7, .2 + ph * (WATER_Y - .25), G.z + u.z * .7); b.material.opacity = .55 * st.bubbles;
+  });
+  drops.forEach(dr => {
+    const u = dr.userData, ph = (T * 1.6 + u.p) % 1;
+    dr.visible = st.drops > 0 && st.dropOrigin;
+    if (dr.visible) dr.position.copy(st.dropOrigin).add(V(u.x * .55, -.08 - ph * .9, u.z * .55));
+  });
+  // joinha e brilho
+  thumbs.visible = st.thumbs > .01;
+  if (thumbs.visible) {
+    thumbs.position.copy(HERO).add(V(.33, .55 + Math.abs(Math.sin(T * 5.5)) * .03, .12));
+    thumbs.scale.setScalar(st.thumbs * .9); thumbs.rotation.set(0, -.2, Math.sin(T * 6) * .12 - .1);
+  }
+  sparkle.visible = st.sparkle > .01;
+  if (sparkle.visible) {
+    const ci = findTooth(0, true, 1); sparkle.position.copy(ci.localToWorld(V(.02, .12, .06)));
+    sparkle.quaternion.copy(camera.quaternion); sparkle.rotateZ(T * 3); sparkle.scale.setScalar(st.sparkle * (1 + .3 * Math.sin(T * 20)));
+  }
+
+  // câmera
+  camera.position.copy(st.camPos); camera.fov = st.fov; camera.updateProjectionMatrix(); camera.lookAt(st.camTgt);
+  postMat.uniforms.uVig.value = st.vig; postMat.uniforms.uTime.value = t; postMat.uniforms.uTint.value.copy(st.tint);
+
+  for (const x of TEXTS) {
+    if (window.__render) {
+      const k = Math.min(range(t, x.a, x.a + .3), 1 - range(t, x.b - .25, x.b)), e = easeOut(k);
+      x.el.style.transition = 'none'; x.el.style.opacity = k;
+      x.el.style.transform = `translateY(${(1 - e) * 40}px) scale(${.92 + .08 * e})`;
+    } else x.el.classList.toggle('on', t >= x.a && t < x.b);
+  }
+
+  renderer.setRenderTarget(rt); renderer.render(scene, camera);
+  renderer.setRenderTarget(null); renderer.render(postScene, postCam);
+}
+
+/* ---------------- controle ---------------- */
+const stage = document.getElementById('stage'), startEl = document.getElementById('start');
+const fit = () => stage.style.setProperty('--s', Math.min(innerWidth / W, innerHeight / H));
+addEventListener('resize', fit); fit();
+const params = new URLSearchParams(location.search);
+let playing = false, offset = parseFloat(params.get('t') || '0'), t0 = 0;
+const current = () => playing ? Math.min(TOTAL, offset + (performance.now() - t0) / 1000) : offset;
+function play() { if (playing) return; playing = true; t0 = performance.now(); startEl.classList.add('hide'); }
+function pause() { offset = current(); playing = false; }
+function seek(t) { offset = clamp(t, 0, TOTAL); t0 = performance.now(); }
+startEl.addEventListener('click', play);
+addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); if (!playing) play(); else pause(); }
+  if (e.code === 'KeyR') { seek(0); play(); }
+  if (e.code === 'ArrowRight') seek(current() + 2);
+  if (e.code === 'ArrowLeft') seek(current() - 2);
+});
+window.__total = TOTAL; window.__dbg = { head, dent, hole, mouth, scene, THREE };
+window.__seek = (t) => { playing = false; offset = t; frame(t); };
+window.__ready = true;
+if (params.has('hideui')) startEl.classList.add('hide');
+if (params.has('still')) frame(offset);
+else (function loop() { frame(current()); requestAnimationFrame(loop); })();
+</script>
+</body>
+</html>

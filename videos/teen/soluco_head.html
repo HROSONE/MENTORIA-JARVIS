@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Você é o Soluço</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --accent:#00E5FF; --s:1; }
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s));background:#000}
+  #c{display:block;width:1080px;height:1920px;transform-origin:50% 45%}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+  #us{position:absolute;inset:0;opacity:0;pointer-events:none}
+  #vhs{position:absolute;inset:0;opacity:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 2px,transparent 2px 6px);}
+  #vhs b{position:absolute;left:60px;top:90px;color:#fff;font:900 90px 'Montserrat',sans-serif}
+  #year{position:absolute;left:0;right:0;top:1500px;text-align:center;color:#fff;font:900 170px 'Montserrat',sans-serif;opacity:0;text-shadow:0 10px 40px rgba(0,0,0,.9);letter-spacing:.04em}
+  .ov{position:absolute;left:40px;right:40px;top:var(--y);text-align:center;color:#fff;font-family:'Montserrat',system-ui,sans-serif;font-weight:900;font-size:var(--fs);line-height:1.02;
+    opacity:0;transform:translateY(40px) scale(.9);transition:opacity .2s ease, transform .35s cubic-bezier(.2,.9,.3,1.4);
+    text-shadow:0 10px 40px rgba(0,0,0,.9),0 2px 8px rgba(0,0,0,.8);pointer-events:none}
+  .ov.on{opacity:1;transform:none}
+  .ov.lbl{left:0;right:auto;top:0;white-space:nowrap}
+  .a{color:var(--accent)}
+  .sub{display:block;font-size:.36em;letter-spacing:.12em;margin-top:.2em}
+  .btn{display:inline-block;border:10px solid var(--accent);border-radius:999px;padding:.28em .75em;background:rgba(0,0,0,.5);box-shadow:0 0 60px rgba(0,229,255,.35)}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;font:800 54px 'Montserrat',sans-serif;background:rgba(0,0,0,.55);cursor:pointer;gap:30px;text-align:center}
+  #start small{font-size:30px;opacity:.6}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <svg id="us" viewBox="0 0 1080 1920"><path fill="#000" fill-rule="evenodd" d="M0 0H1080V1920H0Z M540 330 L60 1250 A960 960 0 0 0 1020 1250 Z"/><text x="70" y="150" fill="#9aa" font-family="Montserrat" font-weight="800" font-size="40">ULTRASSOM · 28 SEM</text></svg>
+  <div id="flash"></div>
+  <div id="vhs"><b>⏪</b></div>
+  <div id="year">1922</div>
+  <div id="texts"></div>
+  <div id="start">▶ CLIQUE ou ESPAÇO<small>com som · ESPAÇO pausa · R reinicia</small></div>
+</div>
+<!--AUDIO-->
+<!--SKIN-->
+<!--GLB-->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* ======== LINHA DO TEMPO (segundos) — a mesma do áudio ======== */
+const EV = {
+  hic1: .45, hic2: 1.6, hic3: 2.8, title: 3.6,
+  xray: 7.0, c1: 9.0, c2: 12.4, glotCam: 13.6, c3: 15.6,
+  scare: 19.0, boo: 20.3, h4: 22.4, h5: 23.9,
+  womb: 25.5, b1: 27.0, b2: 28.5, b3: 30.0,
+  record: 32.5, recEnd: 39.6,
+  rewind: 40.0, tad: 41.0, tp1: 42.8, tp2: 44.6, side: 46.4, sp1: 47.6, sp2: 49.0,
+  end: 50.6, e1: 51.0, e2: 52.3, total: 54.5,
+};
+const TEXTS = [
+  { from: .45, to: 1.2,  y: 260, fs: 200, html: '<span class="a">HIC!</span>' },
+  { from: 1.6, to: 2.4,  y: 300, fs: 220, html: '<span class="a">HIC!</span>' },
+  { from: 2.8, to: 3.5,  y: 340, fs: 250, html: '<span class="a">HIC!</span>' },
+  { from: 3.7, to: 6.9,  y: 200, fs: 150, html: 'POR QUÊ<span class="a">?</span>' },
+  { from: 7.6, to: 11.6, anchor: 'dia', fs: 66, html: '<span class="a">DIAFRAGMA</span>' },
+  { from: 9.1, to: 11.6, y: 190, fs: 110, html: 'ESPASMO' },
+  { from: 14.2, to: 18.6, y: 190, fs: 90, html: 'AS CORDAS VOCAIS<br><span class="a">FECHAM</span>' },
+  { from: 20.3, to: 21.6, y: 260, fs: 200, html: 'BU!' },
+  { from: 22.4, to: 24.9, y: 200, fs: 110, html: 'NÃO <span class="a">ADIANTOU</span>' },
+  { from: 26.2, to: 31.8, y: 1560, fs: 90, html: 'ANTES DE<br><span class="a">NASCER</span>' },
+  { from: 33.4, to: 39.5, y: 170, fs: 190, html: '<span class="a">68</span> ANOS<span class="sub">RECORDE MUNDIAL DE SOLUÇO</span>' },
+  { from: 42.0, to: 46.2, y: 170, fs: 120, html: '<span class="a">GIRINO</span>' },
+  { from: 47.0, to: 50.5, y: 170, fs: 100, html: 'O MESMO<br><span class="a">MOVIMENTO</span>' },
+  { from: 51.2, to: 54.5, y: 1540, fs: 110, html: '<span class="btn">SE INSCREVE</span>' },
+];
