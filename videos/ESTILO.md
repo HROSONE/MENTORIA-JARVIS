@@ -26,11 +26,13 @@ Regras pedidas pelo dono do canal. Valem para todo vídeo novo.
 - Revisar quadro por quadro antes de entregar (proporções, enquadramento, nada cortado de forma estranha).
 - Fatos checados com fonte. Ficção nunca é apresentada como caso real.
 
-## Capa / primeiro quadro (o que funcionou no canal)
+## Primeiro segundo no feed (o que funcionou no canal)
+Nos Shorts quase ninguém escolhe pela capa: o vídeo aparece no feed e a pessoa decide em 1–2 s se arrasta. O que conta é o primeiro quadro em movimento e a retenção (quantos assistem em vez de arrastar e quantos veem até o fim ou repetem).
 Os mais vistos: Xadrez (39 mil), Alcatraz "OLHANDO." (27 mil), Pegada "TAMANHO 38-42" (17 mil).
-Os mais fracos: "ELES SÃO GÊMEOS" (2,7 mil), "Gota de melado" (3,1 mil), túnel escuro do Cavalo (2,1 mil).
-- Um assunto só, grande e legível no tamanho de miniatura, em fundo limpo e contrastado.
-- Tensão ou mistério visível: alguém sendo vigiado, um objeto estranho, um número sem explicação.
-- No máximo uma palavra ou um número na tela, que gere pergunta (OLHANDO. / 38-42), nunca uma frase que já entregue a resposta (ELES SÃO GÊMEOS).
-- Personagens no estilo `man()` (Alcatraz) e objetos em close (Xadrez) funcionam; cena escura ou confusa na capa não funciona.
-- História real com "como isso é possível?" vence curiosidade explicativa.
+Os mais fracos: "ELES SÃO GÊMEOS" (2,7 mil), "Gota de melado" (3,1 mil), Cavalo (2,1 mil).
+- Abrir com uma situação de tensão já acontecendo (alguém sendo vigiado, objeto estranho, número sem explicação), e não com uma frase que explica o tema.
+- Um assunto só no centro, grande, legível na tela do celular; nada de cena escura ou poluída no começo.
+- Texto na tela: no máximo uma palavra ou número que crie pergunta (OLHANDO. / 38-42). Nunca entregar a surpresa no início (ELES SÃO GÊMEOS).
+- Uma pergunta que só se responde no fim segura a retenção; final que conecta com o começo ajuda a repetição.
+- História real do tipo "como isso é possível?" vence curiosidade explicativa.
+- Vídeos longos (aba Vídeos/busca) aí sim dependem de miniatura e título.
