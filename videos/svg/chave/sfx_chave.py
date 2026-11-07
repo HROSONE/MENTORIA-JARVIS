@@ -114,12 +114,13 @@ add(ding(1568, .3), a + 3.7); add(ding(2093, .2), a + 3.8); add(whoosh(1.2, 500,
 # 6
 a, b = A['n6']; add(drone(b - a, 44, .08), a)
 s_ = scrape(b - a, .08); add(s_, a)
-for k in range(6): add(tick(.25), a + .8 + k * .45)
-add(beep(220, .3, .2), a + 2.2); add(beep(180, .4, .2), a + 4.1)
-for k in range(10): add(lp(ken('impactMetal_light', k % 5), 2500), a + 4.0 + k * .17, .3)
+for k in range(4): add(ding(1200 + k * 200, .18), a + .4 + (k + 1) * .95)
+for k in range(14): add(tick(.2), a + .5 + k * .27)
+for k in range(5): add(lp(bsb('0243', 0, .5, .01), 500), a + 3.6 + k * .3, .5)
 # 7
 a, b = A['n7']; night(a, b - a)
-for k in range(12): add(lp(ken('impactMetal_medium', k % 5), 2000), a + .1 + k * .22, .2, -.2)
+for k in range(14): add(tick(.18), a + .1 + k * .25)
+for k in range(6): add(lp(bsb('0243', 0, .5, .01), 500), a + .1 + k * .5, .4)
 for k in range(5): add(lp(ken('footstep_concrete', k), 2600), a + .5 + k * .45, .25, .6)
 add(whoosh(.4, 600, 2000, .1), a + 2.8)
 # 8
@@ -128,7 +129,7 @@ add(ken('impactWood_heavy', 2), a + .55, 1.0); add(ken('impactPunch_heavy', 0), 
 for k in range(5): add(ding(2600 + k * 300, .06), a + .7 + k * .12)
 add(lp(noise(.5), 300) * np.exp(-T(.5) * 8) * .6, a + 1.65)
 # 9
-a, b = A['n9']; add(siren(b - a, .12) * env(int((b - a) * SR), .5, .3), a); night(a, b - a, .2)
+a, b = A['n9']; add(lp(ken('footstep_concrete', 1), 2500), a + 1.4, .4); add(siren(b - a, .12) * env(int((b - a) * SR), .5, .3), a); night(a, b - a, .2)
 add(lp(noise(.6), 200) * np.exp(-T(.6) * 5) * .4, a + 1.2)
 add(lp(ken('impactMetal_light', 1), 4000), a + 2.4, .6); add(lp(ken('impactMetal_light', 3), 4000), a + 2.55, .5)
 add(ding(1760, .2), a + 3.6)

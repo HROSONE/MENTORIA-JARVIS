@@ -128,11 +128,12 @@ function s1(t) {
 const wireH = (len = 120) => `<path d="M0 0 L${len} 0 L${len + 20} -26" stroke="#C8A060" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
 function s2(t) {
   const { L, d, k } = loc(t, 'n2'), [hx, hy] = HH(t);
-  setCam(lerp(160, 600, easeInOut(range(L, 0, 2.4))) + hx, 1200 + hy, lerp(.95, 1.2, easeInOut(range(L, 2.6, d))), 0, [540, 1200, 1]);
+  setCam(lerp(160, 600, easeInOut(range(L, 0, 2.4))) + hx, lerp(1200, 1260, range(L, 2.6, d)) + hy, lerp(.95, 1.3, easeInOut(range(L, 2.8, d))), 0, [540, 1200, 1]);
   let s = lay(.9, nightStreet(t)) + lay(1, car(CARX, GND, 1));
-  const walk = range(L, 0, 2.0), bx = lerp(-260, 600, easeOut(walk));
-  const look = L > 2.1 && L < 2.7 ? -1 : 0, pull = range(L, 2.8, 3.3), reach = range(L, 3.5, 4.4);
-  s += lay(1, man({ x: bx, y: GND, s: .58, kind: 'bandido', ...walkPose(L * 9, walk < 1 ? 1 : 0), look, armF: L > 3.3 ? [lerp(40, 95, reach), lerp(30, -10, reach)] : [lerp(10, 60, pull), lerp(10, 60, pull)], held: L > 2.9 ? wireH() : '', mouth: L > 3.0 ? .3 : 0 }));
+  const walk = range(L, 0, 2.0), bx = lerp(-260, 560, easeOut(walk));
+  const look = L > 2.1 && L < 2.7 ? -1 : 0, cr = easeInOut(range(L, 2.8, 3.4)), reach = range(L, 3.6, 4.6);
+  const pose = cr > 0 ? { drop: 220 * cr, lean: 18 * cr, legF: [85 * cr, -100 * cr], legB: [-15 * cr, 100 * cr] } : walkPose(L * 9, walk < 1 ? 1 : 0);
+  s += lay(1, man({ x: bx, y: GND, s: .58, kind: 'bandido', ...pose, look, armF: L > 3.4 ? [lerp(60, 112, reach), lerp(30, -6, reach)] : [lerp(10, 60, range(L, 2.5, 3.0)), lerp(10, 50, range(L, 2.5, 3.0))], armB: cr > 0 ? [lerp(10, 70, cr), 30] : [-10, 10], held: L > 2.6 ? wireH() : '' }));
   return s + VIG(.9);
 }
 /* ---------- 3. close na fechadura → vista lateral → carcaça some ---------- */
@@ -174,14 +175,15 @@ function s5(t) {
 /* ---------- 6. o arame: levanta uma, as outras travam; não gira ---------- */
 function s6(t) {
   const { L, d, k } = loc(t, 'n6');
-  setCam(lerp(540, 600, k), 890, lerp(1.45, 1.55, k), 0, [560, 880, 1]);
-  // o arame cutuca: plaquinha 2, depois 4 (sobe demais), e escapa
-  const tgt = L < 2.6 ? 1 : 3, x = WX[tgt], poke = L < .5 ? 0 : Math.max(0, Math.sin((L - .5) * 3.2));
-  const lifts = [0, 0, 0, 0, 0]; lifts[tgt] = tgt === 3 ? poke * 85 : poke * WD[tgt];
-  const wx = L < .5 ? lerp(1100, x, L / .5) : x + Math.sin(L * 6) * 8, wy = PT + 170 - lifts[tgt] - 10;
-  const jig = L > 4.0 ? 1 : 0;
-  let s = lay(1, lockCut(t, { housing: .1, tip: 1500, wire: [wx, wy], lifts, jig }));
-  if (jig) s += `<rect width="1080" height="1920" fill="#FF2020" opacity="${op(.06 + .06 * Math.sin(t * 30))}"/>`;
+  setCam(lerp(540, 600, k), 890, lerp(1.45, 1.6, k), 0, [560, 880, 1]);
+  const prog = range(L, .4, 4.2) * 4, cur = Math.min(4, Math.floor(prog)), within = prog - Math.floor(prog);
+  const lifts = WD.map((dd, i) => i < cur ? dd : (i === cur ? dd * Math.min(.85, Math.abs(Math.sin(within * Math.PI * 1.5)) * (i === 4 ? .8 : 1)) : 0));
+  const x = WX[cur], wx = L < .4 ? lerp(1100, x, L / .4) : x + Math.sin(L * 7) * 6, wy = PT + 170 - lifts[cur] - 10;
+  let s = lay(1, lockCut(t, { housing: .1, tip: 1500, wire: [wx, wy], lifts, jig: L > 4.4 ? .4 : 0 }));
+  // contador de plaquinhas acertadas
+  const n = Math.min(4, cur);
+  s += `<g transform="translate(540,1560)">${[0, 1, 2, 3, 4].map(i => `<circle cx="${(i - 2) * 110}" cy="0" r="40" fill="${i < n ? '#3ACF7A' : '#3A2A2A'}" stroke="${i === 4 ? '#FF3A3A' : OUTL}" stroke-width="${i === 4 ? 8 : 5}"/>`).join('')}</g>`;
+  if (L > 4.4) s += `<circle cx="${(4 - 2) * 110 + 540}" cy="1560" r="${f1(60 + 10 * Math.sin(t * 12))}" fill="none" stroke="#FF3A3A" stroke-width="6" opacity=".8"/>`;
   return s + VIG(.7);
 }
 /* ---------- 7. ele força a porta... e a senhora chega por trás ---------- */
@@ -189,9 +191,9 @@ function s7(t) {
   const { L, d, k } = loc(t, 'n7'), [hx, hy] = HH(t);
   setCam(lerp(700, 820, k) + hx, 1200 + hy, lerp(1.05, .95, k), 0, [540, 1200, 1]);
   const shake = Math.sin(t * 22) * 8 * (L < 2.8 ? 1 : 0);
-  let s = lay(.9, nightStreet(t)) + lay(1, car(CARX + shake * .3, GND, 1));
-  s += lay(1, man({ x: 600, y: GND, s: .58, kind: 'bandido', armF: [95 + shake * .5, -10], armB: [80, 0], lean: 10, mouth: .6, held: wireH(), eyes: L > 1.2 && L < 1.4 ? 0 : 1 }));
-  for (let i = 0; i < 3; i++) { const p = (L * 1.4 + i * .33) % 1; s += lay(1, `<path d="M${f1(560 + i * 30)} ${f1(GND - 690 + p * 60)} q6 12 0 20 q-6 -8 0 -20Z" fill="#9AD0FF" opacity="${op(1 - p)}"/>`); }
+  let s = lay(.9, nightStreet(t)) + lay(1, car(CARX, GND, 1));
+  s += lay(1, man({ x: 560, y: GND, s: .58, kind: 'bandido', drop: 220, lean: 18, legF: [85, -100], legB: [-15, 100], armF: [112 + shake * .4, -6], armB: [70, 30], held: wireH() }));
+  for (let i = 0; i < 3; i++) { const p = (L * 1.4 + i * .33) % 1; s += lay(1, `<path d="M${f1(520 + i * 30)} ${f1(GND - 560 + p * 60)} q6 12 0 20 q-6 -8 0 -20Z" fill="#9AD0FF" opacity="${op(1 - p)}"/>`); }
   const lx = lerp(1600, 980, easeOut(range(L, .4, 2.8)));
   s += lay(1, man({ x: lx, y: GND, s: .58, kind: 'idosa', flip: -1, ...walkPose(L * 7, L < 2.8 ? .7 : 0), armF: L > 2.8 ? [170, 10] : [30, 10], held: cane(420, L > 2.8 ? 160 : 0), armB: [30, 40], heldB: `<path d="M-30 0 L30 0 L40 90 L-40 90Z" fill="#C8A060" stroke="${OUTL}" stroke-width="4"/>`, mouth: L > 2.8 ? .6 : 0 }));
   return s + VIG(.9);
@@ -200,17 +202,18 @@ function s7(t) {
 function s8(t) {
   const { L, d, k } = loc(t, 'n8');
   const hit = .55, sh = L > hit && L < hit + .35 ? 18 : 0;
-  setCam(780 + sh * noise1(t * 50, 1), 1150 + sh * noise1(t * 50, 4), 1.45, 0, [540, 1100, 1]);
+  setCam(700 + sh * noise1(t * 50, 1), 1180 + sh * noise1(t * 50, 4), 1.35, 0, [540, 1100, 1]);
   let s = lay(.9, nightStreet(t)) + lay(1, car(CARX, GND, 1));
   const fall = easeIn(range(L, hit + .3, hit + 1.1));
-  s += lay(1, `<g transform="rotate(${f1(-88 * fall)} 600 ${GND})">${man({ x: 600, y: GND, s: .58, kind: 'bandido', armF: [lerp(70, 160, range(L, hit, hit + .2)), 0], armB: [lerp(10, 160, range(L, hit, hit + .2)), 0], eyes: L > hit ? 0 : 1, mouth: L > hit ? 1 : .4, shadow: 0 })}</g>`);
+  s += lay(1, `<g transform="rotate(${f1(-80 * fall)} 560 ${GND})">${man({ x: 560, y: GND, s: .58, kind: 'bandido', drop: 220 * (1 - fall * .6), lean: 18, legF: [85, -100], legB: [-15, 100], armF: [lerp(112, 170, range(L, hit, hit + .2)), 0], armB: [lerp(70, 160, range(L, hit, hit + .2)), 0], held: L < hit ? wireH() : '', shadow: 0 })}</g>`);
   const sw = range(L, .2, hit);
-  s += lay(1, man({ x: 900, y: GND, s: .58, kind: 'idosa', flip: -1, armF: [lerp(170, 60, easeIn(sw)), 10], held: cane(420, lerp(160, 70, easeIn(sw))), mouth: .8 }));
+  if (L > hit) { const fl = range(L, hit, hit + .5); s += lay(1, `<g transform="translate(${f1(700 + 60 * fl)},${f1(GND - 260 + 250 * easeIn(fl))}) rotate(${f1(fl * 300)})">${wireH()}</g>`); }
+  s += lay(1, man({ x: 830, y: GND, s: .58, kind: 'idosa', flip: -1, armF: [lerp(170, 50, easeIn(sw)), 10], held: cane(420, lerp(160, 60, easeIn(sw))), mouth: .8 }));
   if (L > hit) {
-    const p = range(L, hit, hit + 1.6), hx2 = 600 - 280 * fall, hy2 = GND - 640 * (1 - fall) - 60;
+    const p = range(L, hit, hit + 1.6), hx2 = 560 - 220 * fall, hy2 = GND - 520 * (1 - fall) - 60;
     s += lay(1, `<g opacity="${op(1 - range(L, hit + 1.6, hit + 2.0))}">${Array.from({ length: 5 }, (_, i) => { const a = t * 5 + i * 1.256; return `<path d="M0 -22 L6 -7 L22 -7 L9 3 L14 19 L0 9 L-14 19 L-9 3 L-22 -7 L-6 -7Z" fill="#FFD832" stroke="${OUTL}" stroke-width="3" transform="translate(${f1(hx2 + Math.cos(a) * 110)},${f1(hy2 + Math.sin(a) * 34)}) scale(1.3)"/>`; }).join('')}</g>`);
     if (L < hit + .12) s += `<rect width="1080" height="1920" fill="#fff" opacity="${op(.7 * (1 - (L - hit) / .12))}"/>`;
-    s += lay(1, `<g opacity="${op(1 - range(L, hit, hit + .4))}">${Array.from({ length: 10 }, (_, i) => `<path d="M${600} ${GND - 640} l${f1(Math.cos(i * .63) * 170)} ${f1(Math.sin(i * .63) * 170)}" stroke="#FFF4C0" stroke-width="10" stroke-linecap="round"/>`).join('')}</g>`);
+    s += lay(1, `<g opacity="${op(1 - range(L, hit, hit + .4))}">${Array.from({ length: 10 }, (_, i) => `<path d="M${560} ${GND - 520} l${f1(Math.cos(i * .63) * 170)} ${f1(Math.sin(i * .63) * 170)}" stroke="#FFF4C0" stroke-width="10" stroke-linecap="round"/>`).join('')}</g>`);
   }
   return s + VIG(.9);
 }
@@ -226,11 +229,11 @@ function s9(t) {
   // bandido em pé, mãos para trás; policial atrás algemando
   const cuff = L > 2.4;
   s += lay(1, man({ x: 760, y: GND, s: .58, kind: 'bandido', armF: [-35, -60], armB: [-40, -60], eyes: 1, mouth: .2, lean: 8 }));
-  s += lay(1, man({ x: 580, y: GND, s: .6, kind: 'policia', ...walkPose(L * 8, L < 1.6 ? 1 : 0), armF: [lerp(20, 80, range(L, 1.8, 2.4)), lerp(10, -20, range(L, 1.8, 2.4))], armB: [60, 10] }));
+  s += lay(1, man({ x: 930, y: GND, s: .6, kind: 'policia', flip: -1, armF: [70, 10], armB: [-10, 10] })) + lay(1, man({ x: 580, y: GND, s: .6, kind: 'policia', ...walkPose(L * 8, L < 1.6 ? 1 : 0), armF: [lerp(20, 80, range(L, 1.8, 2.4)), lerp(10, -20, range(L, 1.8, 2.4))], armB: [60, 10] }));
   if (cuff) s += lay(1, `<g transform="translate(700,${GND - 300})"><circle cx="0" cy="0" r="22" fill="none" stroke="#C8CCD4" stroke-width="9"/><circle cx="34" cy="8" r="22" fill="none" stroke="#C8CCD4" stroke-width="9"/></g>`);
   // senhora com a chave levantada, piscando para a câmera
   const wave = Math.sin(t * 8) * 10;
-  s += lay(1, man({ x: 1040, y: GND, s: .58, kind: 'idosa', flip: -1, armF: [170, wave], held: cane(420, 160 + Math.sin(t * 8) * 10), armB: [20, 10], eyes: L > 3.6 && L < 4.0 ? 0 : 1, mouth: .5 }));
+  s += lay(1, man({ x: 1150, y: GND, s: .58, kind: 'idosa', flip: -1, armF: [170, wave], held: cane(420, 160 + Math.sin(t * 8) * 10), armB: [20, 10], eyes: L > 3.6 && L < 4.0 ? 0 : 1, mouth: .5 }));
   return s + VIG(.9);
 }
 const FN = { n1: s1, n2: s2, n3: s3, n4: s4, n5: s5, n6: s6, n7: s7, n8: s8, n9: s9 };
