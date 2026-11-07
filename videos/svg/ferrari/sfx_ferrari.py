@@ -90,9 +90,11 @@ def siren(d, g=.14): t = T(d); return np.sin(2 * np.pi * np.cumsum(700 + 250 * n
 def kick(g=.5): d = .35; t = T(d); return np.sin(2 * np.pi * (60 + 80 * np.exp(-t * 30)) * t) * np.exp(-t * 9) * g
 FL_T = [0.55, 2.2, 5.1, 9.6, 14.2, 19.4, 27.6, 34.4, 40.3, 42.2]
 TH = ['3113', '3114', '3115', '3179']
-for i, f in enumerate(FL_T): add(bsb(TH[i % 4], 0, 4.5, .02), f + .15 + (i % 3) * .2, .55 if i else .8, (i % 3 - 1) * .3)
+for i, f in enumerate(FL_T): add(lp(bsb(TH[i % 4], 0, 4.5, .02), 900), f + .4 + (i % 3) * .3, .45, (i % 3 - 1) * .3)
 add(lp(noise(TOTAL), 160) * .015, 0)
-a0 = 0; bedL('0740', 30, 0, TOTAL, .32, .5, .8)
+# sem chuva: só pingos esparsos caindo de marquises e trovão distante
+for k in range(int(TOTAL / .9)): add(bp(noise(.04), 1800, 7000) * np.exp(-T(.04) * 90) * .18, k * .9 + (k * 37 % 10) / 25, 1, ((k * 13) % 7 - 3) / 4)
+bedL('3222', 30, 0, TOTAL, .06, .5, .8)
 for x in NR['s'][1:]: add(whoosh(.25, 4000, 600, .08), x['a'] - .14, 1.0)
 A2 = {x['k']: x['a'] for x in NR['s']}
 # 1: passos dele na calçada molhada
@@ -124,7 +126,10 @@ add(click(.4), a + 2.1); add(bsb('1524', 0, 1.2), a + 2.2, .6)
 # 9: entra, fecha a porta, pega o casaco, motor e vai embora
 a = A2['n9']; add(bsb('1521', .2, 1.0), a + .3, .4); add(ken('impactSoft_medium', 1), a + .8, .4); add(bsb('1526', 0, 1.0), a + 1.15, .6)
 add(whoosh(.5, 800, 2400, .2), a + 1.7); add(bp(noise(.3), 600, 2500) * .15, a + 2.4)
-add(bsb('0534', 0, 4.0, .05), a + 2.4, .75); add(bsb('1521', 0, 2.0), a + 3.1, .5); add(bsb('1519', 0, 2.0) if os.path.exists(os.path.join(SONS, 'bsb', '1519.ogg')) else bsb('1521', .5, 1.5), a + 3.6, .4)
+add(bsb('0534', 0, 4.0, .05), a + 2.4, .75); add(bsb('1521', 0, 2.0), a + 3.1, .5); add(bsb('1521', .5, 1.5), a + 3.6, .4)
+# 10: céu com raios nas nuvens no final
+a = A2['n10']
+for k, tt in enumerate([2.1, 2.9, 3.6, 4.3, 4.7, 5.0, 5.4, 5.8]): add(bsb(TH[k % 4], 0, 3.0, .01), a + tt + .05, .5 if k % 2 else .7, (k % 3 - 1) * .4)
 # 10: indo embora
 a = A2['n10']; add(lp(bsb('0534', 4, 4.0, .05), 1800), a, .45); add(bp(noise(4), 400, 2500) * env(int(4 * SR), .3, 2) * .06, a)
 mx = np.stack([L, Rr], 1); mx = np.tanh(mx * 1.2) / np.tanh(1.2); mx *= .85 / max(1e-6, np.abs(mx).max())
