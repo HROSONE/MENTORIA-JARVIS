@@ -84,18 +84,213 @@ function townSide(t, d, o = {}) {
   s += lay(1, prairie(d, t) + b + (o.extra || ''));
   return s;
 }
-/* ---------- vista aérea ---------- */
+/* ---------- vista aérea (detalhada, cacheada por luz) ---------- */
+const AER = {};
+function buildAerial(lit) {
+  let sd = 1907; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  const C = c => mix('#0C100C', c, .12 + .88 * lit), LT = (c, k = .22) => C(mix(c, '#FFF6E0', k)), DK = (c, k = .3) => C(mix(c, '#000000', k));
+  const SHD = `fill="#0A0806" opacity="${f1(.32 * lit + .08) }"`;
+  const SX = -16, SY = 7;   // sol nascendo a leste: sombras para oeste
+  let df = '', s = '';
+  // ---- padrões de lavoura (linhas de plantio) ----
+  const rowsP = (id, col, gap, w, a) => df += `<pattern id="${id}" width="${gap}" height="${gap}" patternUnits="userSpaceOnUse" patternTransform="rotate(${a})"><rect width="${gap}" height="${w}" fill="${col}"/></pattern>`;
+  const CROPS = [
+    { base: '#7A9A3E', row: '#4E7028', gap: 14, w: 6 },   // milho
+    { base: '#D2B46A', row: '#B0914A', gap: 10, w: 3 },   // trigo colhido
+    { base: '#8A6A44', row: '#6A4C30', gap: 12, w: 5 },   // terra arada
+    { base: '#5E8236', row: '#3E5E22', gap: 11, w: 5 },   // soja
+    { base: '#A8A45A', row: '#8A8A48', gap: 26, w: 2 },   // pasto
+    { base: '#C2A45C', row: '#9C8044', gap: 16, w: 4 }];  // palha
+  CROPS.forEach((c, i) => { rowsP(`cr${i}a`, C(c.row), c.gap, c.w, 0); rowsP(`cr${i}b`, C(c.row), c.gap, c.w, 90); });
+  df += `<pattern id="mottP" width="220" height="220" patternUnits="userSpaceOnUse"><circle cx="40" cy="50" r="38" fill="#000" opacity=".07"/><circle cx="160" cy="140" r="52" fill="#000" opacity=".06"/><circle cx="120" cy="30" r="22" fill="#fff" opacity=".06"/><circle cx="60" cy="170" r="30" fill="#fff" opacity=".05"/></pattern>`;
+  df += `<pattern id="grassP" width="30" height="30" patternUnits="userSpaceOnUse"><circle cx="6" cy="8" r="3" fill="#000" opacity=".14"/><circle cx="20" cy="22" r="4" fill="#000" opacity=".1"/><circle cx="24" cy="6" r="2" fill="#fff" opacity=".1"/></pattern>`;
+  df += `<pattern id="mowP" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="12" fill="#fff" opacity=".07"/></pattern>`;
+  df += `<pattern id="gravP" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="3" cy="4" r="1.4" fill="#000" opacity=".18"/><circle cx="11" cy="12" r="1.2" fill="#fff" opacity=".25"/></pattern>`;
+  df += `<radialGradient id="binG" cx=".65" cy=".35" r=".7"><stop offset="0" stop-color="${C('#F2F2EA')}"/><stop offset=".6" stop-color="${C('#A8ACB0')}"/><stop offset="1" stop-color="${C('#6A6E74')}"/></radialGradient>`;
+  df += `<radialGradient id="pivG"><stop offset="0" stop-color="${C('#6E9A3A')}"/><stop offset=".85" stop-color="${C('#5A8A30')}"/><stop offset="1" stop-color="${C('#4A7228')}"/></radialGradient>`;
+  df += `<radialGradient id="cloudSh"><stop offset="0" stop-color="#0A0C14" stop-opacity=".32"/><stop offset=".6" stop-color="#0A0C14" stop-opacity=".18"/><stop offset="1" stop-color="#0A0C14" stop-opacity="0"/></radialGradient>`;
+  // ---- chão base ----
+  s += `<rect x="-9000" y="-9000" width="20000" height="20000" fill="${C('#9A9A58')}"/><rect x="-9000" y="-9000" width="20000" height="20000" fill="url(#mottP)"/>`;
+  // ---- seções de 1 milha: estradas a cada 1600 ----
+  const SEC = 1600, RX = k => 960 + k * SEC, RY = k => 540 + k * SEC;
+  const inTown = (x, y, w, h) => x < 1500 && x + w > 420 && y < 960 && y + h > 160;
+  const farms = [];
+  for (let i = -5; i < 5; i++) for (let j = -4; j < 4; j++) {
+    const x0 = RX(i), y0 = RY(j);
+    for (let q = 0; q < 4; q++) {
+      const fx = x0 + (q % 2) * 800 + 14, fy = y0 + Math.floor(q / 2) * 800 + 14, fw = 772, fh = 772;
+      if (inTown(fx, fy, fw, fh)) { s += `<rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="${C('#9AA45A')}"/><rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="url(#grassP)"/>`; continue; }
+      const r = rnd();
+      if (r < .2) {   // pivô central irrigado
+        s += `<rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="${C('#B89E62')}"/><rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="url(#cr4a)" opacity=".6"/>`;
+        const cx = fx + fw / 2, cy = fy + fh / 2, R = 378;
+        s += `<circle cx="${cx}" cy="${cy}" r="${R}" fill="url(#pivG)"/><circle cx="${cx}" cy="${cy}" r="${R}" fill="url(#cr${rnd() < .5 ? 0 : 3}a)" opacity=".55"/>`;
+        for (let k = 1; k < 8; k++) s += `<circle cx="${cx}" cy="${cy}" r="${k * 48}" fill="none" stroke="${C('#3A5A20')}" stroke-width="3" opacity=".35"/>`;
+        const a = rnd() * 6.28, ex = cx + Math.cos(a) * R, ey = cy + Math.sin(a) * R;
+        s += `<path d="M${cx} ${cy} L${f1(ex)} ${f1(ey)}" stroke="${C('#D8D8D0')}" stroke-width="5"/>` + [.25, .5, .75, 1].map(k => `<circle cx="${f1(cx + (ex - cx) * k)}" cy="${f1(cy + (ey - cy) * k)}" r="6" fill="${C('#E8E8E0')}" stroke="${OUTL}" stroke-width="1.5"/>`).join('') + `<circle cx="${cx}" cy="${cy}" r="10" fill="${C('#C8C8C0')}" stroke="${OUTL}" stroke-width="2"/>`;
+        // trilha de onde a água já passou (mais escuro)
+        s += `<path d="M${cx} ${cy} L${f1(ex)} ${f1(ey)} A${R} ${R} 0 0 0 ${f1(cx + Math.cos(a - .9) * R)} ${f1(cy + Math.sin(a - .9) * R)}Z" fill="#0A2A10" opacity=".12"/>`;
+      } else if (r < .3) {   // cultivo em faixas
+        const vert = rnd() < .5, n = 8;
+        for (let k = 0; k < n; k++) { const c = k % 2 ? CROPS[1] : CROPS[2]; s += vert ? `<rect x="${f1(fx + k * fw / n)}" y="${fy}" width="${f1(fw / n + .5)}" height="${fh}" fill="${C(c.base)}"/>` : `<rect x="${fx}" y="${f1(fy + k * fh / n)}" width="${fw}" height="${f1(fh / n + .5)}" fill="${C(c.base)}"/>`; }
+        s += `<rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="url(#cr1${vert ? 'b' : 'a'})" opacity=".5"/>`;
+      } else {
+        const ci = Math.floor(rnd() * 6), c = CROPS[ci], dir = rnd() < .5 ? 'a' : 'b';
+        const split = rnd() < .35;   // metade dividida em dois cultivos
+        if (split) {
+          const c2 = CROPS[(ci + 2) % 6], h2 = fh * (.35 + rnd() * .3);
+          s += `<rect x="${fx}" y="${fy}" width="${fw}" height="${f1(h2)}" fill="${C(c.base)}"/><rect x="${fx}" y="${fy}" width="${fw}" height="${f1(h2)}" fill="url(#cr${ci}${dir})"/>`;
+          s += `<rect x="${fx}" y="${f1(fy + h2 + 8)}" width="${fw}" height="${f1(fh - h2 - 8)}" fill="${C(c2.base)}"/><rect x="${fx}" y="${f1(fy + h2 + 8)}" width="${fw}" height="${f1(fh - h2 - 8)}" fill="url(#cr${(ci + 2) % 6}${dir === 'a' ? 'b' : 'a'})"/>`;
+          s += `<rect x="${fx}" y="${f1(fy + h2)}" width="${fw}" height="8" fill="${C('#7A7A44')}"/>`;
+        } else s += `<rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="${C(c.base)}"/><rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="url(#cr${ci}${dir})"/>`;
+        s += `<rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="url(#mottP)"/>`;
+        if (ci === 1 && rnd() < .8) for (let b = 0; b < 14; b++) { const bx = fx + 60 + rnd() * (fw - 120), by = fy + 60 + rnd() * (fh - 120); s += `<ellipse cx="${f1(bx + SX * .5)}" cy="${f1(by + SY * .5)}" rx="11" ry="9" ${SHD}/><circle cx="${f1(bx)}" cy="${f1(by)}" r="9" fill="${C('#E2C47A')}" stroke="${C('#8A6A34')}" stroke-width="2"/><circle cx="${f1(bx)}" cy="${f1(by)}" r="4" fill="none" stroke="${C('#A8884A')}" stroke-width="1.5"/>`; }
+        if (ci === 2 && rnd() < .5) s += `<path d="M${fx + 40} ${fy + fh - 60} q ${fw * .4} -40 ${fw - 80} -20" stroke="${C('#5A3E24')}" stroke-width="7" fill="none" opacity=".5"/>`;
+      }
+      s += `<rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="none" stroke="${C('#6A6A3A')}" stroke-width="5" opacity=".55"/>`;
+      if (!inTown(fx - 400, fy - 400, fw + 800, fh + 800) && rnd() < .16) farms.push([fx + (rnd() < .5 ? 90 : fw - 90), fy + (rnd() < .5 ? 90 : fh - 90), rnd() < .45]);
+    }
+  }
+  // ---- riacho com mata ciliar ----
+  const CK = []; for (let u = -9000; u <= 11000; u += 120) CK.push([u, -760 + .22 * u + 380 * Math.sin(u / 900) + 150 * Math.sin(u / 310 + 1)]);
+  const cpath = CK.map((p, i) => i ? `Q${p[0]} ${f1(p[1])} ${f1((p[0] + CK[Math.min(i + 1, CK.length - 1)][0]) / 2)} ${f1((p[1] + CK[Math.min(i + 1, CK.length - 1)][1]) / 2)}` : `M${p[0]} ${f1(p[1])}`).join(' ');
+  s += `<path d="${cpath}" stroke="${C('#6E8A44')}" stroke-width="210" fill="none" opacity=".75" stroke-linecap="round"/>`;
+  s += `<path d="${cpath}" stroke="${C('#5A7438')}" stroke-width="120" fill="none" opacity=".6"/>`;
+  let ctrees = '';
+  CK.forEach(([x, y], i) => { for (let k = 0; k < 3; k++) { const ox = (rnd() - .5) * 150, oy = (rnd() - .5) * 150, r = 18 + rnd() * 22; ctrees += tree(x + ox, y + oy, r); } });
+  s += `<path d="${cpath}" stroke="${C('#3A4A2E')}" stroke-width="34" fill="none"/><path d="${cpath}" stroke="${C('#5A7A8A')}" stroke-width="24" fill="none"/><path d="${cpath}" stroke="${C('#A8C8D0')}" stroke-width="5" fill="none" opacity=".6" transform="translate(4,-4)"/>`;
+  s += ctrees;
+  // ---- estradas de cascalho + rodovia ----
+  const road = (x, y, w, h) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${C('#CDBB94')}"/><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#gravP)"/>`;
+  for (let i = -5; i < 6; i++) s += road(RX(i) - 13, -9000, 26, 20000);
+  for (let j = -4; j < 5; j++) s += road(-9000, RY(j) - (j === 0 ? 17 : 13), 20000, j === 0 ? 34 : 26);
+  // marcas de pneu na estrada principal
+  s += `<path d="M-9000 534 H11000 M-9000 546 H11000" stroke="${C('#A8946E')}" stroke-width="3" opacity=".6"/>`;
+  const HWX = RX(-2) + 400;   // rodovia asfaltada
+  s += `<rect x="${HWX - 30}" y="-9000" width="60" height="20000" fill="${C('#8A8A7A')}"/><rect x="${HWX - 22}" y="-9000" width="44" height="20000" fill="${C('#3A3C40')}"/><path d="M${HWX} -9000 V11000" stroke="${C('#E8C040')}" stroke-width="3" stroke-dasharray="40 30"/><path d="M${HWX - 19} -9000 V11000 M${HWX + 19} -9000 V11000" stroke="${C('#E8E8E0')}" stroke-width="2"/>`;
+  // ---- antiga linha de trem (desativada) ----
+  s += `<rect x="-9000" y="906" width="20000" height="30" fill="${C('#8A8458')}"/><path d="M-9000 921 H11000" stroke="${C('#6A6040')}" stroke-width="14" stroke-dasharray="6 10" opacity=".55"/>`;
+  // ---- fazendas (sede, celeiro, silos, quebra-vento) ----
+  farms.forEach(([x, y, aband]) => {
+    let f = '';
+    for (let k = 0; k < 9; k++) f += tree(x - 110 + k * 26, y - 120, 20 + (k % 3) * 4);
+    for (let k = 0; k < 7; k++) f += tree(x - 130, y - 100 + k * 28, 20 + (k % 2) * 5);
+    f += `<rect x="${x - 70}" y="${y - 70}" width="160" height="150" fill="${C('#B8A878')}" opacity=".7"/>`;
+    f += gable(x - 30, y - 30, 56, 40, aband ? '#7A7470' : '#5A6A7A', 0, aband);
+    f += gable(x + 40, y + 20, 70, 50, aband ? '#6A4A40' : '#A8382C', 90, aband);
+    [[x + 40, y - 40], [x + 62, y - 40], [x + 84, y - 30]].forEach(([bx, by]) => f += bin(bx, by, 11));
+    s += f;
+  });
+  // ---- a cidade ----
+  s += townTop();
+  return { df, s };
+
+  function tree(x, y, r) {
+    const k = rnd();
+    return `<circle cx="${f1(x + SX * r / 18)}" cy="${f1(y + SY * r / 18)}" r="${f1(r)}" ${SHD}/><circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(r)}" fill="${C(k < .5 ? '#3E5A2A' : '#4A6A30')}" stroke="${C('#24341A')}" stroke-width="2"/><circle cx="${f1(x + r * .2)}" cy="${f1(y - r * .2)}" r="${f1(r * .62)}" fill="${C('#5E8038')}"/><circle cx="${f1(x + r * .38)}" cy="${f1(y - r * .36)}" r="${f1(r * .3)}" fill="${C('#86A852')}"/>`;
+  }
+  function bin(x, y, r) { return `<ellipse cx="${x + SX * .9}" cy="${y + SY * .9}" rx="${r + 4}" ry="${r}" ${SHD}/><circle cx="${x}" cy="${y}" r="${r}" fill="url(#binG)" stroke="${OUTL}" stroke-width="1.5"/><circle cx="${x}" cy="${y}" r="${r * .25}" fill="${C('#E8E8E0')}"/>${[0, 1, 2, 3, 4, 5].map(a => `<path d="M${x} ${y} L${f1(x + Math.cos(a) * r)} ${f1(y + Math.sin(a) * r)}" stroke="#000" stroke-width=".8" opacity=".25"/>`).join('')}`; }
+  // casa com telhado de duas águas vista de cima
+  function gable(x, y, w, h, col, rot = 0, ruin = 0, opt = {}) {
+    let g = `<g transform="translate(${x},${y}) rotate(${rot})"><rect x="${-w / 2 + SX * .7}" y="${-h / 2 + SY * .7}" width="${w}" height="${h}" ${SHD}/>`;
+    if (opt.porch) g += `<rect x="${-w / 2 + 6}" y="${h / 2 - 2}" width="${w - 12}" height="12" fill="${C('#B8A890')}" stroke="${OUTL}" stroke-width="1.5"/>`;
+    g += `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h / 2}" fill="${LT(col, .18)}" stroke="${OUTL}" stroke-width="2"/><rect x="${-w / 2}" y="0" width="${w}" height="${h / 2}" fill="${DK(col, .22)}" stroke="${OUTL}" stroke-width="2"/>`;
+    for (let k = 1; k < 5; k++) g += `<path d="M${-w / 2} ${f1(-h / 2 + k * h / 10)} H${w / 2} M${-w / 2} ${f1(k * h / 10)} H${w / 2}" stroke="#000" stroke-width=".8" opacity=".18"/>`;
+    g += `<path d="M${-w / 2} 0 H${w / 2}" stroke="${LT(col, .45)}" stroke-width="2.5"/>`;
+    if (!ruin) g += `<rect x="${w * .22}" y="${-h * .38}" width="7" height="7" fill="${C('#7A3A2A')}" stroke="${OUTL}" stroke-width="1.2"/>`;
+    if (ruin) { g += `<path d="M${-w * .2} ${-h * .4} l${w * .18} ${h * .06} l${-w * .04} ${h * .28} l${-w * .2} ${-h * .1}Z" fill="#14100C"/><path d="M${w * .1} ${h * .05} l${w * .22} ${h * .02} l${-w * .06} ${h * .3} Z" fill="#1A140E" opacity=".9"/>`; g += `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" fill="#5A5048" opacity=".25"/>`; }
+    return g + '</g>';
+  }
+  function flat(x, y, w, h, col, opt = {}) {
+    let g = `<g transform="translate(${x},${y})"><rect x="${-w / 2 + SX * .8}" y="${-h / 2 + SY * .8}" width="${w}" height="${h}" ${SHD}/><rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" fill="${C(opt.parapet || '#8A3A2C')}" stroke="${OUTL}" stroke-width="2.5"/><rect x="${-w / 2 + 5}" y="${-h / 2 + 5}" width="${w - 10}" height="${h - 10}" fill="${C(col)}"/><rect x="${-w / 2 + 5}" y="${-h / 2 + 5}" width="${w - 10}" height="${h - 10}" fill="url(#gravP)"/>`;
+    if (opt.ac) g += `<rect x="${-w * .3}" y="${-h * .25}" width="16" height="12" fill="${C('#C8CCD0')}" stroke="${OUTL}" stroke-width="1.2"/><rect x="${-w * .3 + SX * .3}" y="${-h * .25 + SY * .3}" width="16" height="12" fill="#000" opacity=".15"/><circle cx="${w * .2}" cy="${-h * .1}" r="5" fill="${C('#9A9EA4')}" stroke="${OUTL}" stroke-width="1"/>`;
+    if (opt.awning) g += `<rect x="${-w / 2 + 8}" y="${h / 2}" width="${w - 16}" height="9" fill="${C(opt.awning)}" stroke="${OUTL}" stroke-width="1.5"/>${Array.from({ length: Math.floor((w - 16) / 10) }, (_, k) => `<rect x="${-w / 2 + 8 + k * 10}" y="${h / 2}" width="5" height="9" fill="#fff" opacity=".35"/>`).join('')}`;
+    if (opt.caved) g += `<path d="M${-w * .3} ${-h * .3} L${w * .1} ${-h * .35} L${w * .25} ${h * .1} L${-w * .05} ${h * .3} L${-w * .35} ${h * .05}Z" fill="#14100C"/><path d="M${-w * .2} ${-h * .1} L${w * .1} ${h * .15}" stroke="${C('#6A4A2A')}" stroke-width="3"/>`;
+    return g + '</g>';
+  }
+  function car(x, y, rot, col) {
+    return `<g transform="translate(${x},${y}) rotate(${rot})"><rect x="${-22 + SX * .3}" y="${-10 + SY * .3}" width="44" height="20" rx="6" ${SHD}/><rect x="-22" y="-10" width="44" height="20" rx="6" fill="${C(col)}" stroke="${OUTL}" stroke-width="1.5"/><rect x="-8" y="-8" width="18" height="16" rx="3" fill="${LT(col, .25)}"/><rect x="8" y="-8" width="5" height="16" fill="${C('#2A3440')}"/><rect x="-12" y="-8" width="4" height="16" fill="${C('#2A3440')}"/></g>`;
+  }
+  function pickup(x, y, rot, col) {
+    return `<g transform="translate(${x},${y}) rotate(${rot})"><rect x="${-26 + SX * .3}" y="${-11 + SY * .3}" width="52" height="22" rx="4" ${SHD}/><rect x="-26" y="-11" width="52" height="22" rx="4" fill="${C(col)}" stroke="${OUTL}" stroke-width="1.5"/><rect x="-24" y="-8" width="24" height="16" fill="${DK(col, .35)}"/><rect x="4" y="-8" width="14" height="16" rx="2" fill="${LT(col, .2)}"/><rect x="18" y="-8" width="4" height="16" fill="${C('#2A3440')}"/></g>`;
+  }
+  function lot(x, y, w, h, kept) { return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${C(kept ? '#7EA24A' : '#9AA058')}"/><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#${kept ? 'mowP' : 'grassP'})"/>`; }
+  function townTop() {
+    let t = '';
+    // quarteirões: gramado (abandonado = mato alto)
+    const BX = [[420, 670], [690, 1030], [1050, 1290], [1310, 1500]], BY = [[180, 350], [370, 523], [557, 710], [730, 890]];
+    BX.forEach(([x0, x1]) => BY.forEach(([y0, y1]) => t += lot(x0, y0, x1 - x0, y1 - y0, 0)));
+    t += lot(560, 560, 150, 130, 1) + lot(700, 430, 160, 90, 1);   // quintal da Elsie e terreno da taverna
+    // ruas internas (cascalho) e calçadas
+    [680, 1040, 1300].forEach(x => t += `<rect x="${x - 10}" y="170" width="20" height="730" fill="${C('#C8B890')}"/><rect x="${x - 10}" y="170" width="20" height="730" fill="url(#gravP)"/>`);
+    [360, 720].forEach(y => t += `<rect x="410" y="${y - 10}" width="1100" height="20" fill="${C('#C8B890')}"/><rect x="410" y="${y - 10}" width="1100" height="20" fill="url(#gravP)"/>`);
+    t += `<rect x="600" y="519" width="760" height="5" fill="${C('#D8D0C0')}"/><rect x="600" y="556" width="760" height="5" fill="${C('#D8D0C0')}"/>`;
+    // vielas
+    [440, 640].forEach(y => t += `<path d="M420 ${y} H1500" stroke="${C('#B0A27A')}" stroke-width="6" opacity=".6" stroke-dasharray="40 14"/>`);
+    // estacionamento da taverna
+    t += `<rect x="700" y="526" width="170" height="10" fill="${C('#B8AA88')}"/>`;
+    // jardim/horta da Elsie
+    t += `<rect x="580" y="640" width="60" height="40" fill="${C('#6A4A2C')}" stroke="${OUTL}" stroke-width="1.5"/>${[0, 1, 2, 3].map(k => `<path d="M584 ${648 + k * 9} H636" stroke="${C('#6A9A3A')}" stroke-width="4" stroke-dasharray="5 3"/>`).join('')}`;
+    // cercas
+    t += `<rect x="560" y="560" width="150" height="130" fill="none" stroke="${C('#E8E0D0')}" stroke-width="2" stroke-dasharray="6 3"/>`;
+    t += `<path d="M1310 730 V890 H1500" fill="none" stroke="${C('#8A7458')}" stroke-width="2" stroke-dasharray="8 6"/>`;
+    // árvores de quintal (choupos grandes)
+    const TR = [[450, 200, 34], [500, 300, 26], [640, 210, 30], [760, 190, 40], [820, 300, 24], [980, 200, 36], [1010, 320, 22], [1120, 210, 28], [1260, 320, 32], [1380, 200, 30], [1470, 300, 26],
+      [450, 400, 30], [640, 400, 24], [990, 410, 26], [1180, 390, 34], [1270, 470, 22], [1450, 470, 30],
+      [450, 600, 34], [540, 690, 28], [720, 600, 22], [1000, 690, 30], [1240, 590, 26], [1480, 640, 34],
+      [460, 790, 36], [700, 860, 30], [840, 760, 26], [1000, 860, 34], [1230, 800, 30], [1460, 860, 28]];
+    TR.forEach(([x, y, r]) => t += tree(x, y, r));
+    // mato tomando conta das casas abandonadas
+    const brush = (x, y, n) => { let b = ''; for (let k = 0; k < n; k++) b += `<circle cx="${f1(x + (rnd() - .5) * 90)}" cy="${f1(y + (rnd() - .5) * 70)}" r="${f1(6 + rnd() * 9)}" fill="${C(rnd() < .5 ? '#6A7A3A' : '#7E8A44')}" opacity=".9"/>`; return b; };
+    // casas (x,y,w,h,cor,rot,ruína)
+    const HS = [[560, 270, 62, 46, '#7A7470', 0, 1], [760, 270, 58, 44, '#5A6A7A', 0, 1], [1150, 270, 64, 48, '#6A5A4A', 0, 1], [1400, 270, 56, 44, '#8A8078', 90, 1],
+      [560, 455, 60, 46, '#6A6A6A', 0, 1], [1180, 470, 58, 44, '#7A6A5A', 0, 1], [1410, 450, 60, 46, '#5A4A3A', 0, 1],
+      [1400, 620, 60, 48, '#7A7470', 0, 1], [560, 800, 58, 44, '#6A5A4A', 0, 1], [780, 800, 62, 46, '#8A8078', 90, 1], [1120, 800, 60, 46, '#5A6A7A', 0, 1], [1400, 800, 58, 44, '#6A6A6A', 0, 1]];
+    HS.forEach(([x, y, w, h, c, r, ru]) => { t += brush(x, y, 7) + gable(x, y, w, h, c, r, ru, { porch: 1 }); });
+    // casa que desabou: só a fundação
+    t += `<rect x="880" y="250" width="60" height="44" fill="none" stroke="${C('#9A9488')}" stroke-width="5"/><path d="M886 258 l20 10 l-6 14 l24 -4 M930 290 l-14 -8" stroke="${C('#6A5A48')}" stroke-width="4"/>` + brush(910, 272, 8);
+    // igreja (planta em cruz + torre)
+    t += `<g transform="translate(900,630)"><rect x="${-24 + SX}" y="${-60 + SY}" width="48" height="120" ${SHD}/><rect x="${-50 + SX}" y="${-14 + SY}" width="100" height="34" ${SHD}/><rect x="-24" y="-60" width="24" height="120" fill="${LT('#7A6A60', .2)}" stroke="${OUTL}" stroke-width="2"/><rect x="0" y="-60" width="24" height="120" fill="${DK('#7A6A60', .2)}" stroke="${OUTL}" stroke-width="2"/><rect x="-50" y="-14" width="100" height="17" fill="${LT('#7A6A60', .2)}" stroke="${OUTL}" stroke-width="2"/><rect x="-50" y="3" width="100" height="17" fill="${DK('#7A6A60', .2)}" stroke="${OUTL}" stroke-width="2"/><rect x="-14" y="54" width="28" height="28" fill="${C('#E8E0D0')}" stroke="${OUTL}" stroke-width="2"/><path d="M-14 54 L14 82 M14 54 L-14 82" stroke="#000" stroke-width="1.5" opacity=".3"/><rect x="${-14 + SX * 2.4}" y="${54 + SY * 2.4}" width="28" height="28" fill="#000" opacity=".14"/></g>`;
+    // escola antiga (abandonada, telhado afundado)
+    t += brush(1170, 640, 12) + flat(1170, 640, 140, 90, '#8A8478', { parapet: '#9A6A4A', caved: 1 });
+    t += `<rect x="1120" y="690" width="100" height="22" fill="${C('#B0A27A')}"/>`;
+    // loja antiga fechada
+    t += flat(1110, 482, 90, 64, '#7A7A72', { parapet: '#6A6A62', caved: 1 }) + brush(1110, 500, 5);
+    // TAVERNA (centro: 780,490) — telhado plano, toldo, letreiro
+    t += flat(780, 485, 120, 76, '#5A5A5E', { parapet: '#A8382C', ac: 1, awning: '#C83A2A' });
+    t += `<rect x="740" y="${485 + 38 + 9}" width="80" height="6" fill="${C('#F2E2C0')}" stroke="${OUTL}" stroke-width="1"/>`;
+    t += pickup(712, 538, 0, '#3A5A8A') + car(852, 540, 180, '#C84A3A') + pickup(1000, 537, 180, '#6A6A6A');
+    // BIBLIOTECA (casinha clara, telhado azul)
+    t += gable(940, 478, 64, 50, '#3A5A8A', 0, 0, { porch: 1 }) + `<rect x="925" y="512" width="30" height="6" fill="${C('#F2EEE0')}" stroke="${OUTL}" stroke-width="1"/>`;
+    // CASA DA ELSIE (bem cuidada)
+    t += gable(640, 600, 70, 52, '#4A6A5A', 0, 0, { porch: 1 });
+    t += `<rect x="683" y="625" width="14" height="70" fill="${C('#CDBB94')}" opacity=".9"/>` + car(690, 650, 90, '#E8E2D0');
+    // caixa d'água
+    t += `<g transform="translate(1460,560)"><ellipse cx="${SX * 6}" cy="${SY * 6}" rx="42" ry="30" ${SHD}/><path d="M-26 -26 L${SX * 6} ${SY * 6} M26 -26 L${SX * 6} ${SY * 6} M-26 26 L${SX * 6} ${SY * 6} M26 26 L${SX * 6} ${SY * 6}" stroke="#000" stroke-width="3" opacity=".25"/><circle r="30" fill="url(#binG)" stroke="${OUTL}" stroke-width="2.5"/><circle r="8" fill="${C('#D8D8D0')}" stroke="${OUTL}" stroke-width="1.5"/></g>`;
+    // elevador de grãos junto à linha de trem
+    t += `<g transform="translate(1180,880)"><rect x="${-110 + SX * 5}" y="${-30 + SY * 2}" width="220" height="60" ${SHD} opacity=".3"/>${[-90, -54, -18, 18, 54].map(cx => `<circle cx="${cx}" cy="0" r="18" fill="url(#binG)" stroke="${OUTL}" stroke-width="2"/>`).join('')}<rect x="76" y="-26" width="44" height="52" fill="${LT('#B8B4A8', .1)}" stroke="${OUTL}" stroke-width="2"/><rect x="76" y="-26" width="22" height="52" fill="#000" opacity=".12"/><rect x="${-110}" y="-4" width="230" height="8" fill="${C('#8A8A84')}" stroke="${OUTL}" stroke-width="1.5"/></g>`;
+    t += bin(1330, 860, 22) + bin(1376, 860, 22) + bin(1353, 900, 18);
+    // postes e fios ao longo da rua principal
+    let poles = '';
+    for (let x = 440; x <= 1480; x += 96) poles += `<circle cx="${x}" cy="566" r="4" fill="${C('#5A4030')}"/><path d="M${x} 566 l${SX * 1.8} ${SY * 1.8}" stroke="#000" stroke-width="3" opacity=".22"/>`;
+    t += `<path d="M420 566 H1500" stroke="${C('#2A2420')}" stroke-width="1.2" opacity=".6"/><path d="M${420 + SX * 1.8} ${566 + SY * 1.8} H${1500 + SX * 1.8}" stroke="#000" stroke-width="1.2" opacity=".18"/>` + poles;
+    // placa na entrada da cidade
+    t += `<g transform="translate(1560,575)"><rect x="-22" y="-6" width="44" height="12" fill="${C('#2E6A3A')}" stroke="${OUTL}" stroke-width="1.5"/><rect x="${-22 + SX}" y="${-6 + SY}" width="44" height="12" fill="#000" opacity=".2"/></g>`;
+    return t;
+  }
+}
 function aerial(t, d) {
-  const lit = lightK(d);
-  let s = `<rect x="-6000" y="-6000" width="14000" height="14000" fill="${mix('#141A10', '#9AA060', lit)}"/>`;
-  for (let i = -8; i < 9; i++) for (let j = -8; j < 9; j++) { const c = ['#A8A860', '#8A9A50', '#C8B070', '#7A8A48', '#B8A058'][(((i * 7 + j * 3) % 5) + 5) % 5]; s += `<rect x="${f1(960 + i * 520 + 6)}" y="${f1(540 + j * 520 + 6)}" width="508" height="508" fill="${mix('#101410', c, lit)}"/>`; if ((i + j) % 3 === 0) for (let r = 0; r < 12; r++) s += `<line x1="${960 + i * 520 + 10}" y1="${540 + j * 520 + 20 + r * 40}" x2="${960 + i * 520 + 500}" y2="${540 + j * 520 + 20 + r * 40}" stroke="#000" stroke-width="3" opacity=".12"/>`; }
-  for (let i = -8; i < 9; i++) s += `<rect x="${960 + i * 520 - 6}" y="-6000" width="12" height="14000" fill="${mix('#2A2820', '#D8C8A0', lit)}"/><rect x="-6000" y="${540 + i * 520 - 6}" width="14000" height="12" fill="${mix('#2A2820', '#D8C8A0', lit)}"/>`;
-  // a cidade: quadrículas e telhados
-  s += `<rect x="700" y="300" width="520" height="480" fill="${mix('#141A10', '#8AA058', lit)}"/>`;
-  for (let i = 0; i < 4; i++) s += `<rect x="${720 + i * 130}" y="300" width="8" height="480" fill="${mix('#1A1A1A', '#C8C0A8', lit)}"/>`;
-  const roofs = [[760, 360, '#8A2A20', 1], [880, 380, '#5A6A7A', 0], [1000, 350, '#6A5A4A', 0], [780, 520, '#C84A3A', 1], [900, 540, '#3A5A7A', 0], [1060, 500, '#7A6A5A', 0], [800, 680, '#6A6A6A', 0], [960, 700, '#5A4A3A', 0], [1120, 650, '#A8A8A0', 0]];
-  roofs.forEach(([x, y, c, l]) => { s += `<rect x="${x - 34}" y="${y - 24}" width="68" height="48" fill="${mix('#141414', c, lit)}" stroke="${OUTL}" stroke-width="3"/><line x1="${x - 34}" y1="${y}" x2="${x + 34}" y2="${y}" stroke="#000" stroke-width="3" opacity=".3"/>${l && lit < .6 ? `<circle cx="${x}" cy="${y}" r="60" fill="#FFD88A" opacity=".35" filter="url(#b12)"/>` : ''}`; });
-  for (let i = 0; i < 20; i++) { const x = 700 + (i * 97) % 520, y = 300 + (i * 61) % 480; s += `<circle cx="${x}" cy="${y}" r="${14 + i % 3 * 6}" fill="${mix('#0E140C', '#3A6A3A', lit)}" stroke="${OUTL}" stroke-width="2"/>`; }
+  const lit = lightK(d), key = Math.round(lit * 100);
+  if (!AER[key]) AER[key] = buildAerial(lit);
+  def(AER[key].df);
+  let s = AER[key].s;
+  // elementos vivos: picape levantando poeira na estrada, sombras de nuvem
+  const px = 4200 - t * 230;
+  if (px > 1600) {
+    for (let k = 0; k < 7; k++) s += `<circle cx="${f1(px + 40 + k * 46)}" cy="${f1(540 + Math.sin(k + t) * 6)}" r="${f1(16 + k * 9)}" fill="#D8C8A0" opacity="${op(.4 - k * .05)}" filter="url(#b12)"/>`;
+    s += `<g transform="translate(${f1(px)},540)"><rect x="-24" y="-9" width="48" height="20" rx="4" fill="#000" opacity=".25" transform="translate(-10,5)"/><rect x="-24" y="-10" width="48" height="20" rx="4" fill="${mix('#20140C', '#B8382C', lit)}" stroke="${OUTL}" stroke-width="1.5"/><rect x="-20" y="-7" width="14" height="14" rx="2" fill="${mix('#20140C', '#2A3440', lit)}"/><rect x="0" y="-7" width="20" height="14" fill="${mix('#20140C', '#7A2A20', lit)}"/></g>`;
+  }
+  [[-2600, -1400, 1500, 900], [1800, 2200, 1700, 1000], [-400, 3200, 1200, 800], [4200, -800, 1400, 900]].forEach(([x, y, rx, ry], i) => s += `<ellipse cx="${f1(x + t * 55)}" cy="${f1(y + t * 12)}" rx="${rx}" ry="${ry}" fill="url(#cloudSh)" opacity="${f1(lit)}"/>`);
   return s;
 }
 /* ---------- retrato (foto real se houver) ---------- */
@@ -117,9 +312,15 @@ function c1(t) {
   if (L < 8.6) {
     const p = easeInOut(range(L, 0, 8.4)), z = .18 * Math.pow(2.6 / .18, p);
     setCam(lerp(960, 960, p), lerp(540, 540, p), z, lerp(-12, 0, p), [960, 540, 1]);
-    s += lay(1, aerial(t, .3));
-    // nuvens passando por baixo da câmera (profundidade)
-    for (let i = 0; i < 5; i++) { const pp = range(L, i * 1.4, i * 1.4 + 3); if (pp > 0 && pp < 1) s += `<ellipse cx="${f1(-400 + i * 500 + pp * 900)}" cy="${300 + (i % 3) * 250}" rx="${f1(500 + pp * 800)}" ry="${f1(140 + pp * 220)}" fill="#F4F0E8" opacity="${op(Math.sin(pp * Math.PI) * .55)}" filter="url(#b30)"/>`; }
+    const a0 = range(L, 8.1, 8.6);
+    s += `<g opacity="${op(1 - a0)}">` + lay(1, aerial(t, .3)) + '</g>';
+    // atmosfera: neblina de altitude + luz dourada do sol nascendo a leste
+    def(`<linearGradient id="sunG" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC27A" stop-opacity=".55"/><stop offset=".5" stop-color="#FFE0B0" stop-opacity=".12"/><stop offset="1" stop-color="#5A6A9A" stop-opacity=".25"/></linearGradient><radialGradient id="flareG" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FFE6B0" stop-opacity=".55"/><stop offset="1" stop-color="#FFE6B0" stop-opacity="0"/></radialGradient>`);
+    s += `<rect width="1920" height="1080" fill="#DCE4EC" opacity="${op(.16 * (1 - p) * (1 - a0))}"/><rect width="1920" height="1080" fill="url(#sunG)" style="mix-blend-mode:soft-light" opacity="${op(1 - a0)}"/><rect width="1920" height="1080" fill="url(#sunG)" opacity="${op(.22 * (1 - a0))}"/><ellipse cx="1900" cy="60" rx="900" ry="600" fill="url(#flareG)" opacity="${op(1 - a0)}"/>`;
+    // nuvens passando por baixo da câmera (profundidade): bolos de cúmulo com base sombreada
+    for (let i = 0; i < 4; i++) { const pp = range(L, i * 1.3, i * 1.3 + 2.8); if (pp > 0 && pp < 1) { const cx = -500 + i * 470 + pp * 1100, cy = 240 + (i % 3) * 280, sc = .7 + pp * 1.6, a = op(Math.sin(pp * Math.PI) * .42); let cl = ''; [[-260, 30, 260, 120], [-60, -40, 300, 160], [200, 10, 280, 130], [40, 70, 420, 110]].forEach(([dx, dy, rx, ry]) => cl += `<ellipse cx="${dx}" cy="${dy + 26}" rx="${rx}" ry="${ry}" fill="#9AA0B4" opacity=".5"/><ellipse cx="${dx}" cy="${dy}" rx="${rx}" ry="${ry}" fill="#FBF6EE"/><ellipse cx="${dx + 40}" cy="${dy - 30}" rx="${rx * .6}" ry="${ry * .5}" fill="#FFFFFF" opacity=".8"/>`); s += `<g transform="translate(${f1(cx)},${cy}) scale(${f1(sc * 100) / 100})" opacity="${a}" filter="url(#b30)">${cl}</g>`; } }
+    // bando de pássaros cruzando abaixo do drone
+    const bp = range(L, 2.4, 7.4); if (bp > 0 && bp < 1) for (let k = 0; k < 9; k++) { const bx = lerp(-200, 2100, bp) - Math.abs(k - 4) * 34, by = 760 - bp * 300 + (k - 4) * 22, fl = Math.sin(t * 14 + k) * 7; s += `<path d="M${f1(bx - 12)} ${f1(by - fl)} Q${f1(bx - 5)} ${f1(by - 4)} ${f1(bx)} ${f1(by)} Q${f1(bx + 5)} ${f1(by - 4)} ${f1(bx + 12)} ${f1(by - fl)}" stroke="#1A1A20" stroke-width="2.6" fill="none"/><path d="M${f1(bx - 46)} ${f1(by + 34 - fl)} Q${f1(bx - 39)} ${f1(by + 30)} ${f1(bx - 34)} ${f1(by + 34)} Q${f1(bx - 29)} ${f1(by + 30)} ${f1(bx - 22)} ${f1(by + 34 - fl)}" stroke="#000" stroke-width="2.4" fill="none" opacity=".18"/>`; }
   }
   if (L > 8.1) {
     const a = range(L, 8.1, 8.6), p = easeOut(range(L, 7.6, d));
@@ -326,7 +527,8 @@ function c9(t) {
     const p = easeInOut(range(L, 6.8, d - .5)), z = 2.2 * Math.pow(.2 / 2.2, p);
     setCam(960, 540, z, lerp(0, 10, p), [960, 540, 1]);
     s += lay(1, aerial(t, .95)) + `<rect width="1920" height="1080" fill="#0A1438" opacity=".6" style="mix-blend-mode:multiply"/>` + STARS3.slice(0, 60).map(q => `<circle cx="${(q.x + 1100) % 1920}" cy="${(q.y + 300) % 1080}" r="${q.r}" fill="#fff" opacity="${op(.3 * p)}"/>`).join('');
-    s += `<circle cx="${f1(960 + (780 - 960) * z)}" cy="${f1(540 + (520 - 540) * z)}" r="${f1(10 + 40 * z)}" fill="#FFD88A" opacity=".9"/>`;
+    def(`<radialGradient id="homeG"><stop offset="0" stop-color="#FFE2A0" stop-opacity=".95"/><stop offset=".25" stop-color="#FFC060" stop-opacity=".5"/><stop offset="1" stop-color="#FF9A30" stop-opacity="0"/></radialGradient>`);
+    s += lay(1, `<circle cx="640" cy="600" r="${f1(70 + 30 / Math.max(z, .3))}" fill="url(#homeG)" style="mix-blend-mode:screen"/><rect x="610" y="585" width="12" height="9" fill="#FFE2A0"/><rect x="652" y="585" width="12" height="9" fill="#FFE2A0"/>`);
     s += `<rect width="1920" height="1080" fill="#000" opacity="${op(range(L, d - 1.5, d))}"/>`;
   }
   return s;
