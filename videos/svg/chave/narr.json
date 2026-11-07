@@ -1,5 +1,5 @@
 {
- "total": 42.6,
+ "total": 44.4,
  "s": [
   {
    "k": "n1",
@@ -67,11 +67,11 @@
   },
   {
    "k": "n9",
-   "txt": "E a polícia chegou rapidinho. Se inscreve!",
+   "txt": "E a polícia chegou rapidinho. A senhorinha só ficou olhando… Se inscreve!",
    "t0": 37.9,
-   "t1": 42.3,
+   "t1": 44.1,
    "a": 37.8,
-   "b": 42.6
+   "b": 44.4
   }
  ]
 }

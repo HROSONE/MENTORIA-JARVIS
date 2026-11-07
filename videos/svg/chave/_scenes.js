@@ -128,10 +128,11 @@ function s1(t) {
 const wireH = (len = 120) => `<path d="M0 0 L${len} 0 L${len + 20} -26" stroke="#C8A060" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
 function s2(t) {
   const { L, d, k } = loc(t, 'n2'), [hx, hy] = HH(t);
-  setCam(lerp(160, 600, easeInOut(range(L, 0, 2.4))) + hx, lerp(1200, 1260, range(L, 2.6, d)) + hy, lerp(.95, 1.3, easeInOut(range(L, 2.8, d))), 0, [540, 1200, 1]);
+  const zk = easeIn(range(L, 3.6, d)), z0 = lerp(.95, 1.25, easeInOut(range(L, 2.8, 3.6)));
+  setCam(lerp(lerp(160, 600, easeInOut(range(L, 0, 2.4))), 734, zk) + hx * (1 - zk), lerp(lerp(1200, 1260, range(L, 2.6, 3.6)), 1249, zk) + hy * (1 - zk), z0 * Math.pow(1.6 / z0, zk), 0, [540, 1200, 1]);
   let s = lay(.9, nightStreet(t)) + lay(1, car(CARX, GND, 1));
   const walk = range(L, 0, 2.0), bx = lerp(-260, 560, easeOut(walk));
-  const look = L > 2.1 && L < 2.7 ? -1 : 0, cr = easeInOut(range(L, 2.8, 3.4)), reach = range(L, 3.6, 4.6);
+  const look = L > 2.1 && L < 2.7 ? -1 : 0, cr = easeInOut(range(L, 2.8, 3.4)), reach = range(L, 3.6, d - .1);
   const pose = cr > 0 ? { drop: 220 * cr, lean: 18 * cr, legF: [85 * cr, -100 * cr], legB: [-15 * cr, 100 * cr] } : walkPose(L * 9, walk < 1 ? 1 : 0);
   s += lay(1, man({ x: bx, y: GND, s: .58, kind: 'bandido', ...pose, look, armF: L > 3.4 ? [lerp(60, 112, reach), lerp(30, -6, reach)] : [lerp(10, 60, range(L, 2.5, 3.0)), lerp(10, 50, range(L, 2.5, 3.0))], armB: cr > 0 ? [lerp(10, 70, cr), 30] : [-10, 10], held: L > 2.6 ? wireH() : '' }));
   return s + VIG(.9);
@@ -139,20 +140,29 @@ function s2(t) {
 /* ---------- 3. close na fechadura → vista lateral → carcaça some ---------- */
 function s3(t) {
   const { L, d, k } = loc(t, 'n3');
-  let s = '';
-  if (L < 1.9) {
-    const p = easeInOut(range(L, .1, 1.6));
-    setCam(540, 960, lerp(1.0, 1.25, p), 0, [540, 960, 1]);
-    s += `<rect x="-900" y="-900" width="2900" height="3800" fill="#4A8AC8"/><rect x="-900" y="-900" width="2900" height="3800" fill="url(#dotP)" opacity=".25"/><path d="M-900 400 Q540 300 2000 420" stroke="#fff" stroke-width="40" opacity=".12" fill="none"/>`;
-    s += lay(1, `<rect x="-200" y="860" width="900" height="210" rx="100" fill="#C8CCD4" stroke="${OUTL}" stroke-width="8"/><rect x="-200" y="860" width="900" height="60" rx="30" fill="#fff" opacity=".35"/><circle cx="840" cy="965" r="120" fill="#B8BCC4" stroke="${OUTL}" stroke-width="8"/><circle cx="840" cy="965" r="80" fill="#9AA0A8" stroke="${OUTL}" stroke-width="5"/><rect x="826" y="910" width="28" height="110" rx="10" fill="#14161C"/><path id="ringP" d="M740 965 A100 100 0 0 1 940 965" fill="none"/><text font-family="'DejaVu Sans',sans-serif" font-weight="700" font-size="22" letter-spacing="3" fill="#3A3E46"><textPath href="#ringP" startOffset="50%" text-anchor="middle">HRYZ ANIMATION</textPath></text>`);
-    const kx = lerp(1300, 840, p), ky = lerp(1500, 965, p), ks = lerp(2.6, 1.0, p);
-    s += lay(1, `<g transform="translate(${f1(kx)},${f1(ky)}) scale(${f1(ks * 100) / 100})"><path d="M0 0 L60 140 Q80 200 40 260" stroke="#C8A060" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M4 4 L62 136" stroke="#FFE0A0" stroke-width="3" opacity=".6"/></g>` + (p > .2 ? vhand('pinca', kx + 60 * ks, ky + 250 * ks, .5 * ks, -20) : ''));
-  } else {
-    const L2 = L - 1.9;
-    setCam(560, 880, lerp(1.2, 1.35, L2 / 2.1), 0, [560, 880, 1]);
-    s += lay(1, lockCut(t, { housing: 1 - easeInOut(range(L2, .6, 1.8)) * .9, tip: 1000 }));
+  const ex = (a, b, p) => a * Math.pow(b / a, clamp(p));
+  let s = `<rect width="1080" height="1920" fill="#000"/>`;
+  if (L < 1.25) {   // rua: a câmera continua fechando na fechadura
+    const p = easeIn(range(L, 0, 1.25));
+    setCam(734, 1249, ex(1.6, 6, p), 0, [540, 1200, 1]);
+    s += lay(.9, nightStreet(t)) + lay(1, car(CARX, GND, 1)) + lay(1, man({ x: 560, y: GND, s: .58, kind: 'bandido', drop: 220, lean: 18, legF: [85, -100], legB: [-15, 100], armF: [112, -6], armB: [70, 30], held: wireH() }));
   }
-  return s + VIG(.7) + (L >= 1.9 && L < 2.0 ? `<rect width="1080" height="1920" fill="#fff" opacity="${op(.6 * (1 - (L - 1.9) / .1))}"/>` : '');
+  if (L > .85 && L < 2.15) {   // close da porta: o arame entra e a câmera mergulha no buraco
+    const p = range(L, .85, 2.05), a = range(L, .85, 1.25);
+    setCam(840, 965, ex(.35, 9, easeIn(p)), 0, [540, 960, 1]);
+    let c = '';
+    c += `<rect x="-3000" y="-3000" width="7000" height="8000" fill="#4A8AC8"/><rect x="-3000" y="-3000" width="7000" height="8000" fill="url(#dotP)" opacity=".25"/><path d="M-900 400 Q540 300 2000 420" stroke="#fff" stroke-width="40" opacity=".12" fill="none"/>`;
+    c += lay(1, `<rect x="-200" y="860" width="900" height="210" rx="100" fill="#C8CCD4" stroke="${OUTL}" stroke-width="8"/><rect x="-200" y="860" width="900" height="60" rx="30" fill="#fff" opacity=".35"/><circle cx="840" cy="965" r="120" fill="#B8BCC4" stroke="${OUTL}" stroke-width="8"/><circle cx="840" cy="965" r="80" fill="#9AA0A8" stroke="${OUTL}" stroke-width="5"/><rect x="826" y="910" width="28" height="110" rx="10" fill="#14161C"/><path id="ringP" d="M740 965 A100 100 0 0 1 940 965" fill="none"/><text font-family="'DejaVu Sans',sans-serif" font-weight="700" font-size="22" letter-spacing="3" fill="#3A3E46"><textPath href="#ringP" startOffset="50%" text-anchor="middle">HRYZ ANIMATION</textPath></text>`);
+        const q = easeOut(range(L, .9, 1.7)), kx = lerp(1300, 840, q), ky = lerp(1500, 965, q), ks = lerp(2.6, 1.0, q);
+    c += lay(1, `<g transform="translate(${f1(kx)},${f1(ky)}) scale(${f1(ks * 100) / 100})"><path d="M0 0 L60 140 Q80 200 40 260" stroke="#C8A060" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M4 4 L62 136" stroke="#FFE0A0" stroke-width="3" opacity=".6"/></g>` + vhand('pinca', kx + 60 * ks, ky + 250 * ks, .5 * ks, -20));
+    s += `<g opacity="${op(a)}">${c}</g>`;
+  }
+  if (L > 1.95) {   // sai do buraco já na vista lateral; a carcaça fica transparente
+    const p = easeOut(range(L, 2.0, 3.2)), a = range(L, 1.95, 2.15);
+    setCam(lerp(902, 560, p), lerp(PT + 179, 880, p), ex(10, 1.35, p), 0, [560, 880, 1]);
+    s += `<g opacity="${op(a)}">${lay(1, lockCut(t, { housing: 1 - easeInOut(range(L, 2.9, 3.9)) * .9, tip: 1000 }))}</g>`;
+  }
+  return s + VIG(.7);
 }
 /* ---------- 4. as plaquinhas travam: tenta girar, não gira ---------- */
 function s4(t) {
@@ -218,22 +228,52 @@ function s8(t) {
   return s + VIG(.9);
 }
 /* ---------- 9. polícia: algemas; a senhora recupera a chave ---------- */
+function ladyBack(blink) {
+  const rim = blink ? '#FF5A5A' : '#5A8AFF';
+  let g = `<g filter="url(#b4)">`;
+  g += `<path d="M-160 1960 L-150 1660 Q-110 1470 120 1430 L560 1430 Q790 1470 820 1660 L840 1960Z" fill="#B86A8A" stroke="${OUTL}" stroke-width="8"/>`;
+  g += `<path d="M-150 1660 Q-110 1470 120 1430" stroke="${rim}" stroke-width="10" fill="none" opacity=".0"/><path d="M560 1430 Q790 1470 820 1660 L840 1960" stroke="${rim}" stroke-width="14" fill="none" opacity=".8"/>`;
+  g += `<path d="M120 1430 Q340 1500 560 1430" stroke="#9A5470" stroke-width="24" fill="none"/>${[0, 1, 2, 3, 4, 5].map(i => `<path d="M${-60 + i * 150} 1600 l0 340" stroke="#9A5470" stroke-width="5" opacity=".5"/>`).join('')}`;
+  g += `<rect x="270" y="1320" width="130" height="140" fill="#CCA486" stroke="${OUTL}" stroke-width="5"/>`;
+  g += `<ellipse cx="560" cy="1220" rx="34" ry="54" fill="#EAC4A6" stroke="${OUTL}" stroke-width="5"/><path d="M560 1190 L700 1170" stroke="#3A2A20" stroke-width="7"/>`;
+  g += `<ellipse cx="335" cy="1200" rx="215" ry="245" fill="#ECECEC" stroke="${OUTL}" stroke-width="8"/>`;
+  for (let i = 0; i < 12; i++) g += `<path d="M${200 + i * 24} 980 Q${180 + i * 26} 1200 ${210 + i * 22} 1420" stroke="#C8C8CC" stroke-width="4" fill="none" opacity=".7"/>`;
+  g += `<circle cx="335" cy="975" r="95" fill="#E2E2E6" stroke="${OUTL}" stroke-width="7"/><path d="M270 960 Q335 920 400 960" stroke="#B8B8C0" stroke-width="5" fill="none"/><rect x="380" y="940" width="70" height="10" rx="4" fill="#C8A040" transform="rotate(-20 380 940)"/>`;
+  g += `<path d="M520 1050 Q560 1200 520 1400" stroke="${rim}" stroke-width="16" fill="none" opacity=".8"/><path d="M410 900 Q440 960 420 1030" stroke="${rim}" stroke-width="10" fill="none" opacity=".7"/>`;
+  g += `<g transform="translate(930,1720)"><path d="M0 0 Q0 -70 -60 -70 Q-110 -70 -110 -30" stroke="#6A4428" stroke-width="30" fill="none" stroke-linecap="round"/><path d="M0 0 L0 300" stroke="#6A4428" stroke-width="30"/><ellipse cx="-20" cy="10" rx="56" ry="42" fill="#EAC4A6" stroke="${OUTL}" stroke-width="5"/></g>`;
+  return g + `</g><path d="M560 1430 Q790 1470 820 1660" stroke="${rim}" stroke-width="40" fill="none" opacity=".35" filter="url(#b12)"/>`;
+}
 function s9(t) {
   const { L, d, k } = loc(t, 'n9'), [hx, hy] = HH(t);
-  setCam(lerp(900, 760, k) + hx, 1200 + hy, .9, 0, [540, 1200, 1]);
-  let s = lay(.9, nightStreet(t)) + lay(1, car(CARX, GND, 1));
-  const px = lerp(2400, 1700, easeOut(range(L, 0, 1.4)));
-  s += lay(1, car(px, GND, 1, { col: '#1A1A22', police: true, t }));
   const blink = Math.sin(t * 14) > 0;
-  s += `<rect width="1080" height="1920" fill="${blink ? '#FF2A2A' : '#2A4AFF'}" opacity=".08"/>`;
-  // bandido em pé, mãos para trás; policial atrás algemando
-  const cuff = L > 2.4;
-  s += lay(1, man({ x: 760, y: GND, s: .58, kind: 'bandido', armF: [-35, -60], armB: [-40, -60], eyes: 1, mouth: .2, lean: 8 }));
-  s += lay(1, man({ x: 930, y: GND, s: .6, kind: 'policia', flip: -1, armF: [70, 10], armB: [-10, 10] })) + lay(1, man({ x: 580, y: GND, s: .6, kind: 'policia', ...walkPose(L * 8, L < 1.6 ? 1 : 0), armF: [lerp(20, 80, range(L, 1.8, 2.4)), lerp(10, -20, range(L, 1.8, 2.4))], armB: [60, 10] }));
-  if (cuff) s += lay(1, `<g transform="translate(700,${GND - 300})"><circle cx="0" cy="0" r="22" fill="none" stroke="#C8CCD4" stroke-width="9"/><circle cx="34" cy="8" r="22" fill="none" stroke="#C8CCD4" stroke-width="9"/></g>`);
-  // senhora com a chave levantada, piscando para a câmera
-  const wave = Math.sin(t * 8) * 10;
-  s += lay(1, man({ x: 1150, y: GND, s: .58, kind: 'idosa', flip: -1, armF: [170, wave], held: cane(420, 160 + Math.sin(t * 8) * 10), armB: [20, 10], eyes: L > 3.6 && L < 4.0 ? 0 : 1, mouth: .5 }));
+  let s = '';
+  if (L < 2.6) {
+  setCam(lerp(900, 760, k) + hx, 1200 + hy, .9, 0, [540, 1200, 1]);
+    s = lay(.9, nightStreet(t)) + lay(1, car(CARX, GND, 1));
+    const px = lerp(2400, 1700, easeOut(range(L, 0, 1.4)));
+    s += lay(1, car(px, GND, 1, { col: '#1A1A22', police: true, t }));
+    const blink = Math.sin(t * 14) > 0;
+    s += `<rect width="1080" height="1920" fill="${blink ? '#FF2A2A' : '#2A4AFF'}" opacity=".08"/>`;
+    // bandido em pé, mãos para trás; policial atrás algemando
+    const cuff = L > 2.4;
+    s += lay(1, man({ x: 760, y: GND, s: .58, kind: 'bandido', armF: [-35, -60], armB: [-40, -60], eyes: 1, mouth: .2, lean: 8 }));
+    s += lay(1, man({ x: 930, y: GND, s: .6, kind: 'policia', flip: -1, armF: [70, 10], armB: [-10, 10] })) + lay(1, man({ x: 580, y: GND, s: .6, kind: 'policia', ...walkPose(L * 8, L < 1.6 ? 1 : 0), armF: [lerp(20, 80, range(L, 1.8, 2.4)), lerp(10, -20, range(L, 1.8, 2.4))], armB: [60, 10] }));
+    if (cuff) s += lay(1, `<g transform="translate(700,${GND - 300})"><circle cx="0" cy="0" r="22" fill="none" stroke="#C8CCD4" stroke-width="9"/><circle cx="34" cy="8" r="22" fill="none" stroke="#C8CCD4" stroke-width="9"/></g>`);
+    // senhora com a chave levantada, piscando para a câmera
+    const wave = Math.sin(t * 8) * 10;
+    s += lay(1, man({ x: 1150, y: GND, s: .58, kind: 'idosa', flip: -1, armF: [170, wave], held: cane(420, 160 + Math.sin(t * 8) * 10), armB: [20, 10], eyes: L > 3.6 && L < 4.0 ? 0 : 1, mouth: .5 }));
+  } else {
+    const L2 = L - 2.6, k2 = L2 / (d - 2.6);
+    setCam(lerp(1380, 1480, k2) + hx, lerp(1180, 1210, k2) + hy, lerp(.95, 1.05, k2), 0, [540, 1200, 1]);
+    s += lay(.9, nightStreet(t)) + lay(1, car(CARX, GND, 1));
+    const walk = easeInOut(range(L2, 0, 2.4)), bx = lerp(1050, 1860, walk), inCar = range(L2, 2.4, 2.9), door = range(L2, .2, .8) * (1 - range(L2, 3.0, 3.4));
+    s += lay(1, car(1750, GND, 1, { col: '#1A1A22', police: true, t, door }));
+    const W = n => walkPose(L2 * 8 + n, walk < 1 ? 1 : 0);
+    s += lay(1, `<g opacity="${op(1 - inCar)}">${man({ x: bx - 150, y: GND, s: .6, kind: 'policia', ...W(0), armF: [80, 0] })}${man({ x: bx, y: GND, s: .58, kind: 'bandido', ...W(1), armF: [-35, -60], armB: [-40, -60], lean: 12 })}${man({ x: bx + 150, y: GND, s: .6, kind: 'policia', ...W(2), armB: [-60, 0], armF: [20, 10] })}</g>`);
+    s += lay(1, `<rect x="-1500" y="-900" width="4200" height="3800" fill="${blink ? '#FF2A2A' : '#2A4AFF'}" opacity=".12"/>`);
+    s += VIG(.9) + ladyBack(blink) + `<rect width="1080" height="1920" fill="${blink ? '#FF2A2A' : '#2A4AFF'}" opacity=".06"/>`;
+    return s;
+  }
   return s + VIG(.9);
 }
 const FN = { n1: s1, n2: s2, n3: s3, n4: s4, n5: s5, n6: s6, n7: s7, n8: s8, n9: s9 };

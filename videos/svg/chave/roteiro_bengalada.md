@@ -13,6 +13,6 @@ A marca **Hryz Animation** aparece na placa do carro, no aro da fechadura e grav
 | 0:26,2 – 0:31,2 | Com o arame, ele foi acertando uma por uma... faltava só a última. |
 | 0:31,2 – 0:35,0 | Só que ele esqueceu de olhar pra trás. |
 | 0:35,0 – 0:37,8 | Bengalada! |
-| 0:37,8 – 0:42,6 | E a polícia chegou rapidinho. Se inscreve! |
+| 0:37,8 – 0:44,4 | E a polícia chegou rapidinho. A senhorinha só ficou olhando… Se inscreve! |
 
-Na versão 2, o bandido fica agachado, com o capuz cobrindo o rosto. No raio-X, as plaquinhas ficam verdes uma por uma (bolinhas de progresso), até faltar só a última, e aí vem a bengalada. Dois policiais prendem o bandido.
+Na versão 3, a câmera vai num zoom contínuo da rua até a fechadura, mergulha no buraco e sai na vista lateral. O final é por cima do ombro da senhorinha, olhando o bandido ser levado com as luzes piscando.
