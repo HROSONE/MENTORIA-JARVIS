@@ -306,8 +306,8 @@ function c8(t) {
     // visitantes no balcão e livro de visitas
     const V = [['turista', 960], ['civil2', 1200], ['motoq', 1460], ['civil', 1720], ['idoso', 2000]];
     let v = ''; V.forEach(([kd, x], i) => { const laugh = Math.max(0, Math.sin(t * 3 + i * 1.7)); const sip = i % 2 ? Math.max(0, Math.sin(t * 1.3 + i)) : 0; v += man({ x, y: 1120, s: .55, kind: kd, flip: -1, armF: [lerp(40, 120, sip), lerp(-30, 70, sip)], armB: [20, 10], mouth: laugh > .6 ? .6 : 0, lean: -laugh * 4, held: i % 2 ? `<g><rect x="-22" y="-50" width="44" height="62" rx="6" fill="#F2C040" stroke="${OUTL}" stroke-width="3" opacity=".9"/><rect x="-22" y="-56" width="44" height="12" fill="#fff"/></g>` : '' }); });
+    s += lay(1.05, `<g transform="translate(1080,606) rotate(-3) scale(.62)"><rect x="-120" y="-20" width="240" height="30" fill="#8A2A22" stroke="${OUTL}" stroke-width="3"/><path d="M-110 -20 L0 -34 L110 -20" fill="#F4F0E4" stroke="${OUTL}" stroke-width="3"/>${Array.from({ length: Math.floor(range(L2, .5, 4) * 6) }, (_, i) => `<path d="M${-90 + (i % 3) * 30} ${-26 + Math.floor(i / 3) * 4} q6 -4 12 0" stroke="#1A3A9A" stroke-width="2" fill="none"/>`).join('')}</g>`);
     s += lay(1.05, v);
-    s += lay(1.05, `<g transform="translate(1080,630) rotate(-4)"><rect x="-120" y="-20" width="240" height="30" fill="#8A2A22" stroke="${OUTL}" stroke-width="3"/><path d="M-110 -20 L0 -34 L110 -20" fill="#F4F0E4" stroke="${OUTL}" stroke-width="3"/>${Array.from({ length: Math.floor(range(L2, .5, 4) * 6) }, (_, i) => `<path d="M${-90 + (i % 3) * 30} ${-26 + Math.floor(i / 3) * 4} q6 -4 12 0" stroke="#1A3A9A" stroke-width="2" fill="none"/>`).join('')}</g>`);
   }
   return s;
 }
