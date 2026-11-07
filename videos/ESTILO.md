@@ -25,3 +25,12 @@ Regras pedidas pelo dono do canal. Valem para todo vídeo novo.
 - Shorts e Reels: vertical, 1080×1920. Vídeos longos do YouTube: 16:9, 1920×1080.
 - Revisar quadro por quadro antes de entregar (proporções, enquadramento, nada cortado de forma estranha).
 - Fatos checados com fonte. Ficção nunca é apresentada como caso real.
+
+## Capa / primeiro quadro (o que funcionou no canal)
+Os mais vistos: Xadrez (39 mil), Alcatraz "OLHANDO." (27 mil), Pegada "TAMANHO 38-42" (17 mil).
+Os mais fracos: "ELES SÃO GÊMEOS" (2,7 mil), "Gota de melado" (3,1 mil), túnel escuro do Cavalo (2,1 mil).
+- Um assunto só, grande e legível no tamanho de miniatura, em fundo limpo e contrastado.
+- Tensão ou mistério visível: alguém sendo vigiado, um objeto estranho, um número sem explicação.
+- No máximo uma palavra ou um número na tela, que gere pergunta (OLHANDO. / 38-42), nunca uma frase que já entregue a resposta (ELES SÃO GÊMEOS).
+- Personagens no estilo `man()` (Alcatraz) e objetos em close (Xadrez) funcionam; cena escura ou confusa na capa não funciona.
+- História real com "como isso é possível?" vence curiosidade explicativa.
