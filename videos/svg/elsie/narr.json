@@ -1,0 +1,77 @@
+{
+ "total": 126.9,
+ "s": [
+  {
+   "k": "c1",
+   "txt": "No meio das planícies do Nebraska, nos Estados Unidos, existe uma cidade com taverna, biblioteca, ruas, postes de luz… e só uma moradora.",
+   "t0": 0.6,
+   "t1": 10.02,
+   "a": 0.0,
+   "b": 11.52
+  },
+  {
+   "k": "c2",
+   "txt": "O nome dela é Elsie Eiler. A cidade se chama Monowi. População: uma pessoa.",
+   "t0": 11.82,
+   "t1": 17.71,
+   "a": 11.52,
+   "b": 19.01
+  },
+  {
+   "k": "c3",
+   "txt": "Mas nem sempre foi assim. Nos anos 1930, Monowi tinha cerca de cento e cinquenta moradores. Tinha escola, correio e trem passando. Só que o trem parou, as fazendas cresceram, e os jovens foram embora pra cidade grande. Casa por casa, as luzes foram se apagando.",
+   "t0": 19.31,
+   "t1": 37.75,
+   "a": 19.01,
+   "b": 39.25
+  },
+  {
+   "k": "c4",
+   "txt": "Elsie nasceu numa fazenda ali do lado, em 1933. Casou com o Rudy, e em 1971 os dois compraram a taverna da cidade. No ano 2000, só restavam os dois. Em 2004, Rudy morreu. E Elsie ficou sozinha.",
+   "t0": 39.55,
+   "t1": 54.85,
+   "a": 39.25,
+   "b": 56.75
+  },
+  {
+   "k": "c5",
+   "txt": "Ela podia ter ido embora. Mas não foi. E como toda cidade precisa de prefeito, tem eleição. Elsie se candidata, vai até a urna… e vota nela mesma. Cem por cento dos votos.",
+   "t0": 57.05,
+   "t1": 70.39,
+   "a": 56.75,
+   "b": 71.89
+  },
+  {
+   "k": "c6",
+   "txt": "Ela também é a secretária e a tesoureira. Faz o orçamento, paga a luz dos postes, e todo ano preenche o pedido de licença pra vender bebida… e depois aprova o próprio pedido, como prefeita.",
+   "t0": 72.19,
+   "t1": 86.32,
+   "a": 71.89,
+   "b": 87.82
+  },
+  {
+   "k": "c7",
+   "txt": "O Rudy amava ler. Depois que ele morreu, Elsie transformou os livros dele numa biblioteca pública, com milhares de livros. E quem cuida da biblioteca? Ela mesma.",
+   "t0": 88.12,
+   "t1": 99.11,
+   "a": 87.82,
+   "b": 100.61
+  },
+  {
+   "k": "c8",
+   "txt": "E a taverna virou famosa. Gente do mundo inteiro dirige até o meio do nada só pra comer o hambúrguer da Elsie, conversar com ela e assinar o livro de visitas.",
+   "t0": 100.91,
+   "t1": 113.46,
+   "a": 100.61,
+   "b": 114.96
+  },
+  {
+   "k": "c9",
+   "txt": "No fim do dia, ela apaga a última luz da cidade. Monowi ainda existe… porque uma senhora decidiu ficar. Se inscreve.",
+   "t0": 115.26,
+   "t1": 123.9,
+   "a": 114.96,
+   "b": 126.9
+  }
+ ]
+}
