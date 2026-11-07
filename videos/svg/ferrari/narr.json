@@ -1,0 +1,85 @@
+{
+ "total": 43.6,
+ "s": [
+  {
+   "k": "n1",
+   "txt": "Quando esse cara que se veste bem foi pra casa,",
+   "t0": 0.1,
+   "t1": 3.34,
+   "a": 0,
+   "b": 3.7
+  },
+  {
+   "k": "n2",
+   "txt": "ele percebeu que a ferrari dele estava longe da calçada.",
+   "t0": 3.8,
+   "t1": 7.6,
+   "a": 3.7,
+   "b": 7.8
+  },
+  {
+   "k": "n3",
+   "txt": "E tem mais um problema, porque a rua estava alagada com uns 30 cm de altura.",
+   "t0": 7.9,
+   "t1": 12.95,
+   "a": 7.8,
+   "b": 13.15
+  },
+  {
+   "k": "n4",
+   "txt": "Então ele fez o seguinte para não molhar a roupa. Tirou o casaco dele",
+   "t0": 13.25,
+   "t1": 17.86,
+   "a": 13.15,
+   "b": 18.06
+  },
+  {
+   "k": "n5",
+   "txt": "e, como se fosse o Karatê Kid, jogou o casaco em cima do capô do carro.",
+   "t0": 18.16,
+   "t1": 22.9,
+   "a": 18.06,
+   "b": 23.1
+  },
+  {
+   "k": "n6",
+   "txt": "Então puxou as mangas até o cotovelo",
+   "t0": 23.2,
+   "t1": 25.75,
+   "a": 23.1,
+   "b": 26.4
+  },
+  {
+   "k": "n7",
+   "txt": "e foi plantando bananeira",
+   "t0": 26.5,
+   "t1": 28.36,
+   "a": 26.4,
+   "b": 30.1
+  },
+  {
+   "k": "n8",
+   "txt": "até abrir a porta,",
+   "t0": 30.2,
+   "t1": 31.63,
+   "a": 30.1,
+   "b": 33.6
+  },
+  {
+   "k": "n9",
+   "txt": "entrar na ferrari, pegar o casaco de volta e ir embora.",
+   "t0": 33.7,
+   "t1": 37.44,
+   "a": 33.6,
+   "b": 39.1
+  },
+  {
+   "k": "n10",
+   "txt": "E se isso te impressionou, se inscreve.",
+   "t0": 39.2,
+   "t1": 41.94,
+   "a": 39.1,
+   "b": 43.6
+  }
+ ]
+}
