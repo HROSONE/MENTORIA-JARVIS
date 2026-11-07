@@ -1,0 +1,77 @@
+{
+ "total": 65.55,
+ "s": [
+  {
+   "k": "n1",
+   "txt": "Esse homem foi atingido por um raio sete vezes… e sobreviveu a todas.",
+   "t0": 0.1,
+   "t1": 4.58,
+   "a": 0,
+   "b": 4.88
+  },
+  {
+   "k": "n2",
+   "txt": "Roy Sullivan era guarda-florestal nos Estados Unidos. Em 1942, um raio atingiu a torre onde ele estava e arrancou a unha do dedão dele.",
+   "t0": 4.98,
+   "t1": 13.46,
+   "a": 4.88,
+   "b": 13.76
+  },
+  {
+   "k": "n3",
+   "txt": "Vinte e sete anos depois, ele dirigia pela serra. O raio acertou o caminhão e queimou as sobrancelhas dele.",
+   "t0": 13.86,
+   "t1": 20.64,
+   "a": 13.76,
+   "b": 20.94
+  },
+  {
+   "k": "n4",
+   "txt": "No ano seguinte, foi no quintal de casa: ombro queimado.",
+   "t0": 21.04,
+   "t1": 24.73,
+   "a": 20.94,
+   "b": 25.03
+  },
+  {
+   "k": "n5",
+   "txt": "Em 1972, no posto dos guardas, o raio pôs fogo no cabelo dele. Daí em diante, ele passou a andar com um galão de água no carro.",
+   "t0": 25.13,
+   "t1": 33.13,
+   "a": 25.03,
+   "b": 33.43
+  },
+  {
+   "k": "n6",
+   "txt": "Em 1973, uma nuvem parecia seguir o carro dele. Ele desceu… e veio o raio. Cabelo em chamas, e o galão salvou.",
+   "t0": 33.53,
+   "t1": 40.5,
+   "a": 33.43,
+   "b": 40.8
+  },
+  {
+   "k": "n7",
+   "txt": "Em 1976, ele tentou fugir correndo da nuvem. Não deu: tornozelo machucado.",
+   "t0": 40.9,
+   "t1": 45.68,
+   "a": 40.8,
+   "b": 45.98
+  },
+  {
+   "k": "n8",
+   "txt": "Em 1977, pescando, levou o sétimo. Voltou pro carro queimado… e achou um urso roubando as trutas dele. Espantou o urso com um galho.",
+   "t0": 46.08,
+   "t1": 54.38,
+   "a": 45.98,
+   "b": 54.68
+  },
+  {
+   "k": "n9",
+   "txt": "Depois disso, ninguém queria ficar perto do Roy na chuva. E dois chapéus queimados dele estão em museus do Guinness. Se inscreve… mas de longe.",
+   "t0": 54.78,
+   "t1": 63.75,
+   "a": 54.68,
+   "b": 65.55
+  }
+ ]
+}
