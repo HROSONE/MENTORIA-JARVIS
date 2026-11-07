@@ -1,0 +1,77 @@
+{
+ "total": 43.4,
+ "s": [
+  {
+   "k": "n1",
+   "txt": "Essa senhora trancou o carro e entrou na padaria.",
+   "t0": 0.1,
+   "t1": 3.9,
+   "a": 0,
+   "b": 4.2
+  },
+  {
+   "k": "n2",
+   "txt": "Um bandido de capuz chegou de fininho e enfiou um arame na fechadura.",
+   "t0": 4.3,
+   "t1": 8.9,
+   "a": 4.2,
+   "b": 9.2
+  },
+  {
+   "k": "n3",
+   "txt": "Mas o que acontece lá dentro da fechadura?",
+   "t0": 9.3,
+   "t1": 12.9,
+   "a": 9.2,
+   "b": 13.2
+  },
+  {
+   "k": "n4",
+   "txt": "Dentro do cilindro tem várias plaquinhas com mola. Elas ficam pra fora e travam tudo. O cilindro não gira.",
+   "t0": 13.3,
+   "t1": 19.3,
+   "a": 13.2,
+   "b": 19.6
+  },
+  {
+   "k": "n5",
+   "txt": "Só a chave certa, com cada dente na altura exata, alinha todas as plaquinhas ao mesmo tempo.",
+   "t0": 19.7,
+   "t1": 25.3,
+   "a": 19.6,
+   "b": 25.6
+  },
+  {
+   "k": "n6",
+   "txt": "Com o arame, ele levanta uma... mas as outras continuam travando. E o cilindro não gira.",
+   "t0": 25.7,
+   "t1": 31.3,
+   "a": 25.6,
+   "b": 31.6
+  },
+  {
+   "k": "n7",
+   "txt": "Enquanto ele brigava com a porta, alguém chegou por trás.",
+   "t0": 31.7,
+   "t1": 35.5,
+   "a": 31.6,
+   "b": 35.8
+  },
+  {
+   "k": "n8",
+   "txt": "Bengalada!",
+   "t0": 35.9,
+   "t1": 38.3,
+   "a": 35.8,
+   "b": 38.6
+  },
+  {
+   "k": "n9",
+   "txt": "E a polícia chegou rapidinho. Se inscreve!",
+   "t0": 38.7,
+   "t1": 43.1,
+   "a": 38.6,
+   "b": 43.4
+  }
+ ]
+}
