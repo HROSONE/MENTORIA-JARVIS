@@ -36,3 +36,4 @@ Os mais fracos: "ELES SÃO GÊMEOS" (2,7 mil), "Gota de melado" (3,1 mil), Caval
 - Uma pergunta que só se responde no fim segura a retenção; final que conecta com o começo ajuda a repetição.
 - História real do tipo "como isso é possível?" vence curiosidade explicativa.
 - Vídeos longos (aba Vídeos/busca) aí sim dependem de miniatura e título.
+- Caso "Bananeira até a Ferrari" (27 s): ~60% arrastaram, mas quem ficou viu 23 de 27 s. O meio prende; quem perdeu foi a abertura (por cima do ombro, escura, calma, frase de contexto). Regra: o quadro 0 é a imagem mais absurda do vídeo (o momento-recompensa), clara e colorida, e a história volta para explicar.
