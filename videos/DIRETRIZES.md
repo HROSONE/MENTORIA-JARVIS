@@ -33,7 +33,7 @@ Complementa o `ESTILO.md`. Ler antes de começar qualquer vídeo novo.
 ## 3. Visual
 
 - **Câmera sempre em movimento**: tremor leve, punch-in nas batidas, dolly, panorâmica. Planos de até 3 s.
-- **Personagens**: o estilo que mais funcionou é o boneco de perfil com contorno (`man()`), sem deformação. Quando pedido, usar **silhueta sem rosto** (`faceless: 1`), como no vídeo do xadrez.
+- **Personagens**: o dono prefere a **silhueta escura sem rosto**, como no vídeo do xadrez: corpo inteiro numa cor sólida (protagonista azul-marinho quase preto, coadjuvante laranja-terroso) com uma borda de luz quente. No `man()`: `faceless: 1` + `sil: '<cor>'` (filtro `sil_<tipo>`); objetos segurados continuam coloridos e legíveis. O estilo "boneco" com rosto não chamou atenção no canal.
 - **Proibido deformar**: nada de membros afinando demais, corpos esticados, cabeça flutuando, pescoço comprido, mãos minúsculas. Proporção natural. (As tentativas de "corpo triângulo" e corpos anime longos foram rejeitadas.)
 - **Tamanho dos objetos** coerente com o personagem: um casaco na mão tem o tamanho de um casaco. Objetos segurados pela mão (`held`) já estão na escala do boneco; não encolher de novo.
 - **Texto nunca espelhado**: quando o boneco está virado (`flip: -1`), desvirar o que ele segura que tem texto.
