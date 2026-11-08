@@ -35,6 +35,7 @@ Complementa o `ESTILO.md`. Ler antes de começar qualquer vídeo novo.
 
 - **Câmera sempre em movimento**: tremor leve, punch-in nas batidas, dolly, panorâmica.
 - **Poucos cortes, planos contínuos**: preferir 3–5 planos longos em que a câmera se aproxima, recua e passeia, em vez de muitos cortes curtos.
+- **Mostrar a mudança, não narrar**: quando a história lista coisas (o que ele comeu, lugares, anos), cada item precisa de uma ação visível própria (alguém traz, apresenta, serve). Mesmo enquadramento com o personagem parado faz o público não perceber que o objeto mudou.
 - **Perto do personagem**: quando a história é o que ele faz (comer, reagir), mostrar de perto, de frente, com expressão (mastigando, piscando, careta). Personagem distante e parado não prende.
 - **Personagens**: o dono prefere a **silhueta escura sem rosto**, como no vídeo do xadrez: corpo inteiro numa cor sólida (protagonista azul-marinho quase preto, coadjuvante laranja-terroso) com uma borda de luz quente. No `man()`: `faceless: 1` + `sil: '<cor>'` (filtro `sil_<tipo>`); objetos segurados continuam coloridos e legíveis. O estilo "boneco" com rosto não chamou atenção no canal.
 - **Proibido deformar**: nada de membros afinando demais, corpos esticados, cabeça flutuando, pescoço comprido, mãos minúsculas. Proporção natural. (As tentativas de "corpo triângulo" e corpos anime longos foram rejeitadas.)

@@ -1,0 +1,77 @@
+{
+ "total": 62.01,
+ "s": [
+  {
+   "k": "n1",
+   "txt": "Esse homem disse que comeu um avião inteiro.",
+   "t0": 0.1,
+   "t1": 3.07,
+   "a": 0,
+   "b": 3.55
+  },
+  {
+   "k": "n2",
+   "txt": "O nome dele era Michel Lotito, um francês que comia o que ninguém come: vidro e metal. Os médicos chamam isso de pica.",
+   "t0": 3.65,
+   "t1": 11.1,
+   "a": 3.55,
+   "b": 11.35
+  },
+  {
+   "k": "n3",
+   "txt": "O truque? Cortar tudo em pedacinhos, tomar óleo e muita água… e engolir. Quase um quilo por dia.",
+   "t0": 11.45,
+   "t1": 17.57,
+   "a": 11.35,
+   "b": 17.82
+  },
+  {
+   "k": "n4",
+   "txt": "Em 1978, chegou o prato principal: um avião Cessna 150. Pedaço por pedaço, ele levou uns dois anos.",
+   "t0": 17.92,
+   "t1": 24.22,
+   "a": 17.82,
+   "b": 24.47
+  },
+  {
+   "k": "n5",
+   "txt": "Mas o cardápio dele tinha muito mais: bicicletas, carrinhos de supermercado, televisões, lustres, camas… e até um caixão.",
+   "t0": 24.57,
+   "t1": 32.2,
+   "a": 24.47,
+   "b": 33.22
+  },
+  {
+   "k": "n6",
+   "txt": "Segundo a lista: dezoito bicicletas, quinze carrinhos, sete TVs, seis lustres, duas camas e um caixão, com as alças.",
+   "t0": 33.32,
+   "t1": 40.65,
+   "a": 33.22,
+   "b": 41.17
+  },
+  {
+   "k": "n7",
+   "txt": "Os médicos viram que o estômago dele tinha uma parede grossa. Mas sabe o que dava azia nele? Banana.",
+   "t0": 41.27,
+   "t1": 47.63,
+   "a": 41.17,
+   "b": 47.88
+  },
+  {
+   "k": "n8",
+   "txt": "O Guinness deu a ele o recorde de dieta mais estranha, com uma placa de metal. E ele comeu a placa.",
+   "t0": 47.98,
+   "t1": 54.28,
+   "a": 47.88,
+   "b": 54.53
+  },
+  {
+   "k": "n9",
+   "txt": "Ninguém nunca provou que ele comeu o avião inteiro. Mas não tenta isso em casa. Se inscreve.",
+   "t0": 54.63,
+   "t1": 60.51,
+   "a": 54.53,
+   "b": 62.01
+  }
+ ]
+}
