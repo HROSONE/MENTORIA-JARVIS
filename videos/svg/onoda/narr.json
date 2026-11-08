@@ -1,0 +1,77 @@
+{
+ "total": 66.18,
+ "s": [
+  {
+   "k": "n1",
+   "txt": "Esse soldado passou 29 anos na selva lutando numa guerra… que já tinha acabado.",
+   "t0": 0.1,
+   "t1": 5.19,
+   "a": 0,
+   "b": 5.44
+  },
+  {
+   "k": "n2",
+   "txt": "Em dezembro de 1944, o Japão mandou o tenente Hiroo Onoda pra uma ilha das Filipinas com uma ordem: nunca se renda.",
+   "t0": 5.54,
+   "t1": 12.81,
+   "a": 5.44,
+   "b": 13.06
+  },
+  {
+   "k": "n3",
+   "txt": "Em 1945, a guerra acabou. Caíram panfletos do céu avisando. Ele leu… e achou que era mentira do inimigo.",
+   "t0": 13.16,
+   "t1": 19.76,
+   "a": 13.06,
+   "b": 20.01
+  },
+  {
+   "k": "n4",
+   "txt": "Os anos foram passando. Um companheiro se rendeu, outro morreu num tiroteio, e em 1972 o último também. Onoda ficou sozinho.",
+   "t0": 20.11,
+   "t1": 27.93,
+   "a": 20.01,
+   "b": 28.18
+  },
+  {
+   "k": "n5",
+   "txt": "E nesse tempo ele continuou atacando os moradores da ilha. Eles contam que até trinta pessoas morreram.",
+   "t0": 28.28,
+   "t1": 34.82,
+   "a": 28.18,
+   "b": 35.07
+  },
+  {
+   "k": "n6",
+   "txt": "Em 1974, um jovem aventureiro japonês foi à ilha procurar três coisas: o tenente Onoda, um panda… e o Abominável Homem das Neves.",
+   "t0": 35.17,
+   "t1": 43.29,
+   "a": 35.07,
+   "b": 43.54
+  },
+  {
+   "k": "n7",
+   "txt": "Ele achou o primeiro. Mas Onoda disse: eu só me rendo se o meu comandante mandar.",
+   "t0": 43.64,
+   "t1": 48.85,
+   "a": 43.54,
+   "b": 49.1
+  },
+  {
+   "k": "n8",
+   "txt": "Então o antigo comandante, já um senhor, voltou à selva e leu a ordem: a guerra acabou. Onoda bateu continência…",
+   "t0": 49.2,
+   "t1": 56.29,
+   "a": 49.1,
+   "b": 56.54
+  },
+  {
+   "k": "n9",
+   "txt": "…e entregou a espada e o fuzil, ainda funcionando. Vinte e nove anos lutando por uma guerra que não existia mais. Se inscreve.",
+   "t0": 56.64,
+   "t1": 64.58,
+   "a": 56.54,
+   "b": 66.18
+  }
+ ]
+}
