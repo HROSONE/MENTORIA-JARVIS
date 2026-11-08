@@ -1,0 +1,69 @@
+{
+ "total": 50.86,
+ "s": [
+  {
+   "k": "n1",
+   "txt": "Esse homem ganhou uma corrida de cavalos… morto.",
+   "t0": 0.1,
+   "t1": 3.31,
+   "a": 0,
+   "b": 4.35
+  },
+  {
+   "k": "n2",
+   "txt": "O nome dele era Frank Hayes. Tinha 22 anos, cuidava dos cavalos no estábulo e nunca tinha ganhado uma corrida.",
+   "t0": 4.45,
+   "t1": 11.42,
+   "a": 4.35,
+   "b": 11.67
+  },
+  {
+   "k": "n3",
+   "txt": "Em 1923, em Nova York, deram uma chance pra ele: montar a égua Sweet Kiss. Ninguém apostava nela. Vinte pra um.",
+   "t0": 11.77,
+   "t1": 18.8,
+   "a": 11.67,
+   "b": 19.05
+  },
+  {
+   "k": "n4",
+   "txt": "Dizem que, pra chegar no peso, ele perdeu uns cinco quilos em poucos dias.",
+   "t0": 19.15,
+   "t1": 23.93,
+   "a": 19.05,
+   "b": 24.18
+  },
+  {
+   "k": "n5",
+   "txt": "Na corrida, cheia de obstáculos, a Sweet Kiss foi passando todo mundo. Mas na parte final, o coração do Frank parou.",
+   "t0": 24.28,
+   "t1": 31.61,
+   "a": 24.18,
+   "b": 31.86
+  },
+  {
+   "k": "n6",
+   "txt": "Ele continuou em cima da égua… e ela cruzou a linha em primeiro. Por uma cabeça.",
+   "t0": 31.96,
+   "t1": 37.11,
+   "a": 31.86,
+   "b": 37.36
+  },
+  {
+   "k": "n7",
+   "txt": "Ninguém percebeu. Só quando a dona da égua foi dar os parabéns, viram que ele estava morto.",
+   "t0": 37.46,
+   "t1": 43.28,
+   "a": 37.36,
+   "b": 43.53
+  },
+  {
+   "k": "n8",
+   "txt": "Ele foi enterrado com a roupa da corrida. E a Sweet Kiss nunca mais correu. Se inscreve.",
+   "t0": 43.63,
+   "t1": 49.26,
+   "a": 43.53,
+   "b": 50.86
+  }
+ ]
+}
