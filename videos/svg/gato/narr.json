@@ -1,0 +1,77 @@
+{
+ "total": 68.86,
+ "s": [
+  {
+   "k": "n1",
+   "txt": "Esse gato foi transformado em espião… pela CIA.",
+   "t0": 0.1,
+   "t1": 3.44,
+   "a": 0,
+   "b": 4.85
+  },
+  {
+   "k": "n2",
+   "txt": "Nos anos 1960, a CIA queria ouvir as conversas dos soviéticos. E alguém teve uma ideia: quem desconfia de um gato?",
+   "t0": 4.95,
+   "t1": 12.48,
+   "a": 4.85,
+   "b": 12.83
+  },
+  {
+   "k": "n3",
+   "txt": "Um veterinário operou o gato por uma hora. Colocou um microfone no ouvido, um transmissor na base do crânio… e um fio fino escondido no pelo.",
+   "t0": 12.93,
+   "t1": 22.14,
+   "a": 12.83,
+   "b": 22.49
+  },
+  {
+   "k": "n4",
+   "txt": "Mas gato é gato. Ele se distraía, ia atrás de comida… e precisaram de outra operação só por causa da fome dele.",
+   "t0": 22.59,
+   "t1": 29.93,
+   "a": 22.49,
+   "b": 30.28
+  },
+  {
+   "k": "n5",
+   "txt": "Segundo um ex-agente, o projeto custou uns vinte milhões de dólares.",
+   "t0": 30.38,
+   "t1": 35.03,
+   "a": 30.28,
+   "b": 35.38
+  },
+  {
+   "k": "n6",
+   "txt": "Até que chegou o primeiro teste: ouvir dois homens num banco de praça, na frente da embaixada soviética, em Washington.",
+   "t0": 35.48,
+   "t1": 43.32,
+   "a": 35.38,
+   "b": 43.67
+  },
+  {
+   "k": "n7",
+   "txt": "O mesmo ex-agente conta que soltaram o gato… ele atravessou a rua… e foi atropelado por um táxi quase na hora.",
+   "t0": 43.77,
+   "t1": 51.05,
+   "a": 43.67,
+   "b": 51.4
+  },
+  {
+   "k": "n8",
+   "txt": "Mas um ex-diretor da CIA diz que não: tiraram o equipamento, costuraram de volta… e o gato viveu uma vida longa e feliz.",
+   "t0": 51.5,
+   "t1": 59.4,
+   "a": 51.4,
+   "b": 59.75
+  },
+  {
+   "k": "n9",
+   "txt": "Em 1967, a CIA desistiu. O relatório concluiu: usar gatos treinados pra espionar… não é prático. Se inscreve.",
+   "t0": 59.85,
+   "t1": 67.06,
+   "a": 59.75,
+   "b": 68.86
+  }
+ ]
+}
