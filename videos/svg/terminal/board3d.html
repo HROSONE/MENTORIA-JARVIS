@@ -1,0 +1,261 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>@font-face{font-family:Anton;src:url(Anton.ttf)}html,body{margin:0;background:#222;overflow:hidden}canvas{display:block}</style>
+<script src="rig.js"></script><script src="draw2d.js"></script><script src="poses.js"></script><script src="props2d.js"></script><script src="set2d.js"></script><script src="shots.js"></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head><body>
+<script type="module">
+/* board3d — os mesmos 18 planos do storyboard, em 3D (Three.js r160).
+   Personagem: o mesmo rig (rig.js) virando malhas (elipsoides e cápsulas). Unidade: cm.
+   Mundo: banco na origem virado para +z; lojas em z=-1400; átrio ao fundo. */
+import * as THREE from 'three';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+const { RIG, POSES: PO, PR, SET } = window; const { V, M } = RIG;
+const W = 1080, H = 1920;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H); renderer.setPixelRatio(1); document.body.appendChild(renderer.domElement);
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const pmrem = new THREE.PMREMGenerator(renderer); const ENV = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+await document.fonts.load('40px Anton');
+let pending = [];
+
+// ---------- texturas ----------
+function svgTex(svg, w, h, sc) {
+  sc = sc || 1; const c = document.createElement('canvas'); c.width = w * sc; c.height = h * sc; const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  pending.push(new Promise(res => { const im = new Image(); im.onload = () => { c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); t.needsUpdate = true; res(); }; im.onerror = () => { console.log('svg falhou'); res(); }; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); }));
+  return t;
+}
+const svgWrap = (inner, vb, w, h) => `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${vb}"><defs>${PR.DEFS}${SET.DEFS}</defs>${inner}</svg>`;
+function canvasTex(w, h, fn) { const c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
+const std = (color, o) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: .7, metalness: 0, envMap: ENV, envMapIntensity: .5 }, o || {}));
+const chrome = () => std('#d8dde2', { roughness: .18, metalness: 1, envMapIntensity: 1.3 });
+function mesh(geo, mat, x, y, z, o) { const m = new THREE.Mesh(geo, mat); m.position.set(x || 0, y || 0, z || 0); m.castShadow = !(o && o.noCast); m.receiveShadow = true; return m; }
+const box = (w, h, d, mat, x, y, z) => mesh(new THREE.BoxGeometry(w, h, d), mat, x, y, z);
+const rbox = (w, h, d, r, mat, x, y, z) => mesh(new RoundedBoxGeometry(w, h, d, 4, r), mat, x, y, z);
+const plane = (w, h, mat, x, y, z) => mesh(new THREE.PlaneGeometry(w, h), mat, x, y, z, { noCast: 1 });
+const unlit = (map, o) => new THREE.MeshBasicMaterial(Object.assign({ map, toneMapped: false }, o || {}));
+
+// ---------- personagem ----------
+const USPH = new THREE.SphereGeometry(1, 28, 20);
+// silhueta chapada (sem sombreamento, para as juntas não aparecerem) + casca invertida que vira a borda de luz
+function figMat(cor) { return new THREE.MeshBasicMaterial({ color: cor }); }
+function hullMat(cor, rim, w) {
+  return new THREE.ShaderMaterial({ side: THREE.BackSide, uniforms: { cA: { value: new THREE.Color(cor) }, cB: { value: new THREE.Color(rim) }, w: { value: w || 1.0 } },
+    vertexShader: 'uniform float w; varying vec3 vN; void main(){ vN = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position, 1.0); mv.xyz += vN * w; gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'uniform vec3 cA; uniform vec3 cB; varying vec3 vN; void main(){ float k = smoothstep(-0.15, 0.55, dot(normalize(vN), normalize(vec3(0.75, 0.62, 0.0)))); gl_FragColor = vec4(mix(cA, cB, k), 1.0); }' });
+}
+const FIG = {};
+function figure(tipo, pose, o) {
+  o = o || {}; const rig = RIG.build(tipo, pose); const T = rig.T; const g = new THREE.Group();
+  const cor = o.cor || T.cor, rim = o.rim || T.rim; const key = cor + rim + (o.hw || '');
+  const mats = FIG[key] || (FIG[key] = [figMat(cor), hullMat(cor, rim, o.hw || 0.9)]);
+  const put = (geo, fn) => { for (let i = 0; i < 2; i++) { const m = new THREE.Mesh(geo, mats[i]); fn(m); m.castShadow = i === 0; g.add(m); } };
+  for (const p of rig.prims) {
+    if (o.only && !o.only.includes(p.part)) continue;
+    if (p.t === 'e') {
+      const A = p.A; put(USPH, m => { m.matrixAutoUpdate = false; m.matrix.set(A[0][0], A[0][1], A[0][2], p.c[0], A[1][0], A[1][1], A[1][2], p.c[1], A[2][0], A[2][1], A[2][2], p.c[2], 0, 0, 0, 1); });
+    } else {
+      const a = new THREE.Vector3(...p.a), b = new THREE.Vector3(...p.b); const d = b.clone().sub(a); const L = d.length();
+      if (L > 0.01) { const geo = new THREE.CylinderGeometry(p.rb, p.ra, L, 24, 1, true); put(geo, c => { c.position.copy(a).addScaledVector(d, .5); c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize()); }); }
+      for (const [pt, r] of [[a, p.ra], [b, p.rb]]) put(USPH, m => { m.position.copy(pt); m.scale.setScalar(r); });
+    }
+  }
+  g.userData.J = rig.J; return g;
+}
+const v3 = a => new THREE.Vector3(a[0], a[1], a[2]);
+
+// ---------- objetos ----------
+function benchSeat() {
+  const g = new THREE.Group(); const red = std('#c21c14', { roughness: .32, envMapIntensity: .9 });
+  // perfil (z para a frente, y para cima) extrudado na largura
+  const s = new THREE.Shape(); s.moveTo(24, 41); s.quadraticCurveTo(27, 43.5, 24, 46); s.lineTo(-14, 49.5); s.quadraticCurveTo(-18, 50, -19, 54); s.lineTo(-22.5, 84); s.quadraticCurveTo(-23.5, 88.5, -26.5, 86); s.quadraticCurveTo(-27.5, 62, -24, 47); s.quadraticCurveTo(-22, 42, -16, 42.5); s.lineTo(24, 41);
+  const geo = new THREE.ExtrudeGeometry(s, { depth: 46, bevelEnabled: true, bevelSize: 2.2, bevelThickness: 2.2, bevelSegments: 4, curveSegments: 10 });
+  geo.translate(0, 0, -23); geo.rotateY(-Math.PI / 2); // perfil x->z
+  const m = mesh(geo, red); g.add(m); return g;
+}
+function bench3d(n) {
+  const g = new THREE.Group(); n = n || 3; const cr = chrome(); const sw = 54;
+  for (let i = 0; i < n; i++) { const s = benchSeat(); s.position.x = (i - (n - 1) / 2) * sw; g.add(s); }
+  const beam = mesh(new THREE.BoxGeometry(n * sw + 8, 5, 8), cr, 0, 39.5, 0); g.add(beam);
+  for (const x of [-(n * sw) / 2 + 12, (n * sw) / 2 - 12]) { g.add(mesh(new THREE.CylinderGeometry(2.4, 2.4, 38, 16), cr, x, 19, 0)); g.add(rbox(6, 3, 56, 1.4, cr, x, 1.6, 2)); }
+  return g;
+}
+const BOXM = std('#c9995b', { roughness: .9, envMapIntensity: .15 });
+function labelTex(txt) { return canvasTex(256, 200, (c, w, h) => { c.fillStyle = '#c9995b'; c.fillRect(0, 0, w, h); c.fillStyle = '#b98a4f'; c.fillRect(0, 70, w, 16); if (txt) { c.fillStyle = 'rgba(80,50,15,.8)'; c.font = '900 34px Arial'; c.textAlign = 'center'; c.fillText(txt, w / 2, 150); } }); }
+function carton(w, h, d, o) {
+  o = o || {}; const g = new THREE.Group(); const front = std('#ffffff', { map: labelTex(o.label), roughness: .9, envMapIntensity: .15 });
+  const b = mesh(new THREE.BoxGeometry(w, h, d), [BOXM, BOXM, std('#d8ad72', { roughness: .9 }), BOXM, front, BOXM], 0, h / 2, 0); g.add(b);
+  g.add(box(w + .4, .4, 5, std('#dcc08e', { roughness: .8 }), 0, h + .1, 0)); // fita
+  if (o.papers) for (let i = 0; i < 3; i++) { const p = box(w * .34, 1.2, d * .6, std('#f1ede2', { roughness: .9 }), -w * .28 + i * w * .28, h + 1 + i * .3, (i - 1) * 3); p.rotation.y = (i - 1) * .25; g.add(p); }
+  return g;
+}
+function suitcase3d(w, h, d, col, o) {
+  o = o || {}; const g = new THREE.Group(); const m = std(col, { roughness: .45, envMapIntensity: .7 });
+  g.add(rbox(w, h - 6, d, 4, m, 0, 5 + (h - 6) / 2, 0));
+  for (let i = -1; i <= 1; i++) g.add(box(1.2, h - 14, d + .6, std('#000', { roughness: .6, transparent: true, opacity: .18 }), i * w / 4, 5 + (h - 6) / 2, 0));
+  g.add(rbox(w * .44, 3, 3, 1.2, std('#222'), 0, h + 1.4, 0));
+  for (const x of [-w / 2 + 5, w / 2 - 5]) for (const z of [-d / 2 + 3, d / 2 - 3]) g.add(mesh(new THREE.SphereGeometry(2.6, 12, 8), std('#1b1b1b'), x, 2.6, z));
+  if (o.poster) { const t = svgTex(svgWrap(PR.poster(0, 0, 30, 42, 0), '-16 -22 32 44', 320, 440), 320, 440); const p = plane(30, 42, std('#fff', { map: t, roughness: .6 }), 0, h * .52, d / 2 + .4); p.rotation.z = -.05; g.add(p); }
+  return g;
+}
+function papers3d(w, h, d) { const g = new THREE.Group(); const n = Math.round(h / 2.4); for (let i = 0; i < n; i++) { const p = box(w, h / n - .15, d, std(i % 3 ? '#efeadd' : '#ddd6c4', { roughness: .95 }), (Math.sin(i * 7) * 1.2), (i + .5) * h / n, Math.cos(i * 5) * 1.2); p.rotation.y = Math.sin(i * 3) * .06; g.add(p); } g.add(box(1.6, h + .4, d + .6, std('#9b6d3a'), 0, h / 2, 0)); return g; }
+function briefcase3d() { const g = new THREE.Group(); const m = std('#6b4126', { roughness: .5, envMapIntensity: .6 }); g.add(rbox(44, 31, 11, 2.4, m, 0, 15.5, 0)); g.add(box(44.4, 5, 11.4, std('#7f5032', { roughness: .5 }), 0, 28, 0)); const gold = std('#e3b23c', { metalness: 1, roughness: .3, envMapIntensity: 1.4 }); g.add(box(4, 4, 1, gold, -8, 27, 5.8)); g.add(box(4, 4, 1, gold, 8, 27, 5.8)); const h = mesh(new THREE.TorusGeometry(6.5, 1.2, 8, 20, Math.PI), std('#2b1b10'), 0, 31, 0); g.add(h); return g; }
+function pipe3d() { const g = new THREE.Group(); const gold = std('#e3b23c', { metalness: 1, roughness: .28, envMapIntensity: 1.6 }); const stem = mesh(new THREE.CylinderGeometry(.7, .55, 11, 10), std('#2a1a0c', { roughness: .4 }), 0, 0, 5.5); stem.rotation.x = Math.PI / 2; g.add(stem); g.add(mesh(new THREE.CylinderGeometry(3.1, 2.3, 7, 16), gold, 0, 2.2, 12.4)); const e = mesh(new THREE.CircleGeometry(2.4, 16), new THREE.MeshBasicMaterial({ color: '#ff7a1a' }), 0, 5.8, 12.4, { noCast: 1 }); e.rotation.x = -Math.PI / 2; g.add(e); return g; }
+const SMOKE = canvasTex(128, 128, (c, w) => { const gr = c.createRadialGradient(64, 64, 2, 64, 64, 62); gr.addColorStop(0, 'rgba(255,252,244,.8)'); gr.addColorStop(1, 'rgba(255,252,244,0)'); c.fillStyle = gr; c.fillRect(0, 0, w, w); });
+function smoke3d(p, t) { const g = new THREE.Group(); for (let i = 0; i < 9; i++) { const a = ((t + i / 9) % 1); const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: SMOKE, transparent: true, opacity: .5 * (1 - a), depthWrite: false })); s.position.set(p.x + Math.sin(a * 6 + i) * 5 * a, p.y + a * 55, p.z + Math.cos(a * 5 + i) * 4 * a); s.scale.setScalar(6 + a * 24); g.add(s); } return g; }
+function boardTex(big) {
+  return canvasTex(1440, 760, (c, w, h) => {
+    c.fillStyle = '#0d0f13'; c.fillRect(0, 0, w, h); c.fillStyle = '#f6c844'; c.font = '700 58px Arial'; c.textAlign = 'left'; c.fillText('DÉPARTS · DEPARTURES', 50, 90); c.textAlign = 'right'; c.fillText('TERMINAL 1', w - 50, 90);
+    const txt = String(big), n = Math.max(4, txt.length), cw = Math.min(184, (w - 120) / n), ch = 280, x0 = w / 2 - n * cw / 2;
+    for (let i = 0; i < n; i++) { c.fillStyle = '#1b1e24'; c.beginPath(); c.roundRect(x0 + i * cw + 6, 140, cw - 12, ch, 12); c.fill(); c.fillStyle = '#ffd54a'; c.font = `${ch * .86}px Anton`; c.textAlign = 'center'; c.fillText(txt[i] || '', x0 + i * cw + cw / 2, 140 + ch * .86); c.fillStyle = '#000'; c.fillRect(x0 + i * cw + 6, 140 + ch / 2 - 3, cw - 12, 6); }
+    c.font = '700 58px Courier New'; [['10:05', 'LONDRES', 'ANNULÉ'], ['10:40', 'BRUXELLES', "À L'HEURE"], ['11:15', 'NEW YORK', 'EMBARQ.']].forEach((r, i) => { const y = 520 + i * 78; c.textAlign = 'left'; c.fillStyle = '#e9eef5'; c.fillText(r[0], 56, y); c.fillText(r[1], 336, y); c.textAlign = 'right'; c.fillStyle = i ? '#f6c844' : '#ff6b5a'; c.fillText(r[2], w - 56, y); });
+  });
+}
+function board3d(txt) { const g = new THREE.Group(); g.add(rbox(376, 206, 22, 4, std('#2a2d33', { roughness: .5 }), 0, 0, 0)); g.add(plane(360, 190, unlit(boardTex(txt)), 0, 0, 11.4)); for (const x of [-120, 120]) g.add(mesh(new THREE.CylinderGeometry(1.5, 1.5, 700, 8), std('#555'), x, 453, 0)); return g; }
+function brand3d(w) { const h = w * .42; const g = new THREE.Group(); g.add(rbox(w + 12, h + 12, 10, 3, std('#3b3f46'), 0, 0, 0)); g.add(plane(w, h, unlit(svgTex(svgWrap(SET.brandBox(w), `${-w / 2} ${-h} ${w} ${h}`, w * 4, h * 4), w * 4, h * 4)), 0, 0, 5.4)); return g; }
+function sheet3d(svgInner, o) { o = o || {}; const t = svgTex(svgWrap(svgInner, '-10.5 -14.85 21 29.7', 420, 594), 420, 594); const m = std('#fff', { map: t, roughness: .8, side: THREE.DoubleSide }); return plane(21, 29.7, m); }
+const DOC = PR.sheet(0, 0, 21, 29.7, 0, 9, { stamp: 1 });
+function cheque3d() { const t = svgTex(svgWrap(PR.cheque(0, 0, 0, 1), '-20 -9 40 18', 800, 360), 800, 360); return plane(52, 23.4, std('#fff', { map: t, roughness: .7, side: THREE.DoubleSide })); }
+function wheelchair3d() { const g = new THREE.Group(); const cr = chrome(), bk = std('#22252b', { roughness: .6 }); for (const z of [-27, 27]) { const w = mesh(new THREE.TorusGeometry(29, 1.8, 10, 40), bk, -6, 30, z); g.add(w); const r = mesh(new THREE.TorusGeometry(25, .8, 8, 40), cr, -6, 30, z + Math.sign(z) * 3); g.add(r); for (let i = 0; i < 8; i++) { const sp = mesh(new THREE.CylinderGeometry(.35, .35, 56, 6), cr, -6, 30, z); sp.rotation.z = i * Math.PI / 8; g.add(sp); } g.add(mesh(new THREE.SphereGeometry(6, 14, 10), bk, 30, 6, z * .85)); const fr = mesh(new THREE.CylinderGeometry(1.4, 1.4, 44, 8), cr, 26, 28, z * .85); fr.rotation.z = .12; g.add(fr); const bp = mesh(new THREE.CylinderGeometry(1.4, 1.4, 50, 8), cr, -24, 72, z * .85); bp.rotation.z = .12; g.add(bp); const hd = mesh(new THREE.CylinderGeometry(1.8, 1.8, 12, 8), bk, -32, 96, z * .85); hd.rotation.z = Math.PI / 2; g.add(hd); g.add(rbox(30, 3, 5, 1.2, bk, 2, 66, z * .9)); }
+  g.add(rbox(42, 5, 46, 2, bk, 2, 50, 0)); const back = rbox(4, 44, 46, 2, bk, -22, 72, 0); back.rotation.z = .12; g.add(back); g.add(rbox(16, 2, 30, 1, cr, 34, 10, 0)); return g; }
+
+// ---------- cenários ----------
+function lights(scene, o) {
+  o = o || {}; scene.add(new THREE.HemisphereLight(o.sky || '#fff3dc', o.ground || '#b9a98c', o.hemi == null ? 1.05 : o.hemi));
+  const key = new THREE.DirectionalLight(o.keyC || '#ffe2b8', o.key == null ? 2.2 : o.key); const kp = o.keyP || [320, 620, 380]; key.position.set(...kp); key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048); const c = key.shadow.camera; const R = o.sr || 520; c.left = -R; c.right = R; c.top = R; c.bottom = -R; c.near = 50; c.far = 2400; key.shadow.bias = -0.0006; key.shadow.normalBias = 1.2; key.shadow.radius = 6; scene.add(key); if (o.tgt) { key.target.position.set(...o.tgt); scene.add(key.target); }
+  const back = new THREE.DirectionalLight('#ffb878', 1.6); back.position.set(-400, 420, -600); scene.add(back);
+}
+function floorTex() { return canvasTex(512, 512, (c, w) => { c.fillStyle = '#d9d2c5'; c.fillRect(0, 0, w, w); for (let i = 0; i < 900; i++) { c.fillStyle = `rgba(${120 + Math.random() * 80},${110 + Math.random() * 70},${95 + Math.random() * 60},.06)`; c.fillRect(Math.random() * w, Math.random() * w, 3, 3); } c.strokeStyle = '#a79d8b'; c.lineWidth = 5; c.strokeRect(0, 0, w, w); }); }
+function terminal3d(scene, year, o) {
+  o = o || {}; scene.background = new THREE.Color('#d9cfbd'); scene.fog = new THREE.Fog('#e6dccb', 2600, 9000);
+  const ft = floorTex(); ft.wrapS = ft.wrapT = THREE.RepeatWrapping; ft.repeat.set(70, 70);
+  const fl = plane(8400, 8400, std('#fff', { map: ft, roughness: .22, metalness: 0, envMapIntensity: .9 }), 0, 0, 0); fl.rotation.x = -Math.PI / 2; scene.add(fl);
+  // lojas (parede do fundo e paredes laterais)
+  const shopT = svgTex(svgWrap(SET.shopRow(), '-1500 -440 3000 440', 3000, 440), 3000, 440);
+  const wallM = std('#fff', { map: shopT, roughness: .9, envMapIntensity: .1 });
+  scene.add(plane(3000, 440, wallM, 0, 220, -1400));
+  const wl = plane(3000, 440, wallM, -1500, 220, 100); wl.rotation.y = Math.PI / 2; scene.add(wl);
+  const wr = plane(3000, 440, wallM, 1500, 220, 100); wr.rotation.y = -Math.PI / 2; scene.add(wr);
+  const b1 = brand3d(250); b1.position.set(-60, 352, -1392); scene.add(b1);
+  const b2 = brand3d(250); b2.position.set(-1492, 352, 160); b2.rotation.y = Math.PI / 2; scene.add(b2);
+  const b3 = brand3d(250); b3.position.set(1492, 352, 40); b3.rotation.y = -Math.PI / 2; scene.add(b3);
+  // átrio ao fundo + tubos de escada rolante em 3D
+  const at = svgTex(svgWrap(SET.atrium(0), '-6000 -5200 12000 5200', 3000, 1300), 3000, 1300);
+  scene.add(plane(12000, 5200, unlit(at, { fog: true }), 0, 2600, -4200));
+  const glass = new THREE.MeshPhysicalMaterial({ color: '#e8f3f8', roughness: .08, metalness: 0, transparent: true, opacity: .32, envMap: ENV, envMapIntensity: 1.6, side: THREE.DoubleSide, depthWrite: false });
+  const tube = (a, b, r) => { const A = v3(a), B = v3(b), d = B.clone().sub(A), L = d.length(); const g = new THREE.Group(); g.position.copy(A).addScaledVector(d, .5); g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize());
+    g.add(mesh(new THREE.CylinderGeometry(r, r, L, 28, 1, true), glass, 0, 0, 0, { noCast: 1 }));
+    for (let u = -L / 2; u <= L / 2; u += r * 1.1) { const ring = mesh(new THREE.TorusGeometry(r, 7, 8, 32), std('#aeb6bd', { metalness: .7, roughness: .35 }), 0, u, 0, { noCast: 1 }); ring.rotation.x = Math.PI / 2; g.add(ring); }
+    const st = mesh(new THREE.BoxGeometry(r * 1.2, L, r * .25), std('#6f7780'), 0, 0, 0, { noCast: 1 }); g.add(st);
+    scene.add(g);
+    for (let i = 0; i < 8; i++) { const p = A.clone().addScaledVector(d, (i + .5) / 8); const m = mesh(new THREE.CapsuleGeometry(16, 100, 4, 10), std('#3e4a63'), p.x, p.y + 75, p.z, { noCast: 1 }); scene.add(m); } };
+  tube([-2400, 420, -2500], [700, 2100, -3300], 125); tube([2500, 900, -2700], [-600, 2900, -3500], 125); tube([-2000, 2000, -3000], [1600, 3900, -3700], 125);
+  if (year != null) { const b = board3d(year); b.position.set(o.bx || 0, o.by || 430, o.bz == null ? -520 : o.bz); if (o.bry) b.rotation.y = o.bry; scene.add(b); }
+  lights(scene, o.L);
+}
+function pile3d(scene, lv, o) {
+  o = o || {}; const add = (m, x, z, y, ry) => { m.position.set(x, y || 0, z); m.rotation.y = ry || 0; scene.add(m); };
+  const it = [[-150, -95, 70, 55, 50, .1, { label: 'JORNAIS' }, 0, .08], [150, -92, 64, 50, 48, .2, {}, 0, -.1], [-150, -95, 60, 46, 44, .35, { papers: 1 }, 55, -.12], [-62, -110, 66, 58, 50, .3, { label: '1993' }, 0, .05], [72, -108, 72, 62, 52, .45, { label: 'REVISTAS' }, 0, -.04],
+    [150, -92, 58, 44, 42, .5, {}, 50, .15], [-62, -110, 60, 48, 44, .6, { label: 'DIÁRIO' }, 58, -.1], [72, -108, 64, 46, 46, .7, { papers: 1 }, 62, .1], [-245, -60, 76, 64, 56, .65, {}, 0, .3], [248, -55, 70, 60, 54, .75, { label: 'LIVROS' }, 0, -.3], [-245, -60, 62, 50, 46, .85, {}, 64, .45],
+    [-150, -95, 52, 40, 40, .8, {}, 101, .2], [248, -55, 60, 48, 46, .92, { papers: 1 }, 60, -.2], [4, -150, 70, 60, 50, .88, {}, 0, 0], [4, -150, 60, 50, 44, .95, { label: '2004' }, 60, .1]];
+  it.filter(a => lv >= a[5]).forEach(a => add(carton(a[2], a[3], a[4], a[6]), a[0], a[1], a[7], a[8]));
+  const sx = o.poster ? -128 : 128;
+  if (lv >= .15) add(suitcase3d(44, 70, 26, '#3f79ad', o.poster ? { poster: 1 } : {}), sx, 12, 0, o.poster ? .15 : -.15);
+  if (lv >= .4) add(suitcase3d(40, 60, 24, '#7a5f49'), o.poster ? -184 : -126, 8, 0, .2);
+  if (lv >= .55) add(papers3d(34, 30, 26), -182, 40, 0, .3);
+  if (lv >= .75) { add(papers3d(36, 42, 26), 188, 40, 0, -.2); add(papers3d(32, 22, 24), 230, 56, 0, .3); }
+  if (lv >= .9) add(suitcase3d(46, 56, 26, '#3e8a66'), -240, 60, 0, .5);
+}
+const setCam = (cam, p, t, fov) => { cam.fov = fov || 30; cam.position.set(...p); cam.lookAt(...t); cam.updateProjectionMatrix(); };
+// objeto na mão
+function inHand(scene, fig, side, m, off, rot) { const J = fig.userData.J; const p = v3(J['grip' + side]); m.position.copy(p).add(v3(off || [0, 0, 0])); if (rot) m.rotation.set(...rot); scene.add(m); return m; }
+function withPipe(scene, fig, t) { const J = fig.userData.J; const p = pipe3d(); const mth = v3(J.mouth); p.position.copy(mth); const f = v3(M.ap(J.Rh, [0, 0, 1])); p.lookAt(mth.clone().add(f)); scene.add(p); if (t != null) { const bowl = mth.clone().addScaledVector(f, 12.4); bowl.y += 6; scene.add(smoke3d(bowl, t)); } }
+const person = (scene, tipo, pose, o) => { const f = figure(tipo, pose, o); scene.add(f); return f; };
+const C3 = { funcionario: '#8a4a26', oficial: '#7c4424', produtor: '#8a4a26', passageiro: '#4b5672', passageira: '#4b5672' };
+const R3 = { passageiro: '#dfe8ff', passageira: '#dfe8ff' };
+const sup = (scene, tipo, pose) => person(scene, tipo, pose, { cor: C3[tipo], rim: R3[tipo] || '#ffd9a6' });
+
+// ---------- planos ----------
+const S = {};
+S[1] = (sc, cam, yr) => { terminal3d(sc, yr || '18 ANOS', { bx: 110, by: 430, bz: -640 }); pile3d(sc, 1); sc.add(bench3d(3));
+  const f = person(sc, 'nasseri', PO.sitPipe({ yaw: 0 })); withPipe(sc, f, .35);
+  sup(sc, 'passageiro', PO.walk(.15, { yaw: 90, pos: [-330, 0, -330] })); sup(sc, 'passageira', PO.walk(.65, { yaw: -90, pos: [330, 0, -480] }));
+  setCam(cam, yr ? [-120, 195, 570] : [-60, 165, 430], [10, yr ? 180 : 172, -60], 42); };
+S[2] = (sc, cam) => { terminal3d(sc, null); pile3d(sc, 1); sc.add(bench3d(3)); const f = person(sc, 'nasseri', PO.sitPipe({ yaw: 0, head: [-4, 0, 0] }, .6)); withPipe(sc, f, .6); setCam(cam, [250, 128, 60], [0, 116, 16], 26); };
+function station3d(sc, o) { o = o || {}; sc.background = new THREE.Color('#e9d5b0'); sc.fog = new THREE.Fog('#ecd9b6', 900, 3200);
+  const fl = plane(6000, 6000, std('#c9ac80', { roughness: .8 })); fl.rotation.x = -Math.PI / 2; sc.add(fl);
+  // trem
+  const tr = new THREE.Group(); tr.add(rbox(2600, 330, 260, 40, std('#5f6f5c', { roughness: .5 }), 0, 215, 0)); for (let i = -6; i <= 6; i++) { tr.add(plane(140, 110, unlit(canvasTex(8, 8, c => { c.fillStyle = '#f2deb0'; c.fillRect(0, 0, 8, 8); })), i * 200, 270, 131)); tr.add(mesh(new THREE.CylinderGeometry(38, 38, 20, 20), std('#2e2a24'), i * 200 + 60, 38, 120)).rotation.x = Math.PI / 2; } tr.position.set(0, 0, -520); sc.add(tr);
+  for (let i = -6; i <= 6; i++) { sc.add(mesh(new THREE.CylinderGeometry(9, 9, 900, 10), std('#6b5435'), i * 420, 450, -820)); const arc = mesh(new THREE.TorusGeometry(210, 8, 8, 24, Math.PI), std('#6b5435'), i * 420 + 210, 900, -820); sc.add(arc); }
+  sc.add(plane(8000, 3000, unlit(canvasTex(8, 64, (c) => { const g = c.createLinearGradient(0, 0, 0, 64); g.addColorStop(0, '#f1dfbd'); g.addColorStop(1, '#cfae7c'); c.fillStyle = g; c.fillRect(0, 0, 8, 64); }), { fog: true }), 0, 1200, -1500));
+  // relógio
+  const ck = new THREE.Group(); ck.add(mesh(new THREE.CylinderGeometry(62, 62, 14, 40), std('#3a2c1c'), 0, 0, 0)).rotation.x = Math.PI / 2;
+  const face = canvasTex(512, 512, (c) => { c.fillStyle = '#f7efdc'; c.beginPath(); c.arc(256, 256, 250, 0, 7); c.fill(); c.translate(256, 256); c.fillStyle = '#3a2c1c'; for (let i = 0; i < 12; i++) { c.fillRect(-7, -236, 14, 40); c.rotate(Math.PI / 6); } c.font = '48px Georgia'; c.textAlign = 'center'; c.fillText('PARIS', 0, 120); c.rotate((o.min || 60) * Math.PI / 180); c.fillStyle = '#111'; c.fillRect(-9, -190, 18, 200); c.rotate(-(o.min || 60) * Math.PI / 180 + 290 * Math.PI / 180); c.fillRect(-13, -130, 26, 140); });
+  const fc = plane(112, 112, unlit(face, { transparent: true }), 0, 0, 7.4); ck.add(fc); ck.add(mesh(new THREE.CylinderGeometry(2.5, 2.5, 600, 8), std('#3a2c1c'), 0, 362, 0)); ck.position.set(...(o.clock || [150, 250, -160])); sc.add(ck);
+  const sign = board3d('1988'); sign.scale.setScalar(.45); sign.position.set(-150, 236, -200); sc.add(sign);
+  lights(sc, { sky: '#fff0d0', ground: '#c9a878', keyC: '#ffd9a0', sr: 400 }); }
+S[3] = (sc, cam) => { station3d(sc); const b = briefcase3d(); b.position.set(-78, 0, -18); b.rotation.y = .3; sc.add(b); person(sc, 'nasseri', PO.standWatch({ yaw: 55 })); setCam(cam, [120, 105, 400], [-10, 118, 0], 34); };
+S[4] = (sc, cam) => { station3d(sc, { min: 150 }); const d = plane(52, 22, unlit(canvasTex(260, 110, (c) => { c.setLineDash([16, 12]); c.strokeStyle = '#7a5a30'; c.lineWidth = 7; c.strokeRect(8, 8, 244, 94); c.fillStyle = '#7a5a30'; c.font = '900 70px Arial'; c.textAlign = 'center'; c.fillText('?', 130, 80); }), { transparent: true }), -78, 0.6, -18); d.rotation.x = -Math.PI / 2; d.rotation.z = .3; sc.add(d);
+  person(sc, 'nasseri', PO.standShock({ yaw: -30, head: [14, -24, 0], spine: [8, 0, -10], armL: { t: [13, 159, 5], hand: 'open', hd: [-0.5, 1, 0], palm: [-1, 0, 0], pole: [1, -0.2, 0.3] }, armR: { t: [-13, 159, 5], hand: 'open', hd: [0.5, 1, 0], palm: [1, 0, 0], pole: [-1, -0.2, 0.3] } })); setCam(cam, [150, 60, 330], [-20, 112, 0], 36); };
+function london3d(sc) { sc.background = new THREE.Color('#d9dde3'); sc.fog = new THREE.Fog('#e3e6ea', 1200, 4000); const ft = floorTex(); ft.wrapS = ft.wrapT = THREE.RepeatWrapping; ft.repeat.set(50, 50); const fl = plane(6000, 6000, std('#eef0f2', { map: ft, roughness: .25, envMapIntensity: .9 })); fl.rotation.x = -Math.PI / 2; sc.add(fl);
+  const wt = canvasTex(2048, 512, (c, w, h) => { c.fillStyle = '#d9dde3'; c.fillRect(0, 0, w, h); c.fillStyle = '#c3c8cf'; for (let i = 0; i < 12; i++) c.fillRect(i * 180, 60, 8, h); c.fillStyle = '#1f3c6e'; c.fillRect(0, 0, w, 64); c.fillStyle = '#fff'; c.font = '700 40px Arial'; c.textAlign = 'center'; c.fillText('L O N D O N   ·   I M M I G R A T I O N', w / 2, 46); });
+  sc.add(plane(2400, 600, std('#fff', { map: wt, roughness: .9 }), 60, 300, -420));
+  const dk = new THREE.Group(); dk.add(rbox(70, 104, 190, 3, std('#e9ecef', { roughness: .5 }), 0, 52, 0)); dk.add(rbox(80, 8, 200, 2, std('#9aa3ac', { roughness: .4 }), 0, 108, 0)); dk.add(box(71, 6, 191, std('#1f3c6e'), 0, 46, 0));
+  const pt = canvasTex(512, 128, (c) => { c.fillStyle = '#e9ecef'; c.fillRect(0, 0, 512, 128); c.fillStyle = '#1f3c6e'; c.font = '700 76px Arial'; c.textAlign = 'center'; c.fillText('PASSPORTS', 256, 92); }); const pl = plane(150, 37, std('#fff', { map: pt, roughness: .6 }), -35.6, 78, 0); pl.rotation.y = -Math.PI / 2; dk.add(pl); const pl2 = plane(60, 15, std('#fff', { map: pt, roughness: .6 }), 0, 80, 95.6); dk.add(pl2);
+  dk.position.set(95, 0, 0); sc.add(dk); lights(sc, { sky: '#f4f7fb', ground: '#c9ced6', keyC: '#fff4e0', sr: 400 }); }
+S[5] = (sc, cam) => { london3d(sc); sup(sc, 'oficial', PO.handOut('oficial', { yaw: -90, pos: [165, 0, 0], armR: { t: [-14, 122, 60], hand: 'open', hd: [0, 0, 1], palm: [0, 1, 0] } })); person(sc, 'nasseri', PO.standShrug({ yaw: 78, pos: [-15, 0, 10] })); setCam(cam, [70, 125, 520], [72, 108, 0], 46); };
+S[6] = (sc, cam) => { london3d(sc); sup(sc, 'oficial', PO.stand({ yaw: -90, pos: [165, 0, 0], armR: { t: [-10, 142, 62], hand: 'relax', hd: [0, 0.05, 1], palm: [1, 0, 0], pole: [-1, -1, 0] }, armL: { t: [26, 100, 6], hand: 'fist', pole: [1, 0, -1] } })); person(sc, 'nasseri', PO.stand({ yaw: 60, pos: [-15, 0, 10], spine: [8, 0, 0], chest: [10, 0, 0], neck: [10, 0, 0], head: [16, 0, 0] })); setCam(cam, [-30, 150, 500], [80, 104, 0], 46); };
+S[7] = async (sc, cam) => { sc.background = svgTex(svgWrap(`<rect width="1080" height="1920" fill="url(#gSky)"/>`, '0 0 1080 1920', 270, 480), 270, 480);
+  const cl = canvasTex(256, 128, (c) => { for (const [x, y, r] of [[80, 80, 44], [128, 64, 56], [176, 82, 42], [128, 92, 60]]) { const g = c.createRadialGradient(x, y, 2, x, y, r); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, 256, 128); } });
+  for (let i = 0; i < 14; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: cl, transparent: true, depthWrite: false, opacity: .95 })); const r = (n) => (Math.sin(i * 12.9898 + n * 78.233) * 43758.5453) % 1; s.position.set(r(1) * 5000, -900 + r(2) * 1800, -2500 - Math.abs(r(3)) * 3000); s.scale.set(2400, 1100, 1); sc.add(s); }
+  const obj = await new OBJLoader().loadAsync(window.JET || '../../biblioteca3d/aviao/Jetliner.obj'); const white = std('#f4f5f7', { roughness: .35, envMapIntensity: 1 }), red = std('#d8261c', { roughness: .4 }), grey = std('#8f98a3', { roughness: .4, metalness: .6 });
+  obj.traverse(o => { if (o.isMesh) { o.material = /Tail/.test(o.name) ? red : /Turbo/.test(o.name) ? grey : white; o.castShadow = true; o.receiveShadow = true; } });
+  const bb = new THREE.Box3().setFromObject(obj); const sz = bb.getSize(new THREE.Vector3()); const ctr = bb.getCenter(new THREE.Vector3());
+  let fus = null; obj.traverse(o => { if (o.isMesh && /Fus/.test(o.name)) fus = new THREE.Box3().setFromObject(o); }); const fs = fus.getSize(new THREE.Vector3()), fc = fus.getCenter(new THREE.Vector3()).sub(ctr);
+  const g = new THREE.Group(); obj.position.sub(ctr); g.add(obj); const k = 3800 / sz.z; g.scale.setScalar(k); const piv = new THREE.Group(); piv.add(g); sc.add(piv);
+  // marca na fuselagem (dos dois lados, nunca espelhada)
+  const bt = canvasTex(1024, 160, (c) => { c.clearRect(0, 0, 1024, 160); c.fillStyle = '#1b2240'; c.font = '120px Anton'; c.textAlign = 'center'; c.fillText('Hryz Animation', 512, 125); });
+  for (const side of [1, -1]) { const p = plane(1150, 180, new THREE.MeshBasicMaterial({ map: bt, transparent: true, toneMapped: false }), side * (fs.x / 2 * k * 0.93), (fc.y + fs.y * 0.2) * k, fc.z * k); p.rotation.y = side * Math.PI / 2; piv.add(p); }
+  piv.rotation.set(-0.06, window.JRY == null ? -Math.PI / 2 - 0.85 : window.JRY, 0.05);
+  lights(sc, { sky: '#dff0ff', ground: '#9fc2e0', keyP: [800, 2500, 1800], hemi: 1.3, sr: 3000 }); sc.environment = ENV;
+  setCam(cam, [-300, -900, 8600], [0, 0, 0], 34); cam.far = 30000; cam.updateProjectionMatrix(); };
+S[8] = (sc, cam) => { terminal3d(sc, null); const b = bench3d(3); b.position.set(150, 0, -260); sc.add(b);
+  const f = person(sc, 'nasseri', PO.walk(.18, { yaw: 165, pos: [-110, 0, 120], armL: { t: [22, 78, -8], hand: 'fist' } })); const s = suitcase3d(40, 60, 24, '#3f79ad'); s.position.set(-140, 0, 150); s.rotation.y = -.3; sc.add(s);
+  sup(sc, 'passageiro', PO.walk(.4, { yaw: 90, pos: [-420, 0, -520] })); sup(sc, 'passageira', PO.walk(.7, { yaw: -90, pos: [460, 0, -700] }));
+  setCam(cam, [-190, 46, 520], [40, 520, -1400], 46); };
+S[9] = (sc, cam) => { terminal3d(sc, '1988', { bx: -80, by: 440, bz: -600 }); sc.add(bench3d(3)); person(sc, 'nasseri', PO.sit(45, { yaw: 0, head: [-6, 18, 0] })); const s = suitcase3d(44, 70, 26, '#3f79ad'); s.position.set(128, 0, 12); s.rotation.y = -.15; sc.add(s); setCam(cam, [140, 150, 450], [10, 172, -60], 44); };
+// planos com visitante: ele sentado, o outro em pé na frente dele
+function visit(sc, cam, year, lv, na, other, c) { const sd = c.side || 1; terminal3d(sc, year, { bx: sd * 440, by: 345, bz: c.bz == null ? -250 : c.bz, bry: -sd * (Math.PI / 2 + .25) }); pile3d(sc, lv, c); sc.add(bench3d(3)); const f = person(sc, 'nasseri', na); const g = other ? sup(sc, other.tipo, other.pose) : null; setCam(cam, c.p, c.t, c.fov || 34); return [f, g]; }
+S[10] = (sc, cam) => { const [f, g] = visit(sc, cam, '1991', .3, PO.sitReach({ yaw: 0 }), { tipo: 'funcionario', pose: PO.offerR('funcionario', { yaw: 180, pos: [-6, 0, 132], armR: { t: [-12, 108, 50], hand: 'hold', hd: [0, 0, 1], palm: [0, 1, 0] } }) }, { p: [-400, 150, 320], t: [60, 150, 50], fov: 40 });
+  const tw = new THREE.Group(); tw.add(rbox(30, 9, 22, 2.5, std('#f7f7f2', { roughness: .95 }), 0, 0, 0)); tw.add(box(30.4, 1.6, 22.4, std('#7fb3d9'), 0, -2, 0)); inHand(sc, g, 'R', tw, [0, 6, -6]); };
+S[11] = (sc, cam) => { const [f, g] = visit(sc, cam, '1994', .55, PO.sitEat({ yaw: 0 }), { tipo: 'passageiro', pose: PO.stand({ yaw: 180, pos: [10, 0, 140], head: [8, 0, 0], armR: { t: [-16, 118, 20], hand: 'open', hd: [0, 1, 0.4], palm: [0, 0, 1], pole: [-1, -1, 0] } }) }, { p: [-400, 140, 330], t: [60, 148, 50], fov: 40 });
+  const bun = new THREE.Group(); bun.add(mesh(new THREE.SphereGeometry(6, 16, 10, 0, 7, 0, Math.PI / 2), std('#d79a4e', { roughness: .7 }), 0, 1, 0)); bun.add(mesh(new THREE.CylinderGeometry(6.2, 6.2, 2, 16), std('#6b3d1e'), 0, 0, 0)); bun.add(mesh(new THREE.CylinderGeometry(6, 5.4, 2.4, 16), std('#e3b064'), 0, -2.2, 0)); inHand(sc, f, 'R', bun, [0, 2, 2]);
+  const bag = mesh(new THREE.CylinderGeometry(9, 7.5, 22, 4), std('#c9905a', { roughness: .9 })); bag.rotation.y = Math.PI / 4; inHand(sc, f, 'L', bag, [0, -8, 4]); const s = suitcase3d(36, 60, 22, '#3e8a66'); s.position.set(-40, 0, 170); sc.add(s); };
+S[12] = (sc, cam) => { const [f, g] = visit(sc, cam, '1997', .8, PO.sitWrite({ yaw: 0 }), { tipo: 'funcionario', pose: PO.bow('funcionario', { yaw: 180, pos: [0, 0, 150] }) }, { p: [-390, 215, 350], t: [60, 146, 50], fov: 40 });
+  const d = new THREE.Group(); const pg = std('#fbf6e6', { roughness: .9 }); const l = box(13, .8, 18, pg, -6.6, 0, 0); l.rotation.z = .12; const r = box(13, .8, 18, pg, 6.6, 0, 0); r.rotation.z = -.12; d.add(l, r, box(28, .8, 19, std('#5a2e17'), 0, -1, 0)); inHand(sc, f, 'L', d, [-4, -2, 0]);
+  const pen = mesh(new THREE.CylinderGeometry(.5, .5, 13, 8), std('#1f3c6e')); pen.rotation.set(.5, 0, .4); inHand(sc, f, 'R', pen, [0, 2, 0]); };
+S[13] = (sc, cam) => { const [f, g] = visit(sc, cam, '1999', .9, PO.sit(45, { yaw: 0, head: [-8, 0, 0] }), { tipo: 'oficial', pose: PO.offerR('oficial', { yaw: 180, pos: [-4, 0, 136], armR: { t: [-12, 112, 52], hand: 'hold', hd: [0, 0.2, 1], palm: [1, 0, 0] }, armL: { t: [20, 78, 4], hand: 'fist' } }) }, { p: [-400, 135, 310], t: [60, 150, 50], fov: 40 });
+  const sh = sheet3d(DOC); inHand(sc, g, 'R', sh, [0, 13, 0], [0, -Math.PI / 2 - .5, 0]); const b = briefcase3d(); inHand(sc, g, 'L', b, [0, -32, 0], [0, Math.PI / 2, 0]); };
+S[14] = (sc, cam) => { const [f, g] = visit(sc, cam, '1999', .9, PO.sitCross({ yaw: 0, head: [-8, 18, 0] }), { tipo: 'oficial', pose: PO.standShrug({ yaw: 180, pos: [-4, 0, 150], head: [2, 0, 8] }) }, { p: [-310, 130, 300], t: [20, 132, 70], fov: 42, bz: -300 });
+  const sh = sheet3d(DOC); inHand(sc, g, 'R', sh, [0, 10, 0], [0, -Math.PI / 2 - .5, .3]); };
+S[15] = (sc, cam) => { terminal3d(sc, null); const bx = carton(90, 60, 70, {}); bx.position.set(0, 0, 14); sc.add(bx);
+  const inner = `<g transform="scale(.0245)"><rect x="-430" y="-640" width="860" height="1240" fill="#fffdf6"/><text x="0" y="-540" font-family="Georgia,serif" font-weight="700" font-size="46" fill="#1f3c6e" text-anchor="middle">RÉPUBLIQUE FRANÇAISE</text><text x="0" y="-480" font-family="Georgia,serif" font-size="32" fill="#1f3c6e" text-anchor="middle">TITRE DE SÉJOUR · AUTORIZAÇÃO DE RESIDÊNCIA</text><line x1="-380" x2="380" y1="-450" y2="-450" stroke="#1f3c6e" stroke-width="3"/><text x="-380" y="-350" font-family="Arial" font-weight="700" font-size="30" fill="#666">NOME</text><text x="-380" y="-280" font-family="Courier New,monospace" font-weight="700" font-size="50" fill="#222">Mehran Karimi Nasseri</text><path d="M-390 -300 C-200 -270 100 -320 300 -290" stroke="#c62828" stroke-width="9" fill="none"/><path d="M-390 -282 C-150 -310 60 -268 300 -304" stroke="#c62828" stroke-width="7" fill="none"/><text x="-380" y="-110" font-family="cursive" font-style="italic" font-size="84" fill="#16327a" transform="rotate(-3 -380 -110)">Sir<tspan font-size="200" dy="30" fill="#c62828">,</tspan><tspan dy="-30"> Alfred Mehran</tspan></text><text x="-380" y="90" font-family="Arial" font-weight="700" font-size="30" fill="#666">NACIONALIDADE</text><text x="-380" y="160" font-family="Courier New,monospace" font-weight="700" font-size="50" fill="#222">iraniana</text><path d="M-390 146 C-300 130 -200 160 -120 140" stroke="#c62828" stroke-width="8" fill="none"/><circle cx="250" cy="430" r="110" fill="none" stroke="#2a54c9" stroke-width="10" opacity=".75"/><text x="250" y="445" font-family="Arial" font-weight="700" font-size="40" fill="#2a54c9" text-anchor="middle" opacity=".75">1999</text></g>`;
+  const t = svgTex(svgWrap(inner, '-10.5 -15.7 21 30.4', 1260, 1824), 1260, 1824); const p = plane(42, 60.8, std('#fff', { map: t, roughness: .85 }), 0, 60.9, 14); p.rotation.set(-Math.PI / 2, 0, Math.PI + .06); p.receiveShadow = true; sc.add(p);
+  const pose = PO.stand({ pos: [0, 0, -52], lean: 24, spine: [20, 0, 0], armR: { t: [-9, 67, 58], hand: 'pinch', hd: [0.25, -0.35, 1], palm: [0.3, -1, 0], pole: [-1, 0.4, -0.4] }, armL: { t: [20, 64, 46], hand: 'open', hd: [-0.2, 0, 1], palm: [0, -1, 0], pole: [1, 0.3, -0.5] } });
+  const f = person(sc, 'nasseri', pose, { only: ['armR', 'armL'] }); const pen = mesh(new THREE.CylinderGeometry(.75, .75, 15, 10), std('#1f3c6e', { roughness: .3 })); const tip = mesh(new THREE.ConeGeometry(.75, 2.4, 10), std('#e3b23c', { metalness: 1, roughness: .3 }), 0, -8.7, 0); tip.rotation.z = Math.PI; pen.add(tip); pen.rotation.set(-.55, 0, -.35); inHand(sc, f, 'R', pen, [1.5, -1.5, 2]);
+  cam.up.set(0, 0, 1); setCam(cam, [0, 212, 4], [0, 60, 12], 30); };
+S[16] = (sc, cam) => { const [f, g] = visit(sc, cam, '2004', .9, PO.sitReach({ yaw: 0, armR: { t: [-14, 86, 46], hand: 'open', hd: [0, 0.2, 1], palm: [0, 1, 0] } }), { tipo: 'produtor', pose: PO.offerR('produtor', { yaw: 180, pos: [-10, 0, 132], lean: 8, spine: [12, 0, 0], armR: { t: [-12, 100, 58], hand: 'hold', hd: [0, 0, 1], palm: [0, 1, 0] } }) }, { p: [350, 160, 340], t: [-50, 150, 20], fov: 40, poster: 1, side: -1 });
+  withPipe(sc, f, null); const ch = cheque3d(); inHand(sc, g, 'R', ch, [0, 10, -6], [0, Math.PI / 2 - .7, 0]); };
+S[17] = (sc, cam) => { terminal3d(sc, '2006', { bx: 250, by: 400, bz: -520, L: { tgt: [150, 0, 100] } }); pile3d(sc, 1, { poster: 1 }); sc.add(bench3d(3)); const wc = wheelchair3d(); wc.position.set(250, 0, 210); sc.add(wc);
+  person(sc, 'nasseri', RIG.sitPose('nasseri', 50, { yaw: 90, pos: [256, 0, 210], lean: -6, spine: [14, 0, 0], chest: [10, 0, 0], neck: [10, 0, 0], head: [8, 0, 0], armL: { t: [13, 62, 28], hand: 'relax' }, armR: { t: [-13, 62, 28], hand: 'relax' } }));
+  sup(sc, 'funcionario', PO.walk(.2, { yaw: 90, pos: [178, 0, 210], half: 20, lean: 5, armL: { t: [24, 98, 36], hand: 'fist', hd: [0, 0, 1] }, armR: { t: [-24, 98, 36], hand: 'fist', hd: [0, 0, 1] } }));
+  setCam(cam, [-110, 160, 720], [215, 150, 100], 44); };
+S[18] = (sc, cam) => S[1](sc, cam, '2022');
+
+window.SHOW = async n => { pending = []; const scene = new THREE.Scene(); const cam = new THREE.PerspectiveCamera(30, W / H, 5, 16000); await S[n](scene, cam); await Promise.all(pending); renderer.render(scene, cam); window.__scene = scene; window.__cam = cam; };
+window.__ready = true;
+</script></body></html>
