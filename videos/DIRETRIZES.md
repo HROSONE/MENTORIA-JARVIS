@@ -81,7 +81,13 @@ Complementa o `ESTILO.md`. Ler antes de começar qualquer vídeo novo.
 - Commit dos arquivos de projeto em `videos/svg/<nome>/` (sem MP4).
 - Trabalhar sem pedir "continua": terminar o pedido inteiro.
 
-## 8. Pipeline técnico (resumo)
+## 8. Assets prontos primeiro
+
+- Antes de modelar qualquer coisa, procurar asset pronto **CC0** (OpenGameArt filtrando CC0; Kenney; Quaternius). Só criar em código o que não existir.
+- Tudo o que for baixado vai para `videos/biblioteca3d/` com a licença e a fonte no README, para reutilizar nos próximos vídeos.
+- Em 3D: abertura em até 3 s mostrando tudo de uma vez, câmera sempre em movimento e uma volta de 360° de vez em quando.
+
+## 9. Pipeline técnico (resumo)
 
 - Página SVG por vídeo: `_head.html` + `_shared.js` + `_helpers.js` + `_man.js` + `_objs.js` + `_scenes.js` + `_render.js`, montada por `build.py`.
 - Linha do tempo em `narr.json` (`k`, `txt`, `t0`, `t1`, `a`, `b`); cada cena é uma função `sN(t)`.
