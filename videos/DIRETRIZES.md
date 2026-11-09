@@ -90,6 +90,14 @@ Complementa o `ESTILO.md`. Ler antes de começar qualquer vídeo novo.
 - Nenhum plano parado: se não há ação, há movimento de câmera e de personagem ao mesmo tempo.
 - Antes de renderizar o vídeo inteiro, mostrar 3 a 5 segundos de teste ao dono para aprovar o visual.
 
+## 7c. 3D que funcionou (aeroporto, 18 anos)
+
+- Personagem como **silhueta chapada com borda de luz** também no 3D (material sem sombreamento + casca invertida): as juntas somem e o estilo do xadrez se mantém.
+- O mesmo esqueleto (`videos/svg/terminal/rig.js`) serve para 2D e 3D; poses por alvo de mão e pé, com proporção real em centímetros.
+- Fazer **storyboard em 2D e em 3D** antes e deixar o dono escolher.
+- Transições pelo cenário: subir a câmera até o painel e descer em outro lugar, giro rápido, nuvem. Contador diegético = painel de partidas.
+- Visitantes nunca passam entre a câmera e o personagem; conferir texto espelhado em tudo que é segurado.
+
 ## 8. Assets prontos primeiro
 
 - Antes de modelar qualquer coisa, procurar asset pronto **CC0** (OpenGameArt filtrando CC0; Kenney; Quaternius). Só criar em código o que não existir.

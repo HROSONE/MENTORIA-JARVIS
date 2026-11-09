@@ -19,7 +19,7 @@
       return [-half + e * 2 * half, 7 + Math.sin(a * Math.PI) * 11, Math.sin(a * Math.PI) * 18];
     };
     const fl = foot(ph), fr = foot(ph + 0.5);
-    const bob = 85.2 + 1.3 * Math.cos(ph * 4 * Math.PI);
+    const bob = 88.5 - 3.3 * Math.min(1, half / 27) + 1.3 * Math.min(1, half / 27) * Math.cos(ph * 4 * Math.PI); // passo curto = perna mais esticada
     const sw = Math.sin(ph * 2 * Math.PI);
     const pose = {
       pelvisY: bob, lean: 2, roll: sw * 2, spine: [2, 0, sw * 4], chest: [3, 0, -sw * 6], neck: [2, 0, 0],

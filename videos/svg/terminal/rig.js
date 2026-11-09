@@ -133,7 +133,7 @@
       E('body', atWst([0, -6 * k, -0.5 * k]), Rw, [15.8 * s, 9 * k, 11.4 * k]);
     }
     if (T.saia) { // saia evasê
-      C('body', atP([0, 2 * k, 0]), atP([0, -26 * k, 0]), 14.5 * s, 21 * s);
+      C('body', atP([0, 2 * k, 0]), atP([0, -26 * k, 0]), 13.5 * s, 16 * s);
     }
     // gola
     E('body', V.add(neckB, M.ap(Rn, [0, 0.8 * k, 0.6 * k])), Rn, [7.6 * k, 2.6 * k, 7.2 * k]);
@@ -250,7 +250,7 @@
         C(part, atM([-0.4, -9.4, 0.6]), atM([-0.2, -15.2, 2.2]), 2.9 * k, 1.9 * k);
         C(part, atM([2.8, -3.4, 1.6]), atM([3.4, -8.2, 3.2]), 1.2 * k, 1.0 * k);
       }
-      arms[side] = { sh, el, wr, grip: atM([0, -8.8, 2.6]), R: Rh2, hdir };
+      arms[side] = { sh, el, wr, grip: atM([0, -8.8, 2.6]), R: Rh2, hdir, palmN, pole };
     }
 
     // pontos úteis
@@ -259,7 +259,7 @@
       mouth: atH([0, 3, 10.4]), eye: atH([3, 8.4, 8]), top: atH([0, 22.6, 0]),
       hipL: legs.L.hip, hipR: legs.R.hip, kneeL: legs.L.knee, kneeR: legs.R.knee, ankL: legs.L.ank, ankR: legs.R.ank,
       shL: arms.L.sh, shR: arms.R.sh, elL: arms.L.el, elR: arms.R.el, wrL: arms.L.wr, wrR: arms.R.wr,
-      gripL: arms.L.grip, gripR: arms.R.grip, handRL: arms.L.R, handRR: arms.R.R,
+      gripL: arms.L.grip, gripR: arms.R.grip, handRL: arms.L.R, handRR: arms.R.R, hdL: arms.L.hdir, hdR: arms.R.hdir, palmL: arms.L.palmN, palmR: arms.R.palmN, poleL: arms.L.pole, poleR: arms.R.pole,
       Rh, Rc, Rp, Ry, k,
     };
     return { prims, J, T, k };

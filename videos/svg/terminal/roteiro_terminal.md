@@ -4,28 +4,33 @@
 **Lugar:** Terminal 1 do aeroporto Charles de Gaulle, Paris, de agosto de 1988 a julho de 2006.
 **Tom:** absurdo e curioso, não triste. A pergunta do começo ("ele podia ter ido embora") só é respondida aos 40 s, quando ele recusa os papéis.
 
-## Tabela: tempo · o que aparece · fala
+## Tabela final do vídeo 3D: tempo · o que aparece · fala
 
-| # | Tempo | O que aparece (uma ação por plano) | Fala (narração do dono) |
+| # | Tempo | O que aparece | Fala (narração do dono) |
 |---|---|---|---|
-| 1 | 0,0–3,5 | **Quadro 0:** silhueta sentada no banco vermelho, cercada por uma montanha de caixas, malas e jornais. Passageiros passam borrados. O painel de partidas em cima mostra **18 ANOS**. A câmera avança. | "Esse homem morou 18 anos dentro de um aeroporto." |
-| 2 | 3,5–6,5 | A câmera chega perto. Ele traga o cachimbo dourado e solta a fumaça. | "E ele podia ter ido embora." |
-| 3 | 6,5–11 | **1988**, estação de trem em Paris (cor sépia). Ele põe a maleta no chão e olha o relógio. Quando olha de volta, a maleta sumiu (corte seco na maleta, sem mostrar como). | "Em 1988, ele disse que roubaram a maleta com os documentos dele." |
-| 4 | 11–16 | Mesmo plano, a câmera corre para a direita até o balcão da imigração de **Londres**. O agente estende a mão: "Passaporte?" Ele mostra as mãos vazias. O agente aponta para trás. | "Sem passaporte, Londres mandou ele de volta pra Paris." |
-| 5 | 16–20 | Um avião (com "Hryz Animation" na fuselagem) volta e pousa. Ele entra no Terminal 1, com os tubos de escada rolante cruzando o vão. | "Na França, sem documento, ele não podia entrar no país…" |
-| 6 | 20–23 | Ele olha em volta, vê o banco vermelho e senta. O painel vira **1988**. | "…então ele sentou num banco vermelho." |
-| 7 | 23–34 | **Um plano longo**: a câmera gira devagar em volta do banco enquanto o painel conta 1989 → 1998 e as pilhas crescem. Cada coisa tem a sua ação: (a) um funcionário entrega uma toalha; (b) um estranho entrega um saco de lanche; (c) fumaça do cachimbo; (d) ele escreve no diário; (e) um funcionário faz reverência. | "Tomava banho no banheiro dos funcionários. Comia lanche que estranhos pagavam. Escrevia diário… e o pessoal chamava ele de Lorde Alfred." |
-| 8 | 34–38 | **1999**: um funcionário do governo chega e estende um documento carimbado. | "Em 1999, a França finalmente deu os papéis pra ele sair." |
-| 9 | 38–41 | Ele lê, devolve o papel e cruza os braços. | "Ele recusou." |
-| 10 | 41–46 | Close no papel: **NOME: Mehran Karimi Nasseri · NACIONALIDADE: iraniana**. A caneta dele risca e escreve **"Sir, Alfred Mehran"**, com uma vírgula enorme. | "Porque o papel não tinha o nome que ele escolheu: 'Sir, Alfred Mehran'. Com vírgula e tudo." |
-| 11 | 46–50 | Um produtor de óculos escuros entrega um cheque de **US$ 250.000**. Ele pendura um cartaz de filme na mala. | "Dizem que Hollywood pagou 250 mil dólares pela história dele…" |
-| 12 | 50–53 | A câmera recua: ele continua no banco. O painel vira **2004**. | "…e ele continuou no banco." |
-| 13 | 53–57 | O painel vira **2006**. Um funcionário empurra a cadeira de rodas dele até a saída. O banco fica vazio, com as caixas. | "Só saiu em 2006, quando ficou doente." |
-| 14 | 57–61 | O painel vira **2022**. Ele volta com a mala e senta de novo. A câmera recua até a mesma imagem do quadro 0 (para incentivar a repetição). | "E em 2022… ele voltou pro aeroporto. Se inscreve — e confere teu passaporte antes de viajar." |
+| 1 | 0,0–3,4 | **Quadro 0:** ele no banco vermelho cercado de caixas, painel **18 ANOS**. A câmera avança e gira até o perfil dele. | "Esse homem morou 18 anos dentro de um aeroporto." |
+| 2 | 3,4–6,6 | Close de perfil: tira o cachimbo dourado da boca e solta a fumaça. A câmera sobe até o painel, que vira **1988**. | "E ele podia ter ido embora." |
+| 3 | 6,6–9,9 | O painel agora é o da estação de Paris. A câmera desce: ele põe a maleta no chão e olha o relógio de pulso (a câmera fecha no relógio). | "Em 1988, ele disse que roubaram…" |
+| 4 | 9,9–11,1 | A câmera abre: a maleta sumiu (só o contorno com "?"). Mãos na cabeça. Giro rápido para a direita. | "…a maleta com os documentos dele." |
+| 5 | 11,1–13,5 | Londres, imigração: o agente estende a mão; ele mostra as mãos vazias. | "Sem passaporte…" |
+| 6 | 13,5–16,0 | O agente aponta para trás; ele abaixa a cabeça e vai embora. A câmera sobe para o céu. | "…Londres mandou ele de volta pra Paris." |
+| 7 | 16,0–18,2 | O avião "Hryz Animation" passa e some na nuvem. | "Na França, sem documento…" |
+| 8 | 18,2–21,5 | Da nuvem para o Terminal 1: a câmera desce dos tubos de escada rolante até ele, que chega puxando a mala. | "…ele não podia entrar no país…" |
+| 9 | 21,5–23,4 | Ele vira e senta no banco vermelho. Painel **1988**. | "…então ele sentou num banco vermelho." |
+| 10 | 23,4–26 | Um plano só, a câmera gira em volta do banco. O painel conta os anos e as caixas vão chegando. Um funcionário entrega uma toalha. | "Tomava banho no banheiro dos funcionários." |
+| 11 | 26–30 | Um passageiro entrega um saco de lanche; ele come. | "Comia lanche que estranhos pagavam." |
+| 12 | 30–34 | Câmera do alto: ele escreve no diário; um funcionário faz reverência. | "Escrevia diário… e o pessoal chamava ele de Lorde Alfred." |
+| 13 | 34–38 | Painel **1999**: o homem do governo entrega o documento. | "Em 1999, a França finalmente deu os papéis pra ele sair." |
+| 14 | 38–41 | Ele lê e balança a cabeça: não. | "Ele recusou." |
+| 15 | 41–46 | A câmera mergulha por cima do papel: ele risca o nome e escreve **"Sir, Alfred Mehran"**; risca "iraniana". Devolve o papel e cruza os braços. | "Porque o papel não tinha o nome que ele escolheu: 'Sir, Alfred Mehran'. Com vírgula e tudo." |
+| 16 | 46–50,5 | Painel **2004**: o produtor entrega o cheque de US$ 250.000 e cola o cartaz do filme na mala. | "Dizem que Hollywood pagou 250 mil dólares pela história dele…" |
+| 17 | 50,5–53,4 | O produtor chama e vai embora; ele acende o cachimbo e fica. A câmera recua. | "…e ele continuou no banco." |
+| 18 | 53,4–57,2 | Painel **2006**: um funcionário leva ele na cadeira de rodas; o banco fica vazio. | "Só saiu em 2006, quando ficou doente." |
+| 19 | 57,2–62,0 | O painel dispara até **2022**: ele volta com uma maleta, senta e acende o cachimbo. A imagem fecha igual ao quadro 0. | "E em 2022… ele voltou pro aeroporto. Se inscreve — e confere teu passaporte antes de viajar." |
 
-**Duração:** ~61 s.
+**Duração:** 62 s. **Vídeo:** `terminal3d.html` (Three.js), montado por `build3d.py`; som em `sfx_terminal.py`.
 
-**Texto na tela:** só o que é diegético, como o painel de partidas (anos), "LONDON · IMMIGRATION", o documento, o cheque e a placa "Hryz Animation".
+**Texto na tela:** só o que é diegético (painel de partidas, "LONDON · IMMIGRATION", "PASSPORTS", o documento, o cheque, a marca).
 
 ## Marca "Hryz Animation" (diegética, nunca espelhada)
 - Caixa de luz publicitária na parede do Terminal 1 (planos 1, 6, 7, 12 e 14).
