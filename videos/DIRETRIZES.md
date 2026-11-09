@@ -20,6 +20,7 @@ Complementa o `ESTILO.md`. Ler antes de começar qualquer vídeo novo.
 | Cavalo de madeira | 2,1 mil | capa escura e confusa |
 | Avião (Lotito) v1 | o dono não gostou | personagem distante e parado, cortes demais |
 | Avião (Lotito, pica) v3 | foi bem | coisa absurda que uma pessoa FAZ com o corpo, repetida e escalando (come vidro → bicicleta → avião) |
+| Cadeira voadora em 3D (Three.js) | fracasso | boneco low poly sem vida, flutuando em vez de sentado, física estranha, muita coisa parada |
 | Onoda (29 anos na guerra) | foi mal | conto histórico dramático, guerra, datas, tristeza: não viraliza |
 
 ## 2. Que tipo de história escolher
@@ -80,6 +81,14 @@ Complementa o `ESTILO.md`. Ler antes de começar qualquer vídeo novo.
 - **Revisar quadro por quadro** (folha de contato) antes de entregar: proporção, enquadramento, nada cortado, nada espelhado, nada flutuando.
 - Commit dos arquivos de projeto em `videos/svg/<nome>/` (sem MP4).
 - Trabalhar sem pedir "continua": terminar o pedido inteiro.
+
+## 7b. Lições do 3D (cadeira voadora)
+
+- Personagem 3D tem que ter vida: expressão, olhar, peso e movimento contínuo. Boneco low poly genérico com pose travada não serve.
+- Contato físico correto é obrigatório: sentado é sentado no assento, pé no chão, mão segurando de verdade. Nada flutuando ou atravessando objetos.
+- Física crível: o que sobe acelera e balança coerente com o vento; o que cai cai com gravidade; nada para do nada.
+- Nenhum plano parado: se não há ação, há movimento de câmera e de personagem ao mesmo tempo.
+- Antes de renderizar o vídeo inteiro, mostrar 3 a 5 segundos de teste ao dono para aprovar o visual.
 
 ## 8. Assets prontos primeiro
 
