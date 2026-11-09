@@ -19,8 +19,15 @@ Complementa o `ESTILO.md`. Ler antes de começar qualquer vídeo novo.
 | Bananeira até a Ferrari | ~60% arrastaram; quem ficou viu 23 de 27 s | o meio prende; a abertura calma e escura perdeu gente |
 | Cavalo de madeira | 2,1 mil | capa escura e confusa |
 | Avião (Lotito) v1 | o dono não gostou | personagem distante e parado, cortes demais |
+| Avião (Lotito, pica) v3 | foi bem | coisa absurda que uma pessoa FAZ com o corpo, repetida e escalando (come vidro → bicicleta → avião) |
+| Onoda (29 anos na guerra) | foi mal | conto histórico dramático, guerra, datas, tristeza: não viraliza |
 
-## 2. Estrutura do vídeo (Shorts)
+## 2. Que tipo de história escolher
+
+- **Sim:** absurdo real e quase inacreditável, de preferência algo que uma pessoa faz com o próprio corpo ou um feito bizarro, com uma ação visual que se repete e vai escalando. Reação esperada: "não acredito", "que nojo", "que maluco". Tom de comédia.
+- **Não:** conto histórico dramático (guerra, tragédia, datas, política), narrativa triste ou que precisa de muito contexto. Mesmo bem feito, não viraliza no canal.
+
+## 2b. Estrutura do vídeo (Shorts)
 
 1. **Quadro 0 = a imagem mais absurda do vídeo** (o momento-recompensa), clara, colorida e com o assunto grande no centro. Nada de abrir por cima do ombro, no escuro ou com frase de contexto.
 2. **Primeira fala em até 0,3 s** e fazendo uma pergunta ("Esse homem disse que comeu um avião inteiro").
