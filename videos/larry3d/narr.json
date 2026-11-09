@@ -1,0 +1,77 @@
+{
+ "total": 60.15,
+ "s": [
+  {
+   "k": "n1",
+   "txt": "Esse homem foi parar no meio dos aviões… sentado numa cadeira de praia.",
+   "t0": 0.1,
+   "t1": 4.94,
+   "a": 0,
+   "b": 5.24
+  },
+  {
+   "k": "n2",
+   "txt": "Larry Walters era caminhoneiro e sonhava em voar. Em 1982, ele comprou quarenta e cinco balões meteorológicos.",
+   "t0": 5.34,
+   "t1": 12.62,
+   "a": 5.24,
+   "b": 12.92
+  },
+  {
+   "k": "n3",
+   "txt": "Encheu quarenta e dois com hélio, amarrou numa cadeira de praia… e batizou de Inspiração Um.",
+   "t0": 13.02,
+   "t1": 19.17,
+   "a": 12.92,
+   "b": 19.47
+  },
+  {
+   "k": "n4",
+   "txt": "Levou sanduíche, Coca-Cola, cerveja, uma câmera, um paraquedas… e uma espingarda de chumbinho, pra estourar os balões na hora de descer.",
+   "t0": 19.57,
+   "t1": 28.47,
+   "a": 19.47,
+   "b": 28.77
+  },
+  {
+   "k": "n5",
+   "txt": "O plano era subir devagar, amarrado no jipe. Mas a corda arrebentou.",
+   "t0": 28.87,
+   "t1": 33.52,
+   "a": 28.77,
+   "b": 33.82
+  },
+  {
+   "k": "n6",
+   "txt": "Ele disparou até quase cinco mil metros. Frio, falta de ar… e dois aviões passando do lado dele.",
+   "t0": 33.92,
+   "t1": 40.32,
+   "a": 33.82,
+   "b": 40.62
+  },
+  {
+   "k": "n7",
+   "txt": "Depois de quarenta e cinco minutos, ele começou a atirar nos balões… e deixou a arma cair.",
+   "t0": 40.72,
+   "t1": 46.75,
+   "a": 40.62,
+   "b": 47.05
+  },
+  {
+   "k": "n8",
+   "txt": "Desceu devagar, enroscou num fio de luz… e dizem que deixou o bairro sem energia.",
+   "t0": 47.15,
+   "t1": 52.61,
+   "a": 47.05,
+   "b": 52.91
+  },
+  {
+   "k": "n9",
+   "txt": "Pousou, foi preso na hora e levou uma multa de quatro mil dólares. Se inscreve.",
+   "t0": 53.01,
+   "t1": 58.35,
+   "a": 52.91,
+   "b": 60.15
+  }
+ ]
+}
