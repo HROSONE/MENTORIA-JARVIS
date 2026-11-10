@@ -10,8 +10,8 @@ Todos os clipes são "no lugar": o objeto inteiro é quem se desloca (veja `velo
 import math
 from types import SimpleNamespace
 import numpy as np
-from base import (ID, qmul, qconj, qeixo, QX, QY, QZ, qeuler, qrot, qarco, qslerp, qmat, qnorm, suave, suave5, lerp, hermite, fk, ik2,
-                  REPOUSO, LOCAL, PAI, OSSOS, INDICE, comprimento, NOS_CACHECOL, SEG_CACHECOL, PE_CALCANHAR, PE_JUNTA_DEDOS)
+from base import (ID, qmul, qconj, qeixo, QX, qeuler, qrot, qarco, qslerp, suave, suave5, lerp, hermite, fk, ik2,
+                  REPOUSO, LOCAL, comprimento, NOS_CACHECOL, SEG_CACHECOL, PE_CALCANHAR, PE_JUNTA_DEDOS)
 
 L1 = comprimento('CoxaE', 'CanelaE')
 L2 = comprimento('CanelaE', 'PeE')
@@ -105,7 +105,7 @@ def montar_pose(p):
         pe = p['pe'][lado]
         quadril = quad_pos + qrot(Qp, LOCAL['Coxa' + lado])
         polo = np.array([SG[lado] * 0.10, 0.0, 1.0])
-        joelho, torn, folga = ik2(quadril, pe['tornozelo'], L1, L2, polo)
+        joelho, torn, _ = ik2(quadril, pe['tornozelo'], L1, L2, polo)
         d0, s0 = D0[lado]
         d1 = (joelho - quadril) / np.linalg.norm(joelho - quadril)
         s1 = (torn - joelho) / np.linalg.norm(torn - joelho)
@@ -117,7 +117,6 @@ def montar_pose(p):
         Qf = qeuler(pe['pitch'], pe['yaw'], 0.0)
         R['Pe' + lado] = qmul(qconj(Qs), Qf)
         R['Ponteira' + lado] = QX(pe['dedos'])
-        pe['_folga'] = folga
     return R, quad_pos
 
 
@@ -126,15 +125,15 @@ ANDAR = SimpleNamespace(
     nome='Andar', T=1.0, v=1.25, beta=0.62, zh0=0.20, x_pe=0.095, u_flat=0.12, u_ho=0.46, th_hs=-0.18, th_to=1.00, th_lim=1.05,
     y0=0.960, quica=0.020, quica_fase=0.30, sway=0.028, yaw_pelve=0.075, roll_pelve=0.045, pitch_pelve=0.04,
     lean=0.06, yaw_ombro=0.17, roll_tronco=0.5,
-    balanco_h=0.07, pico=0.45, kick=0.0, passo_abre=0.0,
-    braco_amp=0.42, braco_bias=0.05, cotovelo=0.02, cotovelo_var=0.34, braco_adu=0.10, braco_fase=0.0, ombro_sobe=0.0, cabeca_segue=0.25,
+    balanco_h=0.07, pico=0.45, kick=0.0,
+    braco_amp=0.42, braco_bias=0.05, cotovelo=0.02, cotovelo_var=0.34, cotovelo_oscila=False, braco_adu=0.10, braco_fase=0.0, cabeca_segue=0.25,
 )
 CORRER = SimpleNamespace(
     nome='Correr', T=0.72, v=3.2, beta=0.34, zh0=0.14, x_pe=0.075, u_flat=0.10, u_ho=0.40, th_hs=-0.12, th_to=0.95, th_lim=1.05,
     y0=0.900, quica=0.034, quica_fase=None, sway=0.016, yaw_pelve=0.10, roll_pelve=0.06, pitch_pelve=0.10,
     lean=0.20, yaw_ombro=0.28, roll_tronco=0.6,
-    balanco_h=0.32, pico=0.42, kick=0.9, passo_abre=0.0,
-    braco_amp=0.55, braco_bias=0.0, cotovelo=1.30, cotovelo_var=0.30, braco_adu=0.30, braco_fase=0.06, ombro_sobe=0.0, cabeca_segue=0.30,
+    balanco_h=0.32, pico=0.42, kick=0.9,
+    braco_amp=0.55, braco_bias=0.0, cotovelo=1.30, cotovelo_var=0.30, cotovelo_oscila=True, braco_adu=0.30, braco_fase=0.06, cabeca_segue=0.30,
 )
 
 
@@ -213,14 +212,11 @@ class Marcha:
         phi_hs = (phi + (1 - pf)) % 1.0
         eps = 0.004
         a0, th0, d0 = self.apoio(1.0, phi_to, lado)
-        a0b, th0b, _ = self.apoio(1.0 - eps / p.T / p.beta * p.T, (phi_to - eps / p.T) % 1.0, lado)
-        a1, th1, d1 = self.apoio(0.0, phi_hs, lado)
-        a1b, th1b, _ = self.apoio(eps / p.T / p.beta * p.T, (phi_hs + eps / p.T) % 1.0, lado)
-        dt = eps
-        v0 = (a0 - a0b) / dt
-        v1 = (a1b - a1) / dt
-        om0 = (th0 - th0b) / dt
-        om1 = (th1b - th1) / dt
+        a0b, _, _ = self.apoio(1.0 - eps / p.beta, (phi_to - eps / p.T) % 1.0, lado)
+        a1, th1, _ = self.apoio(0.0, phi_hs, lado)
+        a1b, _, _ = self.apoio(eps / p.beta, (phi_hs + eps / p.T) % 1.0, lado)
+        v0 = (a0 - a0b) / eps                                     # velocidades do tornozelo nas pontas do apoio (Hermite sem degrau)
+        v1 = (a1b - a1) / eps
         pos = np.array([a0[0], 0.0, 0.0])
         for k in (1, 2):
             pos[k] = hermite(a0[k], a1[k], v0[k] * Tsw, v1[k] * Tsw, s)
@@ -249,7 +245,7 @@ class Marcha:
         esp = [(dp * f, dy * g, dr * f) for f, g in zip(fr, fy)]
         return esp
 
-    def bracos(self, phi, quicando):
+    def bracos(self, phi):
         p = self.p
         c = 2 * math.pi
         out = {}
@@ -258,10 +254,10 @@ class Marcha:
             ph = (phi + (0.0 if lado == 'E' else 0.5) + p.braco_fase) % 1.0
             f = p.braco_amp * math.cos(c * (ph - 0.5)) - p.braco_bias        # >0 = braço à frente
             ombro_rx = -f
-            cot = p.cotovelo + p.cotovelo_var * max(0.0, math.cos(c * (ph - 0.5))) * (1.0 if p.cotovelo < 1.0 else 0.0) + \
-                (p.cotovelo_var * 0.5 * math.cos(c * (ph - 0.5)) if p.cotovelo >= 1.0 else 0.0)
-            out[lado] = {'ombro': (0.0, 0.0, sg * 0.0),
-                         'braco': (ombro_rx - 0.6 * p.lean, sg * (0.0), -sg * p.braco_adu),
+            avanco = math.cos(c * (ph - 0.5))                                  # +1 = braço no ponto mais à frente
+            cot = p.cotovelo + p.cotovelo_var * (0.5 * avanco if p.cotovelo_oscila else max(0.0, avanco))
+            out[lado] = {'ombro': (0.0, 0.0, 0.0),
+                         'braco': (ombro_rx - 0.6 * p.lean, 0.0, -sg * p.braco_adu),
                          'antebraco': (-cot, 0.0, 0.0),
                          'mao': (-0.12, 0.0, 0.0)}
         return out
@@ -286,7 +282,7 @@ class Marcha:
         for e in esp:
             Qc = qmul(Qc, qeuler(*e))
         cabeca = qslerp(ID, Qc, p.cabeca_segue)
-        return {'quad_pos': pos, 'quad_rot': rot, 'espinha': esp, 'cabeca_mundo': cabeca, 'pe': pes, 'braco': self.bracos(phi, True)}
+        return {'quad_pos': pos, 'quad_rot': rot, 'espinha': esp, 'cabeca_mundo': cabeca, 'pe': pes, 'braco': self.bracos(phi)}
 
 
 # ====================================================================== parado (respiração, troca de peso, olhar)
@@ -420,7 +416,7 @@ class Pulo:
 
 
 # ====================================================================== cachecol (simulação)
-def simular_cachecol(frames, fps, vento_z, ciclos=6, sub=4, gust=0.0, T=None, laco=True):
+def simular_cachecol(frames, fps, vento_z, ciclos=6, sub=4, gust=0.0, T=None, laco=True, torcao=1.0):
     """cadeia de partículas presa ao pescoço, com gravidade, arrasto quadrático do ar relativo (o corpo anda a `vento_z` contra o ar),
     rigidez de dobra e colisão com as costas. Devolve, por frame do ciclo, a rotação local de cada osso Cachecol1..N (fundida para repetir sem emenda)."""
     n = len(frames) - 1
@@ -488,8 +484,9 @@ def simular_cachecol(frames, fps, vento_z, ciclos=6, sub=4, gust=0.0, T=None, la
         ext = np.concatenate([res[-3:-1], res[:-1], res[1:3]])
         suav = sum(ext[i:i + n] * wt for i, wt in enumerate((0.1, 0.2, 0.4, 0.2, 0.1)))
         res = np.concatenate([suav, suav[:1]])
-    else:
-        res = np.concatenate([res[:1], (res[:-2] + 2 * res[1:-1] + res[2:]) / 4, res[-1:]])
+    else:                                                        # clipe que não repete: mesma média de 5 quadros, repetindo os quadros das pontas
+        ext = np.concatenate([res[:1], res[:1], res, res[-1:], res[-1:]])
+        res = sum(ext[i:i + len(res)] * wt for i, wt in enumerate((0.1, 0.2, 0.4, 0.2, 0.1)))
     # posições -> rotações locais dos ossos
     rest_dir = np.array([0.0, -1.0, 0.0])
     rots = []
@@ -498,9 +495,13 @@ def simular_cachecol(frames, fps, vento_z, ciclos=6, sub=4, gust=0.0, T=None, la
         P, Q = fk(R, qp)
         Qpai = Q['Pescoco']
         out = {}
+        tt = (k % n) / fps
         for i in range(1, N + 1):
             d = pos[i] - pos[i - 1]
-            Qw = qarco(rest_dir, d / np.linalg.norm(d))
+            dn = d / np.linalg.norm(d)
+            # a fita gira em torno do próprio eixo: torção acumulada ao longo do comprimento + ondulação (frequências inteiras do ciclo: repete sem emenda)
+            giro = torcao * (0.45 * i + 0.9 * math.sin(2 * math.pi * 2 * tt / (T or 1.0) - 1.1 * i))
+            Qw = qmul(qeixo(dn, giro), qarco(rest_dir, dn))
             out['Cachecol%d' % i] = qmul(qconj(Qpai), Qw)
             Qpai = Qw
         rots.append(out)
@@ -520,8 +521,8 @@ def amostrar(fn_pose, T, fps, laco=True):
 
 
 def com_cachecol(frames, fps, vento, T, gust):
-    cs = simular_cachecol(frames, fps, -vento, T=T, gust=gust)
-    for (R, qp), c in zip(frames, cs):
+    cs = simular_cachecol(frames, fps, -vento, T=T, gust=gust, torcao=1.0 if vento > 0.5 else 0.25)
+    for (R, _), c in zip(frames, cs):
         R.update(c)
     return frames
 
@@ -545,9 +546,8 @@ def clipe_pulo(fps=60):
     c = Pulo()
     fr = amostrar(c.pose, c.T, fps, laco=False)
     # o pulo não repete sozinho, mas começa e termina de pé: o cachecol é simulado com o pulo repetido
-    n = len(fr) - 1
-    cs = simular_cachecol(fr, fps, 0.0, T=c.T, laco=False)
-    for (R, qp), cc in zip(fr, cs):
+    cs = simular_cachecol(fr, fps, 0.0, T=c.T, laco=False, torcao=0.5)
+    for (R, _), cc in zip(fr, cs):
         R.update(cc)
     return {'nome': c.nome, 'T': c.T, 'fps': fps, 'frames': fr,
             'info': {'duracao': c.T, 'laco': False, 'velocidade': 0.0, 'altura_m': float(c.vy ** 2 / (2 * G)), 'decolagem_s': c.t_dec, 'pouso_s': c.t_pouso}}
