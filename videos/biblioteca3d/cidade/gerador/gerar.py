@@ -15,10 +15,13 @@ import ruas
 import faixas
 import placas
 import mobiliario
+import iluminacao
+import calcadas
+import rotatoria
 from malha import Malha
 from paleta import GRAMA
 
-NOMES_NOS = {'asfalto': 'Asfalto', 'meiofio': 'MeioFio', 'calcada': 'Calcada', 'faixas': 'Faixas'}
+NOMES_NOS = {'asfalto': 'Asfalto', 'meiofio': 'MeioFio', 'calcada': 'Calcada', 'faixas': 'Faixas', 'ilha': 'Ilha', 'grama': 'Grama'}
 MANIFEST = {'pecas': []}
 
 
@@ -61,6 +64,28 @@ def gerar_placas():
         salvar('placas', nome, desc, nos, {'tipo': 'placa', 'frente': '+Z', 'origem': 'pé do poste'})
 
 
+def gerar_calcadas():
+    print('calcadas')
+    for nome, (fn, desc) in calcadas.PECAS.items():
+        nos, con = fn()
+        salvar('calcadas', nome, desc, nos, {'conexoes': con, 'tile': ruas.TILE, 'tipo': 'calcada'})
+
+
+def gerar_rotatorias():
+    print('rotatorias')
+    tamanho = {'rotatoria': rotatoria.A * 2, 'rotatoria-mini': ruas.TILE}
+    for nome, (fn, desc) in rotatoria.PECAS.items():
+        mal, con = fn()
+        salvar('rotatorias', nome, desc, [(NOMES_NOS[k], m) for k, m in mal.items() if m.n_tris], {'conexoes': con, 'tile': tamanho[nome], 'tipo': 'rotatoria'})
+
+
+def gerar_iluminacao():
+    print('iluminacao')
+    for nome, (fn, desc) in iluminacao.PECAS.items():
+        nos, extras = fn()
+        salvar('mobiliario', nome, desc, nos, {'tipo': 'poste-luz', 'frente': '+Z (o braço aponta para +Z)', 'origem': 'pé do poste', **extras})
+
+
 def gerar_mobiliario():
     print('mobiliario')
     for nome, (fn, desc) in mobiliario.PECAS.items():
@@ -78,10 +103,10 @@ def gerar_chao():
 
 def escrever_lista():
     """PECAS.md: tabela de todas as peças (gerada, não edite à mão)"""
-    nomes = {'ruas': 'Ruas e chão', 'faixas': 'Faixas pintadas (decalques)', 'placas': 'Placas', 'mobiliario': 'Semáforos e hidrantes'}
+    nomes = {'ruas': 'Ruas e chão', 'rotatorias': 'Rotatórias', 'calcadas': 'Calçadas e caminhos de pedestres', 'faixas': 'Faixas pintadas (decalques)', 'placas': 'Placas', 'mobiliario': 'Semáforos, postes de luz e hidrantes'}
     linhas = ['# Peças do kit cidade', '', 'Arquivo gerado por `gerador/gerar.py`; não edite à mão. Medidas em metros (largura x altura x profundidade).', '']
     tot_tris, tot_kb = 0, 0.0
-    for cat in ('ruas', 'faixas', 'placas', 'mobiliario'):
+    for cat in ('ruas', 'rotatorias', 'calcadas', 'faixas', 'placas', 'mobiliario'):
         linhas += [f'## {nomes[cat]}', '', '| Peça | O que é | Tamanho (m) | Triângulos | KB | Conexões |', '|---|---|---|---|---|---|']
         for p in MANIFEST['pecas']:
             if p['categoria'] != cat:
@@ -99,9 +124,12 @@ def escrever_lista():
 def main():
     gerar_ruas()
     gerar_chao()
+    gerar_rotatorias()
+    gerar_calcadas()
     gerar_faixas()
     gerar_placas()
     gerar_mobiliario()
+    gerar_iluminacao()
     MANIFEST.update({
         'versao': 1, 'unidade': 'metro', 'eixo_cima': 'Y', 'tile': ruas.TILE, 'faixa': ruas.H, 'largura_calcada': ruas.S,
         'altura_calcada': ruas.CH, 'altura_tinta': ruas.YF,
@@ -109,8 +137,11 @@ def main():
             'frente': '+Z (lentes do semáforo, bocal do hidrante, face das placas e frente dos carros do Kenney)',
             'reta': 'a rua reta corre ao longo de Z; gire 90° em Y para a direção X',
             'mao': 'direita: quem anda para +Z usa a faixa x = -1,75; quem anda para -Z usa x = +1,75',
-            'altura': 'topo do asfalto em y = 0; topo da calçada em y = 0,15; props nascem no pé (y = 0): coloque-os em y = 0,15 sobre a calçada',
+            'altura': 'topo do asfalto em y = 0; topo da calçada, dos caminhos e da grama do kit em y = 0,15; props nascem no pé (y = 0): coloque-os em y = 0,15 sobre a calçada ou a grama',
             'rotacao': 'girar 90° em Y leva a conexão S para E, depois N, depois W',
+            'rotatoria': 'a rotatória grande tem 36 x 36 m (3 x 3 ladrilhos, o centro cai no centro de um ladrilho); suas conexões ficam a 18 m do centro; o anel é de mão única, anti-horário visto de cima (mão direita)',
+            'caminho': 'calcada-reta/curva/t/cruzamento/fim: caminho de 2,5 m cortado na grama, com as conexões no meio das bordas (como as ruas)',
+            'luzes': 'cada poste de luz traz em extras.luzes a lista de {pos, dir, cor, alcance} onde pôr PointLight/SpotLight; a lâmpada é o nó Luz (acenda com kit.luzEstado)',
             'escala_veiculo_kenney': 1.7,
         },
     })

@@ -19,3 +19,8 @@ VERMELHO_HIDRANTE = Material('HidranteVermelho', '#d1332c', rough=0.55, metal=0.
 VERMELHO_HIDRANTE_ESCURO = Material('HidranteVermelhoEscuro', '#9f221e', rough=0.55, metal=0.15)
 AMARELO_HIDRANTE = Material('HidranteAmarelo', '#f1bf1d', rough=0.55, metal=0.15)
 AMARELO_HIDRANTE_ESCURO = Material('HidranteAmareloEscuro', '#b98a10', rough=0.55, metal=0.15)
+
+CALCADA_B = Material('CalcadaB', '#b0ada3', rough=0.9)          # segundo tom das lajes (alterna com CALCADA)
+POSTE = Material('PosteLuz', '#5d636a', rough=0.5, metal=0.5)
+POSTE_BASE = Material('PosteLuzBase', '#3f444a', rough=0.55, metal=0.5)
+LUMINARIA = Material('Luminaria', '#464b51', rough=0.5, metal=0.4)
