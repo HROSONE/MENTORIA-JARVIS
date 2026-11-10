@@ -18,6 +18,10 @@ import mobiliario
 import iluminacao
 import calcadas
 import rotatoria
+import natureza
+import cercas
+import energia
+import moveis
 from malha import Malha
 from paleta import GRAMA
 
@@ -101,12 +105,36 @@ def gerar_chao():
     salvar('ruas', 'chao-grama', 'Ladrilho de grama 12 x 12 m na altura da calçada (preenche os quarteirões)', [('Grama', m)], {'tile': ruas.TILE, 'tipo': 'chao'})
 
 
+def gerar_grupo(cat, pecas, extra=None):
+    """categorias simples: PECAS = {nome: (função, descrição[, extras])}; a função devolve a lista de (nó, Malha)"""
+    print(cat)
+    for nome, item in pecas.items():
+        fn, desc = item[0], item[1]
+        ex = dict(item[2]) if len(item) > 2 else {}
+        salvar(cat, nome, desc, fn(), {**(extra or {}), **ex})
+
+
+def gerar_novas():
+    gerar_grupo('natureza', natureza.PECAS, {'origem': 'pé (y = 0); sobre a grama do kit, y = 0,15'})
+    gerar_grupo('gramados', {n: (f, d, {'tile': ruas.TILE, 'tipo': 'gramado'}) for n, (f, d) in natureza.GRAMADOS.items()})
+    gerar_grupo('cercas', {n: (f, d, {'tipo': 'cerca', 'comprimento': 12.0, 'frente': '+Z', 'origem': 'centro do trecho, no chão (y = 0); corre ao longo de X'})
+                           for n, (f, d) in cercas.PECAS.items()})
+    gerar_grupo('energia', energia.PECAS, {'frente': '+Z', 'origem': 'pé do poste (y = 0); a linha corre ao longo de X'})
+    gerar_grupo('moveis', moveis.PECAS)
+
+
 def escrever_lista():
     """PECAS.md: tabela de todas as peças (gerada, não edite à mão)"""
-    nomes = {'ruas': 'Ruas e chão', 'rotatorias': 'Rotatórias', 'calcadas': 'Calçadas e caminhos de pedestres', 'faixas': 'Faixas pintadas (decalques)', 'placas': 'Placas', 'mobiliario': 'Semáforos, postes de luz e hidrantes'}
+    nomes = {'ruas': 'Ruas e chão', 'rotatorias': 'Rotatórias', 'calcadas': 'Calçadas e caminhos de pedestres', 'gramados': 'Gramados (ladrilhos de 12 x 12 m)',
+             'natureza': 'Árvores e arbustos', 'cercas': 'Cercas, muros e portões (trechos de 12 m)', 'energia': 'Rede elétrica',
+             'casas': 'Casas', 'predios': 'Prédios', 'equipamentos': 'Hospital, delegacia, supermercado e cinema', 'esporte': 'Esporte',
+             'moveis': 'Mesas, cadeiras e móveis', 'faixas': 'Faixas pintadas (decalques)', 'placas': 'Placas',
+             'mobiliario': 'Semáforos, postes de luz e hidrantes'}
     linhas = ['# Peças do kit cidade', '', 'Arquivo gerado por `gerador/gerar.py`; não edite à mão. Medidas em metros (largura x altura x profundidade).', '']
     tot_tris, tot_kb = 0, 0.0
-    for cat in ('ruas', 'rotatorias', 'calcadas', 'faixas', 'placas', 'mobiliario'):
+    for cat in nomes:
+        if not any(p['categoria'] == cat for p in MANIFEST['pecas']):
+            continue
         linhas += [f'## {nomes[cat]}', '', '| Peça | O que é | Tamanho (m) | Triângulos | KB | Conexões |', '|---|---|---|---|---|---|']
         for p in MANIFEST['pecas']:
             if p['categoria'] != cat:
@@ -130,6 +158,7 @@ def main():
     gerar_placas()
     gerar_mobiliario()
     gerar_iluminacao()
+    gerar_novas()
     MANIFEST.update({
         'versao': 1, 'unidade': 'metro', 'eixo_cima': 'Y', 'tile': ruas.TILE, 'faixa': ruas.H, 'largura_calcada': ruas.S,
         'altura_calcada': ruas.CH, 'altura_tinta': ruas.YF,

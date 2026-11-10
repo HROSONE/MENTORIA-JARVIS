@@ -1030,7 +1030,7 @@
    "arquivo": "placas/placa-de-a-preferencia.glb",
    "descricao": "Placa Dê a preferência (R-2): triângulo invertido",
    "tris": 152,
-   "kb": 21.4,
+   "kb": 21.5,
    "bbox": {
     "min": [
      -0.475,
@@ -1058,7 +1058,7 @@
    "arquivo": "placas/placa-velocidade-40.glb",
    "descricao": "Velocidade máxima 40 km/h (R-19)",
    "tris": 252,
-   "kb": 65.0,
+   "kb": 65.1,
    "bbox": {
     "min": [
      -0.375,
@@ -1086,7 +1086,7 @@
    "arquivo": "placas/placa-velocidade-60.glb",
    "descricao": "Velocidade máxima 60 km/h (R-19)",
    "tris": 252,
-   "kb": 70.5,
+   "kb": 70.6,
    "bbox": {
     "min": [
      -0.375,
@@ -1114,7 +1114,7 @@
    "arquivo": "placas/placa-sentido-proibido.glb",
    "descricao": "Sentido proibido (R-3): círculo vermelho com barra branca",
    "tris": 252,
-   "kb": 42.8,
+   "kb": 42.9,
    "bbox": {
     "min": [
      -0.375,
@@ -1198,7 +1198,7 @@
    "arquivo": "placas/placa-sentido-obrigatorio.glb",
    "descricao": "Siga em frente (sentido obrigatório): círculo azul com seta",
    "tris": 252,
-   "kb": 45.9,
+   "kb": 46.0,
    "bbox": {
     "min": [
      -0.375,
@@ -1254,7 +1254,7 @@
    "arquivo": "placas/placa-rua-hryz.glb",
    "descricao": "Placa de rua azul com \"RUA HRYZ\" (marca do canal dentro do cenário)",
    "tris": 156,
-   "kb": 44.5,
+   "kb": 44.6,
    "bbox": {
     "min": [
      -0.55,
@@ -1716,6 +1716,1045 @@
     }
    ],
    "ligada": true
+  },
+  {
+   "nome": "arvore-redonda",
+   "categoria": "natureza",
+   "arquivo": "natureza/arvore-redonda.glb",
+   "descricao": "Árvore redonda de 6 m (copa facetada em quatro tons de verde)",
+   "tris": 648,
+   "kb": 52.8,
+   "bbox": {
+    "min": [
+     -2.412,
+     0.0,
+     -2.323
+    ],
+    "max": [
+     2.537,
+     6.675,
+     2.315
+    ]
+   },
+   "nos": [
+    "Tronco",
+    "Copa"
+   ],
+   "origem": "pé (y = 0); sobre a grama do kit, y = 0,15",
+   "tipo": "arvore",
+   "altura": 6.0
+  },
+  {
+   "nome": "arvore-frondosa",
+   "categoria": "natureza",
+   "arquivo": "natureza/arvore-frondosa.glb",
+   "descricao": "Árvore grande de sombra (mangueira) de 10 m, copa de 9 m de largura",
+   "tris": 1024,
+   "kb": 82.2,
+   "bbox": {
+    "min": [
+     -4.957,
+     0.0,
+     -4.698
+    ],
+    "max": [
+     5.068,
+     10.339,
+     4.834
+    ]
+   },
+   "nos": [
+    "Tronco",
+    "Copa"
+   ],
+   "origem": "pé (y = 0); sobre a grama do kit, y = 0,15",
+   "tipo": "arvore",
+   "altura": 10.0
+  },
+  {
+   "nome": "arvore-pinheiro",
+   "categoria": "natureza",
+   "arquivo": "natureza/arvore-pinheiro.glb",
+   "descricao": "Pinheiro de 8,5 m em seis andares de cone",
+   "tris": 236,
+   "kb": 20.7,
+   "bbox": {
+    "min": [
+     -2.15,
+     0.0,
+     -2.15
+    ],
+    "max": [
+     2.15,
+     9.45,
+     2.15
+    ]
+   },
+   "nos": [
+    "Tronco",
+    "Copa"
+   ],
+   "origem": "pé (y = 0); sobre a grama do kit, y = 0,15",
+   "tipo": "arvore",
+   "altura": 8.5
+  },
+  {
+   "nome": "arvore-cipreste",
+   "categoria": "natureza",
+   "arquivo": "natureza/arvore-cipreste.glb",
+   "descricao": "Cipreste alto e estreito de 8 m",
+   "tris": 536,
+   "kb": 43.5,
+   "bbox": {
+    "min": [
+     -0.81,
+     0.0,
+     -0.811
+    ],
+    "max": [
+     0.814,
+     8.116,
+     0.823
+    ]
+   },
+   "nos": [
+    "Tronco",
+    "Copa"
+   ],
+   "origem": "pé (y = 0); sobre a grama do kit, y = 0,15",
+   "tipo": "arvore",
+   "altura": 8.0
+  },
+  {
+   "nome": "arvore-ipe-amarelo",
+   "categoria": "natureza",
+   "arquivo": "natureza/arvore-ipe-amarelo.glb",
+   "descricao": "Ipê amarelo em flor, 6 m",
+   "tris": 864,
+   "kb": 69.3,
+   "bbox": {
+    "min": [
+     -3.05,
+     0.0,
+     -2.882
+    ],
+    "max": [
+     3.278,
+     6.514,
+     2.86
+    ]
+   },
+   "nos": [
+    "Tronco",
+    "Copa"
+   ],
+   "origem": "pé (y = 0); sobre a grama do kit, y = 0,15",
+   "tipo": "arvore",
+   "altura": 6.0
+  },
+  {
+   "nome": "arvore-ipe-rosa",
+   "categoria": "natureza",
+   "arquivo": "natureza/arvore-ipe-rosa.glb",
+   "descricao": "Ipê rosa em flor, 6 m",
+   "tris": 864,
+   "kb": 69.3,
+   "bbox": {
+    "min": [
+     -3.12,
+     0.0,
+     -2.834
+    ],
+    "max": [
+     3.183,
+     6.595,
+     2.976
+    ]
+   },
+   "nos": [
+    "Tronco",
+    "Copa"
+   ],
+   "origem": "pé (y = 0); sobre a grama do kit, y = 0,15",
+   "tipo": "arvore",
+   "altura": 6.0
+  },
+  {
+   "nome": "arvore-palmeira",
+   "categoria": "natureza",
+   "arquivo": "natureza/arvore-palmeira.glb",
+   "descricao": "Palmeira de coco de 9 m com folhas caídas e cocos",
+   "tris": 1072,
+   "kb": 86.0,
+   "bbox": {
+    "min": [
+     -3.429,
+     -0.02,
+     -3.561
+    ],
+    "max": [
+     3.647,
+     8.926,
+     3.365
+    ]
+   },
+   "nos": [
+    "Tronco",
+    "Folhas",
+    "Cocos"
+   ],
+   "origem": "pé (y = 0); sobre a grama do kit, y = 0,15",
+   "tipo": "arvore",
+   "altura": 9.0
+  },
+  {
+   "nome": "arbusto",
+   "categoria": "natureza",
+   "arquivo": "natureza/arbusto.glb",
+   "descricao": "Arbusto baixo de 1,1 m",
+   "tris": 480,
+   "kb": 39.2,
+   "bbox": {
+    "min": [
+     -0.926,
+     -0.015,
+     -0.899
+    ],
+    "max": [
+     0.926,
+     1.202,
+     0.913
+    ]
+   },
+   "nos": [
+    "Folhas"
+   ],
+   "origem": "pé (y = 0); sobre a grama do kit, y = 0,15",
+   "tipo": "arbusto",
+   "altura": 1.1
+  },
+  {
+   "nome": "arbusto-flores",
+   "categoria": "natureza",
+   "arquivo": "natureza/arbusto-flores.glb",
+   "descricao": "Arbusto de 1,1 m com flores cor-de-rosa",
+   "tris": 920,
+   "kb": 73.6,
+   "bbox": {
+    "min": [
+     -0.958,
+     -0.032,
+     -0.895
+    ],
+    "max": [
+     0.962,
+     1.182,
+     0.938
+    ]
+   },
+   "nos": [
+    "Folhas",
+    "Flores"
+   ],
+   "origem": "pé (y = 0); sobre a grama do kit, y = 0,15",
+   "tipo": "arbusto",
+   "altura": 1.1
+  },
+  {
+   "nome": "tufos-capim",
+   "categoria": "natureza",
+   "arquivo": "natureza/tufos-capim.glb",
+   "descricao": "Punhado de capim e flores soltos (1 m) para espalhar à mão; pé em y = 0",
+   "tris": 180,
+   "kb": 20.0,
+   "bbox": {
+    "min": [
+     -0.48,
+     0.0,
+     -0.486
+    ],
+    "max": [
+     0.435,
+     0.419,
+     0.475
+    ]
+   },
+   "nos": [
+    "Capim",
+    "Flores",
+    "Hastes"
+   ],
+   "origem": "pé (y = 0); sobre a grama do kit, y = 0,15",
+   "tipo": "arbusto",
+   "altura": 0.5
+  },
+  {
+   "nome": "gramado-detalhado",
+   "categoria": "gramados",
+   "arquivo": "gramados/gramado-detalhado.glb",
+   "descricao": "Gramado de 12 x 12 m: chão facetado em três tons de verde e 330 tufos de capim; topo em y = 0,15",
+   "tris": 1778,
+   "kb": 139.5,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.118,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.487,
+     6.0
+    ]
+   },
+   "nos": [
+    "Gramado",
+    "Tufos"
+   ],
+   "tile": 12.0,
+   "tipo": "gramado"
+  },
+  {
+   "nome": "gramado-flores",
+   "categoria": "gramados",
+   "arquivo": "gramados/gramado-flores.glb",
+   "descricao": "Gramado detalhado com cerca de 70 flores brancas, amarelas, rosas, roxas e vermelhas",
+   "tris": 3248,
+   "kb": 255.9,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.118,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.547,
+     6.0
+    ]
+   },
+   "nos": [
+    "Gramado",
+    "Tufos",
+    "Flores",
+    "Hastes"
+   ],
+   "tile": 12.0,
+   "tipo": "gramado"
+  },
+  {
+   "nome": "gramado-listrado",
+   "categoria": "gramados",
+   "arquivo": "gramados/gramado-listrado.glb",
+   "descricao": "Gramado liso de 12 x 12 m com faixas de corte claras e escuras (jardim, campo)",
+   "tris": 12,
+   "kb": 2.7,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.15,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.15,
+     6.0
+    ]
+   },
+   "nos": [
+    "FaixasClaras",
+    "FaixasEscuras"
+   ],
+   "tile": 12.0,
+   "tipo": "gramado"
+  },
+  {
+   "nome": "cerca-madeira",
+   "categoria": "cercas",
+   "arquivo": "cercas/cerca-madeira.glb",
+   "descricao": "Cerca de ripas brancas de 1,2 m, trecho de 12 m ao longo de X, frente +Z",
+   "tris": 1284,
+   "kb": 100.4,
+   "bbox": {
+    "min": [
+     -6.069,
+     0.0,
+     -0.075
+    ],
+    "max": [
+     6.069,
+     1.254,
+     0.069
+    ]
+   },
+   "nos": [
+    "Postes",
+    "Trilhos",
+    "Ripas"
+   ],
+   "tipo": "cerca",
+   "comprimento": 12.0,
+   "frente": "+Z",
+   "origem": "centro do trecho, no chão (y = 0); corre ao longo de X"
+  },
+  {
+   "nome": "cerca-madeira-portao",
+   "categoria": "cercas",
+   "arquivo": "cercas/cerca-madeira-portao.glb",
+   "descricao": "Cerca de ripas brancas com portão de duas folhas de 3,6 m no meio",
+   "tris": 1452,
+   "kb": 114.4,
+   "bbox": {
+    "min": [
+     -6.069,
+     0.0,
+     -0.104
+    ],
+    "max": [
+     6.069,
+     1.51,
+     0.104
+    ]
+   },
+   "nos": [
+    "Postes",
+    "Trilhos",
+    "Ripas",
+    "Portao"
+   ],
+   "tipo": "cerca",
+   "comprimento": 12.0,
+   "frente": "+Z",
+   "origem": "centro do trecho, no chão (y = 0); corre ao longo de X"
+  },
+  {
+   "nome": "cerca-rural",
+   "categoria": "cercas",
+   "arquivo": "cercas/cerca-rural.glb",
+   "descricao": "Cerca de fazenda: postes de madeira e três tábuas, 1,3 m",
+   "tris": 220,
+   "kb": 18.7,
+   "bbox": {
+    "min": [
+     -6.09,
+     0.0,
+     -0.09
+    ],
+    "max": [
+     6.09,
+     1.34,
+     0.13
+    ]
+   },
+   "nos": [
+    "Postes",
+    "Tabuas"
+   ],
+   "tipo": "cerca",
+   "comprimento": 12.0,
+   "frente": "+Z",
+   "origem": "centro do trecho, no chão (y = 0); corre ao longo de X"
+  },
+  {
+   "nome": "alambrado",
+   "categoria": "cercas",
+   "arquivo": "cercas/alambrado.glb",
+   "descricao": "Alambrado de 2,4 m (postes de metal e tela de losangos translúcida) para quadras, campos e terrenos",
+   "tris": 674,
+   "kb": 56.3,
+   "bbox": {
+    "min": [
+     -6.08,
+     0.0,
+     -0.076
+    ],
+    "max": [
+     6.08,
+     2.51,
+     0.076
+    ]
+   },
+   "nos": [
+    "Postes",
+    "Travessas",
+    "Tela"
+   ],
+   "tipo": "cerca",
+   "comprimento": 12.0,
+   "frente": "+Z",
+   "origem": "centro do trecho, no chão (y = 0); corre ao longo de X"
+  },
+  {
+   "nome": "muro",
+   "categoria": "cercas",
+   "arquivo": "cercas/muro.glb",
+   "descricao": "Muro de 1,3 m com pilares de 1,65 m a cada 3 m e capeamento",
+   "tris": 180,
+   "kb": 17.7,
+   "bbox": {
+    "min": [
+     -6.29,
+     0.0,
+     -0.29
+    ],
+    "max": [
+     6.29,
+     1.78,
+     0.29
+    ]
+   },
+   "nos": [
+    "Pilares",
+    "Muro",
+    "Capeamento"
+   ],
+   "tipo": "cerca",
+   "comprimento": 12.0,
+   "frente": "+Z",
+   "origem": "centro do trecho, no chão (y = 0); corre ao longo de X"
+  },
+  {
+   "nome": "muro-portao",
+   "categoria": "cercas",
+   "arquivo": "cercas/muro-portao.glb",
+   "descricao": "Muro com portão de ferro de duas folhas de 4 m e pilares altos",
+   "tris": 768,
+   "kb": 64.0,
+   "bbox": {
+    "min": [
+     -6.29,
+     0.0,
+     -0.36
+    ],
+    "max": [
+     6.29,
+     2.46,
+     0.36
+    ]
+   },
+   "nos": [
+    "Pilares",
+    "PilaresPortao",
+    "Muro",
+    "Capeamento",
+    "Portao"
+   ],
+   "tipo": "cerca",
+   "comprimento": 12.0,
+   "frente": "+Z",
+   "origem": "centro do trecho, no chão (y = 0); corre ao longo de X"
+  },
+  {
+   "nome": "cerca-viva",
+   "categoria": "cercas",
+   "arquivo": "cercas/cerca-viva.glb",
+   "descricao": "Cerca viva (sebe) de 1,1 m de altura e 1 m de largura",
+   "tris": 288,
+   "kb": 25.3,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.0,
+     -0.48
+    ],
+    "max": [
+     6.0,
+     1.182,
+     0.48
+    ]
+   },
+   "nos": [
+    "Sebe",
+    "SebeClara"
+   ],
+   "tipo": "cerca",
+   "comprimento": 12.0,
+   "frente": "+Z",
+   "origem": "centro do trecho, no chão (y = 0); corre ao longo de X"
+  },
+  {
+   "nome": "grade-ferro",
+   "categoria": "cercas",
+   "arquivo": "cercas/grade-ferro.glb",
+   "descricao": "Grade de ferro de 1,9 m com lanças e pilares de concreto (hospital, delegacia, praça)",
+   "tris": 1512,
+   "kb": 118.5,
+   "bbox": {
+    "min": [
+     -6.21,
+     0.0,
+     -0.21
+    ],
+    "max": [
+     6.21,
+     2.49,
+     0.21
+    ]
+   },
+   "nos": [
+    "Pilares",
+    "Grade",
+    "Travessas"
+   ],
+   "tipo": "cerca",
+   "comprimento": 12.0,
+   "frente": "+Z",
+   "origem": "centro do trecho, no chão (y = 0); corre ao longo de X"
+  },
+  {
+   "nome": "poste-energia",
+   "categoria": "energia",
+   "arquivo": "energia/poste-energia.glb",
+   "descricao": "Poste de concreto de 9 m com cruzeta, três isoladores e cabo de telefonia; a linha corre ao longo de X",
+   "tris": 676,
+   "kb": 57.2,
+   "bbox": {
+    "min": [
+     -0.2,
+     0.0,
+     -1.15
+    ],
+    "max": [
+     0.2,
+     9.0,
+     1.15
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Cruzeta",
+    "Isoladores",
+    "Ferragens",
+    "Telecom"
+   ],
+   "frente": "+Z",
+   "origem": "pé do poste (y = 0); a linha corre ao longo de X",
+   "tipo": "poste-energia"
+  },
+  {
+   "nome": "poste-energia-transformador",
+   "categoria": "energia",
+   "arquivo": "energia/poste-energia-transformador.glb",
+   "descricao": "Poste de energia com transformador de distribuição",
+   "tris": 1046,
+   "kb": 88.0,
+   "bbox": {
+    "min": [
+     -0.29,
+     0.0,
+     -1.15
+    ],
+    "max": [
+     0.29,
+     9.0,
+     1.15
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Cruzeta",
+    "Isoladores",
+    "Ferragens",
+    "Telecom",
+    "Transformador",
+    "Buchas"
+   ],
+   "frente": "+Z",
+   "origem": "pé do poste (y = 0); a linha corre ao longo de X",
+   "tipo": "poste-energia"
+  },
+  {
+   "nome": "fio-vao-12",
+   "categoria": "energia",
+   "arquivo": "energia/fio-vao-12.glb",
+   "descricao": "Fios entre dois postes a 12 m (começa no poste em x = 0 e termina em x = 12)",
+   "tris": 320,
+   "kb": 25.6,
+   "bbox": {
+    "min": [
+     -0.001,
+     7.157,
+     -0.862
+    ],
+    "max": [
+     12.001,
+     9.04,
+     0.862
+    ]
+   },
+   "nos": [
+    "Fios"
+   ],
+   "frente": "+Z",
+   "origem": "pé do poste (y = 0); a linha corre ao longo de X",
+   "tipo": "fio",
+   "vao": 12
+  },
+  {
+   "nome": "fio-vao-24",
+   "categoria": "energia",
+   "arquivo": "energia/fio-vao-24.glb",
+   "descricao": "Fios entre dois postes a 24 m",
+   "tris": 640,
+   "kb": 49.9,
+   "bbox": {
+    "min": [
+     -0.001,
+     6.984,
+     -0.862
+    ],
+    "max": [
+     24.001,
+     9.04,
+     0.862
+    ]
+   },
+   "nos": [
+    "Fios"
+   ],
+   "frente": "+Z",
+   "origem": "pé do poste (y = 0); a linha corre ao longo de X",
+   "tipo": "fio",
+   "vao": 24
+  },
+  {
+   "nome": "fio-vao-36",
+   "categoria": "energia",
+   "arquivo": "energia/fio-vao-36.glb",
+   "descricao": "Fios entre dois postes a 36 m",
+   "tris": 960,
+   "kb": 74.3,
+   "bbox": {
+    "min": [
+     -0.001,
+     6.812,
+     -0.862
+    ],
+    "max": [
+     36.001,
+     9.04,
+     0.862
+    ]
+   },
+   "nos": [
+    "Fios"
+   ],
+   "frente": "+Z",
+   "origem": "pé do poste (y = 0); a linha corre ao longo de X",
+   "tipo": "fio",
+   "vao": 36
+  },
+  {
+   "nome": "mesa-madeira",
+   "categoria": "moveis",
+   "arquivo": "moveis/mesa-madeira.glb",
+   "descricao": "Mesa de jantar de madeira, 1,6 x 0,9 m, altura 0,75 m",
+   "tris": 76,
+   "kb": 8.5,
+   "bbox": {
+    "min": [
+     -0.8,
+     0.0,
+     -0.45
+    ],
+    "max": [
+     0.8,
+     0.75,
+     0.45
+    ]
+   },
+   "nos": [
+    "Tampo",
+    "Pernas",
+    "Saia"
+   ],
+   "tipo": "movel",
+   "origem": "chão (y = 0)",
+   "frente": "+Z"
+  },
+  {
+   "nome": "mesa-redonda",
+   "categoria": "moveis",
+   "arquivo": "moveis/mesa-redonda.glb",
+   "descricao": "Mesa redonda de café, 0,8 m de diâmetro, altura 0,73 m",
+   "tris": 336,
+   "kb": 28.3,
+   "bbox": {
+    "min": [
+     -0.4,
+     0.0,
+     -0.4
+    ],
+    "max": [
+     0.4,
+     0.73,
+     0.4
+    ]
+   },
+   "nos": [
+    "Tampo",
+    "Base"
+   ],
+   "tipo": "movel",
+   "origem": "chão (y = 0)",
+   "frente": "+Z"
+  },
+  {
+   "nome": "mesa-piquenique",
+   "categoria": "moveis",
+   "arquivo": "moveis/mesa-piquenique.glb",
+   "descricao": "Mesa de piquenique de madeira com dois bancos, 1,8 x 2,3 m",
+   "tris": 204,
+   "kb": 18.1,
+   "bbox": {
+    "min": [
+     -0.9,
+     -0.03,
+     -0.985
+    ],
+    "max": [
+     0.9,
+     0.785,
+     0.985
+    ]
+   },
+   "nos": [
+    "Tampo",
+    "Bancos",
+    "Estrutura"
+   ],
+   "tipo": "movel",
+   "origem": "chão (y = 0)",
+   "frente": "+Z"
+  },
+  {
+   "nome": "mesa-escritorio",
+   "categoria": "moveis",
+   "arquivo": "moveis/mesa-escritorio.glb",
+   "descricao": "Escrivaninha 1,4 x 0,7 m com três gavetas (o lado das gavetas é +Z)",
+   "tris": 102,
+   "kb": 11.9,
+   "bbox": {
+    "min": [
+     -0.7,
+     0.0,
+     -0.35
+    ],
+    "max": [
+     0.7,
+     0.76,
+     0.35
+    ]
+   },
+   "nos": [
+    "Tampo",
+    "Gavetas",
+    "Frentes",
+    "Estrutura"
+   ],
+   "tipo": "movel",
+   "origem": "chão (y = 0)",
+   "frente": "+Z"
+  },
+  {
+   "nome": "cadeira-madeira",
+   "categoria": "moveis",
+   "arquivo": "moveis/cadeira-madeira.glb",
+   "descricao": "Cadeira de madeira com encosto de ripas, assento a 0,46 m",
+   "tris": 116,
+   "kb": 11.4,
+   "bbox": {
+    "min": [
+     -0.22,
+     0.0,
+     -0.21
+    ],
+    "max": [
+     0.22,
+     0.92,
+     0.21
+    ]
+   },
+   "nos": [
+    "Assento",
+    "Pernas",
+    "Encosto"
+   ],
+   "tipo": "movel",
+   "origem": "chão (y = 0)",
+   "frente": "+Z"
+  },
+  {
+   "nome": "cadeira-plastica",
+   "categoria": "moveis",
+   "arquivo": "moveis/cadeira-plastica.glb",
+   "descricao": "Cadeira de plástico branca (monobloco), assento a 0,46 m",
+   "tris": 170,
+   "kb": 15.4,
+   "bbox": {
+    "min": [
+     -0.251,
+     -0.002,
+     -0.321
+    ],
+    "max": [
+     0.251,
+     0.916,
+     0.241
+    ]
+   },
+   "nos": [
+    "Assento",
+    "Encosto",
+    "Pernas"
+   ],
+   "tipo": "movel",
+   "origem": "chão (y = 0)",
+   "frente": "+Z"
+  },
+  {
+   "nome": "cadeira-escritorio",
+   "categoria": "moveis",
+   "arquivo": "moveis/cadeira-escritorio.glb",
+   "descricao": "Cadeira giratória de escritório com rodinhas e braços",
+   "tris": 386,
+   "kb": 34.5,
+   "bbox": {
+    "min": [
+     -0.29,
+     0.0,
+     -0.327
+    ],
+    "max": [
+     0.332,
+     1.029,
+     0.317
+    ]
+   },
+   "nos": [
+    "Base",
+    "Rodinhas",
+    "Assento",
+    "Encosto"
+   ],
+   "tipo": "movel",
+   "origem": "chão (y = 0)",
+   "frente": "+Z"
+  },
+  {
+   "nome": "banqueta",
+   "categoria": "moveis",
+   "arquivo": "moveis/banqueta.glb",
+   "descricao": "Banqueta redonda de bar, assento a 0,67 m",
+   "tris": 260,
+   "kb": 22.4,
+   "bbox": {
+    "min": [
+     -0.21,
+     -0.002,
+     -0.242
+    ],
+    "max": [
+     0.216,
+     0.67,
+     0.197
+    ]
+   },
+   "nos": [
+    "Assento",
+    "Pernas",
+    "Aro"
+   ],
+   "tipo": "movel",
+   "origem": "chão (y = 0)",
+   "frente": "+Z"
+  },
+  {
+   "nome": "banco-praca",
+   "categoria": "moveis",
+   "arquivo": "moveis/banco-praca.glb",
+   "descricao": "Banco de praça de ferro e madeira, 1,8 m",
+   "tris": 196,
+   "kb": 17.5,
+   "bbox": {
+    "min": [
+     -0.9,
+     0.0,
+     -0.344
+    ],
+    "max": [
+     0.9,
+     0.89,
+     0.28
+    ]
+   },
+   "nos": [
+    "Estrutura",
+    "Assento",
+    "Encosto"
+   ],
+   "tipo": "movel",
+   "origem": "chão (y = 0)",
+   "frente": "+Z"
+  },
+  {
+   "nome": "sofa",
+   "categoria": "moveis",
+   "arquivo": "moveis/sofa.glb",
+   "descricao": "Sofá de três lugares, 2,0 x 0,9 m",
+   "tris": 230,
+   "kb": 20.2,
+   "bbox": {
+    "min": [
+     -1.0,
+     0.0,
+     -0.45
+    ],
+    "max": [
+     1.0,
+     0.86,
+     0.46
+    ]
+   },
+   "nos": [
+    "Corpo",
+    "Almofadas",
+    "Pes"
+   ],
+   "tipo": "movel",
+   "origem": "chão (y = 0)",
+   "frente": "+Z"
+  },
+  {
+   "nome": "conjunto-jantar",
+   "categoria": "moveis",
+   "arquivo": "moveis/conjunto-jantar.glb",
+   "descricao": "Mesa de jantar com quatro cadeiras (duas de cada lado), 1,6 x 2,2 m",
+   "tris": 540,
+   "kb": 45.8,
+   "bbox": {
+    "min": [
+     -0.8,
+     0.0,
+     -0.83
+    ],
+    "max": [
+     0.8,
+     0.92,
+     0.83
+    ]
+   },
+   "nos": [
+    "Tampo",
+    "Pernas",
+    "Saia",
+    "AssentoCadeiras",
+    "PernasCadeiras",
+    "EncostoCadeiras"
+   ],
+   "tipo": "movel",
+   "origem": "chão (y = 0)",
+   "frente": "+Z"
   }
  ],
  "versao": 1,

@@ -32,7 +32,7 @@ def acessor(j, binario, i):
     return arr.reshape(-1, n) if n > 1 else arr
 
 
-def checar(caminho, categoria, tile=12):
+def checar(caminho, categoria, tile=12, pegada=None):
     erros = []
     j, b = ler_glb(caminho)
     mn, mx = np.full(3, np.inf), np.full(3, -np.inf)
@@ -67,6 +67,14 @@ def checar(caminho, categoria, tile=12):
             erros.append(f'passa de {tile:g} x {tile:g} m: x {mn[0]:.2f}..{mx[0]:.2f}  z {mn[2]:.2f}..{mx[2]:.2f}')
         if mx[1] > 0.1501 or mn[1] < -0.0001:
             erros.append(f'altura fora de 0..0,15: {mn[1]:.3f}..{mx[1]:.3f}')
+    if categoria == 'gramados':
+        meio = tile / 2 + 0.001
+        if mx[0] > meio or mn[0] < -meio or mx[2] > meio or mn[2] < -meio:
+            erros.append(f'passa de {tile:g} x {tile:g} m: x {mn[0]:.2f}..{mx[0]:.2f}  z {mn[2]:.2f}..{mx[2]:.2f}')
+    if pegada:
+        mx_, mz_ = pegada[0] / 2 + 0.001, pegada[1] / 2 + 0.001
+        if mx[0] > mx_ or mn[0] < -mx_ or mx[2] > mz_ or mn[2] < -mz_:
+            erros.append(f'passa da pegada de {pegada[0]:g} x {pegada[1]:g} m: x {mn[0]:.2f}..{mx[0]:.2f}  z {mn[2]:.2f}..{mx[2]:.2f}')
     if categoria == 'faixas' and (mx[1] > 0.0121 or mn[1] < 0.0119):
         erros.append(f'tinta fora de y = 0,012: {mn[1]:.4f}..{mx[1]:.4f}')
     return erros, tris, mn, mx
@@ -76,7 +84,7 @@ def main():
     manifest = json.load(open(os.path.join(RAIZ, 'manifest.json'), encoding='utf-8'))
     ruim = 0
     for p in manifest['pecas']:
-        erros, tris, mn, mx = checar(os.path.join(RAIZ, p['arquivo']), p['categoria'], p.get('tile', 12))
+        erros, tris, mn, mx = checar(os.path.join(RAIZ, p['arquivo']), p['categoria'], p.get('tile', 12), p.get('pegada'))
         estado = 'ok ' if not erros else 'ERRO'
         print(f'{estado} {p["arquivo"]:42s} {tris:5d} tris  {mx[0]-mn[0]:6.2f} x {mx[1]-mn[1]:5.2f} x {mx[2]-mn[2]:6.2f} m')
         for e in erros:
