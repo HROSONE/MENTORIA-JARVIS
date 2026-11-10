@@ -137,7 +137,7 @@ class Cabeca:
         wm, ym, zc = self.wm, self.y_boca, self.zc
 
         def pesos_cabeca(u):
-            wj = suave((self.u_boca + 0.012 - u) / 0.05)
+            wj = suave((self.u_boca + 0.012 - u) / 0.022)
             return osso(nb, idx, Cabeca=1 - wj + 1e-6, Mandibula=wj + 1e-6)
 
         def ajuste(P, W):                                   # a mandíbula só move o que está à frente da articulação
@@ -210,11 +210,13 @@ class Cabeca:
             elipsoide(S, np.array([sg * nl * 0.92, self.y_nariz_base + 0.0005 - g * 0.6, zb + L * 0.32]), X_, Y_, Z_, nl * 0.56, npn * 0.95, npn * 1.0, cab, 'pele', aneis=9, nseg=14, cor=self.cor_pele)
             elipsoide(S, np.array([sg * nl * 0.46, y_tip - 0.0058, zb + L * 0.80]), X_, Y_, Z_, p['narina'], p['narina'] * 0.85, p['narina'] * 0.7, cab, 'narina', aneis=6, nseg=10)
         # ---- boca: cavidade, dentes, língua, lábios
-        cav_c = np.array([0.0, ym - 0.008, self.zf(0, ym) - 0.016])
-        elipsoide(S, cav_c, X_, Y_, Z_, wm * 0.95, 0.030, 0.014, osso(nb, idx, Cabeca=0.4, Mandibula=0.6), 'boca_dentro', aneis=9, nseg=24)
-        fundo_c = np.array([0.0, ym - 0.010, self.zf(0, ym) - 0.040])                       # fundo da boca: esconde o pescoço que apareceria pela abertura
-        elipsoide(S, fundo_c, X_, Y_, Z_, wm * 1.25, 0.030, 0.026, osso(nb, idx, Cabeca=0.5, Mandibula=0.5), 'boca_dentro', aneis=9, nseg=24)
-        elipsoide(S, cav_c + np.array([0, -0.010, 0.002]), X_, Y_, Z_, wm * 0.55, 0.0065, 0.011, jaw, 'lingua', aneis=7, nseg=16)
+        zmin = min(self.zf(0, y) for y in np.linspace(ym - 0.045, ym + 0.012, 12))          # frente mais recuada do rosto na altura da boca (queixo recua)
+        # interior escuro em três peças: teto (no crânio), assoalho (acompanha a mandíbula sem deformar) e um meio mais fundo que preenche a abertura
+        elipsoide(S, np.array([0.0, ym + 0.002, zmin - 0.016]), X_, Y_, Z_, wm * 1.0, 0.012, 0.010, cab, 'boca_dentro', aneis=7, nseg=24)
+        elipsoide(S, np.array([0.0, ym - 0.016, zmin - 0.016]), X_, Y_, Z_, wm * 1.0, 0.016, 0.010, jaw, 'boca_dentro', aneis=7, nseg=24)
+        elipsoide(S, np.array([0.0, ym - 0.012, zmin - 0.034]), X_, Y_, Z_, wm * 1.15, 0.030, 0.016, osso(nb, idx, Cabeca=0.5, Mandibula=0.5), 'boca_dentro', aneis=9, nseg=24)
+        lingua_c = np.array([0.0, ym - 0.012, zmin - 0.010])
+        elipsoide(S, lingua_c, X_, Y_, Z_, wm * 0.55, 0.0065, 0.008, jaw, 'lingua', aneis=7, nseg=16)
         nd = int(p['dentes'])
         rng = np.random.RandomState(5)
         for linha, (yy, wd, ymax) in enumerate(((ym + 0.0002, cab, 0.0058), (ym - 0.0048, jaw, 0.0050))):
@@ -243,7 +245,10 @@ class Cabeca:
                 wc = suave((cn - 0.55) / 0.45)
                 base = Cabeca_w if wl == 'cabeca' else Mand_w
                 v = base * (1 - wc)
-                v = v + osso(nb, idx, **{'Boca' + lado_: 1}) * wc
+                canto = osso(nb, idx, **{'Boca' + lado_: 1})
+                if wl != 'cabeca':                               # o canto do lábio de baixo acompanha 45% da mandíbula (a boca aberta fica em U, não em linhas retas)
+                    canto = canto * 0.55 + osso(nb, idx, Mandibula=1) * 0.45
+                v = v + canto * wc
                 return v / v.sum()
             Cabeca_w, Mand_w = osso(nb, idx, Cabeca=1), osso(nb, idx, Mandibula=1)
             tubo(S, ptsl, rads, pl, 'labio', nseg=12, sub=3, fecha=(True, True), achatamento=0.8, frame='auto')
@@ -315,9 +320,9 @@ def expressoes(cab):
             d['Mandibula'] = {'r': q(jaw)}
         return d
     return {'neutro': {},
-            'medo': exp(jaw=0.20, brow_y=0.012, brow_in=-0.32, lid=-0.34, boca_x=0.006, boca_y=-0.004),
-            'grito': exp(jaw=0.52, brow_y=0.012, brow_in=-0.28, lid=-0.38, boca_x=0.004, boca_y=0.002),
-            'surpresa': exp(jaw=0.30, brow_y=0.014, brow_in=0.0, lid=-0.34),
+            'medo': exp(jaw=0.20, brow_y=0.012, brow_in=-0.32, lid=-0.34, boca_x=0.006, boca_y=-0.008),
+            'grito': exp(jaw=0.34, brow_y=0.012, brow_in=-0.28, lid=-0.38, boca_x=0.005, boca_y=-0.012),
+            'surpresa': exp(jaw=0.26, brow_y=0.014, brow_in=0.0, lid=-0.34),
             'sorriso': exp(jaw=0.06, brow_y=0.003, lid=0.14, boca_x=0.005, boca_y=0.010),
             'maldoso': exp(jaw=0.17, brow_y=-0.003, brow_in=0.38, lid=-0.22, boca_x=0.009, boca_y=0.012, assim=0.005, brow_assim=0.004),
             'raiva': exp(jaw=0.10, brow_y=-0.007, brow_in=0.46, lid=0.30, boca_x=0.002, boca_y=-0.006),

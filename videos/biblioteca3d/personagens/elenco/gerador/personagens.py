@@ -216,8 +216,7 @@ def nina():
         cp.mao(S, lado)
         cp.membro(S, 'perna', lado, -0.12, 2.12, 1.0, 0.0035, 'legging', n_an=16)
         cp.sapato(S, lado, 'tenis', 'tenis', 'sola', 'tenis_det')
-    H.touca(S, cab, 'cabelo', borda=lambda th: 0.30 if abs(th) > 1.0 else (0.80 - 0.1 * (1 - math.exp(-(th / 0.6) ** 2))), grossura=0.008)
-    H.tufos_aleatorios(S, cab, 'cabelo', 18, (0.76, 0.86), (-1.0, 1.0), (0.035, 0.055), 0.0055, up=-0.5, lado=0.9, sementes=31)           # franja
+    H.touca(S, cab, 'cabelo', borda=lambda th: 0.30 if abs(th) > 1.0 else (0.71 + 0.07 * (1 - math.exp(-(th / 0.55) ** 2))), grossura=0.008)      # franja reta sobre a testa
     pts = e.cadeias['CabN']['pontos']
     rads = [(0.070, 0.016), (0.090, 0.024), (0.100, 0.026), (0.099, 0.025), (0.092, 0.020), (0.070, 0.010)]
     H.mecha_cadeia(S, e, cn, pts, rads, 'cabelo', nseg=22, n=3.0, fecha=(False, True))

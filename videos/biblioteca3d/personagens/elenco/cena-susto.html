@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cena de susto (teste do elenco)</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#05070d}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<script type="module">
+// Teste do elenco numa cena noturna: o maníaco persegue as crianças num parque; a velha, assustada, olha de longe.
+// Parâmetros: still (uma imagem), t (instante em s). Sem `still` a cena anda sozinha em laço.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { Personagem } from './elenco.js';
+
+const Q = new URLSearchParams(location.search);
+const W = innerWidth, H = innerHeight;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, Q.has('still') ? 1 : 2));
+renderer.setSize(W, H);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.35;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070a14);
+scene.fog = new THREE.FogExp2(0x070a14, 0.032);
+scene.add(new THREE.HemisphereLight(0x6f84c8, 0x1a1f2c, 1.5));
+const lua = new THREE.DirectionalLight(0xa9bcff, 2.4);
+lua.position.set(-6, 9, 5); lua.castShadow = true; lua.shadow.mapSize.set(2048, 2048);
+Object.assign(lua.shadow.camera, { left: -12, right: 12, top: 8, bottom: -6, near: 1, far: 40 }); lua.shadow.bias = -0.0004; lua.shadow.normalBias = 0.03;
+scene.add(lua);
+const chao = new THREE.Mesh(new THREE.CircleGeometry(40, 64), new THREE.MeshStandardMaterial({ color: 0x2b3d31, roughness: 1 }));
+chao.rotation.x = -Math.PI / 2; chao.receiveShadow = true; scene.add(chao);
+const caminho = new THREE.Mesh(new THREE.PlaneGeometry(40, 3.2), new THREE.MeshStandardMaterial({ color: 0x585c69, roughness: 1 }));
+caminho.rotation.x = -Math.PI / 2; caminho.position.set(0, 0.01, 0.8); caminho.receiveShadow = true; scene.add(caminho);
+
+// peças do kit da cidade (árvores e poste de luz)
+const KIT = '../../cidade/';
+const loader = new GLTFLoader();
+async function peca(arq, x, z, giro = 0, esc = 1) {
+  const g = (await loader.loadAsync(KIT + arq)).scene;
+  g.position.set(x, 0.0, z); g.rotation.y = giro; g.scale.setScalar(esc);
+  g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  scene.add(g);
+  return g;
+}
+await Promise.all([peca('natureza/arvore-pinheiro.glb', -9.5, -6.5, 0.3, 0.8), peca('natureza/arvore-frondosa.glb', 7.5, -7.5, 1.1, 0.8), peca('natureza/arvore-cipreste.glb', -3.5, -9, 0, 0.8),
+  peca('natureza/arvore-pinheiro.glb', 12, -5.5, 2.1, 0.8), peca('natureza/arvore-frondosa.glb', -14, -4, 0.5, 0.8), peca('natureza/arvore-cipreste.glb', 3.5, -10, 0.2, 0.8), peca('mobiliario/poste-luz.glb', 3.0, -2.6, 0, 1.0)]);
+const lampada = new THREE.PointLight(0xffc27a, 130, 24, 2); lampada.position.set(3.0, 5.2, -2.4); scene.add(lampada);
+const contra = new THREE.PointLight(0xff9a4a, 34, 11, 2); contra.position.set(-2.0, 2.4, -1.8); scene.add(contra);
+const frente = new THREE.DirectionalLight(0x8ea4ff, 0.9); frente.position.set(1, 3, 8); scene.add(frente);
+
+// elenco
+const atores = [
+  { f: 'maniaco.glb', x0: -9.2, z: 0.2, clip: 'Correr', rosto: 'maldoso', t0: 0.0, ry: Math.PI / 2 },
+  { f: 'teo.glb', x0: -7.4, z: 1.3, clip: 'Fugir', rosto: 'surpresa', t0: 0.05, ry: Math.PI / 2 },
+  { f: 'davi.glb', x0: -6.2, z: 1.8, clip: 'Fugir', rosto: 'medo', t0: 0.15, ry: Math.PI / 2 },
+  { f: 'lia.glb', x0: -5.2, z: 0.9, clip: 'Fugir', rosto: 'grito', t0: 0.0, ry: Math.PI / 2 },
+  { f: 'nina.glb', x0: -4.7, z: 0.3, clip: 'Fugir', rosto: 'medo', t0: 0.3, ry: Math.PI / 2 },
+  { f: 'velha.glb', x0: 5.2, z: -0.4, clip: 'Assustado', rosto: 'surpresa', t0: 0.0, ry: -0.9, fixa: true },
+];
+for (const a of atores) {
+  a.p = await Personagem.carregar(a.f);
+  a.p.obj.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  a.p.rosto({ expressao: a.rosto, forca: 1 });
+  a.v = a.fixa ? 0 : a.p.info(a.clip).velocidade;
+  a.p.obj.rotation.y = a.ry;
+  scene.add(a.p.obj);
+}
+const cam = new THREE.PerspectiveCamera(40, W / H, 0.1, 80);
+cam.position.set(0.8, 1.35, 8.8); cam.lookAt(0.6, 0.95, 0.4);
+
+const SPAN = 26;              // a cena anda em laço: quem sai pela direita volta pela esquerda
+function colocar(t) {
+  for (const a of atores) {
+    const x = a.fixa ? a.x0 : (((a.x0 + a.v * (t + a.t0) + 11) % SPAN) + SPAN) % SPAN - 11;
+    a.p.obj.position.set(x, 0, a.z);
+  }
+}
+window.__setTime = t => { for (const a of atores) a.p.pose(a.clip, t + a.t0); colocar(t); atores.forEach(a => a.p._aplicarRosto()); renderer.render(scene, cam); };
+let ult = performance.now(), tempo = 0;
+function loop(now) {
+  const dt = Math.min(0.05, (now - ult) / 1000); ult = now; tempo += dt;
+  colocar(tempo);
+  for (const a of atores) { a.p.atualizar(dt); }
+  renderer.render(scene, cam);
+  requestAnimationFrame(loop);
+}
+if (Q.has('still')) { window.__setTime(+(Q.get('t') || 1.6)); window.__ready = true; }
+else { for (const a of atores) { a.p.tocar(a.clip); a.p.piscarAuto(true); } requestAnimationFrame(loop); window.__ready = true; }
+</script>
+</body>
+</html>
