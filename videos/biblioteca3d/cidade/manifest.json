@@ -2755,6 +2755,868 @@
    "tipo": "movel",
    "origem": "chão (y = 0)",
    "frente": "+Z"
+  },
+  {
+   "nome": "casa-simples",
+   "categoria": "casas",
+   "arquivo": "casas/casa-simples.glb",
+   "descricao": "Casa térrea amarela de duas águas, com varanda de entrada e chaminé (8 x 8 m)",
+   "tris": 548,
+   "kb": 52.5,
+   "bbox": {
+    "min": [
+     -4.55,
+     0.0,
+     -5.15
+    ],
+    "max": [
+     4.55,
+     6.2,
+     5.39
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "Molduras",
+    "Vidro",
+    "VidroLuz",
+    "Portas",
+    "Detalhes"
+   ],
+   "tipo": "casa",
+   "frente": "+Z",
+   "origem": "centro da pegada, no chão (y = 0); sobre a grama do kit, y = 0,15",
+   "pegada": [
+    12.0,
+    12.0
+   ]
+  },
+  {
+   "nome": "casa-sobrado",
+   "categoria": "casas",
+   "arquivo": "casas/casa-sobrado.glb",
+   "descricao": "Sobrado branco de dois andares com garagem, sacada de vidro e telhado de quatro águas (9 x 8 m)",
+   "tris": 956,
+   "kb": 85.9,
+   "bbox": {
+    "min": [
+     -5.1,
+     0.0,
+     -5.0
+    ],
+    "max": [
+     5.1,
+     8.13,
+     5.19
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "Molduras",
+    "Vidro",
+    "VidroLuz",
+    "Portas",
+    "Detalhes"
+   ],
+   "tipo": "casa",
+   "frente": "+Z",
+   "origem": "centro da pegada, no chão (y = 0); sobre a grama do kit, y = 0,15",
+   "pegada": [
+    12.0,
+    12.0
+   ]
+  },
+  {
+   "nome": "casa-moderna",
+   "categoria": "casas",
+   "arquivo": "casas/casa-moderna.glb",
+   "descricao": "Casa moderna de cubos brancos e grafite, vidro, ripado de madeira, garagem e terraço (10 x 8 m)",
+   "tris": 588,
+   "kb": 56.2,
+   "bbox": {
+    "min": [
+     -5.55,
+     0.0,
+     -4.55
+    ],
+    "max": [
+     5.07,
+     6.8,
+     4.12
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "Molduras",
+    "Vidro",
+    "VidroLuz",
+    "Portas",
+    "Detalhes"
+   ],
+   "tipo": "casa",
+   "frente": "+Z",
+   "origem": "centro da pegada, no chão (y = 0); sobre a grama do kit, y = 0,15",
+   "pegada": [
+    12.0,
+    12.0
+   ]
+  },
+  {
+   "nome": "casa-colonial",
+   "categoria": "casas",
+   "arquivo": "casas/casa-colonial.glb",
+   "descricao": "Casa colonial azul (10,4 x 7,7 m) com varanda de seis colunas, venezianas verdes e telhado de quatro águas",
+   "tris": 924,
+   "kb": 81.3,
+   "bbox": {
+    "min": [
+     -5.8,
+     0.0,
+     -4.6
+    ],
+    "max": [
+     5.8,
+     6.77,
+     5.59
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "Molduras",
+    "Vidro",
+    "VidroLuz",
+    "Portas",
+    "Detalhes"
+   ],
+   "tipo": "casa",
+   "frente": "+Z",
+   "origem": "centro da pegada, no chão (y = 0); sobre a grama do kit, y = 0,15",
+   "pegada": [
+    12.0,
+    12.0
+   ]
+  },
+  {
+   "nome": "predio-residencial-6",
+   "categoria": "predios",
+   "arquivo": "predios/predio-residencial-6.glb",
+   "descricao": "Prédio residencial de 6 andares (cantos de tijolo, sacadas de vidro, portaria com marquise e caixa-d'água)",
+   "tris": 2778,
+   "kb": 226.4,
+   "bbox": {
+    "min": [
+     -5.1,
+     0.0,
+     -5.1
+    ],
+    "max": [
+     5.1,
+     21.92,
+     6.0
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "Molduras",
+    "Vidro",
+    "VidroLuz",
+    "Portas",
+    "Detalhes"
+   ],
+   "tipo": "predio",
+   "frente": "+Z",
+   "origem": "centro da pegada, no chão (y = 0); sobre a grama do kit, y = 0,15",
+   "pegada": [
+    12.0,
+    12.0
+   ]
+  },
+  {
+   "nome": "predio-residencial-12",
+   "categoria": "predios",
+   "arquivo": "predios/predio-residencial-12.glb",
+   "descricao": "Prédio residencial de 12 andares com duas coberturas recuadas, caixa-d'água e antena",
+   "tris": 2724,
+   "kb": 219.8,
+   "bbox": {
+    "min": [
+     -5.12,
+     0.0,
+     -5.12
+    ],
+    "max": [
+     5.12,
+     44.6,
+     5.9
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "Molduras",
+    "Vidro",
+    "VidroLuz",
+    "Detalhes"
+   ],
+   "tipo": "predio",
+   "frente": "+Z",
+   "origem": "centro da pegada, no chão (y = 0); sobre a grama do kit, y = 0,15",
+   "pegada": [
+    12.0,
+    12.0
+   ]
+  },
+  {
+   "nome": "predio-comercial-10",
+   "categoria": "predios",
+   "arquivo": "predios/predio-comercial-10.glb",
+   "descricao": "Torre comercial de vidro de 10 andares (24 x 12 m) com lobby de dois andares e marquise",
+   "tris": 1314,
+   "kb": 111.3,
+   "bbox": {
+    "min": [
+     -10.12,
+     0.0,
+     -5.62
+    ],
+    "max": [
+     10.12,
+     48.6,
+     5.9
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "Molduras",
+    "Vidro",
+    "VidroLuz",
+    "Detalhes"
+   ],
+   "tipo": "predio",
+   "frente": "+Z",
+   "origem": "centro da pegada, no chão (y = 0); sobre a grama do kit, y = 0,15",
+   "pegada": [
+    24.0,
+    12.0
+   ]
+  },
+  {
+   "nome": "predio-loja-3",
+   "categoria": "predios",
+   "arquivo": "predios/predio-loja-3.glb",
+   "descricao": "Prédio de 3 andares com loja no térreo (vitrines, toldo listrado, letreiro) e apartamentos com sacadinhas de ferro",
+   "tris": 2626,
+   "kb": 231.6,
+   "bbox": {
+    "min": [
+     -5.75,
+     0.0,
+     -5.25
+    ],
+    "max": [
+     5.75,
+     12.77,
+     5.4
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "Molduras",
+    "Vidro",
+    "VidroLuz",
+    "Detalhes",
+    "Letreiro"
+   ],
+   "tipo": "predio",
+   "frente": "+Z",
+   "origem": "centro da pegada, no chão (y = 0); sobre a grama do kit, y = 0,15",
+   "pegada": [
+    12.0,
+    12.0
+   ]
+  },
+  {
+   "nome": "hospital",
+   "categoria": "equipamentos",
+   "arquivo": "equipamentos/hospital.glb",
+   "descricao": "Hospital de 36 x 24 m: torre de 7 andares com átrio de vidro, duas alas de 4 andares, cobertura de emergência, cruzes e helipoliporto",
+   "tris": 4144,
+   "kb": 459.8,
+   "bbox": {
+    "min": [
+     -17.97,
+     0.0,
+     -9.07
+    ],
+    "max": [
+     17.97,
+     30.25,
+     10.62
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "Molduras",
+    "Vidro",
+    "VidroLuz",
+    "Detalhes",
+    "Letreiro",
+    "Luz"
+   ],
+   "tipo": "edificio",
+   "frente": "+Z",
+   "origem": "centro da pegada, no chão (y = 0); sobre a calçada ou a grama do kit, y = 0,15",
+   "pegada": [
+    36.0,
+    24.0
+   ],
+   "luzes": [
+    {
+     "pos": [
+      0.0,
+      4.2,
+      8.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 16
+    },
+    {
+     "pos": [
+      -9.0,
+      3.0,
+      4.5
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 12
+    },
+    {
+     "pos": [
+      9.0,
+      3.0,
+      4.5
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 12
+    }
+   ]
+  },
+  {
+   "nome": "delegacia",
+   "categoria": "equipamentos",
+   "arquivo": "equipamentos/delegacia.glb",
+   "descricao": "Delegacia de polícia de 24 x 12 m: dois andares azul e cinza, pórtico de colunas com escada, sirenes e bandeiras",
+   "tris": 1318,
+   "kb": 253.9,
+   "bbox": {
+    "min": [
+     -10.08,
+     0.0,
+     -5.98
+    ],
+    "max": [
+     10.3,
+     9.3,
+     5.29
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "Molduras",
+    "Vidro",
+    "VidroLuz",
+    "Detalhes",
+    "Letreiro",
+    "Luz"
+   ],
+   "tipo": "edificio",
+   "frente": "+Z",
+   "origem": "centro da pegada, no chão (y = 0); sobre a calçada ou a grama do kit, y = 0,15",
+   "pegada": [
+    24.0,
+    12.0
+   ],
+   "luzes": [
+    {
+     "pos": [
+      0.0,
+      4.8,
+      3.6
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 12
+    },
+    {
+     "pos": [
+      -6.2,
+      3.3,
+      2.4
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 9
+    },
+    {
+     "pos": [
+      6.2,
+      3.3,
+      2.4
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 9
+    }
+   ]
+  },
+  {
+   "nome": "supermercado",
+   "categoria": "equipamentos",
+   "arquivo": "equipamentos/supermercado.glb",
+   "descricao": "Supermercado de 36 x 24 m: vitrine corrida, entrada de vidro, letreiro SUPERMERCADO, totem, abrigos com carrinhos e portões de carga",
+   "tris": 2486,
+   "kb": 476.9,
+   "bbox": {
+    "min": [
+     -17.2,
+     0.0,
+     -11.12
+    ],
+    "max": [
+     17.2,
+     11.2,
+     9.65
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "Molduras",
+    "Vidro",
+    "VidroLuz",
+    "Detalhes",
+    "Letreiro",
+    "Luz"
+   ],
+   "tipo": "edificio",
+   "frente": "+Z",
+   "origem": "centro da pegada, no chão (y = 0); sobre a calçada ou a grama do kit, y = 0,15",
+   "pegada": [
+    36.0,
+    24.0
+   ],
+   "luzes": [
+    {
+     "pos": [
+      0.0,
+      4.0,
+      8.5
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 16
+    },
+    {
+     "pos": [
+      -10.0,
+      3.0,
+      5.2
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 11
+    },
+    {
+     "pos": [
+      10.0,
+      3.0,
+      5.2
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 11
+    },
+    {
+     "pos": [
+      -15.0,
+      6.0,
+      10.2
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 9
+    }
+   ]
+  },
+  {
+   "nome": "cinema",
+   "categoria": "equipamentos",
+   "arquivo": "equipamentos/cinema.glb",
+   "descricao": "Cinema de 24 x 24 m: marquise com lâmpadas, letreiro CINEMA, cartazes, bilheteria, placa vertical e sala alta nos fundos",
+   "tris": 1544,
+   "kb": 418.4,
+   "bbox": {
+    "min": [
+     -10.61,
+     0.0,
+     -11.14
+    ],
+    "max": [
+     10.06,
+     14.65,
+     8.82
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "Molduras",
+    "VidroLuz",
+    "Portas",
+    "Detalhes",
+    "Letreiro",
+    "Luz"
+   ],
+   "tipo": "edificio",
+   "frente": "+Z",
+   "origem": "centro da pegada, no chão (y = 0); sobre a calçada ou a grama do kit, y = 0,15",
+   "pegada": [
+    24.0,
+    24.0
+   ],
+   "luzes": [
+    {
+     "pos": [
+      0.0,
+      3.6,
+      8.2
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffc866",
+     "alcance": 14
+    },
+    {
+     "pos": [
+      -9.0,
+      3.0,
+      8.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 9
+    },
+    {
+     "pos": [
+      9.0,
+      3.0,
+      8.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 9
+    }
+   ]
+  },
+  {
+   "nome": "estacionamento",
+   "categoria": "equipamentos",
+   "arquivo": "equipamentos/estacionamento.glb",
+   "descricao": "Ladrilho de estacionamento de 12 x 12 m (topo em y = 0,15): quatro vagas de 3 x 5 m com calços e corredor de 7 m; emenda lado a lado",
+   "tris": 54,
+   "kb": 6.9,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.15,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.27,
+     6.0
+    ]
+   },
+   "nos": [
+    "Asfalto",
+    "Faixas",
+    "Calcos"
+   ],
+   "tipo": "edificio",
+   "frente": "+Z",
+   "origem": "centro da pegada, no chão (y = 0); sobre a calçada ou a grama do kit, y = 0,15",
+   "pegada": [
+    12.0,
+    12.0
+   ],
+   "tile": 12.0
+  },
+  {
+   "nome": "estadio-futebol",
+   "categoria": "esporte",
+   "arquivo": "esporte/estadio-futebol.glb",
+   "descricao": "Estádio de futebol de 144 x 108 m: campo 100 x 64 m com marcações e traves, quatro arquibancadas cobertas, quatro torres de refletores, placar e letreiro ESTÁDIO HRYZ",
+   "tris": 7376,
+   "kb": 751.5,
+   "bbox": {
+    "min": [
+     -72.0,
+     0.0,
+     -53.8
+    ],
+    "max": [
+     72.0,
+     40.6,
+     53.8
+    ]
+   },
+   "nos": [
+    "GramadoClaro",
+    "GramadoEscuro",
+    "Pista",
+    "Linhas",
+    "Traves",
+    "Redes",
+    "Bandeirinhas",
+    "Degraus",
+    "Espelhos",
+    "AssentosAzuis",
+    "AssentosBrancos",
+    "Fachada",
+    "Cobertura",
+    "Estrutura",
+    "Portoes",
+    "Letreiro",
+    "Placar",
+    "Torres",
+    "Luz"
+   ],
+   "tipo": "ladrilho-grande",
+   "origem": "centro do campo, y = 0 (o chão fica em y = 0,15, como as calçadas)",
+   "comprimento_do_campo": "ao longo de X",
+   "pegada": [
+    144.0,
+    108.0
+   ],
+   "tile": 144.0,
+   "luzes": [
+    {
+     "pos": [
+      -68.5174943151202,
+      39.05,
+      -50.643365363349716
+     ],
+     "dir": [
+      0.55,
+      -0.6,
+      0.4
+     ],
+     "cor": "#fff6e0",
+     "alcance": 90
+    },
+    {
+     "pos": [
+      -68.5174943151202,
+      39.05,
+      50.643365363349716
+     ],
+     "dir": [
+      0.55,
+      -0.6,
+      -0.4
+     ],
+     "cor": "#fff6e0",
+     "alcance": 90
+    },
+    {
+     "pos": [
+      68.5174943151202,
+      39.05,
+      -50.643365363349716
+     ],
+     "dir": [
+      -0.55,
+      -0.6,
+      0.4
+     ],
+     "cor": "#fff6e0",
+     "alcance": 90
+    },
+    {
+     "pos": [
+      68.5174943151202,
+      39.05,
+      50.643365363349716
+     ],
+     "dir": [
+      -0.55,
+      -0.6,
+      -0.4
+     ],
+     "cor": "#fff6e0",
+     "alcance": 90
+    }
+   ]
+  },
+  {
+   "nome": "campo-futebol",
+   "categoria": "esporte",
+   "arquivo": "esporte/campo-futebol.glb",
+   "descricao": "Campo de várzea de 72 x 48 m (campo 64 x 40 m): gramado listrado, terra batida nos gols, traves com rede, bancos e quatro postes de luz",
+   "tris": 1254,
+   "kb": 109.3,
+   "bbox": {
+    "min": [
+     -36.0,
+     0.0,
+     -24.0
+    ],
+    "max": [
+     36.0,
+     11.6,
+     24.0
+    ]
+   },
+   "nos": [
+    "GramadoClaro",
+    "GramadoEscuro",
+    "Terra",
+    "Linhas",
+    "Traves",
+    "Redes",
+    "Bandeirinhas",
+    "Bancos",
+    "Postes",
+    "Luz"
+   ],
+   "tipo": "ladrilho-grande",
+   "origem": "centro do campo, y = 0 (o chão fica em y = 0,15, como as calçadas)",
+   "comprimento_do_campo": "ao longo de X",
+   "pegada": [
+    72.0,
+    48.0
+   ],
+   "tile": 72.0,
+   "luzes": [
+    {
+     "pos": [
+      -33.2,
+      11.05,
+      -21.7
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#fff6e0",
+     "alcance": 40
+    },
+    {
+     "pos": [
+      -33.2,
+      11.05,
+      21.7
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#fff6e0",
+     "alcance": 40
+    },
+    {
+     "pos": [
+      33.2,
+      11.05,
+      -21.7
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#fff6e0",
+     "alcance": 40
+    },
+    {
+     "pos": [
+      33.2,
+      11.05,
+      21.7
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#fff6e0",
+     "alcance": 40
+    }
+   ]
   }
  ],
  "versao": 1,
