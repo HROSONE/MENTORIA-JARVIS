@@ -1,6 +1,7 @@
 """Construtor de malhas triangulares (numpy): caixas, polígonos convexos, prismas, sólidos de revolução.
 Convenções: metros, Y para cima. A orientação das faces é corrigida automaticamente pela direção `facing`."""
 import math
+import random
 import numpy as np
 from glb import Prim
 
@@ -234,6 +235,68 @@ class Malha:
         m = Malha()
         m.revolve(mat, perfil, segs, smooth=True, hard_deg=80)
         self.add(m, T(*c))
+
+    def caixa(self, mat, x0, x1, y0, y1, z0, z1, faces='+x-x+y+z-z', mats=None):
+        """caixa por limites; `faces` diz quais faces desenhar (padrão: todas menos a de baixo); `mats` troca o material de uma face"""
+        m = mats or {}
+        f = lambda k: m.get(k, mat)
+        if '+y' in faces:
+            self.quad(f('+y'), (x0, y1, z0), (x0, y1, z1), (x1, y1, z1), (x1, y1, z0), (0, 1, 0))
+        if '-y' in faces:
+            self.quad(f('-y'), (x0, y0, z0), (x1, y0, z0), (x1, y0, z1), (x0, y0, z1), (0, -1, 0))
+        if '+x' in faces:
+            self.quad(f('+x'), (x1, y0, z0), (x1, y1, z0), (x1, y1, z1), (x1, y0, z1), (1, 0, 0))
+        if '-x' in faces:
+            self.quad(f('-x'), (x0, y0, z0), (x0, y0, z1), (x0, y1, z1), (x0, y1, z0), (-1, 0, 0))
+        if '+z' in faces:
+            self.quad(f('+z'), (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1), (0, 0, 1))
+        if '-z' in faces:
+            self.quad(f('-z'), (x0, y0, z0), (x0, y1, z0), (x1, y1, z0), (x1, y0, z0), (0, 0, -1))
+
+    def ico(self, mat, c, r, nivel=1, jitter=0.0, rng=None, esc=(1.0, 1.0, 1.0)):
+        """esfera facetada (icosaedro subdividido `nivel` vezes, faces planas). `jitter` move cada vértice na radial (copas de árvore);
+        `esc` achata ou estica nos três eixos"""
+        t = (1 + math.sqrt(5)) / 2
+        v = [(-1, t, 0), (1, t, 0), (-1, -t, 0), (1, -t, 0), (0, -1, t), (0, 1, t), (0, -1, -t), (0, 1, -t), (t, 0, -1), (t, 0, 1), (-t, 0, -1), (-t, 0, 1)]
+        f = [(0, 11, 5), (0, 5, 1), (0, 1, 7), (0, 7, 10), (0, 10, 11), (1, 5, 9), (5, 11, 4), (11, 10, 2), (10, 7, 6), (7, 1, 8),
+             (3, 9, 4), (3, 4, 2), (3, 2, 6), (3, 6, 8), (3, 8, 9), (4, 9, 5), (2, 4, 11), (6, 2, 10), (8, 6, 7), (9, 8, 1)]
+        v = [tuple(np.array(p, dtype=float) / np.linalg.norm(p)) for p in v]
+        for _ in range(nivel):
+            cache = {}
+
+            def meio(a, b):
+                k = (min(a, b), max(a, b))
+                if k not in cache:
+                    p = (np.array(v[a]) + np.array(v[b])) / 2
+                    v.append(tuple(p / np.linalg.norm(p)))
+                    cache[k] = len(v) - 1
+                return cache[k]
+            nf = []
+            for a, b, c3 in f:
+                ab, bc, ca = meio(a, b), meio(b, c3), meio(c3, a)
+                nf += [(a, ab, ca), (b, bc, ab), (c3, ca, bc), (ab, bc, ca)]
+            f = nf
+        rng = rng or random.Random(0)
+        fat = [1 + jitter * (rng.random() * 2 - 1) for _ in v]
+        centro = np.array(c, dtype=float)
+        P = [np.array(p) * fat[i] * np.array(esc) * r + centro for i, p in enumerate(v)]
+        for a, b, c3 in f:
+            pa, pb, pc = P[a], P[b], P[c3]
+            if np.dot(np.cross(pb - pa, pc - pa), (pa + pb + pc) / 3 - centro) < 0:
+                pb, pc = pc, pb
+            self.tri(mat, pa, pb, pc)
+
+    def facetado(self, mat, perfil, segs=8, giro=0.0):
+        """sólido de revolução em torno de Y com faces planas (cones, copas de pinheiro, torres): `perfil` = [(r, y)] de baixo para cima"""
+        P = [(float(r), float(y)) for r, y in perfil]
+        for (r0, y0), (r1, y1) in zip(P, P[1:]):
+            nr, ny = y1 - y0, -(r1 - r0)
+            for i in range(segs):
+                a0, a1 = giro + 2 * math.pi * i / segs, giro + 2 * math.pi * (i + 1) / segs
+                am = (a0 + a1) / 2
+                q = [(r0 * math.cos(a0), y0, r0 * math.sin(a0)), (r0 * math.cos(a1), y0, r0 * math.sin(a1)),
+                     (r1 * math.cos(a1), y1, r1 * math.sin(a1)), (r1 * math.cos(a0), y1, r1 * math.sin(a0))]
+                self.poly(mat, q, (nr * math.cos(am), ny, nr * math.sin(am)))
 
     def add(self, other, M=None):
         """copia outra malha aplicando a matriz 4x4 M"""

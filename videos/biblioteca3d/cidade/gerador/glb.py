@@ -17,7 +17,8 @@ def srgb_to_linear(c):
 
 
 class Material:
-    def __init__(self, name, color='#ffffff', rough=0.9, metal=0.0, emissive=None, texture=None, double_sided=False):
+    def __init__(self, name, color='#ffffff', rough=0.9, metal=0.0, emissive=None, texture=None, double_sided=False,
+                 alpha=None, repeat=False):
         self.name = name
         self.color = hex_rgb(color) if isinstance(color, str) else list(color)
         self.rough = rough
@@ -25,6 +26,8 @@ class Material:
         self.emissive = None if emissive is None else (hex_rgb(emissive) if isinstance(emissive, str) else list(emissive))
         self.texture = texture            # bytes de um PNG (opcional)
         self.double_sided = double_sided
+        self.alpha = alpha                # None (opaco) ou 'BLEND': usa o canal alfa do PNG (tela de alambrado, vidro)
+        self.repeat = repeat              # textura que se repete (UV maiores que 1)
 
 
 class Prim:
@@ -76,7 +79,7 @@ def write_glb(path, roots, generator='Hryz Animation - kit cidade'):
         if m.texture is not None:
             if id(m.texture) not in tex_index:
                 jimgs.append({'bufferView': add_view(m.texture), 'mimeType': 'image/png', 'name': m.name})
-                jtex.append({'sampler': 0, 'source': len(jimgs) - 1})
+                jtex.append({'sampler': 1 if m.repeat else 0, 'source': len(jimgs) - 1})
                 tex_index[id(m.texture)] = len(jtex) - 1
             pbr['baseColorTexture'] = {'index': tex_index[id(m.texture)]}
             pbr['baseColorFactor'] = [1.0, 1.0, 1.0, 1.0]
@@ -84,6 +87,8 @@ def write_glb(path, roots, generator='Hryz Animation - kit cidade'):
             jm['emissiveFactor'] = [float(x) for x in srgb_to_linear(m.emissive)]
         if m.double_sided:
             jm['doubleSided'] = True
+        if m.alpha:
+            jm['alphaMode'] = m.alpha
         jmats.append(jm)
         mat_index[id(m)] = len(jmats) - 1
         return mat_index[id(m)]
@@ -129,7 +134,8 @@ def write_glb(path, roots, generator='Hryz Animation - kit cidade'):
     if jimgs:
         doc['images'] = jimgs
         doc['textures'] = jtex
-        doc['samplers'] = [{'magFilter': 9729, 'minFilter': 9987, 'wrapS': 33071, 'wrapT': 33071}]
+        doc['samplers'] = [{'magFilter': 9729, 'minFilter': 9987, 'wrapS': 33071, 'wrapT': 33071},
+                           {'magFilter': 9729, 'minFilter': 9987, 'wrapS': 10497, 'wrapT': 10497}]
     js = json.dumps(doc, separators=(',', ':')).encode('utf-8')
     js += b' ' * ((4 - len(js) % 4) % 4)
     total = 12 + 8 + len(js) + 8 + len(buf)
