@@ -24,8 +24,9 @@ LH = TILE / 2
 LADOS = {'N': ((0, 0, -LH), (0, 0, -1)), 'S': ((0, 0, LH), (0, 0, 1)), 'E': ((LH, 0, 0), (1, 0, 0)), 'W': ((-LH, 0, 0), (-1, 0, 0))}
 
 
-def conexoes(lados):
-    return [{'lado': l, 'pos': list(LADOS[l][0]), 'dir': list(LADOS[l][1]), 'perfil': 'rua-2-faixas'} for l in lados]
+def conexoes(lados, d=LH):
+    """conexões no meio das bordas; `d` = distância do centro à borda (6 m nos ladrilhos, 18 m na rotatória)"""
+    return [{'lado': l, 'pos': [round(p * d / LH, 3) for p in LADOS[l][0]], 'dir': list(LADOS[l][1]), 'perfil': 'rua-2-faixas'} for l in lados]
 
 
 def novas():

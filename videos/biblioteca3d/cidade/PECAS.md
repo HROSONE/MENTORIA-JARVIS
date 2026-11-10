@@ -8,10 +8,28 @@ Arquivo gerado por `gerador/gerar.py`; não edite à mão. Medidas em metros (la
 |---|---|---|---|---|---|
 | `ruas/rua-reta.glb` | Reta de 12 m, mão dupla, com tracejado central e linhas de borda | 12.00 x 0.15 x 12.00 | 26 | 6.8 | N S |
 | `ruas/rua-curva.glb` | Curva de 90° ligando as bordas S e E | 12.00 x 0.15 x 12.00 | 332 | 30.2 | S E |
-| `ruas/rua-t.glb` | Entroncamento em T com braços W, E e S, faixas de pedestres e linhas de retenção | 12.00 x 0.15 x 12.00 | 176 | 17.5 | W E S |
-| `ruas/rua-cruzamento.glb` | Cruzamento de 4 braços com faixas de pedestres e linhas de retenção | 12.00 x 0.15 x 12.00 | 306 | 26.8 | N E S W |
+| `ruas/rua-t.glb` | Entroncamento em T com braços W, E e S, faixas de pedestres e linhas de retenção | 12.00 x 0.15 x 12.00 | 176 | 17.6 | W E S |
+| `ruas/rua-cruzamento.glb` | Cruzamento de 4 braços com faixas de pedestres e linhas de retenção | 12.00 x 0.15 x 12.00 | 306 | 26.9 | N E S W |
 | `ruas/rua-fim.glb` | Fim de rua (sem saída) com braço vindo do sul | 12.00 x 0.15 x 12.00 | 42 | 7.9 | S |
 | `ruas/chao-grama.glb` | Ladrilho de grama 12 x 12 m na altura da calçada (preenche os quarteirões) | 12.00 x 0.00 x 12.00 | 2 | 1.2 | — |
+
+## Rotatórias
+
+| Peça | O que é | Tamanho (m) | Triângulos | KB | Conexões |
+|---|---|---|---|---|---|
+| `rotatorias/rotatoria.glb` | Rotatória de 36 x 36 m (3 x 3 ladrilhos): ilha central, anel de mão única anti-horário, 4 braços de mão dupla e cantos de grama | 36.00 x 0.15 x 36.00 | 1066 | 86.8 | N E S W |
+| `rotatorias/rotatoria-mini.glb` | Mini-rotatória de 12 x 12 m (1 ladrilho): cruzamento com ilha central e setas | 12.00 x 0.15 x 12.00 | 500 | 41.7 | N E S W |
+
+## Calçadas e caminhos de pedestres
+
+| Peça | O que é | Tamanho (m) | Triângulos | KB | Conexões |
+|---|---|---|---|---|---|
+| `calcadas/calcada-lisa.glb` | Praça/calçadão: ladrilho pavimentado com lajes de 2 m em dois tons | 12.00 x 0.00 x 12.00 | 72 | 7.2 | — |
+| `calcadas/calcada-reta.glb` | Caminho de pedestres reto (2,5 m) sobre grama | 12.00 x 0.00 x 12.00 | 20 | 4.1 | N S |
+| `calcadas/calcada-curva.glb` | Caminho de pedestres em curva de 90° (ligando S e E) | 12.00 x 0.00 x 12.00 | 50 | 6.5 | S E |
+| `calcadas/calcada-t.glb` | Caminho de pedestres em T (braços W, E e S) | 12.00 x 0.00 x 12.00 | 26 | 4.7 | W E S |
+| `calcadas/calcada-cruzamento.glb` | Cruzamento de caminhos de pedestres (4 braços) | 12.00 x 0.00 x 12.00 | 34 | 5.4 | N E S W |
+| `calcadas/calcada-fim.glb` | Caminho de pedestres que termina numa pracinha redonda (vindo do sul) | 12.00 x 0.00 x 12.00 | 68 | 7.8 | S |
 
 ## Faixas pintadas (decalques)
 
@@ -39,7 +57,7 @@ Arquivo gerado por `gerador/gerar.py`; não edite à mão. Medidas em metros (la
 | `placas/placa-rua.glb` | Placa de nome de rua (verde, texto "RUA EXEMPLO"; troque o texto em placas.p_rua) | 1.10 x 2.63 x 0.16 | 156 | 46.3 | — |
 | `placas/placa-rua-hryz.glb` | Placa de rua azul com "RUA HRYZ" (marca do canal dentro do cenário) | 1.10 x 2.63 x 0.16 | 156 | 44.5 | — |
 
-## Semáforos e hidrantes
+## Semáforos, postes de luz e hidrantes
 
 | Peça | O que é | Tamanho (m) | Triângulos | KB | Conexões |
 |---|---|---|---|---|---|
@@ -51,5 +69,9 @@ Arquivo gerado por `gerador/gerar.py`; não edite à mão. Medidas em metros (la
 | `mobiliario/semaforo-braco-verde.glb` | Semáforo de braço projetado (2 cabeças) com luz verde | 5.42 x 6.00 x 0.54 | 1084 | 92.6 | — |
 | `mobiliario/hidrante.glb` | Hidrante de coluna vermelho | 0.53 x 0.81 x 0.45 | 796 | 62.5 | — |
 | `mobiliario/hidrante-amarelo.glb` | Hidrante de coluna amarelo | 0.53 x 0.81 x 0.45 | 796 | 62.6 | — |
+| `mobiliario/poste-luz.glb` | Poste de luz urbano de 8 m, braço único, lâmpada acesa | 0.40 x 8.10 x 2.57 | 742 | 60.8 | — |
+| `mobiliario/poste-luz-apagado.glb` | Poste de luz urbano de 8 m, braço único, lâmpada apagada | 0.40 x 8.10 x 2.57 | 742 | 60.8 | — |
+| `mobiliario/poste-luz-duplo.glb` | Poste de luz de 8 m com dois braços opostos (canteiro central), acesa | 0.40 x 8.10 x 4.76 | 1194 | 95.3 | — |
+| `mobiliario/poste-luz-pedestre.glb` | Poste ornamental de pedestre (4,4 m) com globo aceso, para calçadas e praças | 0.62 x 4.52 x 0.60 | 514 | 42.8 | — |
 
-Total: 30 peças, 9223 triângulos, 1.1 MB.
+Total: 42 peças, 14251 triângulos, 1.5 MB.

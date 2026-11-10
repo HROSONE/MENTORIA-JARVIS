@@ -7,6 +7,10 @@
 //   scene.add(await kit.prop('hidrante', 0, 1, 4.8, 2));    // prop na calçada (x,z locais do ladrilho)
 //   kit.semaforoEstado(semaforo, 'vermelho');               // troca a luz ligada em tempo de execução
 //
+//   kit.luzEstado(poste, true);                             // acende a lâmpada de um poste de luz
+//   for (const l of kit.luzesDe(poste)) { /* l.pos, l.cor, l.alcance: ponha um PointLight aqui em cenas noturnas */ }
+//   scene.add(await kit.ladrilho('rotatoria', 2, 2));       // rotatória de 36 m: o centro cai no centro de um ladrilho (ocupa 3 x 3)
+//
 // Convenções: metros, Y para cima. Ladrilho de 12 x 12 m com a origem no centro; topo do asfalto em y = 0 e da calçada em y = 0,15.
 // Girar um ladrilho 90° em Y leva a conexão S para E, depois N, depois W (sentido horário visto de cima).
 import * as THREE from 'three';
@@ -40,6 +44,8 @@ export class Kit {
     const gltf = await this.cache.get(nome);
     const o = gltf.scene.clone(true);
     o.name = nome;
+    const raiz = o.children[0];                       // nó raiz do .glb: seus `extras` (conexoes, luzes...) vão para o objeto
+    if (raiz) Object.assign(o.userData, raiz.userData);
     o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
     return o;
   }
@@ -80,6 +86,23 @@ export class Kit {
   naPista(gx, gz, rot, sentido, s) {
     const t = rot * Math.PI / 2, lx = sentido > 0 ? -FAIXA / 2 : FAIXA / 2;
     return { x: gx * TILE + lx * Math.cos(t) + s * Math.sin(t), z: gz * TILE - lx * Math.sin(t) + s * Math.cos(t), ry: t + (sentido > 0 ? 0 : Math.PI) };
+  }
+
+  /** acende ou apaga a lâmpada de um poste de luz (nó `Luz`); funciona em qualquer poste-luz-*.glb */
+  luzEstado(obj, ligada) {
+    obj.traverse(m => {
+      if (!m.isMesh || !/^Luz(_\d+)?$/.test(m.name)) return;
+      if (!m.userData.matProprio) { m.material = m.material.clone(); m.userData.matProprio = true; }
+      m.material.color.setHex(ligada ? 0xfff2cc : 0xcdd3d8);
+      m.material.emissive.setHex(ligada ? 0xffd98a : 0x000000);
+      m.material.emissiveIntensity = ligada ? 1.6 : 0;
+    });
+  }
+
+  /** onde pôr luzes reais (PointLight/SpotLight) de um poste, em coordenadas do mundo: [{ pos: Vector3, dir, cor, alcance }] */
+  luzesDe(obj) {
+    obj.updateMatrixWorld(true);
+    return (obj.userData.luzes || []).map(l => ({ pos: obj.localToWorld(new THREE.Vector3(...l.pos)), dir: l.dir, cor: l.cor, alcance: l.alcance }));
   }
 
   /** liga uma luz do semáforo ('vermelho' | 'amarelo' | 'verde' | 'apagado'); funciona em qualquer semaforo-*.glb */

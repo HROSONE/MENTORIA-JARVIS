@@ -37,6 +37,60 @@ def Rz(a):
     m = np.eye(4); m[0, 0], m[0, 1], m[1, 0], m[1, 1] = c, -s, s, c; return m
 
 
+def alinhar_y(d):
+    """matriz 4x4 que gira o eixo +Y para a direção d"""
+    d = V(*d)
+    d = d / np.linalg.norm(d)
+    y = V(0, 1, 0)
+    v = np.cross(y, d)
+    c = float(np.dot(y, d))
+    if np.linalg.norm(v) < 1e-9:
+        return np.eye(4) if c > 0 else Rx(math.pi)
+    vx = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+    M = np.eye(4)
+    M[:3, :3] = np.eye(3) + vx + vx @ vx / (1 + c)
+    return M
+
+
+def triangular(pts):
+    """triangula um polígono simples (pode ser côncavo) por ear clipping. pts: [(x, z)]; devolve triplas de índices"""
+    n = len(pts)
+    idx = list(range(n))
+    area = sum(pts[i][0] * pts[(i + 1) % n][1] - pts[(i + 1) % n][0] * pts[i][1] for i in range(n)) / 2
+    if area < 0:
+        idx.reverse()
+
+    def cruz(a, b, c):
+        return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+
+    def dentro(p, a, b, c):
+        d1, d2, d3 = cruz(a, b, p), cruz(b, c, p), cruz(c, a, p)
+        return d1 >= -1e-9 and d2 >= -1e-9 and d3 >= -1e-9
+
+    tris = []
+    guarda = 0
+    while len(idx) > 3 and guarda < 20000:
+        guarda += 1
+        achou = False
+        for k in range(len(idx)):
+            i0, i1, i2 = idx[k - 1], idx[k], idx[(k + 1) % len(idx)]
+            a, b, c = pts[i0], pts[i1], pts[i2]
+            if cruz(a, b, c) <= 1e-10:
+                continue
+            if any(dentro(pts[j], a, b, c) for j in idx if j not in (i0, i1, i2) and pts[j] not in (a, b, c)):
+                continue
+            tris.append((i0, i1, i2))
+            idx.pop(k)
+            achou = True
+            break
+        if not achou:                                   # vértice colinear/degenerado: descarta o de menor área
+            k = min(range(len(idx)), key=lambda k: abs(cruz(pts[idx[k - 1]], pts[idx[k]], pts[idx[(k + 1) % len(idx)]])))
+            idx.pop(k)
+    if len(idx) == 3:
+        tris.append(tuple(idx))
+    return tris
+
+
 class Malha:
     def __init__(self):
         self.g = {}          # id(material) -> [material, pos[], nrm[], uv[], idx[]]
@@ -160,6 +214,26 @@ class Malha:
         m = Malha(); m.revolve(mat, prof, segs, smooth=True, hard_deg=40)
         M = {'y': np.eye(4), 'x': Rz(-math.pi / 2), 'z': Rx(math.pi / 2)}[axis]
         self.add(m, T(cx, cy, cz) @ M)
+
+
+    def plano(self, mat, pts_xz, y, facing=(0, 1, 0)):
+        """polígono horizontal qualquer (côncavo também), triangulado por ear clipping, em altura y"""
+        for i0, i1, i2 in triangular(pts_xz):
+            a, b, c = pts_xz[i0], pts_xz[i1], pts_xz[i2]
+            self.poly(mat, [(a[0], y, a[1]), (b[0], y, b[1]), (c[0], y, c[1])], facing)
+
+    def tubo(self, mat, p0, p1, r0, r1=None, segs=10, caps=False):
+        """cilindro (ou cone truncado) entre dois pontos 3D"""
+        d = V(*p1) - V(*p0)
+        m = Malha()
+        m.cyl(mat, 0, 0, 0, r0, float(np.linalg.norm(d)), segs, r_top=r1, caps=caps)
+        self.add(m, T(*p0) @ alinhar_y(d))
+
+    def esfera(self, mat, c, r, segs=12, aneis=6):
+        perfil = [(r * math.sin(math.pi * k / aneis), -r * math.cos(math.pi * k / aneis)) for k in range(aneis + 1)]
+        m = Malha()
+        m.revolve(mat, perfil, segs, smooth=True, hard_deg=80)
+        self.add(m, T(*c))
 
     def add(self, other, M=None):
         """copia outra malha aplicando a matriz 4x4 M"""

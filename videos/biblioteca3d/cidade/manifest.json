@@ -29,8 +29,8 @@
     {
      "lado": "N",
      "pos": [
-      0,
-      0,
+      0.0,
+      0.0,
       -6.0
      ],
      "dir": [
@@ -43,8 +43,8 @@
     {
      "lado": "S",
      "pos": [
-      0,
-      0,
+      0.0,
+      0.0,
       6.0
      ],
      "dir": [
@@ -86,8 +86,8 @@
     {
      "lado": "S",
      "pos": [
-      0,
-      0,
+      0.0,
+      0.0,
       6.0
      ],
      "dir": [
@@ -101,8 +101,8 @@
      "lado": "E",
      "pos": [
       6.0,
-      0,
-      0
+      0.0,
+      0.0
      ],
      "dir": [
       1,
@@ -120,7 +120,7 @@
    "arquivo": "ruas/rua-t.glb",
    "descricao": "Entroncamento em T com braços W, E e S, faixas de pedestres e linhas de retenção",
    "tris": 176,
-   "kb": 17.5,
+   "kb": 17.6,
    "bbox": {
     "min": [
      -6.0,
@@ -144,8 +144,8 @@
      "lado": "W",
      "pos": [
       -6.0,
-      0,
-      0
+      0.0,
+      0.0
      ],
      "dir": [
       -1,
@@ -158,8 +158,8 @@
      "lado": "E",
      "pos": [
       6.0,
-      0,
-      0
+      0.0,
+      0.0
      ],
      "dir": [
       1,
@@ -171,8 +171,8 @@
     {
      "lado": "S",
      "pos": [
-      0,
-      0,
+      0.0,
+      0.0,
       6.0
      ],
      "dir": [
@@ -191,7 +191,7 @@
    "arquivo": "ruas/rua-cruzamento.glb",
    "descricao": "Cruzamento de 4 braços com faixas de pedestres e linhas de retenção",
    "tris": 306,
-   "kb": 26.8,
+   "kb": 26.9,
    "bbox": {
     "min": [
      -6.0,
@@ -214,8 +214,8 @@
     {
      "lado": "N",
      "pos": [
-      0,
-      0,
+      0.0,
+      0.0,
       -6.0
      ],
      "dir": [
@@ -229,8 +229,8 @@
      "lado": "E",
      "pos": [
       6.0,
-      0,
-      0
+      0.0,
+      0.0
      ],
      "dir": [
       1,
@@ -242,8 +242,8 @@
     {
      "lado": "S",
      "pos": [
-      0,
-      0,
+      0.0,
+      0.0,
       6.0
      ],
      "dir": [
@@ -257,8 +257,8 @@
      "lado": "W",
      "pos": [
       -6.0,
-      0,
-      0
+      0.0,
+      0.0
      ],
      "dir": [
       -1,
@@ -299,8 +299,8 @@
     {
      "lado": "S",
      "pos": [
-      0,
-      0,
+      0.0,
+      0.0,
       6.0
      ],
      "dir": [
@@ -337,6 +337,514 @@
    ],
    "tile": 12.0,
    "tipo": "chao"
+  },
+  {
+   "nome": "rotatoria",
+   "categoria": "rotatorias",
+   "arquivo": "rotatorias/rotatoria.glb",
+   "descricao": "Rotatória de 36 x 36 m (3 x 3 ladrilhos): ilha central, anel de mão única anti-horário, 4 braços de mão dupla e cantos de grama",
+   "tris": 1066,
+   "kb": 86.8,
+   "bbox": {
+    "min": [
+     -18.0,
+     0.0,
+     -18.0
+    ],
+    "max": [
+     18.0,
+     0.15,
+     18.0
+    ]
+   },
+   "nos": [
+    "Asfalto",
+    "Ilha",
+    "MeioFio",
+    "Calcada",
+    "Faixas",
+    "Grama"
+   ],
+   "conexoes": [
+    {
+     "lado": "N",
+     "pos": [
+      0.0,
+      0.0,
+      -18.0
+     ],
+     "dir": [
+      0,
+      0,
+      -1
+     ],
+     "perfil": "rua-2-faixas"
+    },
+    {
+     "lado": "E",
+     "pos": [
+      18.0,
+      0.0,
+      0.0
+     ],
+     "dir": [
+      1,
+      0,
+      0
+     ],
+     "perfil": "rua-2-faixas"
+    },
+    {
+     "lado": "S",
+     "pos": [
+      0.0,
+      0.0,
+      18.0
+     ],
+     "dir": [
+      0,
+      0,
+      1
+     ],
+     "perfil": "rua-2-faixas"
+    },
+    {
+     "lado": "W",
+     "pos": [
+      -18.0,
+      0.0,
+      0.0
+     ],
+     "dir": [
+      -1,
+      0,
+      0
+     ],
+     "perfil": "rua-2-faixas"
+    }
+   ],
+   "tile": 36.0,
+   "tipo": "rotatoria"
+  },
+  {
+   "nome": "rotatoria-mini",
+   "categoria": "rotatorias",
+   "arquivo": "rotatorias/rotatoria-mini.glb",
+   "descricao": "Mini-rotatória de 12 x 12 m (1 ladrilho): cruzamento com ilha central e setas",
+   "tris": 500,
+   "kb": 41.7,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.0,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.15,
+     6.0
+    ]
+   },
+   "nos": [
+    "Asfalto",
+    "MeioFio",
+    "Calcada",
+    "Faixas"
+   ],
+   "conexoes": [
+    {
+     "lado": "N",
+     "pos": [
+      0.0,
+      0.0,
+      -6.0
+     ],
+     "dir": [
+      0,
+      0,
+      -1
+     ],
+     "perfil": "rua-2-faixas"
+    },
+    {
+     "lado": "E",
+     "pos": [
+      6.0,
+      0.0,
+      0.0
+     ],
+     "dir": [
+      1,
+      0,
+      0
+     ],
+     "perfil": "rua-2-faixas"
+    },
+    {
+     "lado": "S",
+     "pos": [
+      0.0,
+      0.0,
+      6.0
+     ],
+     "dir": [
+      0,
+      0,
+      1
+     ],
+     "perfil": "rua-2-faixas"
+    },
+    {
+     "lado": "W",
+     "pos": [
+      -6.0,
+      0.0,
+      0.0
+     ],
+     "dir": [
+      -1,
+      0,
+      0
+     ],
+     "perfil": "rua-2-faixas"
+    }
+   ],
+   "tile": 12.0,
+   "tipo": "rotatoria"
+  },
+  {
+   "nome": "calcada-lisa",
+   "categoria": "calcadas",
+   "arquivo": "calcadas/calcada-lisa.glb",
+   "descricao": "Praça/calçadão: ladrilho pavimentado com lajes de 2 m em dois tons",
+   "tris": 72,
+   "kb": 7.2,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.15,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.15,
+     6.0
+    ]
+   },
+   "nos": [
+    "Calcada"
+   ],
+   "conexoes": [],
+   "tile": 12.0,
+   "tipo": "calcada"
+  },
+  {
+   "nome": "calcada-reta",
+   "categoria": "calcadas",
+   "arquivo": "calcadas/calcada-reta.glb",
+   "descricao": "Caminho de pedestres reto (2,5 m) sobre grama",
+   "tris": 20,
+   "kb": 4.1,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.15,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.15,
+     6.0
+    ]
+   },
+   "nos": [
+    "Calcada",
+    "Grama"
+   ],
+   "conexoes": [
+    {
+     "lado": "N",
+     "pos": [
+      0.0,
+      0.0,
+      -6.0
+     ],
+     "dir": [
+      0,
+      0,
+      -1
+     ],
+     "perfil": "caminho-2,5m"
+    },
+    {
+     "lado": "S",
+     "pos": [
+      0.0,
+      0.0,
+      6.0
+     ],
+     "dir": [
+      0,
+      0,
+      1
+     ],
+     "perfil": "caminho-2,5m"
+    }
+   ],
+   "tile": 12.0,
+   "tipo": "calcada"
+  },
+  {
+   "nome": "calcada-curva",
+   "categoria": "calcadas",
+   "arquivo": "calcadas/calcada-curva.glb",
+   "descricao": "Caminho de pedestres em curva de 90° (ligando S e E)",
+   "tris": 50,
+   "kb": 6.5,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.15,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.15,
+     6.0
+    ]
+   },
+   "nos": [
+    "Calcada",
+    "Grama"
+   ],
+   "conexoes": [
+    {
+     "lado": "S",
+     "pos": [
+      0.0,
+      0.0,
+      6.0
+     ],
+     "dir": [
+      0,
+      0,
+      1
+     ],
+     "perfil": "caminho-2,5m"
+    },
+    {
+     "lado": "E",
+     "pos": [
+      6.0,
+      0.0,
+      0.0
+     ],
+     "dir": [
+      1,
+      0,
+      0
+     ],
+     "perfil": "caminho-2,5m"
+    }
+   ],
+   "tile": 12.0,
+   "tipo": "calcada"
+  },
+  {
+   "nome": "calcada-t",
+   "categoria": "calcadas",
+   "arquivo": "calcadas/calcada-t.glb",
+   "descricao": "Caminho de pedestres em T (braços W, E e S)",
+   "tris": 26,
+   "kb": 4.7,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.15,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.15,
+     6.0
+    ]
+   },
+   "nos": [
+    "Calcada",
+    "Grama"
+   ],
+   "conexoes": [
+    {
+     "lado": "W",
+     "pos": [
+      -6.0,
+      0.0,
+      0.0
+     ],
+     "dir": [
+      -1,
+      0,
+      0
+     ],
+     "perfil": "caminho-2,5m"
+    },
+    {
+     "lado": "E",
+     "pos": [
+      6.0,
+      0.0,
+      0.0
+     ],
+     "dir": [
+      1,
+      0,
+      0
+     ],
+     "perfil": "caminho-2,5m"
+    },
+    {
+     "lado": "S",
+     "pos": [
+      0.0,
+      0.0,
+      6.0
+     ],
+     "dir": [
+      0,
+      0,
+      1
+     ],
+     "perfil": "caminho-2,5m"
+    }
+   ],
+   "tile": 12.0,
+   "tipo": "calcada"
+  },
+  {
+   "nome": "calcada-cruzamento",
+   "categoria": "calcadas",
+   "arquivo": "calcadas/calcada-cruzamento.glb",
+   "descricao": "Cruzamento de caminhos de pedestres (4 braços)",
+   "tris": 34,
+   "kb": 5.4,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.15,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.15,
+     6.0
+    ]
+   },
+   "nos": [
+    "Calcada",
+    "Grama"
+   ],
+   "conexoes": [
+    {
+     "lado": "N",
+     "pos": [
+      0.0,
+      0.0,
+      -6.0
+     ],
+     "dir": [
+      0,
+      0,
+      -1
+     ],
+     "perfil": "caminho-2,5m"
+    },
+    {
+     "lado": "E",
+     "pos": [
+      6.0,
+      0.0,
+      0.0
+     ],
+     "dir": [
+      1,
+      0,
+      0
+     ],
+     "perfil": "caminho-2,5m"
+    },
+    {
+     "lado": "S",
+     "pos": [
+      0.0,
+      0.0,
+      6.0
+     ],
+     "dir": [
+      0,
+      0,
+      1
+     ],
+     "perfil": "caminho-2,5m"
+    },
+    {
+     "lado": "W",
+     "pos": [
+      -6.0,
+      0.0,
+      0.0
+     ],
+     "dir": [
+      -1,
+      0,
+      0
+     ],
+     "perfil": "caminho-2,5m"
+    }
+   ],
+   "tile": 12.0,
+   "tipo": "calcada"
+  },
+  {
+   "nome": "calcada-fim",
+   "categoria": "calcadas",
+   "arquivo": "calcadas/calcada-fim.glb",
+   "descricao": "Caminho de pedestres que termina numa pracinha redonda (vindo do sul)",
+   "tris": 68,
+   "kb": 7.8,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.15,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.15,
+     6.0
+    ]
+   },
+   "nos": [
+    "Calcada",
+    "Grama"
+   ],
+   "conexoes": [
+    {
+     "lado": "S",
+     "pos": [
+      0.0,
+      0.0,
+      6.0
+     ],
+     "dir": [
+      0,
+      0,
+      1
+     ],
+     "perfil": "caminho-2,5m"
+    }
+   ],
+   "tile": 12.0,
+   "tipo": "calcada"
   },
   {
    "nome": "faixa-central-tracejada",
@@ -1011,6 +1519,203 @@
    "tipo": "hidrante",
    "frente": "+Z",
    "origem": "pé do poste"
+  },
+  {
+   "nome": "poste-luz",
+   "categoria": "mobiliario",
+   "arquivo": "mobiliario/poste-luz.glb",
+   "descricao": "Poste de luz urbano de 8 m, braço único, lâmpada acesa",
+   "tris": 742,
+   "kb": 60.8,
+   "bbox": {
+    "min": [
+     -0.2,
+     0.0,
+     -0.195
+    ],
+    "max": [
+     0.2,
+     8.1,
+     2.38
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Braco",
+    "Luminaria",
+    "Luz"
+   ],
+   "tipo": "poste-luz",
+   "frente": "+Z (o braço aponta para +Z)",
+   "origem": "pé do poste",
+   "luzes": [
+    {
+     "pos": [
+      0,
+      7.88,
+      1.85
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 16
+    }
+   ],
+   "ligada": true
+  },
+  {
+   "nome": "poste-luz-apagado",
+   "categoria": "mobiliario",
+   "arquivo": "mobiliario/poste-luz-apagado.glb",
+   "descricao": "Poste de luz urbano de 8 m, braço único, lâmpada apagada",
+   "tris": 742,
+   "kb": 60.8,
+   "bbox": {
+    "min": [
+     -0.2,
+     0.0,
+     -0.195
+    ],
+    "max": [
+     0.2,
+     8.1,
+     2.38
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Braco",
+    "Luminaria",
+    "Luz"
+   ],
+   "tipo": "poste-luz",
+   "frente": "+Z (o braço aponta para +Z)",
+   "origem": "pé do poste",
+   "luzes": [
+    {
+     "pos": [
+      0,
+      7.88,
+      1.85
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 16
+    }
+   ],
+   "ligada": false
+  },
+  {
+   "nome": "poste-luz-duplo",
+   "categoria": "mobiliario",
+   "arquivo": "mobiliario/poste-luz-duplo.glb",
+   "descricao": "Poste de luz de 8 m com dois braços opostos (canteiro central), acesa",
+   "tris": 1194,
+   "kb": 95.3,
+   "bbox": {
+    "min": [
+     -0.2,
+     0.0,
+     -2.38
+    ],
+    "max": [
+     0.2,
+     8.1,
+     2.38
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Braco",
+    "Luminaria",
+    "Luz"
+   ],
+   "tipo": "poste-luz",
+   "frente": "+Z (o braço aponta para +Z)",
+   "origem": "pé do poste",
+   "luzes": [
+    {
+     "pos": [
+      0,
+      7.88,
+      1.85
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 16
+    },
+    {
+     "pos": [
+      0,
+      7.88,
+      -1.85
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 16
+    }
+   ],
+   "ligada": true
+  },
+  {
+   "nome": "poste-luz-pedestre",
+   "categoria": "mobiliario",
+   "arquivo": "mobiliario/poste-luz-pedestre.glb",
+   "descricao": "Poste ornamental de pedestre (4,4 m) com globo aceso, para calçadas e praças",
+   "tris": 514,
+   "kb": 42.8,
+   "bbox": {
+    "min": [
+     -0.31,
+     0.0,
+     -0.302
+    ],
+    "max": [
+     0.31,
+     4.52,
+     0.302
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Topo",
+    "Luz"
+   ],
+   "tipo": "poste-luz",
+   "frente": "+Z (o braço aponta para +Z)",
+   "origem": "pé do poste",
+   "luzes": [
+    {
+     "pos": [
+      0,
+      3.99,
+      0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 9
+    }
+   ],
+   "ligada": true
   }
  ],
  "versao": 1,
@@ -1025,8 +1730,11 @@
   "frente": "+Z (lentes do semáforo, bocal do hidrante, face das placas e frente dos carros do Kenney)",
   "reta": "a rua reta corre ao longo de Z; gire 90° em Y para a direção X",
   "mao": "direita: quem anda para +Z usa a faixa x = -1,75; quem anda para -Z usa x = +1,75",
-  "altura": "topo do asfalto em y = 0; topo da calçada em y = 0,15; props nascem no pé (y = 0): coloque-os em y = 0,15 sobre a calçada",
+  "altura": "topo do asfalto em y = 0; topo da calçada, dos caminhos e da grama do kit em y = 0,15; props nascem no pé (y = 0): coloque-os em y = 0,15 sobre a calçada ou a grama",
   "rotacao": "girar 90° em Y leva a conexão S para E, depois N, depois W",
+  "rotatoria": "a rotatória grande tem 36 x 36 m (3 x 3 ladrilhos, o centro cai no centro de um ladrilho); suas conexões ficam a 18 m do centro; o anel é de mão única, anti-horário visto de cima (mão direita)",
+  "caminho": "calcada-reta/curva/t/cruzamento/fim: caminho de 2,5 m cortado na grama, com as conexões no meio das bordas (como as ruas)",
+  "luzes": "cada poste de luz traz em extras.luzes a lista de {pos, dir, cor, alcance} onde pôr PointLight/SpotLight; a lâmpada é o nó Luz (acenda com kit.luzEstado)",
   "escala_veiculo_kenney": 1.7
  }
 }
