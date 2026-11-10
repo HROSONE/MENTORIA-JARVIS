@@ -7,9 +7,11 @@
 //   scene.add(await kit.prop('hidrante', 0, 1, 4.8, 2));    // prop na calçada (x,z locais do ladrilho)
 //   kit.semaforoEstado(semaforo, 'vermelho');               // troca a luz ligada em tempo de execução
 //
-//   kit.luzEstado(poste, true);                             // acende a lâmpada de um poste de luz
+//   kit.luzEstado(poste, true);                             // acende a lâmpada de um poste, as janelas de um prédio, os letreiros...
 //   for (const l of kit.luzesDe(poste)) { /* l.pos, l.cor, l.alcance: ponha um PointLight aqui em cenas noturnas */ }
 //   scene.add(await kit.ladrilho('rotatoria', 2, 2));       // rotatória de 36 m: o centro cai no centro de um ladrilho (ocupa 3 x 3)
+//   scene.add(await kit.prop('casa-sobrado', 0, 1, 0, 0));  // casas, prédios, árvores, cercas, móveis... são props: pé em y = 0,15 sobre a grama
+//   kit.pecas['hospital'].pegada                            // [36, 24]: tamanho do lote em metros (edifícios e ladrilhos grandes)
 //
 // Convenções: metros, Y para cima. Ladrilho de 12 x 12 m com a origem no centro; topo do asfalto em y = 0 e da calçada em y = 0,15.
 // Girar um ladrilho 90° em Y leva a conexão S para E, depois N, depois W (sentido horário visto de cima).
@@ -88,21 +90,37 @@ export class Kit {
     return { x: gx * TILE + lx * Math.cos(t) + s * Math.sin(t), z: gz * TILE - lx * Math.sin(t) + s * Math.cos(t), ry: t + (sentido > 0 ? 0 : Math.PI) };
   }
 
-  /** acende ou apaga a lâmpada de um poste de luz (nó `Luz`); funciona em qualquer poste-luz-*.glb */
+  /** acende ou apaga as luzes de um objeto do kit (à noite): as lâmpadas (nó `Luz`: postes, marquises, refletores), as janelas
+   *  sorteadas (nó `VidroLuz`: casas, prédios, hospital...) e os letreiros com textura (nó `Letreiro`, que passam a brilhar) */
   luzEstado(obj, ligada) {
     obj.traverse(m => {
-      if (!m.isMesh || !/^Luz(_\d+)?$/.test(m.name)) return;
-      if (!m.userData.matProprio) { m.material = m.material.clone(); m.userData.matProprio = true; }
-      m.material.color.setHex(ligada ? 0xfff2cc : 0xcdd3d8);
-      m.material.emissive.setHex(ligada ? 0xffd98a : 0x000000);
-      m.material.emissiveIntensity = ligada ? 1.6 : 0;
+      if (!m.isMesh) return;
+      const luz = /^Luz(_\d+)?$/.test(m.name), janela = /^VidroLuz(_\d+)?$/.test(m.name), letreiro = /^Letreiro(_\d+)?$/.test(m.name);
+      if (!luz && !janela && !letreiro) return;
+      if (!m.userData.matProprio) { m.material = m.material.clone(); m.userData.matProprio = true; m.userData.corDia = m.material.color.getHex(); }
+      const mat = m.material;
+      if (luz) {
+        mat.color.setHex(ligada ? 0xfff2cc : 0xcdd3d8);
+        mat.emissive.setHex(ligada ? 0xffd98a : 0x000000);
+        mat.emissiveIntensity = ligada ? 1.6 : 0;
+      } else if (janela) {
+        mat.color.setHex(ligada ? 0xffe3a8 : m.userData.corDia);
+        mat.emissive.setHex(ligada ? 0xffc866 : 0x000000);
+        mat.emissiveIntensity = ligada ? 1.2 : 0;
+      } else if (mat.map) {
+        mat.emissiveMap = mat.map;
+        mat.emissive.setHex(ligada ? 0xffffff : 0x000000);
+        mat.emissiveIntensity = ligada ? 0.9 : 0;
+        mat.needsUpdate = true;
+      }
     });
   }
 
-  /** onde pôr luzes reais (PointLight/SpotLight) de um poste, em coordenadas do mundo: [{ pos: Vector3, dir, cor, alcance }] */
+  /** onde pôr luzes reais de um objeto, em coordenadas do mundo: [{ pos: Vector3, dir: Vector3, cor, alcance, foco }]; sem `foco` use um PointLight,
+   com `foco` (meio ângulo do cone, em graus) use um SpotLight apontado para `dir` (refletores de estádio e de campo) */
   luzesDe(obj) {
     obj.updateMatrixWorld(true);
-    return (obj.userData.luzes || []).map(l => ({ pos: obj.localToWorld(new THREE.Vector3(...l.pos)), dir: l.dir, cor: l.cor, alcance: l.alcance }));
+    return (obj.userData.luzes || []).map(l => ({ pos: obj.localToWorld(new THREE.Vector3(...l.pos)), dir: new THREE.Vector3(...l.dir).transformDirection(obj.matrixWorld), cor: l.cor, alcance: l.alcance, foco: l.foco }));
   }
 
   /** liga uma luz do semáforo ('vermelho' | 'amarelo' | 'verde' | 'apagado'); funciona em qualquer semaforo-*.glb */

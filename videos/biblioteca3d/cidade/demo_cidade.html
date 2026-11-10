@@ -13,7 +13,7 @@
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 </head>
 <body>
-<div id="info">Kit cidade — demonstração (arraste para girar) · ?mapa=cidade|rotatoria · ?noite · ?cam=aereo|rua|topo|canto|poste · ?still</div>
+<div id="info">Kit cidade — demonstração (arraste para girar) · ?mapa=cidade|rotatoria|bairro|centro|estadio · ?noite · ?cam=aereo|rua|topo|canto|poste|casa|praca · ?still</div>
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -21,7 +21,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Kit, TILE, CALCADA, ESCALA_VEICULO } from './kit.js';
 
 const Q = new URLSearchParams(location.search);
-const MAPA = Q.get('mapa') === 'rotatoria' ? 'rotatoria' : 'cidade';
+const MAPA = ['rotatoria', 'bairro', 'centro', 'estadio'].includes(Q.get('mapa')) ? Q.get('mapa') : 'cidade';
 const NOITE = Q.has('noite');
 const CAM = Q.get('cam') || 'aereo';
 if (Q.has('still')) document.body.classList.add('still');
@@ -46,8 +46,6 @@ sun.castShadow = true;
 sun.shadow.mapSize.set(4096, 4096);
 sun.shadow.bias = -0.0003;
 sun.shadow.normalBias = 0.03;
-const RS = MAPA === 'rotatoria' ? 48 : 40;
-Object.assign(sun.shadow.camera, { left: -RS, right: RS, top: RS, bottom: -RS, near: 1, far: 170 });
 scene.add(sun, sun.target);
 
 const kit = await Kit.carregar();
@@ -72,21 +70,43 @@ const HALO = (() => {
   return new THREE.SpriteMaterial({ map: t, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true });
 })();
 
-/** poste de luz em coordenadas do mundo (x, z); `ang` gira o braço (0 = braço para +Z); `y` = altura do pé (0,15 sobre calçada ou grama do kit).
- *  Dia: lâmpada apagada. Noite: lâmpada acesa, um PointLight por luz do poste (kit.luzesDe) e um halo. */
-async function poste(nome, x, z, ang = 0, y = CALCADA) {
+/** coloca uma peça em coordenadas do mundo (x, z): `ang` gira em torno de Y e `y` é a altura do pé (0,15 sobre a calçada ou a grama do kit).
+ *  À noite acende as lâmpadas, as janelas e os letreiros (kit.luzEstado); com `luz`, põe um PointLight (e um halo, nos postes de luz)
+ *  em cada luz do objeto (kit.luzesDe, no máximo `max`). */
+async function colocar(nome, x, z, ang = 0, y = CALCADA, { escala = 1, luz = false, max = 3 } = {}) {
   const o = await kit.peca(nome);
   o.position.set(x, y, z); o.rotation.y = ang;
+  if (escala !== 1) o.scale.setScalar(escala);
   kit.luzEstado(o, NOITE);
   mundo.add(o);
-  if (!NOITE) return;
-  for (const l of kit.luzesDe(o)) {
-    const luz = new THREE.PointLight(l.cor, l.alcance * l.alcance * 1.1, l.alcance * 1.5, 2);
-    luz.position.copy(l.pos); mundo.add(luz);
-    const halo = new THREE.Sprite(HALO);
-    halo.position.copy(l.pos); halo.scale.setScalar(l.alcance > 12 ? 3.4 : 1.9); mundo.add(halo);
+  if (NOITE && luz) {
+    for (const l of kit.luzesDe(o).slice(0, max)) {
+      if (l.foco) {                                                           // refletor: SpotLight apontado para o campo
+        const sp = new THREE.SpotLight(l.cor, l.alcance * l.alcance * 0.9, l.alcance * 1.6, l.foco * Math.PI / 180, 0.5, 2);
+        sp.position.copy(l.pos); sp.target.position.copy(l.pos).addScaledVector(l.dir, 60);
+        mundo.add(sp, sp.target);
+        const halo = new THREE.Sprite(HALO);
+        halo.position.copy(l.pos); halo.scale.setScalar(l.alcance > 60 ? 12 : 5); mundo.add(halo);
+        continue;
+      }
+      const pl = new THREE.PointLight(l.cor, l.alcance * l.alcance * 1.1, l.alcance * 1.5, 2);
+      pl.position.copy(l.pos); mundo.add(pl);
+      if (nome.startsWith('poste-luz')) {
+        const halo = new THREE.Sprite(HALO);
+        halo.position.copy(l.pos); halo.scale.setScalar(l.alcance > 12 ? 3.4 : 1.9); mundo.add(halo);
+      }
+    }
   }
+  return o;
 }
+/** poste de luz: braço para +Z; gire `ang` para apontá-lo para a pista (PI = -Z, PI/2 = +X, -PI/2 = -X) */
+const poste = (nome, x, z, ang = 0, y = CALCADA) => colocar(nome, x, z, ang, y, { luz: true });
+
+function aleatorio(semente) {                      // números pseudoaleatórios repetíveis (mulberry32)
+  let a = semente;
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+const ARVORES = ['arvore-redonda', 'arvore-frondosa', 'arvore-ipe-amarelo', 'arvore-ipe-rosa', 'arvore-pinheiro', 'arvore-cipreste'];
 
 // ---- veículos do Kenney (biblioteca3d/veiculos), escala 1,7; sem a textura colormap.png usamos cor chapada
 const vl = new GLTFLoader();
@@ -100,12 +120,12 @@ async function carro(nome, cor, p) {
     if (!m.material.map || !m.material.map.image) { m.material.map = null; m.material.color.set(cor); }
   });
   o.scale.setScalar(ESCALA_VEICULO);
-  o.position.set(p.x, 0, p.z);
+  o.position.set(p.x, p.y || 0, p.z);
   o.rotation.y = p.ry;
   mundo.add(o);
 }
 
-let centro, camPadrao;
+let centro, camPadrao, raio = 42;
 if (MAPA === 'cidade') {
   // ================================================================ cidade: grade 5 x 4
   await ladrilhos([
@@ -165,7 +185,7 @@ if (MAPA === 'cidade') {
     rua: { pos: [5.5, 5.4, 41], alvo: [25, 1.6, 25], fov: 48 },
     poste: { pos: [3, 1.7, 31.8], alvo: [29, 4.6, 27], fov: 52 },
   };
-} else {
+} else if (MAPA === 'rotatoria') {
   // ================================================================ rotatória: grade 5 x 5, a rotatória ocupa 3 x 3 no meio
   const C = new THREE.Vector3(2 * TILE, 0, 2 * TILE);
   await ladrilhos([
@@ -221,6 +241,189 @@ if (MAPA === 'cidade') {
     rua: { pos: [C.x + 1.75, 2.7, C.z + 31], alvo: [C.x, 1.5, C.z + 6], fov: 52 },
     poste: { pos: [C.x + 21, 1.8, C.z + 18], alvo: [C.x + 8, 5.5, C.z + 4], fov: 54 },
   };
+} else if (MAPA === 'bairro') {
+  // ================================================================ bairro: grade 8 x 5, uma rua com casas dos dois lados e uma travessa
+  const R = aleatorio(7);
+  const ESC = () => 0.9 + R() * 0.25;
+  const ruas = [['rua-cruzamento', 4, 2], ['rua-reta', 4, 1, ['N', 'S']], ['rua-reta', 4, 3, ['N', 'S']], ['rua-fim', 4, 0, ['S']], ['rua-fim', 4, 4, ['N']]];
+  for (const gx of [0, 1, 2, 3, 5, 6, 7]) ruas.push(['rua-reta', gx, 2, ['W', 'E']]);
+  await ladrilhos(ruas);
+
+  // lotes: casa, cerca da frente, cerca viva nos fundos, cerca lateral, árvore e arbusto de flores
+  const CASAS = ['casa-simples', 'casa-sobrado', 'casa-moderna', 'casa-colonial'];
+  const FRENTES = ['cerca-madeira-portao', 'muro-portao', 'grade-ferro', 'cerca-madeira'];
+  const GRAMAS = ['gramado-detalhado', 'chao-grama', 'gramado-flores', 'chao-grama'];
+  let k = 0;
+  for (const gz of [1, 3]) {
+    const s = gz === 1 ? 1 : -1;                                   // 1: lote ao norte da rua (frente para +Z); -1: ao sul (frente para -Z)
+    const giro = s > 0 ? 0 : Math.PI;
+    for (const gx of [0, 1, 2, 3, 5, 6, 7]) {
+      if (gz === 3 && gx >= 5) continue;                           // o parque ocupa o canto sudeste
+      const i = k++, cx = 12 * gx, cz = 12 * gz;
+      await ladrilhos([[GRAMAS[i % 4], gx, gz]]);
+      await colocar(CASAS[i % 4], cx, cz, giro);
+      await colocar(FRENTES[i % 4], cx, cz + s * 5.85, giro);
+      await colocar('cerca-viva', cx, cz - s * 5.85, giro + Math.PI);
+      await colocar('cerca-madeira', cx - 5.9, cz, -Math.PI / 2);
+      if (gx === 3 || gx === 7) await colocar('cerca-madeira', cx + 5.9, cz, Math.PI / 2);
+      await colocar(ARVORES[(i + 1) % 6], cx + (i % 2 ? 4.7 : -4.7), cz + s * 4.5, R() * 6.28, CALCADA, { escala: ESC() });
+      await colocar('arbusto-flores', cx + (i % 2 ? -4.7 : 4.7), cz + s * 4.9, 0);
+    }
+  }
+  // quintais dos fundos: gramado detalhado e árvores
+  for (const gz of [0, 4]) {
+    for (const gx of [0, 1, 2, 3, 5, 6, 7]) {
+      await ladrilhos([['gramado-detalhado', gx, gz]]);
+      for (let j = 0; j < 2; j++) await colocar(ARVORES[Math.floor(R() * 6)], 12 * gx + (R() - 0.5) * 8, 12 * gz + (R() - 0.5) * 8, R() * 6.28, CALCADA, { escala: ESC() });
+    }
+  }
+  // parque no canto sudeste: praça de lajes com mesas de café, mesa de piquenique, bancos e palmeiras
+  await ladrilhos([['gramado-flores', 5, 3], ['calcada-lisa', 6, 3], ['gramado-flores', 7, 3]]);
+  for (const [dx, dz] of [[-1.8, -0.8], [1.8, 0.8]]) {
+    await colocar('mesa-redonda', 72 + dx, 36 + dz, 0);
+    for (let c = 0; c < 4; c++) {
+      const a = c * Math.PI / 2 + 0.4;
+      await colocar('cadeira-plastica', 72 + dx + Math.sin(a) * 0.72, 36 + dz + Math.cos(a) * 0.72, a + Math.PI);
+    }
+  }
+  await colocar('mesa-piquenique', 60, 38, 0.3);
+  for (const [x, z, g] of [[66, 31.3, 0], [78, 31.3, 0], [72, 40.8, Math.PI]]) await colocar('banco-praca', x, z, g);
+  for (const [n, x, z, g] of [['arvore-palmeira', 58, 33, 0.2], ['arvore-palmeira', 87, 34, 1.4], ['arvore-frondosa', 84, 40, 0.8], ['arvore-ipe-amarelo', 62, 41, 2.0], ['arvore-ipe-rosa', 69, 41, 1.0]]) await colocar(n, x, z, g);
+  for (const x of [66, 78]) await poste('poste-luz-pedestre', x, 36);
+
+  // a rua: postes de luz, rede elétrica com fios, semáforos no cruzamento, hidrantes e carros
+  for (const x of [12, 36, 60, 84]) await poste('poste-luz', x, 28.85, Math.PI);
+  for (const x of [24, 72]) await poste('poste-luz', x, 19.15, 0);
+  for (const [x, nome, fio] of [[6, 'poste-energia', 'fio-vao-12'], [18, 'poste-energia-transformador', 'fio-vao-12'], [30, 'poste-energia', null], [66, 'poste-energia', 'fio-vao-12'], [78, 'poste-energia', null]]) {
+    await colocar(nome, x, 29.5, 0);
+    if (fio) await colocar(fio, x, 29.5, 0);
+  }
+  await SEM('semaforo-apagado', 4, 2, 4.7, 4.7, 0, 'vermelho');
+  await SEM('semaforo-apagado', 4, 2, -4.7, -4.7, Math.PI, 'vermelho');
+  await SEM('semaforo-apagado', 4, 2, -4.7, 4.7, -Math.PI / 2, 'verde');
+  await SEM('semaforo-apagado', 4, 2, 4.7, -4.7, Math.PI / 2, 'verde');
+  await P('hidrante', 1, 2, -4.8, 3.5, 0, { rot: 1 });
+  await P('hidrante-amarelo', 6, 2, 4.8, -3.5, 0, { rot: 1 });
+  await P('placa-pare', 4, 1, -4.8, 4.6, Math.PI);                 // quem desce a travessa para no cruzamento
+  await carro('sedan', '#d94b3f', kit.naPista(1, 2, 1, +1, -2));
+  await carro('taxi', '#f2c500', kit.naPista(6, 2, 1, -1, 3));
+  await carro('suv', '#2e8b57', kit.naPista(4, 3, 0, -1, 1.5));
+  await carro('police', '#2f5fa8', kit.naPista(2, 2, 1, -1, 1));
+
+  centro = new THREE.Vector3(42, 0, 24);
+  raio = 66;
+  camPadrao = {
+    aereo: { pos: [centro.x + 62, 58, centro.z + 84], alvo: [centro.x, 0, centro.z + 2], fov: 36 },
+    topo: { pos: [42, 135, 24.01], alvo: [42, 0, 24], fov: 38 },
+    rua: { pos: [-3, 2.8, 26.3], alvo: [55, 4.5, 22], fov: 50 },
+    casa: { pos: [-2, 2.4, 27.2], alvo: [14, 3.6, 12], fov: 54 },
+    praca: { pos: [92, 3.4, 54], alvo: [70, 1.4, 36], fov: 52 },
+    poste: { pos: [8, 1.8, 33], alvo: [30, 5.5, 28], fov: 52 },
+  };
+} else if (MAPA === 'centro') {
+  // ================================================================ centro: avenida com dois cruzamentos, hospital, supermercado, cinema, delegacia e prédios
+  const R = aleatorio(11);
+  const ESC = () => 0.85 + R() * 0.25;
+  const ruas = [];
+  for (let gx = 0; gx <= 9; gx++) ruas.push(gx === 3 || gx === 7 ? ['rua-cruzamento', gx, 2] : ['rua-reta', gx, 2, ['W', 'E']]);
+  for (const gx of [3, 7]) for (const gz of [0, 1, 3, 4, 5]) ruas.push(['rua-reta', gx, gz, ['N', 'S']]);
+  await ladrilhos(ruas);
+  const lajes = [], verde = [], vagas = [];
+  for (const gx of [0, 1, 2, 4, 5, 6, 8, 9]) for (const gz of [0, 1, 3]) lajes.push(['calcada-lisa', gx, gz]);
+  for (const gx of [0, 1, 2, 8, 9]) for (const gz of [4, 5]) verde.push(['gramado-detalhado', gx, gz]);
+  for (const gx of [4, 5, 6]) { vagas.push(['estacionamento', gx, 4, 0]); verde.push(['gramado-detalhado', gx, 5]); }
+  await ladrilhos([...lajes, ...verde]);
+  for (const [nome, gx, gz, rot] of vagas) mundo.add(await kit.ladrilho(nome, gx, gz, rot));
+
+  // lado norte (frente para +Z, para a avenida) e lado sul (giro de 180°)
+  await colocar('supermercado', 12, 6, 0, CALCADA, { luz: true, max: 2 });
+  await colocar('hospital', 60, 6, 0, CALCADA, { luz: true, max: 2 });
+  await colocar('cinema', 102, 6, 0, CALCADA, { luz: true, max: 2 });
+  await colocar('delegacia', 6, 36, Math.PI, CALCADA, { luz: true, max: 1 });
+  await colocar('predio-loja-3', 24, 36, Math.PI);
+  await colocar('predio-comercial-10', 54, 36, Math.PI);
+  await colocar('predio-residencial-6', 72, 36, Math.PI);
+  await colocar('predio-residencial-12', 96, 36, Math.PI);
+  await colocar('predio-residencial-12', 108, 36, Math.PI);
+
+  // árvores nas calçadas e nos jardins
+  for (const x of [16, 26, 56, 74, 104, 112]) await colocar(ARVORES[Math.floor(R() * 4)], x, 19.2, R() * 6.28, CALCADA, { escala: 0.75 });
+  for (const x of [8, 28, 48, 62, 94, 112]) await colocar(ARVORES[Math.floor(R() * 4)], x, 28.8, R() * 6.28, CALCADA, { escala: 0.75 });
+  for (const gx of [0, 1, 2, 8, 9]) for (let j = 0; j < 2; j++) await colocar(ARVORES[Math.floor(R() * 6)], 12 * gx + (R() - 0.5) * 8, 12 * 4.5 + R() * 10, R() * 6.28, CALCADA, { escala: ESC() });
+  await colocar('arvore-palmeira', 72, 60, 0.3); await colocar('arvore-palmeira', 48, 60, 1.1); await colocar('arvore-palmeira', 60, 61, 2.0);
+  await colocar('banco-praca', 12, 52, Math.PI); await colocar('mesa-piquenique', 6, 56, 0.2); await colocar('mesa-piquenique', 20, 58, -0.4);
+  await colocar('banco-praca', 100, 50, Math.PI); await colocar('banco-praca', 106, 56, 0);
+
+  // avenida: postes de luz (norte com braço para +Z, sul para -Z), semáforos nos dois cruzamentos, carros
+  for (const x of [8, 48, 66, 96]) await poste('poste-luz', x, 19.15, 0);
+  for (const x of [20, 56, 72, 104]) await poste('poste-luz', x, 28.85, Math.PI);
+  for (const gx of [3, 7]) {
+    await SEM('semaforo-apagado', gx, 2, 4.7, 4.7, 0, 'vermelho');
+    await SEM('semaforo-apagado', gx, 2, -4.7, -4.7, Math.PI, 'vermelho');
+    await SEM('semaforo-apagado', gx, 2, -4.7, 4.7, -Math.PI / 2, gx === 3 ? 'verde' : 'amarelo');
+    await SEM('semaforo-apagado', gx, 2, 4.7, -4.7, Math.PI / 2, gx === 3 ? 'verde' : 'amarelo');
+  }
+  await carro('taxi', '#f2c500', kit.naPista(4, 2, 1, +1, 2));
+  await carro('sedan', '#d94b3f', kit.naPista(1, 2, 1, -1, -2));
+  await carro('suv', '#2e8b57', kit.naPista(5, 2, 1, +1, -1));
+  await carro('police', '#2f5fa8', kit.naPista(3, 3, 0, -1, 1));
+  await carro('firetruck', '#c1272d', kit.naPista(8, 2, 1, -1, 0));
+  await carro('delivery', '#f08a24', kit.naPista(7, 1, 0, +1, 0));
+  // ambulância e viatura na entrada de emergência do hospital
+  await carro('ambulance', '#f4f6f8', { x: 60, z: 13, ry: 0, y: CALCADA });
+
+  centro = new THREE.Vector3(54, 0, 30);
+  raio = 82;
+  camPadrao = {
+    aereo: { pos: [centro.x + 52, 122, centro.z + 112], alvo: [centro.x, 0, centro.z - 2], fov: 38 },
+    norte: { pos: [centro.x - 58, 118, centro.z - 108], alvo: [centro.x, 0, centro.z + 4], fov: 38 },
+    topo: { pos: [54, 165, 30.01], alvo: [54, 0, 30], fov: 40 },
+    rua: { pos: [-3, 3.4, 26.4], alvo: [70, 9, 24], fov: 52 },
+    hospital: { pos: [55, 3.0, 28.8], alvo: [60, 8.5, 9], fov: 58 },
+    cinema: { pos: [90, 2.8, 28.6], alvo: [102, 5, 9], fov: 58 },
+    super: { pos: [2, 2.8, 28.6], alvo: [14, 3.8, 7], fov: 58 },
+  };
+} else if (MAPA === 'estadio') {
+  // ================================================================ estádio: 144 x 108 m (12 x 9 casas) com a rua em volta e estacionamento nos corredores
+  const R = aleatorio(5);
+  const ruas = [];
+  for (let gx = 1; gx <= 14; gx++) ruas.push(['rua-reta', gx, 0, ['W', 'E']], ['rua-reta', gx, 10, ['W', 'E']]);
+  ruas.push(['rua-curva', 0, 0, ['E', 'S']], ['rua-curva', 15, 0, ['W', 'S']], ['rua-curva', 0, 10, ['N', 'E']], ['rua-curva', 15, 10, ['N', 'W']]);
+  for (let gz = 1; gz <= 9; gz++) ruas.push(['rua-reta', 0, gz, ['N', 'S']], ['rua-reta', 15, gz, ['N', 'S']]);
+  await ladrilhos(ruas);
+  const vagas = [];
+  for (const gx of [1, 14]) for (let gz = 1; gz <= 9; gz++) vagas.push([gx, gz, gz % 2 ? 2 : 0]);
+  for (const [gx, gz, rot] of vagas) mundo.add(await kit.ladrilho('estacionamento', gx, gz, rot));
+  await colocar('estadio-futebol', 90, 60, 0, 0, { luz: true, max: 4 });
+  // palmeiras e postes de luz ao longo das ruas
+  for (let x = 18; x <= 162; x += 24) { await colocar('arvore-palmeira', x, -4.6, R() * 6.28); await colocar('arvore-palmeira', x, 124.6, R() * 6.28); }
+  for (let x = 30; x <= 150; x += 24) { await poste('poste-luz', x, -4.85, 0); await poste('poste-luz', x, 124.85, Math.PI); }
+  for (const z of [24, 60, 96]) { await poste('poste-luz', -4.85, z, Math.PI / 2); await poste('poste-luz', 184.85, z, -Math.PI / 2); }
+  for (let gz = 2; gz <= 8; gz += 3) { await colocar('arvore-ipe-amarelo', 12, 12 * gz + 2, R() * 6.28); await colocar('arvore-ipe-rosa', 168, 12 * gz - 2, R() * 6.28); }
+  // carros estacionados (as vagas ficam nas faixas de 3 m, com a frente voltada para o estádio) e dois na rua
+  const CORES = ['#d94b3f', '#2f5fa8', '#f2c500', '#2e8b57', '#e9edf2', '#f08a24'], NOMES = ['sedan', 'suv', 'taxi', 'delivery', 'van', 'police'];
+  let n = 0;
+  for (const [gx, gz, rot] of vagas) {
+    for (const bx of [-4.5, -1.5, 1.5, 4.5]) {
+      if (R() < 0.45) continue;
+      const lz = rot === 0 ? -3.5 : 3.5;                                // as vagas ficam na metade norte (giro 0) ou sul (giro 180°)
+      const sinal = rot === 0 ? 1 : -1;
+      const q = n++ % 6;
+      await carro(NOMES[q], CORES[q], { x: 12 * gx + bx * sinal, z: 12 * gz + lz, ry: rot === 0 ? Math.PI : 0, y: CALCADA });
+    }
+  }
+  await carro('taxi', '#f2c500', kit.naPista(8, 0, 1, +1, 1));
+  await carro('police', '#2f5fa8', kit.naPista(5, 10, 1, -1, 0));
+
+  centro = new THREE.Vector3(90, 0, 60);
+  raio = 120;
+  camPadrao = {
+    aereo: { pos: [centro.x + 125, 125, centro.z + 175], alvo: [centro.x, 0, centro.z - 4], fov: 38 },
+    topo: { pos: [90, 290, 60.01], alvo: [90, 0, 60], fov: 40 },
+    torre: { pos: [168, 8, 128], alvo: [120, 18, 78], fov: 54 },
+    campo: { pos: [92, 2.4, 92], alvo: [112, 8, 62], fov: 62 },
+    entrada: { pos: [58, 3, 132], alvo: [66, 6, 118], fov: 56 },
+  };
 }
 
 // ---- câmera: preset (?cam=...) ou livre (?pos=x,y,z&alvo=x,y,z&fov=graus)
@@ -234,7 +437,10 @@ camera.lookAt(alvo);
 const ctl = new OrbitControls(camera, renderer.domElement);
 ctl.target.copy(alvo); ctl.update();
 sun.target.position.copy(centro);
-sun.position.copy(centro).add(NOITE ? new THREE.Vector3(25, 55, -30) : new THREE.Vector3(-30, 55, 25));
+sun.position.copy(centro).add((NOITE ? new THREE.Vector3(25, 55, -30) : new THREE.Vector3(-30, 55, 25)).multiplyScalar(Math.max(1, raio / 42)));
+Object.assign(sun.shadow.camera, { left: -raio, right: raio, top: raio, bottom: -raio, near: 1, far: raio * 4.5 });
+sun.shadow.camera.updateProjectionMatrix();
+scene.fog.near = raio * (NOITE ? 1.3 : 2.2); scene.fog.far = raio * (NOITE ? 4.2 : 5.2);
 function frame() { renderer.render(scene, camera); }
 ctl.addEventListener('change', frame);
 addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); frame(); });

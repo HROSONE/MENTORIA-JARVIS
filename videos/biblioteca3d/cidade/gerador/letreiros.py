@@ -204,12 +204,12 @@ def placar():
     img = T.tela(w, h, '#0e1116')
     d = ImageDraw.Draw(img)
     _ret(d, w, h, 0.01, 0.03, 0.99, 0.97, 18, outline='#4c5560', width=10 * SS)
-    T.texto(img, 'CASA', 0.2 * w, 0.2 * h, 64, BRANCO)
-    T.texto(img, 'VISITANTE', 0.78 * w, 0.2 * h, 64, BRANCO)
-    T.texto(img, '2', 0.2 * w, 0.58 * h, 200, '#ffd24a')
-    T.texto(img, '1', 0.78 * w, 0.58 * h, 200, '#ffd24a')
-    T.texto(img, 'X', 0.49 * w, 0.58 * h, 110, '#8b95a3')
-    T.texto(img, '63:21', 0.49 * w, 0.2 * h, 70, '#6bff7a')
+    T.texto(img, 'CASA', 0.17 * w, 0.2 * h, 52, BRANCO)
+    T.texto(img, 'VISITANTE', 0.82 * w, 0.2 * h, 46, BRANCO)
+    T.texto(img, '2', 0.17 * w, 0.62 * h, 200, '#ffd24a')
+    T.texto(img, '1', 0.82 * w, 0.62 * h, 200, '#ffd24a')
+    T.texto(img, 'X', 0.5 * w, 0.62 * h, 110, '#8b95a3')
+    T.texto(img, '63:21', 0.5 * w, 0.2 * h, 64, '#6bff7a')
     return T.png(img)
 
 
