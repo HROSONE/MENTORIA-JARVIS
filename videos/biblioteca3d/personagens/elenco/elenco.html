@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Elenco</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#aebccb;font-family:system-ui,sans-serif}
+  canvas{display:block}
+  #ui{position:fixed;left:12px;top:12px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 24px)}
+  #ui button{border:0;border-radius:8px;padding:7px 11px;font:600 13px system-ui;background:#151925;color:#f4efe6;cursor:pointer}
+  #ui button.on{background:#e0762c}
+  #ui .sep{width:14px}
+  body.sem-ui #ui{display:none}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="ui"></div>
+<script type="module">
+import * as THREE from 'three';
+import { Personagem } from './elenco.js';
+
+const Q = new URLSearchParams(location.search);
+const num = (k, d) => (Q.has(k) ? +Q.get(k) : d);
+const W = innerWidth, H = innerHeight;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, Q.has('still') ? 1 : 2));
+renderer.setSize(W, H);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = +(Q.get('exp') || 1.05);
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const noite = Q.has('noite');
+scene.background = new THREE.Color('#' + (Q.get('fundo') || (noite ? '0b0f1a' : 'aebccb')));
+if (noite) scene.fog = new THREE.Fog(0x0b0f1a, 6, 26);
+scene.add(new THREE.HemisphereLight(noite ? 0x4a5a86 : 0xeaf1f7, noite ? 0x141824 : 0x7a8794, noite ? 0.8 : 1.0));
+const key = new THREE.DirectionalLight(noite ? 0xaebcff : 0xfff1dc, noite ? 1.4 : 2.4);
+key.position.set(3, 5, 4); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -7, right: 7, top: 5, bottom: -3, near: 0.5, far: 30 }); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02;
+scene.add(key);
+if (Q.has('contra')) { const r = new THREE.DirectionalLight(0xffc27a, 2.4); r.position.set(-3, 2.5, -4); scene.add(r); }
+const chao = new THREE.Mesh(new THREE.CircleGeometry(60, 64), new THREE.MeshStandardMaterial({ color: '#' + (Q.get('chao') || (noite ? '1b2230' : '8c9aa6')), roughness: 1 }));
+chao.rotation.x = -Math.PI / 2; chao.receiveShadow = true; scene.add(chao);
+const marcas = new THREE.Group(); const ESP = 0.6;
+if (!Q.has('semgrade')) {
+  const mm = new THREE.MeshBasicMaterial({ color: 0x6f7c88, transparent: true, opacity: 0.5 });
+  for (let i = -30; i < 30; i++) { const f = new THREE.Mesh(new THREE.PlaneGeometry(12, 0.05), mm); f.rotation.x = -Math.PI / 2; f.position.set(0, 0.003, i * ESP); marcas.add(f); }
+  scene.add(marcas);
+}
+const arqs = (Q.get('f') || 'maniaco.glb').split(',');
+const clipePadrao = Q.get('clip');
+const pers = [];
+const esp = num('esp', 1.0);
+for (let k = 0; k < arqs.length; k++) {
+  const p = await Personagem.carregar(arqs[k]);
+  p.obj.position.x = (k - (arqs.length - 1) / 2) * esp;
+  p.obj.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  if (Q.has('contorno')) p.contorno({ cor: '#0a0d14', espessura: 0.004 });
+  const nomes = p.clipes.map(c => c.name);
+  const clip = clipePadrao || nomes[0];
+  if (clip && p.clipes.find(c => c.name === clip)) { if (Q.has('t')) p.pose(clip, num('t', 0) + k * num('dt', 0)); else p.tocar(clip); }
+  const ex = Q.get('rosto'); if (ex) { const [nome, f] = ex.split(':'); p.rosto({ expressao: nome, forca: f ? +f : 1, boca: num('boca', 0), piscar: num('piscar', 0), olhar: [num('olhar_x', 0), num('olhar_y', 0)] }); }
+  if (Q.has('pisca')) p.piscarAuto(true);
+  if (Q.get('pose')) {                                         // depuração: pose=Osso:rx,ry,rz;Osso2:...
+    for (const it of Q.get('pose').split(';')) { const [n, v] = it.split(':'); const o = p.obj.getObjectByName(n); if (o) { const [x, y, z] = v.split(',').map(Number); o.rotation.set(x, y, z, 'YXZ'); } }
+  }
+  if (Q.get('em')) { const [x, z] = Q.get('em').split(',').map(Number); p.obj.position.set(x, 0, z); }
+  scene.add(p.obj); pers.push(p);
+}
+const camera = new THREE.PerspectiveCamera(num('fov', 30), W / H, 0.05, 200);
+const alvo = (Q.get('alvo') || '0,0.9,0').split(',').map(Number);
+const az = num('az', 25) * Math.PI / 180, el = num('el', 8) * Math.PI / 180, dist = num('d', 5);
+camera.position.set(alvo[0] + dist * Math.sin(az) * Math.cos(el), alvo[1] + dist * Math.sin(el), alvo[2] + dist * Math.cos(az) * Math.cos(el));
+camera.lookAt(...alvo);
+const ui = document.getElementById('ui');
+if (Q.has('still')) document.body.classList.add('sem-ui');
+const p0 = pers[0];
+(p0.clipes.map(c => c.name)).forEach(n => { const b = document.createElement('button'); b.textContent = n; b.onclick = () => { pers.forEach(p => p.tocar(n, { fade: 0.25 })); p0.ultimo = n; [...ui.querySelectorAll('.clip')].forEach(c => c.classList.toggle('on', c === b)); }; b.className = 'clip'; ui.appendChild(b); });
+const sp = document.createElement('span'); sp.className = 'sep'; ui.appendChild(sp);
+Object.keys(p0.expressoes).forEach(n => { const b = document.createElement('button'); b.textContent = n; b.onclick = () => { pers.forEach(p => p.rosto({ expressao: n, forca: 1 })); [...ui.querySelectorAll('.exp')].forEach(c => c.classList.toggle('on', c === b)); }; b.className = 'exp'; ui.appendChild(b); });
+pers.forEach(p => p.piscarAuto(!Q.has('still')));
+const veloc = () => (p0.info(p0.ultimo || '').velocidade || 0);
+let desloc = 0;
+const mover = d => { desloc = d; marcas.position.z = -(((d % ESP) + ESP) % ESP); };
+window.__setTime = t => { const c = clipePadrao || p0.clipes[0].name; pers.forEach(p => p.pose(c, t)); mover((p0.info(c).velocidade || 0) * t); renderer.render(scene, camera); };
+let ult = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - ult) / 1000); ult = now;
+  if (!Q.has('t')) { pers.forEach(p => p.atualizar(dt)); mover(desloc + veloc() * dt); } else pers.forEach(p => p._aplicarRosto());
+  renderer.render(scene, camera);
+  requestAnimationFrame(loop);
+}
+if (Q.has('still')) { pers.forEach(p => p._aplicarRosto()); renderer.render(scene, camera); window.__ready = true; }
+else { requestAnimationFrame(loop); window.__ready = true; }
+</script>
+</body>
+</html>
