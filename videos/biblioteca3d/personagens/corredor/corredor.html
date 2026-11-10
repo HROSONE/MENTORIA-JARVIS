@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Corredor</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#aebccb;font-family:system-ui,sans-serif}
+  canvas{display:block}
+  #ui{position:fixed;left:12px;top:12px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 24px)}
+  #ui button{border:0;border-radius:8px;padding:8px 12px;font:600 14px system-ui;background:#151925;color:#f4efe6;cursor:pointer}
+  #ui button.on{background:#e0762c}
+  body.sem-ui #ui{display:none}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="ui"></div>
+<script type="module">
+import * as THREE from 'three';
+import { Corredor } from './corredor.js';
+
+const Q = new URLSearchParams(location.search);
+const num = (k, d) => (Q.has(k) ? +Q.get(k) : d);
+const W = innerWidth, H = innerHeight;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, Q.has('still') ? 1 : 2));
+renderer.setSize(W, H);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+const fundo = Q.get('fundo') || 'aebccb';
+scene.background = new THREE.Color('#' + fundo);
+scene.add(new THREE.HemisphereLight(0xeaf1f7, 0x7a8794, Q.has('rim') ? 0.55 : 1.0));
+const key = new THREE.DirectionalLight(0xfff1dc, Q.has('rim') ? 1.6 : 2.4);
+key.position.set(3, 5, 4); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -6, right: 6, top: 4, bottom: -2, near: 0.5, far: 30 }); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02;
+scene.add(key);
+if (Q.has('rim')) { const r = new THREE.DirectionalLight(0xffc27a, 3.2); r.position.set(-4, 3, -3.5); scene.add(r); }
+const chao = new THREE.Mesh(new THREE.CircleGeometry(60, 64), new THREE.MeshStandardMaterial({ color: Q.get('chao') ? '#' + Q.get('chao') : 0x8c9aa6, roughness: 1 }));
+chao.rotation.x = -Math.PI / 2; chao.receiveShadow = true; scene.add(chao);
+if (!Q.has('semgrade')) { const g = new THREE.GridHelper(40, 40, 0x56606b, 0x7b8794); g.position.y = 0.002; g.material.transparent = true; g.material.opacity = 0.35; scene.add(g); }
+
+const arquivo = Q.get('f') || 'corredor.glb';
+const base = await Corredor.carregar(arquivo);
+const nomes = base.clipes.map(c => c.name);
+const clip = Q.get('clip') || nomes[0];
+const folha = num('folha', 0);                 // N poses do mesmo ciclo lado a lado
+const esp = num('esp', 0.9);
+const pers = [];
+const dur = (base.clipes.find(c => c.name === clip) || { duration: 1 }).duration;
+const N = Math.max(1, folha);
+for (let k = 0; k < N; k++) {
+  const p = k === 0 ? base : base.clonar();
+  if (Q.get('eixo') === 'z') p.obj.position.z = (k - (N - 1) / 2) * esp; else p.obj.position.x = (k - (N - 1) / 2) * esp;
+  p.obj.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; if ((Q.get('ocultar') || '').split(',').includes(o.name)) o.visible = false; } });
+  if (clip) { if (folha) p.pose(clip, (k / N) * dur); else if (Q.has('t')) p.pose(clip, num('t', 0)); else p.tocar(clip); }
+  scene.add(p.obj); pers.push(p);
+}
+const camera = new THREE.PerspectiveCamera(num('fov', 30), W / H, 0.05, 200);
+const alvo = (Q.get('alvo') || '0,0.9,0').split(',').map(Number);
+const az = num('az', 25) * Math.PI / 180, el = num('el', 8) * Math.PI / 180, dist = num('d', 5);
+camera.position.set(alvo[0] + dist * Math.sin(az) * Math.cos(el), alvo[1] + dist * Math.sin(el), alvo[2] + dist * Math.cos(az) * Math.cos(el));
+camera.lookAt(...alvo);
+
+const ui = document.getElementById('ui');
+if (Q.has('still') || folha) document.body.classList.add('sem-ui');
+nomes.forEach(n => { const b = document.createElement('button'); b.textContent = n; b.onclick = () => { pers[0].tocar(n, { fade: 0.25 }); [...ui.children].forEach(c => c.classList.toggle('on', c === b)); }; if (n === clip) b.className = 'on'; ui.appendChild(b); });
+
+window.__setTime = t => { pers.forEach(p => p.pose(clip, t)); renderer.render(scene, camera); };
+let ult = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - ult) / 1000); ult = now;
+  if (!Q.has('t') && !folha) pers.forEach(p => p.atualizar(dt));
+  renderer.render(scene, camera);
+  requestAnimationFrame(loop);
+}
+if (Q.has('still') || folha || Q.has('t')) { renderer.render(scene, camera); window.__ready = true; }
+else { requestAnimationFrame(loop); window.__ready = true; }
+</script>
+</body>
+</html>
