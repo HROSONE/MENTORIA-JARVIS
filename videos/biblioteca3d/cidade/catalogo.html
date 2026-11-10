@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<title>Kit cidade — catálogo</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#aee0f5;font-family:system-ui,sans-serif}
+  canvas{display:block}
+  #rot{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .rot{position:absolute;transform:translate(-50%,0);color:#fff;font:600 13px/1.1 system-ui,sans-serif;text-shadow:0 1px 3px #000,0 0 6px #000;white-space:nowrap}
+  #info{position:absolute;left:12px;top:10px;color:#fff;font:600 14px system-ui,sans-serif;text-shadow:0 1px 3px #000}
+  body.still #info{display:none}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="rot"></div>
+<div id="info">Kit cidade — arraste para girar, roda para zoom · ?cat=ruas|faixas|placas|mobiliario · ?cam=obl|topo|baixo · ?so=nome1,nome2 · ?alvo=4.2</div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const Q = new URLSearchParams(location.search);
+const CAT = Q.get('cat') || 'tudo';
+const CAM = Q.get('cam') || 'obl';
+const ALVO = parseFloat(Q.get('alvo') || '4.2');      // altura-alvo (m) para ampliar placas, semáforos e hidrantes no catálogo
+const STILL = Q.has('still');
+const SEL = Q.get('so') ? Q.get('so').split(',') : null;
+if (STILL) document.body.classList.add('still');
+
+const W = innerWidth, Hh = innerHeight;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(W, Hh);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xc6e4f4);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8fa3b5, 1.5));
+const sun = new THREE.DirectionalLight(0xffffff, 2.6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.02;
+scene.add(sun, sun.target);
+
+const manifest = await (await fetch('manifest.json')).json();
+const loader = new GLTFLoader();
+const ORDEM = ['ruas', 'faixas', 'placas', 'mobiliario'];
+let pecas = manifest.pecas.filter(p => (CAT === 'tudo' || p.categoria === CAT) && (!SEL || SEL.includes(p.nome)));
+pecas.sort((a, b) => ORDEM.indexOf(a.categoria) - ORDEM.indexOf(b.categoria));
+
+const asfalto = new THREE.MeshStandardMaterial({ color: 0x3d4147, roughness: 0.95 });
+const chaoCat = new THREE.MeshStandardMaterial({ color: 0x8aa0ae, roughness: 1 });     // cinza-azulado: deixa o ladrilho de grama visível
+const root = new THREE.Group();
+scene.add(root);
+const labels = [];
+
+// agrupa por categoria; cada categoria é uma fileira
+const fileiras = {};
+for (const p of pecas) (fileiras[p.categoria] ||= []).push(p);
+let z = 0;
+const caixa = new THREE.Box3();
+for (const cat of ORDEM.filter(c => fileiras[c])) {
+  const lista = fileiras[cat];
+  const escDe = p => (cat === 'ruas' || cat === 'faixas') ? 1 : Math.max(1, Math.min(6, ALVO / (p.bbox.max[1] - p.bbox.min[1])));
+  const cell = Math.max(...lista.map(p => Math.max(p.bbox.max[0] - p.bbox.min[0], p.bbox.max[2] - p.bbox.min[2]) * escDe(p))) * 1.22 + 0.6;
+  const cols = cat === 'ruas' ? Math.ceil(lista.length / 2) : Math.min(lista.length, Math.max(3, Math.round(Math.sqrt(lista.length * 2))));
+  const rows = Math.ceil(lista.length / cols);
+  await Promise.all(lista.map((p, i) => new Promise((ok, no) => loader.load(p.arquivo, gltf => {
+    const esc = escDe(p);
+    const cx = (i % cols - (cols - 1) / 2) * cell, cz = z + Math.floor(i / cols) * cell + cell / 2;
+    const o = gltf.scene;
+    o.scale.setScalar(esc);
+    o.position.set(cx, 0, cz);
+    o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+    if (cat === 'faixas') {
+      const placa = new THREE.Mesh(new THREE.PlaneGeometry(manifest.tile, manifest.tile), asfalto);
+      placa.rotation.x = -Math.PI / 2; placa.position.set(cx, -0.004, cz); placa.receiveShadow = true; root.add(placa);
+    }
+    root.add(o);
+    const b = new THREE.Box3().setFromObject(o); caixa.union(b);
+    labels.push({ txt: p.nome + (esc > 1.05 ? ` ×${esc.toFixed(1)}` : ''), pos: new THREE.Vector3(cx, 0, cz + Math.max(b.max.z - cz, cell * 0.28) + 0.2) });
+    ok();
+  }, undefined, no))));
+  z += rows * cell + 1.5;
+}
+
+// chão
+const sz = caixa.getSize(new THREE.Vector3()), ct = caixa.getCenter(new THREE.Vector3());
+const chao = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), chaoCat);
+chao.rotation.x = -Math.PI / 2; chao.position.y = -0.03; chao.receiveShadow = true; scene.add(chao);
+
+// câmera: afasta até todos os cantos da caixa caberem na tela
+const camera = new THREE.PerspectiveCamera(32, W / Hh, 0.1, 2000);
+const dir = { obl: new THREE.Vector3(0.55, 0.85, 1.25), topo: new THREE.Vector3(0, 1, 0.0001), baixo: new THREE.Vector3(0.35, 0.16, 1) }[CAM].normalize();
+const cantos = [];
+for (const x of [caixa.min.x, caixa.max.x]) for (const y of [caixa.min.y, caixa.max.y]) for (const zz of [caixa.min.z, caixa.max.z]) cantos.push(new THREE.Vector3(x, y, zz));
+function cabe(d) {
+  camera.position.copy(ct).addScaledVector(dir, d); camera.lookAt(ct); camera.updateMatrixWorld(); camera.updateProjectionMatrix();
+  return cantos.every(c => { const v = c.clone().project(camera); return Math.abs(v.x) < 0.94 && Math.abs(v.y) < 0.86; });
+}
+let lo = 1, hi = 2000;
+for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (cabe(m)) hi = m; else lo = m; }
+cabe(hi);
+const ctl = new OrbitControls(camera, renderer.domElement);
+ctl.target.copy(ct); ctl.update();
+
+sun.position.copy(ct).add(new THREE.Vector3(-0.5, 1, 0.45).normalize().multiplyScalar(Math.max(sz.x, sz.z, 20) * 1.2));
+sun.target.position.copy(ct);
+const r = Math.max(sz.x, sz.z) * 0.75 + 4;
+Object.assign(sun.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 0.5, far: r * 6 }); sun.shadow.camera.updateProjectionMatrix();
+
+const rot = document.getElementById('rot');
+const els = labels.map(l => { const d = document.createElement('div'); d.className = 'rot'; d.textContent = l.txt; rot.appendChild(d); return d; });
+function frame() {
+  renderer.render(scene, camera);
+  labels.forEach((l, i) => { const v = l.pos.clone().project(camera); els[i].style.left = ((v.x + 1) / 2 * W) + 'px'; els[i].style.top = ((1 - v.y) / 2 * Hh) + 'px'; });
+}
+ctl.addEventListener('change', frame);
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); frame(); });
+frame();
+window.__ready = true;
+</script>
+</body>
+</html>

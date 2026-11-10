@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<title>Kit cidade — demonstração</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#bfe3f5}
+  canvas{display:block}
+  #info{position:absolute;left:12px;top:10px;color:#fff;font:600 14px system-ui,sans-serif;text-shadow:0 1px 3px #000}
+  body.still #info{display:none}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="info">Kit cidade — demonstração (arraste para girar) · ?cam=aereo|rua|topo|canto · ?still</div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Kit, TILE, ESCALA_VEICULO } from './kit.js';
+
+const Q = new URLSearchParams(location.search);
+const CAM = Q.get('cam') || 'aereo';
+if (Q.has('still')) document.body.classList.add('still');
+
+const W = innerWidth, H = innerHeight;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(W, H);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xbfe3f5);
+scene.fog = new THREE.Fog(0xbfe3f5, 90, 220);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8fa3b5, 1.5));
+const sun = new THREE.DirectionalLight(0xfff4e0, 2.7);
+sun.position.set(-30, 55, 25);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.bias = -0.0003;
+sun.shadow.normalBias = 0.03;
+Object.assign(sun.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, near: 1, far: 160 });
+scene.add(sun, sun.target);
+
+const kit = await Kit.carregar();
+const cidade = new THREE.Group();
+scene.add(cidade);
+
+// ---- o mapa (grade 5 x 4): [peça, gx, gz, conexões desejadas]
+const MAPA = [
+  ['rua-curva', 0, 0, ['E', 'S']], ['rua-reta', 1, 0, ['W', 'E']], ['rua-t', 2, 0, ['W', 'E', 'S']], ['rua-reta', 3, 0, ['W', 'E']], ['rua-curva', 4, 0, ['W', 'S']],
+  ['rua-reta', 0, 1, ['N', 'S']], ['chao-grama', 1, 1], ['rua-reta', 2, 1, ['N', 'S']], ['chao-grama', 3, 1], ['rua-reta', 4, 1, ['N', 'S']],
+  ['rua-curva', 0, 2, ['N', 'E']], ['rua-reta', 1, 2, ['W', 'E']], ['rua-cruzamento', 2, 2], ['rua-reta', 3, 2, ['W', 'E']], ['rua-curva', 4, 2, ['N', 'W']],
+  ['chao-grama', 0, 3], ['chao-grama', 1, 3], ['rua-fim', 2, 3, ['N']], ['chao-grama', 3, 3], ['chao-grama', 4, 3],
+];
+for (const [nome, gx, gz, lados] of MAPA) cidade.add(await kit.ladrilho(nome, gx, gz, 0, lados || null));
+
+// ---- semáforos: um em cada esquina do cruzamento (2,2), olhando para quem chega; N-S vermelho, L-O verde
+const SEM = async (nome, gx, gz, x, z, rotY, estado, opc = {}) => {
+  const o = await kit.prop(nome, gx, gz, x, z, { rotY, ...opc });
+  kit.semaforoEstado(o, estado); cidade.add(o);
+};
+await SEM('semaforo-apagado', 2, 2, 4.7, 4.7, 0, 'vermelho');                   // quem chega do sul (anda para -Z)
+await SEM('semaforo-apagado', 2, 2, -4.7, -4.7, Math.PI, 'vermelho');           // quem chega do norte
+await SEM('semaforo-apagado', 2, 2, -4.7, 4.7, -Math.PI / 2, 'verde');          // quem chega do oeste (anda para +X)
+await SEM('semaforo-apagado', 2, 2, 4.7, -4.7, Math.PI / 2, 'verde');           // quem chega do leste
+// braço projetado no T, sobre a faixa de quem chega do sul (espelhado para o braço sair para a esquerda)
+await SEM('semaforo-braco-verde', 2, 0, 4.6, 4.7, 0, 'amarelo', { espelho: true });
+
+// ---- placas, hidrantes
+const P = async (nome, gx, gz, x, z, rotY = 0, opc = {}) => cidade.add(await kit.prop(nome, gx, gz, x, z, { rotY, ...opc }));
+await P('placa-pare', 2, 0, -4.8, 4.7, -Math.PI / 2);                              // oeste do T: quem anda para +X
+await P('placa-velocidade-40', 1, 0, -4.7, -1, Math.PI, { rot: 1 });               // reta horizontal, mão para leste
+await P('placa-pedestres', 2, 1, -4.7, 3.2, Math.PI);                              // antes da faixa de pedestres
+await P('placa-proibido-estacionar', 3, 2, -4.7, 1, Math.PI, { rot: 1 });
+await P('placa-sentido-obrigatorio', 4, 1, 4.7, -2, Math.PI);
+await P('placa-rua-hryz', 2, 3, 0, -4.7, 0, { rot: 2 });                          // no fim de rua (ladrilho girado 180°), olhando para a rua
+await P('hidrante', 2, 1, 4.8, -1.5);
+await P('hidrante', 1, 2, -2.5, 4.9, 0, { rot: 1 });
+await P('hidrante-amarelo', 3, 0, 4.8, 2.5, 0, { rot: 1 });
+
+// ---- veículos do Kenney (biblioteca3d/veiculos), escala 1,7; sem a textura colormap.png usamos cor chapada
+const vl = new GLTFLoader();
+async function carro(nome, cor, gx, gz, rot, sentido, s) {
+  const g = await vl.loadAsync(`../veiculos/${nome}.glb`);
+  const o = g.scene;
+  o.traverse(m => {
+    if (!m.isMesh) return;
+    m.castShadow = true; m.receiveShadow = true;
+    m.material = m.material.clone();
+    if (!m.material.map || !m.material.map.image) { m.material.map = null; m.material.color.set(cor); }
+  });
+  const p = kit.naPista(gx, gz, rot, sentido, s);
+  o.scale.setScalar(ESCALA_VEICULO);
+  o.position.set(p.x, 0, p.z);
+  o.rotation.y = p.ry;
+  cidade.add(o);
+}
+await carro('taxi', '#f2c500', 2, 2, 0, -1, 7.9);        // parado na linha de retenção do sul, no vermelho (a frente está em +Z, por isso gira 180°)
+await carro('sedan', '#d94b3f', 2, 3, 0, -1, 14.2 - 12);
+await carro('police', '#2f5fa8', 3, 2, 1, +1, -1);
+await carro('suv', '#2e8b57', 2, 1, 0, +1, -2);
+await carro('delivery', '#f08a24', 4, 1, 0, -1, 2);
+await carro('firetruck', '#c1272d', 1, 0, 1, -1, 0);
+await carro('van', '#e9edf2', 0, 1, 0, +1, 1);
+
+// ---- câmera
+const centro = new THREE.Vector3(2.5 * TILE, 0, 1.9 * TILE);
+const camera = new THREE.PerspectiveCamera(36, W / H, 0.1, 600);
+const alvo = new THREE.Vector3().copy(centro);
+if (CAM === 'aereo') { camera.position.set(centro.x + 46, 44, centro.z + 62); }
+else if (CAM === 'topo') { camera.position.set(centro.x, 95, centro.z + 0.01); }
+else if (CAM === 'canto') { camera.position.set(2 * TILE + 10.5, 2.3, 2 * TILE + 11.5); alvo.set(2 * TILE + 4.3, 0.5, 2 * TILE + 4.6); camera.fov = 50; camera.updateProjectionMatrix(); }
+else { camera.position.set(2 * TILE - 13, 5.2, 2 * TILE + 17); alvo.set(2 * TILE + 1, 1.6, 2 * TILE + 1); camera.fov = 48; camera.updateProjectionMatrix(); }
+camera.lookAt(alvo);
+const ctl = new OrbitControls(camera, renderer.domElement);
+ctl.target.copy(alvo); ctl.update();
+sun.target.position.copy(centro);
+sun.position.copy(centro).add(new THREE.Vector3(-30, 55, 25));
+function frame() { renderer.render(scene, camera); }
+ctl.addEventListener('change', frame);
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); frame(); });
+frame();
+window.__ready = true;
+</script>
+</body>
+</html>

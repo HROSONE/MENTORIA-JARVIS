@@ -1,0 +1,1032 @@
+{
+ "pecas": [
+  {
+   "nome": "rua-reta",
+   "categoria": "ruas",
+   "arquivo": "ruas/rua-reta.glb",
+   "descricao": "Reta de 12 m, mão dupla, com tracejado central e linhas de borda",
+   "tris": 26,
+   "kb": 6.8,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.0,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.15,
+     6.0
+    ]
+   },
+   "nos": [
+    "Asfalto",
+    "MeioFio",
+    "Calcada",
+    "Faixas"
+   ],
+   "conexoes": [
+    {
+     "lado": "N",
+     "pos": [
+      0,
+      0,
+      -6.0
+     ],
+     "dir": [
+      0,
+      0,
+      -1
+     ],
+     "perfil": "rua-2-faixas"
+    },
+    {
+     "lado": "S",
+     "pos": [
+      0,
+      0,
+      6.0
+     ],
+     "dir": [
+      0,
+      0,
+      1
+     ],
+     "perfil": "rua-2-faixas"
+    }
+   ],
+   "tile": 12.0
+  },
+  {
+   "nome": "rua-curva",
+   "categoria": "ruas",
+   "arquivo": "ruas/rua-curva.glb",
+   "descricao": "Curva de 90° ligando as bordas S e E",
+   "tris": 332,
+   "kb": 30.2,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.0,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.15,
+     6.0
+    ]
+   },
+   "nos": [
+    "Asfalto",
+    "MeioFio",
+    "Calcada",
+    "Faixas"
+   ],
+   "conexoes": [
+    {
+     "lado": "S",
+     "pos": [
+      0,
+      0,
+      6.0
+     ],
+     "dir": [
+      0,
+      0,
+      1
+     ],
+     "perfil": "rua-2-faixas"
+    },
+    {
+     "lado": "E",
+     "pos": [
+      6.0,
+      0,
+      0
+     ],
+     "dir": [
+      1,
+      0,
+      0
+     ],
+     "perfil": "rua-2-faixas"
+    }
+   ],
+   "tile": 12.0
+  },
+  {
+   "nome": "rua-t",
+   "categoria": "ruas",
+   "arquivo": "ruas/rua-t.glb",
+   "descricao": "Entroncamento em T com braços W, E e S, faixas de pedestres e linhas de retenção",
+   "tris": 176,
+   "kb": 17.5,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.0,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.15,
+     6.0
+    ]
+   },
+   "nos": [
+    "Asfalto",
+    "MeioFio",
+    "Calcada",
+    "Faixas"
+   ],
+   "conexoes": [
+    {
+     "lado": "W",
+     "pos": [
+      -6.0,
+      0,
+      0
+     ],
+     "dir": [
+      -1,
+      0,
+      0
+     ],
+     "perfil": "rua-2-faixas"
+    },
+    {
+     "lado": "E",
+     "pos": [
+      6.0,
+      0,
+      0
+     ],
+     "dir": [
+      1,
+      0,
+      0
+     ],
+     "perfil": "rua-2-faixas"
+    },
+    {
+     "lado": "S",
+     "pos": [
+      0,
+      0,
+      6.0
+     ],
+     "dir": [
+      0,
+      0,
+      1
+     ],
+     "perfil": "rua-2-faixas"
+    }
+   ],
+   "tile": 12.0
+  },
+  {
+   "nome": "rua-cruzamento",
+   "categoria": "ruas",
+   "arquivo": "ruas/rua-cruzamento.glb",
+   "descricao": "Cruzamento de 4 braços com faixas de pedestres e linhas de retenção",
+   "tris": 306,
+   "kb": 26.8,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.0,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.15,
+     6.0
+    ]
+   },
+   "nos": [
+    "Asfalto",
+    "MeioFio",
+    "Calcada",
+    "Faixas"
+   ],
+   "conexoes": [
+    {
+     "lado": "N",
+     "pos": [
+      0,
+      0,
+      -6.0
+     ],
+     "dir": [
+      0,
+      0,
+      -1
+     ],
+     "perfil": "rua-2-faixas"
+    },
+    {
+     "lado": "E",
+     "pos": [
+      6.0,
+      0,
+      0
+     ],
+     "dir": [
+      1,
+      0,
+      0
+     ],
+     "perfil": "rua-2-faixas"
+    },
+    {
+     "lado": "S",
+     "pos": [
+      0,
+      0,
+      6.0
+     ],
+     "dir": [
+      0,
+      0,
+      1
+     ],
+     "perfil": "rua-2-faixas"
+    },
+    {
+     "lado": "W",
+     "pos": [
+      -6.0,
+      0,
+      0
+     ],
+     "dir": [
+      -1,
+      0,
+      0
+     ],
+     "perfil": "rua-2-faixas"
+    }
+   ],
+   "tile": 12.0
+  },
+  {
+   "nome": "rua-fim",
+   "categoria": "ruas",
+   "arquivo": "ruas/rua-fim.glb",
+   "descricao": "Fim de rua (sem saída) com braço vindo do sul",
+   "tris": 42,
+   "kb": 7.9,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.0,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.15,
+     6.0
+    ]
+   },
+   "nos": [
+    "Asfalto",
+    "MeioFio",
+    "Calcada",
+    "Faixas"
+   ],
+   "conexoes": [
+    {
+     "lado": "S",
+     "pos": [
+      0,
+      0,
+      6.0
+     ],
+     "dir": [
+      0,
+      0,
+      1
+     ],
+     "perfil": "rua-2-faixas"
+    }
+   ],
+   "tile": 12.0
+  },
+  {
+   "nome": "chao-grama",
+   "categoria": "ruas",
+   "arquivo": "ruas/chao-grama.glb",
+   "descricao": "Ladrilho de grama 12 x 12 m na altura da calçada (preenche os quarteirões)",
+   "tris": 2,
+   "kb": 1.2,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.15,
+     -6.0
+    ],
+    "max": [
+     6.0,
+     0.15,
+     6.0
+    ]
+   },
+   "nos": [
+    "Grama"
+   ],
+   "tile": 12.0,
+   "tipo": "chao"
+  },
+  {
+   "nome": "faixa-central-tracejada",
+   "categoria": "faixas",
+   "arquivo": "faixas/faixa-central-tracejada.glb",
+   "descricao": "Linha central amarela tracejada (3 m de traço, 3 m de vão), 12 m",
+   "tris": 4,
+   "kb": 1.4,
+   "bbox": {
+    "min": [
+     -0.075,
+     0.012,
+     -4.5
+    ],
+    "max": [
+     0.075,
+     0.012,
+     4.5
+    ]
+   },
+   "nos": [
+    "Tinta"
+   ],
+   "tipo": "decalque",
+   "aponta": "+Z"
+  },
+  {
+   "nome": "faixa-central-dupla",
+   "categoria": "faixas",
+   "arquivo": "faixas/faixa-central-dupla.glb",
+   "descricao": "Linha central amarela dupla contínua (proibido ultrapassar), 12 m",
+   "tris": 4,
+   "kb": 1.4,
+   "bbox": {
+    "min": [
+     -0.19,
+     0.012,
+     -6.0
+    ],
+    "max": [
+     0.19,
+     0.012,
+     6.0
+    ]
+   },
+   "nos": [
+    "Tinta"
+   ],
+   "tipo": "decalque",
+   "aponta": "+Z"
+  },
+  {
+   "nome": "faixa-borda",
+   "categoria": "faixas",
+   "arquivo": "faixas/faixa-borda.glb",
+   "descricao": "Linhas de borda brancas dos dois lados da pista, 12 m",
+   "tris": 4,
+   "kb": 1.4,
+   "bbox": {
+    "min": [
+     -3.26,
+     0.012,
+     -6.0
+    ],
+    "max": [
+     3.26,
+     0.012,
+     6.0
+    ]
+   },
+   "nos": [
+    "Tinta"
+   ],
+   "tipo": "decalque",
+   "aponta": "+Z"
+  },
+  {
+   "nome": "faixa-pedestres",
+   "categoria": "faixas",
+   "arquivo": "faixas/faixa-pedestres.glb",
+   "descricao": "Faixa de pedestres (zebra) de 7 m x 3 m",
+   "tris": 14,
+   "kb": 2.1,
+   "bbox": {
+    "min": [
+     -3.25,
+     0.012,
+     -1.5
+    ],
+    "max": [
+     3.25,
+     0.012,
+     1.5
+    ]
+   },
+   "nos": [
+    "Tinta"
+   ],
+   "tipo": "decalque",
+   "aponta": "+Z"
+  },
+  {
+   "nome": "linha-retencao",
+   "categoria": "faixas",
+   "arquivo": "faixas/linha-retencao.glb",
+   "descricao": "Linha de retenção (PARE) de uma faixa",
+   "tris": 2,
+   "kb": 1.2,
+   "bbox": {
+    "min": [
+     0.15,
+     0.012,
+     -0.2
+    ],
+    "max": [
+     3.35,
+     0.012,
+     0.2
+    ]
+   },
+   "nos": [
+    "Tinta"
+   ],
+   "tipo": "decalque",
+   "aponta": "+Z"
+  },
+  {
+   "nome": "seta-frente",
+   "categoria": "faixas",
+   "arquivo": "faixas/seta-frente.glb",
+   "descricao": "Seta de seguir em frente, 3 m, aponta para +Z",
+   "tris": 3,
+   "kb": 1.3,
+   "bbox": {
+    "min": [
+     -0.45,
+     0.012,
+     -1.5
+    ],
+    "max": [
+     0.45,
+     0.012,
+     1.5
+    ]
+   },
+   "nos": [
+    "Tinta"
+   ],
+   "tipo": "decalque",
+   "aponta": "+Z"
+  },
+  {
+   "nome": "placa-pare",
+   "categoria": "placas",
+   "arquivo": "placas/placa-pare.glb",
+   "descricao": "Placa PARE (R-1): octógono vermelho",
+   "tris": 172,
+   "kb": 33.5,
+   "bbox": {
+    "min": [
+     -0.4,
+     0.0,
+     -0.127
+    ],
+    "max": [
+     0.4,
+     2.65,
+     0.03
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Suportes",
+    "Placa"
+   ],
+   "tipo": "placa",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "placa-de-a-preferencia",
+   "categoria": "placas",
+   "arquivo": "placas/placa-de-a-preferencia.glb",
+   "descricao": "Placa Dê a preferência (R-2): triângulo invertido",
+   "tris": 152,
+   "kb": 21.4,
+   "bbox": {
+    "min": [
+     -0.475,
+     0.0,
+     -0.127
+    ],
+    "max": [
+     0.475,
+     2.665,
+     0.03
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Suportes",
+    "Placa"
+   ],
+   "tipo": "placa",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "placa-velocidade-40",
+   "categoria": "placas",
+   "arquivo": "placas/placa-velocidade-40.glb",
+   "descricao": "Velocidade máxima 40 km/h (R-19)",
+   "tris": 252,
+   "kb": 65.0,
+   "bbox": {
+    "min": [
+     -0.375,
+     0.0,
+     -0.127
+    ],
+    "max": [
+     0.375,
+     2.63,
+     0.03
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Suportes",
+    "Placa"
+   ],
+   "tipo": "placa",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "placa-velocidade-60",
+   "categoria": "placas",
+   "arquivo": "placas/placa-velocidade-60.glb",
+   "descricao": "Velocidade máxima 60 km/h (R-19)",
+   "tris": 252,
+   "kb": 70.5,
+   "bbox": {
+    "min": [
+     -0.375,
+     0.0,
+     -0.127
+    ],
+    "max": [
+     0.375,
+     2.63,
+     0.03
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Suportes",
+    "Placa"
+   ],
+   "tipo": "placa",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "placa-sentido-proibido",
+   "categoria": "placas",
+   "arquivo": "placas/placa-sentido-proibido.glb",
+   "descricao": "Sentido proibido (R-3): círculo vermelho com barra branca",
+   "tris": 252,
+   "kb": 42.8,
+   "bbox": {
+    "min": [
+     -0.375,
+     0.0,
+     -0.127
+    ],
+    "max": [
+     0.375,
+     2.63,
+     0.03
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Suportes",
+    "Placa"
+   ],
+   "tipo": "placa",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "placa-proibido-estacionar",
+   "categoria": "placas",
+   "arquivo": "placas/placa-proibido-estacionar.glb",
+   "descricao": "Proibido estacionar (R-6a)",
+   "tris": 252,
+   "kb": 56.9,
+   "bbox": {
+    "min": [
+     -0.375,
+     0.0,
+     -0.127
+    ],
+    "max": [
+     0.375,
+     2.63,
+     0.03
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Suportes",
+    "Placa"
+   ],
+   "tipo": "placa",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "placa-pedestres",
+   "categoria": "placas",
+   "arquivo": "placas/placa-pedestres.glb",
+   "descricao": "Passagem de pedestres (A-32b): losango amarelo",
+   "tris": 156,
+   "kb": 33.0,
+   "bbox": {
+    "min": [
+     -0.45,
+     0.0,
+     -0.127
+    ],
+    "max": [
+     0.45,
+     2.7,
+     0.03
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Suportes",
+    "Placa"
+   ],
+   "tipo": "placa",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "placa-sentido-obrigatorio",
+   "categoria": "placas",
+   "arquivo": "placas/placa-sentido-obrigatorio.glb",
+   "descricao": "Siga em frente (sentido obrigatório): círculo azul com seta",
+   "tris": 252,
+   "kb": 45.9,
+   "bbox": {
+    "min": [
+     -0.375,
+     0.0,
+     -0.127
+    ],
+    "max": [
+     0.375,
+     2.63,
+     0.03
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Suportes",
+    "Placa"
+   ],
+   "tipo": "placa",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "placa-rua",
+   "categoria": "placas",
+   "arquivo": "placas/placa-rua.glb",
+   "descricao": "Placa de nome de rua (verde, texto \"RUA EXEMPLO\"; troque o texto em placas.p_rua)",
+   "tris": 156,
+   "kb": 46.3,
+   "bbox": {
+    "min": [
+     -0.55,
+     0.0,
+     -0.127
+    ],
+    "max": [
+     0.55,
+     2.63,
+     0.03
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Suportes",
+    "Placa"
+   ],
+   "tipo": "placa",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "placa-rua-hryz",
+   "categoria": "placas",
+   "arquivo": "placas/placa-rua-hryz.glb",
+   "descricao": "Placa de rua azul com \"RUA HRYZ\" (marca do canal dentro do cenário)",
+   "tris": 156,
+   "kb": 44.5,
+   "bbox": {
+    "min": [
+     -0.55,
+     0.0,
+     -0.127
+    ],
+    "max": [
+     0.55,
+     2.63,
+     0.03
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Suportes",
+    "Placa"
+   ],
+   "tipo": "placa",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "semaforo-apagado",
+   "categoria": "mobiliario",
+   "arquivo": "mobiliario/semaforo-apagado.glb",
+   "descricao": "Semáforo de poste com as três luzes apagadas",
+   "tris": 624,
+   "kb": 54.0,
+   "bbox": {
+    "min": [
+     -0.18,
+     0.0,
+     -0.17
+    ],
+    "max": [
+     0.18,
+     3.74,
+     0.69
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Suportes",
+    "Caixa",
+    "Viseiras",
+    "Luz_Vermelho",
+    "Luz_Amarelo",
+    "Luz_Verde"
+   ],
+   "tipo": "semaforo",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "semaforo-vermelho",
+   "categoria": "mobiliario",
+   "arquivo": "mobiliario/semaforo-vermelho.glb",
+   "descricao": "Semáforo de poste com a luz vermelha ligada",
+   "tris": 624,
+   "kb": 54.0,
+   "bbox": {
+    "min": [
+     -0.18,
+     0.0,
+     -0.17
+    ],
+    "max": [
+     0.18,
+     3.74,
+     0.69
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Suportes",
+    "Caixa",
+    "Viseiras",
+    "Luz_Vermelho",
+    "Luz_Amarelo",
+    "Luz_Verde"
+   ],
+   "tipo": "semaforo",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "semaforo-amarelo",
+   "categoria": "mobiliario",
+   "arquivo": "mobiliario/semaforo-amarelo.glb",
+   "descricao": "Semáforo de poste com a luz amarela ligada",
+   "tris": 624,
+   "kb": 54.0,
+   "bbox": {
+    "min": [
+     -0.18,
+     0.0,
+     -0.17
+    ],
+    "max": [
+     0.18,
+     3.74,
+     0.69
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Suportes",
+    "Caixa",
+    "Viseiras",
+    "Luz_Vermelho",
+    "Luz_Amarelo",
+    "Luz_Verde"
+   ],
+   "tipo": "semaforo",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "semaforo-verde",
+   "categoria": "mobiliario",
+   "arquivo": "mobiliario/semaforo-verde.glb",
+   "descricao": "Semáforo de poste com a luz verde ligada",
+   "tris": 624,
+   "kb": 54.0,
+   "bbox": {
+    "min": [
+     -0.18,
+     0.0,
+     -0.17
+    ],
+    "max": [
+     0.18,
+     3.74,
+     0.69
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Suportes",
+    "Caixa",
+    "Viseiras",
+    "Luz_Vermelho",
+    "Luz_Amarelo",
+    "Luz_Verde"
+   ],
+   "tipo": "semaforo",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "semaforo-braco-vermelho",
+   "categoria": "mobiliario",
+   "arquivo": "mobiliario/semaforo-braco-vermelho.glb",
+   "descricao": "Semáforo de braço projetado (2 cabeças) com luz vermelha",
+   "tris": 1084,
+   "kb": 92.5,
+   "bbox": {
+    "min": [
+     -0.22,
+     0.0,
+     -0.22
+    ],
+    "max": [
+     5.2,
+     6.0,
+     0.32
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Braco",
+    "Caixas",
+    "Viseiras",
+    "Luz_Vermelho",
+    "Luz_Amarelo",
+    "Luz_Verde"
+   ],
+   "tipo": "semaforo",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "semaforo-braco-verde",
+   "categoria": "mobiliario",
+   "arquivo": "mobiliario/semaforo-braco-verde.glb",
+   "descricao": "Semáforo de braço projetado (2 cabeças) com luz verde",
+   "tris": 1084,
+   "kb": 92.6,
+   "bbox": {
+    "min": [
+     -0.22,
+     0.0,
+     -0.22
+    ],
+    "max": [
+     5.2,
+     6.0,
+     0.32
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Braco",
+    "Caixas",
+    "Viseiras",
+    "Luz_Vermelho",
+    "Luz_Amarelo",
+    "Luz_Verde"
+   ],
+   "tipo": "semaforo",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "hidrante",
+   "categoria": "mobiliario",
+   "arquivo": "mobiliario/hidrante.glb",
+   "descricao": "Hidrante de coluna vermelho",
+   "tris": 796,
+   "kb": 62.5,
+   "bbox": {
+    "min": [
+     -0.265,
+     0.0,
+     -0.175
+    ],
+    "max": [
+     0.265,
+     0.815,
+     0.27
+    ]
+   },
+   "nos": [
+    "Hidrante"
+   ],
+   "tipo": "hidrante",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  },
+  {
+   "nome": "hidrante-amarelo",
+   "categoria": "mobiliario",
+   "arquivo": "mobiliario/hidrante-amarelo.glb",
+   "descricao": "Hidrante de coluna amarelo",
+   "tris": 796,
+   "kb": 62.6,
+   "bbox": {
+    "min": [
+     -0.265,
+     0.0,
+     -0.175
+    ],
+    "max": [
+     0.265,
+     0.815,
+     0.27
+    ]
+   },
+   "nos": [
+    "Hidrante"
+   ],
+   "tipo": "hidrante",
+   "frente": "+Z",
+   "origem": "pé do poste"
+  }
+ ],
+ "versao": 1,
+ "unidade": "metro",
+ "eixo_cima": "Y",
+ "tile": 12.0,
+ "faixa": 3.5,
+ "largura_calcada": 2.5,
+ "altura_calcada": 0.15,
+ "altura_tinta": 0.012,
+ "convencoes": {
+  "frente": "+Z (lentes do semáforo, bocal do hidrante, face das placas e frente dos carros do Kenney)",
+  "reta": "a rua reta corre ao longo de Z; gire 90° em Y para a direção X",
+  "mao": "direita: quem anda para +Z usa a faixa x = -1,75; quem anda para -Z usa x = +1,75",
+  "altura": "topo do asfalto em y = 0; topo da calçada em y = 0,15; props nascem no pé (y = 0): coloque-os em y = 0,15 sobre a calçada",
+  "rotacao": "girar 90° em Y leva a conexão S para E, depois N, depois W",
+  "escala_veiculo_kenney": 1.7
+ }
+}
