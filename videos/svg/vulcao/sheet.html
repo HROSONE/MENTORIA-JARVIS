@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="utf-8"><style>@font-face{font-family:Anton;src:url(Anton.ttf)}html,body{margin:0;background:#fff}svg{display:block}</style>
+<script src="rig.js"></script><script src="../terminal/poses.js"></script><script src="toon.js"></script></head><body><div id="out"></div><script>
+const PO = POSES; const W = 2000, H = 1500; let s = '';
+const lab = (x, y, t) => `<text x="${x}" y="${y}" font-family="Arial" font-weight="700" font-size="24" fill="#333" text-anchor="middle">${t}</text>`;
+const put = (x, y, sc, tipo, pose) => { const r = TOON.draw(tipo, pose); s += `<g transform="translate(${x},${y}) scale(${sc})"><ellipse cx="0" cy="0" rx="30" ry="4" fill="#000" opacity=".15"/>${r.all}</g>`; };
+[0, 45, 90, 135, 180].forEach((y, i) => { put(170 + i * 250, 640, 3.1, 'jensen', PO.stand({ yaw: y, face: { mouth: 'smile' } })); s += lab(170 + i * 250, 680, 'Jensen ' + y + '°'); });
+put(1500, 640, 3.1, 'jensen', PO.walk(.15, { yaw: 60, face: { mouth: 'smile' } })); put(1800, 640, 3.1, 'jensen', PO.standShock({ yaw: 20, face: { mouth: 'open', brow: 1, wide: 1 } })); s += lab(1500, 680, 'andando') + lab(1800, 680, 'susto');
+[0, 60, 90].forEach((y, i) => { put(170 + i * 250, 1380, 3.1, 'amigo', PO.stand({ yaw: y, face: i === 0 ? { mouth: 'grin', brow: -1 } : { mouth: 'smile' } })); }); s += lab(420, 1420, 'Amigo (malicioso / normal)');
+put(950, 1380, 3.1, 'cobaia', PO.standShrug({ yaw: 20, face: { mouth: 'o', brow: 1 } })); s += lab(950, 1420, 'cobaia da abertura');
+put(1230, 1380, 3.1, 'cumpliceA', PO.stand({ yaw: 25, face: { mouth: 'grin' } })); put(1500, 1380, 3.1, 'cumpliceB', PO.stand({ yaw: -25, face: { mouth: 'grin' } })); put(1780, 1380, 3.1, 'cumpliceC', PO.stand({ yaw: 15, face: { mouth: 'smile' } })); s += lab(1500, 1420, 'cúmplices');
+s += `<g transform="translate(1800,1380) scale(0)"></g>`;
+document.getElementById('out').innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs>${TOON.defs()}</defs><rect width="${W}" height="${H}" fill="#eee8dc"/>${s}</svg>`; window.__ready = true;
+</script></body></html>
