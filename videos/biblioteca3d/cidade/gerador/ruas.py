@@ -221,7 +221,6 @@ def rua_fim():
     p = Reto()
     s0 = LH - H                                         # começa em z = -3,5
     extrudar_perfil(mal, p, s0, p.L)
-    mal['asfalto'].top(ASFALTO, -H, H, -H, H, 0) if False else None
     cap_z0, cap_z1 = -LH, -H
     mal['calcada'].top(CALCADA, -LH, LH, cap_z0, cap_z1 - CB, CH)
     mal['meiofio'].top(MEIOFIO, -H - CB, H + CB, cap_z1 - CB, cap_z1, CH)

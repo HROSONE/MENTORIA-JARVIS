@@ -77,6 +77,41 @@ Arquivo gerado por `gerador/gerar.py`; não edite à mão. Medidas em metros (la
 | `energia/fio-vao-24.glb` | Fios entre dois postes a 24 m | 24.00 x 2.06 x 1.72 | 640 | 49.9 | — |
 | `energia/fio-vao-36.glb` | Fios entre dois postes a 36 m | 36.00 x 2.23 x 1.72 | 960 | 74.3 | — |
 
+## Casas
+
+| Peça | O que é | Tamanho (m) | Triângulos | KB | Conexões |
+|---|---|---|---|---|---|
+| `casas/casa-simples.glb` | Casa térrea amarela de duas águas, com varanda de entrada e chaminé (8 x 8 m) | 9.10 x 6.20 x 10.54 | 548 | 52.5 | — |
+| `casas/casa-sobrado.glb` | Sobrado branco de dois andares com garagem, sacada de vidro e telhado de quatro águas (9 x 8 m) | 10.20 x 8.13 x 10.19 | 956 | 85.9 | — |
+| `casas/casa-moderna.glb` | Casa moderna de cubos brancos e grafite, vidro, ripado de madeira, garagem e terraço (10 x 8 m) | 10.62 x 6.80 x 8.67 | 588 | 56.2 | — |
+| `casas/casa-colonial.glb` | Casa colonial azul (10,4 x 7,7 m) com varanda de seis colunas, venezianas verdes e telhado de quatro águas | 11.60 x 6.77 x 10.19 | 924 | 81.3 | — |
+
+## Prédios
+
+| Peça | O que é | Tamanho (m) | Triângulos | KB | Conexões |
+|---|---|---|---|---|---|
+| `predios/predio-residencial-6.glb` | Prédio residencial de 6 andares (cantos de tijolo, sacadas de vidro, portaria com marquise e caixa-d'água) | 10.20 x 21.92 x 11.10 | 2778 | 226.4 | — |
+| `predios/predio-residencial-12.glb` | Prédio residencial de 12 andares com duas coberturas recuadas, caixa-d'água e antena | 10.24 x 44.60 x 11.02 | 2724 | 219.8 | — |
+| `predios/predio-comercial-10.glb` | Torre comercial de vidro de 10 andares (24 x 12 m) com lobby de dois andares e marquise | 20.24 x 48.60 x 11.52 | 1314 | 111.3 | — |
+| `predios/predio-loja-3.glb` | Prédio de 3 andares com loja no térreo (vitrines, toldo listrado, letreiro) e apartamentos com sacadinhas de ferro | 11.50 x 12.77 x 10.65 | 2626 | 231.6 | — |
+
+## Hospital, delegacia, supermercado e cinema
+
+| Peça | O que é | Tamanho (m) | Triângulos | KB | Conexões |
+|---|---|---|---|---|---|
+| `equipamentos/hospital.glb` | Hospital de 36 x 24 m: torre de 7 andares com átrio de vidro, duas alas de 4 andares, cobertura de emergência, cruzes e helipoliporto | 35.94 x 30.25 x 19.69 | 4144 | 459.8 | — |
+| `equipamentos/delegacia.glb` | Delegacia de polícia de 24 x 12 m: dois andares azul e cinza, pórtico de colunas com escada, sirenes e bandeiras | 20.38 x 9.30 x 11.27 | 1318 | 253.9 | — |
+| `equipamentos/supermercado.glb` | Supermercado de 36 x 24 m: vitrine corrida, entrada de vidro, letreiro SUPERMERCADO, totem, abrigos com carrinhos e portões de carga | 34.40 x 11.20 x 20.77 | 2486 | 476.9 | — |
+| `equipamentos/cinema.glb` | Cinema de 24 x 24 m: marquise com lâmpadas, letreiro CINEMA, cartazes, bilheteria, placa vertical e sala alta nos fundos | 20.67 x 14.65 x 19.96 | 1544 | 418.4 | — |
+| `equipamentos/estacionamento.glb` | Ladrilho de estacionamento de 12 x 12 m (topo em y = 0,15): quatro vagas de 3 x 5 m com calços e corredor de 7 m; emenda lado a lado | 12.00 x 0.12 x 12.00 | 54 | 6.9 | — |
+
+## Esporte
+
+| Peça | O que é | Tamanho (m) | Triângulos | KB | Conexões |
+|---|---|---|---|---|---|
+| `esporte/estadio-futebol.glb` | Estádio de futebol de 144 x 108 m: campo 100 x 64 m com marcações e traves, quatro arquibancadas cobertas, quatro torres de refletores, placar e letreiro ESTÁDIO HRYZ | 144.00 x 40.60 x 107.60 | 7376 | 751.5 | — |
+| `esporte/campo-futebol.glb` | Campo de várzea de 72 x 48 m (campo 64 x 40 m): gramado listrado, terra batida nos gols, traves com rede, bancos e quatro postes de luz | 72.00 x 11.60 x 48.00 | 1254 | 109.3 | — |
+
 ## Mesas, cadeiras e móveis
 
 | Peça | O que é | Tamanho (m) | Triângulos | KB | Conexões |
@@ -136,4 +171,4 @@ Arquivo gerado por `gerador/gerar.py`; não edite à mão. Medidas em metros (la
 | `mobiliario/poste-luz-duplo.glb` | Poste de luz de 8 m com dois braços opostos (canteiro central), acesa | 0.40 x 8.10 x 4.76 | 1194 | 95.3 | — |
 | `mobiliario/poste-luz-pedestre.glb` | Poste ornamental de pedestre (4,4 m) com globo aceso, para calçadas e praças | 0.62 x 4.52 x 0.60 | 514 | 42.8 | — |
 
-Total: 79 peças, 38749 triângulos, 3.4 MB.
+Total: 94 peças, 69383 triângulos, 6.9 MB.

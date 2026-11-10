@@ -22,6 +22,10 @@ import natureza
 import cercas
 import energia
 import moveis
+import casas
+import predios
+import equipamentos
+import esporte
 from malha import Malha
 from paleta import GRAMA
 
@@ -111,7 +115,9 @@ def gerar_grupo(cat, pecas, extra=None):
     for nome, item in pecas.items():
         fn, desc = item[0], item[1]
         ex = dict(item[2]) if len(item) > 2 else {}
-        salvar(cat, nome, desc, fn(), {**(extra or {}), **ex})
+        res = fn()
+        nos, ex2 = res if isinstance(res, tuple) else (res, {})
+        salvar(cat, nome, desc, nos, {**(extra or {}), **ex, **ex2})
 
 
 def gerar_novas():
@@ -121,6 +127,10 @@ def gerar_novas():
                            for n, (f, d) in cercas.PECAS.items()})
     gerar_grupo('energia', energia.PECAS, {'frente': '+Z', 'origem': 'pé do poste (y = 0); a linha corre ao longo de X'})
     gerar_grupo('moveis', moveis.PECAS)
+    gerar_grupo('casas', casas.PECAS)
+    gerar_grupo('predios', predios.PECAS)
+    gerar_grupo('equipamentos', equipamentos.PECAS, equipamentos.EX)
+    gerar_grupo('esporte', esporte.PECAS, esporte.EX)
 
 
 def escrever_lista():
