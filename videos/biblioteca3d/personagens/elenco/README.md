@@ -1,0 +1,135 @@
+# Elenco — maníaco, velha senhora e quatro crianças (3D, com rosto que mexe)
+
+Seis personagens **originais do canal** (Hryz Animation), feitos em código, prontos para uma cena de susto: o **maníaco**, **Dona Lurdes** (a velha senhora),
+dois meninos (**Davi** e **Théo**) e duas meninas (**Lia** e **Nina**), cada criança com cabelo e roupa diferentes.
+Todos têm esqueleto, **rosto que mexe** (olhos, pálpebras, sobrancelhas, boca com dentes e língua) e animações prontas. Uso livre, sem crédito.
+
+![grupo](previews/elenco-grupo.webp)
+
+| Arquivo | Nome | Altura | Triângulos | Quem é |
+|---|---|---|---|---|
+| `davi.glb` | Davi | 1,31 m | 53.802 | menino de 9 anos, cabelo castanho curto e arrepiado, jaqueta azul de zíper com faixas, jeans e tênis branco com sola vermelha |
+| `teo.glb` | Théo | 1,27 m | 57.153 | menino de 8 anos, cabelo afro preto, moletom amarelo com capuz e bolso canguru, bermuda cinza, meias altas listradas, tênis vermelho e mochila azul |
+| `lia.glb` | Lia | 1,29 m | 55.702 | menina de 9 anos, ruiva de maria-chiquinhas com laços (cabelo simulado), vestido xadrez com gola branca, meia-calça listrada e sapatinho vermelho |
+| `nina.glb` | Nina | 1,36 m | 56.854 | menina de 10 anos, cabelo preto liso comprido com franja (simulado), óculos redondos, casaco puffer rosa, legging roxa e tênis branco |
+| `maniaco.glb` | Maníaco | 1,88 m | 55.488 | homem magro e corcunda, rosto encovado com olheiras, barba por fazer, nariz de gancho, dentes tortos e cicatriz, cabelo selvagem e oleoso, camisa suja e rasgada, suspensórios, calça puída e botas |
+| `velha.glb` | Dona Lurdes | 1,56 m | 61.115 | senhora de 78 anos, corcunda, cabelo cacheado grisalho com coque, óculos, rugas, colar de pérolas, cardigã lilás de tricô, saia longa florida, meia grossa, sapato ortopédico e **bengala** |
+
+Cada GLB tem cerca de 2 MB. Outros arquivos: `elenco.js` (ajudante em Three.js), `elenco.html` (visualizador), `cena-susto.html` (cena noturna de teste), `previews/`, `gerador/`.
+
+## Uso rápido (Three.js r160)
+
+```js
+import { Personagem } from './elenco.js';
+
+const m = await Personagem.carregar('maniaco.glb');
+scene.add(m.obj);
+m.tocar('Andar');                                     // 'Parado' | 'Andar' | 'Correr' | 'Fugir' | 'Pular' | 'Assustado'
+m.rosto({ expressao: 'maldoso', forca: 1 });          // neutro | medo | grito | surpresa | sorriso | maldoso | raiva | triste
+m.piscarAuto(true);                                   // pisca sozinho e o olhar dá pequenos saltos
+
+// no laço de animação:
+m.atualizar(dt);
+m.obj.position.x += m.info('Andar').velocidade * dt;  // os clipes são "no lugar": quem anda é o objeto (os pés não escorregam)
+```
+
+`Personagem` estende o `Corredor` (`../corredor/corredor.js`): tem também `pose(nome, t)`, `clonar()`, `info(nome)`, `silhueta()` e `contorno()`.
+**Os clipes de corpo não mexem nos ossos do rosto**, então qualquer expressão funciona junto com qualquer animação.
+
+### Rosto
+
+`m.rosto({ expressao, forca = 1, boca = 0, olhar = [giro, inclinação], piscar = 0 })`
+
+- `expressao`: nome da expressão (veja abaixo); `forca` de 0 a 1 mistura com o rosto neutro.
+- `boca`: abertura extra da mandíbula, de 0 a 1 (use para fala ou gargalhada: `boca = 0.4 + 0.3 * Math.sin(t * 14)`).
+- `olhar`: gira os olhos em radianos; `piscar`: 0 aberto, 1 fechado.
+
+| Expressão | Para quê |
+|---|---|
+| `medo` | sobrancelhas para cima, olhos arregalados, boca aberta |
+| `grito` | boca bem aberta, olhos arregalados (a mais forte) |
+| `surpresa` | sobrancelhas altas, boca em "o" |
+| `sorriso` | sorriso aberto com dentes |
+| `maldoso` | olhos arregalados, sobrancelhas baixas, sorriso torto com dentes (o rosto do maníaco) |
+| `raiva` | sobrancelhas franzidas, olhos semicerrados |
+| `triste` | sobrancelhas caídas, canto da boca para baixo |
+
+As expressões ficam gravadas no próprio GLB (`extras.expressoes`, deltas dos ossos do rosto). Ossos do rosto: `Mandibula`, `OlhoE/D`, `PalpebraE/D`, `SobrancelhaE/D`, `BocaE/D`.
+
+## As animações
+
+Todas são **no lugar** (use `info(nome).velocidade` para mover o objeto sem escorregar). A marcha usa o mesmo método do Corredor (IK de pernas com o pé de apoio parado no chão),
+escalonada pelo comprimento da perna de cada personagem; cada um tem seu estilo (o maníaco anda corcunda, devagar e balançando a cabeça; a velha arrasta os pés apoiada na bengala).
+
+| Clipe | Quem | O que faz |
+|---|---|---|
+| `Parado` | todos | respira, troca o peso, olha em volta (o maníaco balança devagar com a cabeça de lado; a velha se apoia na bengala plantada) |
+| `Andar` | todos | ciclo de marcha (criança ≈ 1,05 m/s, maníaco 1,06 m/s, velha 0,61 m/s com a bengala andando junto, plantada no chão) |
+| `Correr` | todos | corrida com fase de voo (criança ≈ 2,7 m/s, maníaco 3,3 m/s); a velha corre arrastando os pés a 1,26 m/s |
+| `Fugir` | crianças e velha | correr de pânico: braços abertos, tronco inclinado, olhando para trás; mais rápida que `Correr` (crianças ≈ 3,2 m/s) |
+| `Pular` | todos | agacha, voa e aterrissa amortecendo (a velha dá um pulinho) |
+| `Assustado` | todos | encolhido e tremendo, mãos junto ao rosto |
+
+Cabelos e laços com ossos (maria-chiquinhas da Lia, cabelo comprido da Nina) são **simulados** (partículas com vento relativo) e balançam com a corrida.
+`velha.glb`: a bengala fica na mão direita; com os braços para cima ela continua pendurada na vertical.
+
+![movimento](previews/elenco-movimento.webp)
+
+## Rostos
+
+![rostos](previews/elenco-rostos.webp)
+
+## Cena de teste
+
+`cena-susto.html` junta tudo num parque à noite: o maníaco persegue as crianças (`Fugir`, com expressões de medo e grito) e a velha, assustada, olha de longe.
+Sem parâmetros a cena anda sozinha em laço; `?still=1&t=1.6` gera um quadro. Usa árvores e poste de luz do kit da cidade.
+
+![cena](previews/cena-susto.webp)
+
+## Coordenadas e esqueleto
+
+Metros, Y para cima, o personagem **olha para +Z** e o lado esquerdo dele é **+X** (igual ao kit da cidade e ao Corredor). Pés em y = 0. Ossos com rotação de repouso = identidade.
+
+```
+Raiz ── Quadril ── Coluna ── Coluna2 ── Peito ─┬─ Pescoco ── Cabeca ─┬─ Mandibula
+   │                                           │                     ├─ OlhoE / OlhoD, PalpebraE / PalpebraD
+   │                                           │                     ├─ SobrancelhaE / SobrancelhaD, BocaE / BocaD
+   │                                           │                     └─ cadeias de cabelo (ChiqE1..5, ChiqD1..5 na Lia; CabN1..5 na Nina)
+   │                                           ├─ OmbroE ── BracoE ── AntebracoE ── MaoE
+   │                                           └─ OmbroD ── BracoD ── AntebracoD ── MaoD
+   ├─ CoxaE ── CanelaE ── PeE ── PonteiraE
+   └─ CoxaD ── CanelaD ── PeD ── PonteiraD            (E = esquerda = +X · D = direita)
+```
+
+As proporções saem de fatores sobre um adulto de referência (perna, tronco, braço, pescoço, ombros, quadril, cabeça, pé) e de uma curvatura da coluna (corcunda da velha e do maníaco).
+
+## Como foi feito (e como refazer)
+
+Tudo em Python (numpy e Pillow) a partir de `gerador/`; o escritor de GLB é o do kit da cidade (estendido com esqueleto, animação e cor por vértice).
+
+| Passo | Comando | O que faz |
+|---|---|---|
+| gerar | `python3 gerar.py [nome ...]` | monta malha, esqueleto, animações e grava os GLB (Lia e Nina demoram ~1 min por causa da simulação do cabelo) |
+| validar | `python3 validar.py` | lê o **arquivo** GLB e confere pesos, laços, pés no chão, escorregão e limites das articulações |
+| prévias | `python3 previas.py` | refaz `previews/` (precisa de `npm install` em `videos/` e Chromium via Playwright) |
+
+| Módulo | Papel |
+|---|---|
+| `forma.py` | superfícies por seções (lofts) com pesos de pele, UV, cor por vértice, recortes; elipsoides e tubos |
+| `esq.py` | esqueleto paramétrico, cadeias de ossos, cinemática direta |
+| `cabeca.py` | crânio com buraco da boca, olhos (íris, pupila, pálpebra móvel), nariz, lábios, dentes, língua, sobrancelhas, orelhas, rugas, pintura de rosto (rubor, olheiras, barba) e as expressões |
+| `corpo.py` | tronco, braços, pernas em cascas de roupa, pescoço, mãos com dedos, sapatos, saia, capuz |
+| `cabelo.py` | cabelos (touca com linha do cabelo, tufos, afro, coque, mechas em cadeia), óculos, bengala, mochila, pérolas, suspensórios |
+| `personagens.py` | a definição dos seis personagens |
+| `animacoes.py` | marcha com pés plantados, parado, assustado, pulo, bengala plantada, simulação dos cabelos |
+| `tecidos.py` | texturas procedurais (xadrez, floral, listras, jeans, tricô) |
+
+Validação: **Khronos glTF Validator: 0 erros, 0 avisos** nos seis GLB; checagens próprias: pés nunca atravessam o chão, escorregão máximo menor que 0,03 mm por quadro nas marchas,
+laços fechados, limites de joelho e cotovelo.
+
+## Limites e ideias
+
+- Mãos sem dedos animados (são fixas, meio fechadas); sem sincronia labial automática (use `boca`).
+- Roupas e cabelos são geometria (sem física de tecido); só as maria-chiquinhas, o cabelo comprido da Nina e o cachecol do Corredor são simulados.
+- Cada personagem tem 53 mil a 61 mil triângulos: para multidões, `clonar()` reaproveita a geometria.
+- Ideias: pulo correndo, tropeçar e cair, agachar, gargalhada com a mandíbula, o maníaco com lanterna.
