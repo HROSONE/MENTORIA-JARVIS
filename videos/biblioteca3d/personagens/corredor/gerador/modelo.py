@@ -5,7 +5,7 @@ Catmull-Rom, as normais saem da própria malha (suaves) e cada anel ganha pesos 
 A malha é construída na pose de repouso do esqueleto de `base.py`."""
 import math
 import numpy as np
-from base import (REPOUSO, OSSOS, INDICE, COMP_COXA, COMP_CANELA, COMP_BRACO, COMP_ANTEBRACO, NOS_CACHECOL, SEG_CACHECOL, suave)
+from base import REPOUSO, OSSOS, INDICE, NOS_CACHECOL, SEG_CACHECOL, suave
 
 NB = len(OSSOS)
 NSEG = 32
@@ -235,38 +235,54 @@ def _w(**kw):
 
 # ------------------------------------------------------------------ partes do corpo
 def torso(S):
-    # y, rx, rz, cz, n
-    T = [(0.86, .136, .094, -.004, 2.2), (0.90, .150, .102, -.006, 2.2), (0.95, .160, .108, -.010, 2.3), (1.00, .158, .106, -.008, 2.3),
-         (1.06, .148, .098, -.002, 2.3), (1.13, .145, .096, .002, 2.3), (1.20, .149, .098, .005, 2.3), (1.28, .160, .106, .010, 2.4),
-         (1.35, .171, .112, .014, 2.5), (1.41, .176, .112, .012, 2.5), (1.455, .168, .104, .005, 2.4), (1.49, .128, .092, -.006, 2.2),
-         (1.515, .092, .083, -.010, 2.0), (1.538, .082, .081, -.010, 2.0), (1.552, .072, .074, -.009, 2.0), (1.558, .060, .062, -.008, 2.0),
-         (1.560, .050, .052, -.008, 2.0)]
-    c = np.array([(0, y, cz) for y, rx, rz, cz, n in T])
-    ru = np.array([t[1] for t in T])
-    rv = np.array([t[2] for t in T])
-    nn = np.array([t[4] for t in T])
-    s = np.array([t[0] for t in T])
-    pesos = nos((0.86, {'Quadril': 1}), (0.99, {'Quadril': 1}), (1.08, {'Coluna': 1}), (1.22, {'Coluna2': 1}), (1.37, {'Peito': 1}), (1.46, {'Peito': 1}),
+    # y, rx, rz, cz, n  (perfil grosseiro; é suavizado e amostrado de 1,5 em 1,5 cm)
+    T = np.array([(0.80, .190, .114, -.003, 2.4), (0.84, .196, .119, -.004, 2.4), (0.88, .195, .121, -.005, 2.4), (0.93, .185, .117, -.007, 2.4),
+                  (1.00, .167, .108, -.008, 2.3), (1.06, .150, .100, -.002, 2.3), (1.13, .147, .098, .002, 2.3), (1.20, .151, .100, .005, 2.3), (1.28, .162, .108, .010, 2.4),
+                  (1.35, .172, .113, .014, 2.5), (1.41, .176, .112, .012, 2.5), (1.455, .168, .104, .005, 2.4), (1.49, .128, .092, -.006, 2.2),
+                  (1.515, .092, .083, -.010, 2.0), (1.538, .082, .081, -.010, 2.0), (1.552, .072, .074, -.009, 2.0), (1.558, .060, .062, -.008, 2.0),
+                  (1.560, .050, .052, -.008, 2.0)])
+    F = catmull(T, 4)
+    y, rx, rz, cz, nn = F[:, 0], F[:, 1].copy(), F[:, 2].copy(), F[:, 3], F[:, 4]
+    base_rz = rz.copy()
+
+    def calombo(y, a, b, h):
+        return h * np.sin(np.pi * np.clip((y - a) / (b - a), 0, 1)) ** 2 * ((y >= a) & (y <= b))
+    for a, b, h in ((0.80, 0.872, 0.003), (1.283, 1.317, 0.0035)):           # barra da jaqueta e faixa no peito: levemente salientes
+        rx += calombo(y, a, b, h)
+        rz += calombo(y, a, b, h)
+    c = np.column_stack([np.zeros_like(y), y, cz])
+    pesos = nos((0.80, {'Quadril': 1}), (0.99, {'Quadril': 1}), (1.08, {'Coluna': 1}), (1.22, {'Coluna2': 1}), (1.37, {'Peito': 1}), (1.46, {'Peito': 1}),
                 (1.52, {'Peito': .55, 'Pescoco': .45}), (1.56, {'Pescoco': 1}))
 
-    def ajuste(P, W):                                           # trapézio e ombros: parte do peso vai para a clavícula
-        for lado, sg in (('E', 1), ('D', -1)):
+    def ajuste(P, W):
+        for lado, sg in (('E', 1), ('D', -1)):                  # trapézio e ombros: parte do peso vai para a clavícula
             m = np.clip((sg * P[:, 0] - 0.07) / 0.09, 0, 1) * np.clip((P[:, 1] - 1.36) / 0.08, 0, 1) * 0.5
             k = INDICE['Ombro' + lado]
             W[:, k] += m * (1 - W[:, k])
             W[:, :k] *= (1 - m)[:, None]
             W[:, k + 1:] *= (1 - m)[:, None]
+        for lado, sg in (('E', 1), ('D', -1)):                  # barra da jaqueta: a frente acompanha a coxa que levanta (como tecido)
+            frente = np.clip((P[:, 2] + 0.02) / 0.10, 0, 1)
+            lado_ok = np.clip((sg * P[:, 0] + 0.02) / 0.06, 0, 1)
+            m = 0.65 * frente * lado_ok * np.clip((0.97 - P[:, 1]) / 0.14, 0, 1)
+            k = INDICE['Coxa' + lado]
+            W[:, k] += m * (1 - W[:, k])
+            W[:, :k] *= (1 - m)[:, None]
+            W[:, k + 1:] *= (1 - m)[:, None]
         W /= W.sum(axis=1, keepdims=True)
 
-    def mat(y):
-        if y < 0.925:
-            return 'calca'
-        if y < 1.025:
-            return 'jaqueta_faixa'
-        if y > 1.545:
+    def mat(yy):
+        if yy < 0.872:
+            return 'jaqueta_barra'
+        if 1.282 < yy < 1.318 or yy > 1.545:
             return 'jaqueta_faixa'
         return 'jaqueta'
-    loft(S, c, ru, rv, s, pesos, mat, n=nn, sub=3, frame=(X_, Z_), ajuste=ajuste, fecha=(True, False))
+    loft(S, c, rx, rz, y, pesos, mat, n=nn, sub=1, frame=(X_, Z_), ajuste=ajuste, fecha=(True, False))
+    # zíper no centro da frente
+    yz = np.arange(0.815, 1.543, 0.016)
+    cz_z = np.interp(yz, y, cz) + np.interp(yz, y, base_rz) + 0.0012
+    cz_ring = np.column_stack([np.zeros_like(yz), yz, cz_z])
+    loft(S, cz_ring, np.full(len(yz), .0042), np.full(len(yz), .0034), yz, pesos, 'jaqueta_faixa', n=2.6, sub=1, nseg=10, frame=(X_, Z_), fecha=(True, True))
 
 
 def pescoco_cabeca(S):
@@ -281,7 +297,7 @@ def pescoco_cabeca(S):
     H = [(1.553, 0, 0, .034), (1.562, .026, .038, .036), (1.580, .048, .060, .030), (1.605, .065, .079, .020), (1.640, .074, .091, .010),
          (1.678, .078, .097, .004), (1.715, .077, .097, .000), (1.748, .071, .091, -.003), (1.773, .056, .077, -.008), (1.787, .032, .050, -.012),
          (1.792, 0, 0, -.012)]
-    c = np.array([(0, y, cz) for y, rx, rz, cz in H])
+    c = np.array([(0, y, cz) for y, _, _, cz in H])
     ru = np.array([h[1] for h in H])
     rv = np.array([h[2] for h in H])
     s = np.array([h[0] for h in H])
@@ -299,7 +315,7 @@ def acessorios_cabeca(S):
     G = [(1.694, .084, .104, 2.0), (1.704, .088, .108, 2.0), (1.712, .085, .105, 2.0), (1.720, .083, .102, 2.1), (1.745, .079, .098, 2.1),
          (1.768, .068, .087, 2.1), (1.788, .050, .066, 2.1), (1.804, .027, .038, 2.0), (1.811, .0, .0, 2.0)]
     czs = {1.694: .004, 1.704: .003, 1.712: .002, 1.720: .001, 1.745: -.003, 1.768: -.009, 1.788: -.013, 1.804: -.014, 1.811: -.014}
-    c = np.array([(0, y, czs[y]) for y, a, b, n in G])
+    c = np.array([(0, y, czs[y]) for y, _, _, _ in G])
     ru = np.array([g[1] for g in G])
     rv = np.array([g[2] for g in G])
     nn = np.array([g[3] for g in G])
@@ -325,25 +341,32 @@ def cachecol(S):
     pts = [(0.035, 1.548, -0.090)] + juntas + [(juntas[-1][0], juntas[-1][1] - SEG_CACHECOL, juntas[-1][2])]
     s_nos = [float(k) for k in range(-1, N + 1)]
     ks = [(-1.0, {'Pescoco': 1.0}), (0.0, {'Pescoco': .35, 'Cachecol1': .65})] + [(float(k), {'Cachecol%d' % (k + 1): 1.0}) for k in range(1, N)] + [(float(N), {'Cachecol%d' % N: 1.0})]
-    tab = [(-1.0, .040, .012, 3.0), (-0.6, .046, .014, 3.0), (0.0, .048, .0145, 3.0)] + [(float(k), .048, .0145, 3.0) for k in range(1, N)] + \
-          [(N - 0.25, .048, .0145, 3.0), (N + 0.0, .047, .0135, 3.0), (N + 0.08, .041, .011, 3.0), (N + 0.12, .0, .0, 3.0)]
+    tab = [(-1.0, .040, .013, 3.0), (-0.6, .047, .015, 3.0), (0.0, .050, .0155, 3.0)] + [(float(k), .050, .0155, 3.0) for k in range(1, N)] + \
+          [(N - 0.25, .050, .0155, 3.0), (N + 0.0, .049, .0145, 3.0), (N + 0.08, .043, .012, 3.0), (N + 0.12, .0, .0, 3.0)]
     c, ru, rv, ss, nn = aneis_sobre(pts, s_nos, tab)
     loft(S, c, ru, rv, np.minimum(ss, float(N)), nos(*ks), 'cachecol', n=nn, sub=2, frame=(X_, Z_), fecha=(False, True))
 
 
 def perna(S, lado):
+    sg = 1.0 if lado == 'E' else -1.0
     H, K, A = REPOUSO['Coxa' + lado], REPOUSO['Canela' + lado], REPOUSO['Pe' + lado]
-    tab = [(-0.12, .088, .092), (0.0, .098, .102), (0.15, .100, .105), (0.40, .091, .096), (0.70, .075, .080), (0.92, .063, .068), (1.0, .061, .067),
-           (1.10, .061, .069), (1.35, .060, .071), (1.65, .052, .059), (1.86, .043, .049), (1.93, .0455, .0505), (2.02, .0455, .0505), (2.10, .040, .045)]
-    c, ru, rv, ss, nn = aneis_sobre([H, K, A], [0.0, 1.0, 2.0], tab)
-    # volume da panturrilha para trás
-    for i, s in enumerate(ss):
-        if 1.1 <= s <= 1.7:
-            c[i][2] -= 0.008 * math.sin(math.pi * (s - 1.1) / 0.6)
+    tab = [(-0.12, .064, .068), (0.0, .072, .076), (0.15, .078, .083), (0.28, .082, .087), (0.40, .086, .091), (0.52, .092, .097), (0.70, .079, .084), (0.92, .066, .071), (1.0, .064, .070),
+           (1.10, .064, .072), (1.35, .063, .074), (1.65, .054, .061), (1.86, .043, .049), (1.93, .0455, .0505), (2.02, .0455, .0505), (2.10, .040, .045)]
+    c, ru, rv, ss, _ = aneis_sobre([H, K, A], [0.0, 1.0, 2.0], tab)
+    for i, s_ in enumerate(ss):                                       # volume da panturrilha para trás
+        if 1.1 <= s_ <= 1.7:
+            c[i][2] -= 0.008 * math.sin(math.pi * (s_ - 1.1) / 0.6)
     pesos = nos((-0.12, {'Quadril': .6, 'Coxa' + lado: .4}), (0.0, {'Quadril': .3, 'Coxa' + lado: .7}), (0.18, {'Coxa' + lado: 1}), (0.80, {'Coxa' + lado: 1}),
                 (1.0, {'Coxa' + lado: .5, 'Canela' + lado: .5}), (1.22, {'Canela' + lado: 1}), (1.82, {'Canela' + lado: 1}),
                 (2.0, {'Canela' + lado: .5, 'Pe' + lado: .5}), (2.12, {'Pe' + lado: 1}))
-    loft(S, c, ru, rv, ss, pesos, lambda s: 'calca_faixa' if 1.9 <= s < 2.06 else 'calca', n=2.1, sub=3, fecha=(True, False))
+    loft(S, c, ru, rv, ss, pesos, lambda s_: 'calca_faixa' if 1.9 <= s_ < 2.06 else 'calca', n=2.1, sub=3, fecha=(True, False))
+    # listra lateral (faixa fina de cor que acompanha o lado de fora da perna)
+    sel = [i for i, s_ in enumerate(ss) if 0.12 <= s_ <= 1.86]
+    cs = np.array([c[i] + sg * X_ * (ru[i] * 0.985) for i in sel])
+    k = len(sel)
+    rl = np.full(k, .0032)
+    rl[0] = rl[-1] = .0016
+    loft(S, cs, rl, np.full(k, .0115), ss[sel], pesos, 'detalhe', n=3.0, sub=3, nseg=10, frame='auto', fecha=(True, True))
 
 
 def sapato(S, lado):
@@ -375,23 +398,32 @@ def sapato(S, lado):
         ss.append(z)
     loft(S, np.array(c), np.array(ru), np.array(rv), np.array(ss), nos((-0.1, {'Pe' + lado: 1}), (0.085, {'Pe' + lado: 1}), (0.145, {'Ponteira' + lado: 1}), (0.22, {'Ponteira' + lado: 1})),
          'sola', n=3.6, sub=3, frame=(X_, Y_), fecha=(False, False))
+    # língua e cadarços: faixa fina sobre o peito do pé
+    zs = np.arange(-0.012, 0.106, 0.014)
+    tops = np.interp(zs, [u[0] for u in Up], [u[1] for u in Up])
+    ct = np.array([(A[0], A[1] + tp + 0.0016, z0 + z) for z, tp in zip(zs, tops)])
+    kk = len(zs)
+    rr = np.full(kk, .0058)
+    rr[0] = rr[-1] = .003
+    loft(S, ct, rr, np.full(kk, .0034), zs, nos((-0.1, {'Pe' + lado: 1}), (0.2, {'Pe' + lado: 1})), 'tenis_detalhe', n=2.4, sub=2, nseg=10, frame=(X_, Y_), fecha=(True, True))
 
 
 def braco(S, lado):
     O, Cv, W = REPOUSO['Braco' + lado], REPOUSO['Antebraco' + lado], REPOUSO['Mao' + lado]
-    tab = [(-0.20, 0.0, 0.0), (-0.14, .040, .044), (-0.06, .060, .064), (0.04, .067, .070), (0.20, .062, .066), (0.45, .055, .058), (0.75, .050, .053),
+    tab = [(-0.20, 0.0, 0.0), (-0.14, .040, .044), (-0.06, .060, .064), (0.04, .067, .070), (0.20, .062, .066), (0.38, .0575, .0605), (0.50, .0535, .0565),
+           (0.53, .0568, .0598), (0.63, .0568, .0598), (0.66, .0525, .0555), (0.75, .050, .053),
            (0.95, .046, .049), (1.0, .045, .049), (1.10, .048, .052), (1.35, .048, .050), (1.65, .040, .042), (1.82, .035, .037), (1.86, .0405, .0425),
            (1.98, .0405, .0425), (2.03, .036, .038)]
-    c, ru, rv, ss, nn = aneis_sobre([O, Cv, W], [0.0, 1.0, 2.0], tab)
+    c, ru, rv, ss, _ = aneis_sobre([O, Cv, W], [0.0, 1.0, 2.0], tab)
     pesos = nos((-0.20, {'Peito': .55, 'Ombro' + lado: .45}), (-0.08, {'Peito': .30, 'Ombro' + lado: .40, 'Braco' + lado: .30}), (0.08, {'Ombro' + lado: .20, 'Braco' + lado: .80}),
                 (0.30, {'Braco' + lado: 1}), (0.82, {'Braco' + lado: 1}), (1.0, {'Braco' + lado: .5, 'Antebraco' + lado: .5}), (1.18, {'Antebraco' + lado: 1}),
                 (1.80, {'Antebraco' + lado: 1}), (2.0, {'Antebraco' + lado: .8, 'Mao' + lado: .2}))
-    loft(S, c, ru, rv, ss, pesos, lambda s: 'jaqueta_faixa' if 1.84 <= s else 'jaqueta', n=2.0, sub=3, fecha=(True, False))
+    loft(S, c, ru, rv, ss, pesos, lambda s: 'jaqueta_faixa' if (1.84 <= s or 0.515 <= s <= 0.645) else 'jaqueta', n=2.0, sub=3, fecha=(True, False))
     # luva (mão fechada, relaxada)
     f = (W - Cv) / np.linalg.norm(W - Cv)
     Lh = 0.150
     tab = [(-0.20, .030, .032), (0.0, .029, .034), (0.18, .027, .041), (0.42, .029, .045), (0.65, .031, .041), (0.85, .027, .032), (1.0, 0.0, 0.0)]
-    c = np.array([W + f * Lh * s for s, a, b in tab])
+    c = np.array([W + f * Lh * t[0] for t in tab])
     ru = np.array([t[1] for t in tab])
     rv = np.array([t[2] for t in tab])
     pw = nos((-0.2, {'Antebraco' + lado: .8, 'Mao' + lado: .2}), (0.1, {'Mao' + lado: 1}))

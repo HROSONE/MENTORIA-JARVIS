@@ -121,13 +121,12 @@ def validar(caminho):
             if dif > 1e-4:
                 erros.append('%s: início e fim diferentes (%.2e)' % (nome, dif))
         # cinemática direta
-        pts = {}
         P_all, Q_all = [], []
         for rots, tq in frames:
             P, Q = fk_frame(rots, tq, rest)
             P_all.append(P)
             Q_all.append(Q)
-        minimo, slip_max, slip_n, apoio_frames = 9.0, 0.0, 0, 0
+        minimo, slip_max, apoio_frames = 9.0, 0.0, 0
         onde_min, onde_slip = '', ''
         for lado in 'ED':
             pontos = []

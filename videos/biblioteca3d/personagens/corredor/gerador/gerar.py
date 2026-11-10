@@ -2,7 +2,6 @@
 Uso:  python3 gerar.py            (a partir desta pasta; precisa de numpy; o escritor GLB é o do kit: ../../../cidade/gerador/glb.py)"""
 import os
 import sys
-import json
 import numpy as np
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
@@ -17,10 +16,11 @@ SAIDA = os.path.normpath(os.path.join(AQUI, '..'))
 
 # cores (sRGB) dos dois acabamentos
 CORES_COLORIDO = {
-    'pele': ('#c98f6b', 0.65, 0.0), 'jaqueta': ('#e0762c', 0.78, 0.0), 'jaqueta_faixa': ('#262e4a', 0.8, 0.0),
+    'pele': ('#c98f6b', 0.65, 0.0), 'jaqueta': ('#e0762c', 0.78, 0.0), 'jaqueta_faixa': ('#262e4a', 0.8, 0.0), 'jaqueta_barra': ('#bd5a1a', 0.8, 0.0),
     'calca': ('#2b3447', 0.88, 0.0), 'calca_faixa': ('#1b2231', 0.85, 0.0), 'tenis': ('#ece7dc', 0.7, 0.0), 'sola': ('#262e4a', 0.8, 0.0),
     'gorro': ('#262e4a', 0.95, 0.0), 'gorro_barra': ('#e0762c', 0.95, 0.0), 'cachecol': ('#d2362b', 0.95, 0.0), 'luva': ('#1b2231', 0.8, 0.0),
     'viseira': ('#0f1420', 0.18, 0.35), 'viseira_faixa': ('#1b2231', 0.8, 0.0),
+    'detalhe': ('#e0762c', 0.78, 0.0), 'tenis_detalhe': ('#262e4a', 0.8, 0.0),
 }
 COR_SILUETA = '#151925'                                                     # azul-marinho quase preto (o mesmo dos bonecos silhueta do canal)
 

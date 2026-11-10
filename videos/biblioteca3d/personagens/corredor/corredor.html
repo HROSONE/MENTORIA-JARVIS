@@ -33,18 +33,26 @@ document.body.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 const fundo = Q.get('fundo') || 'aebccb';
 scene.background = new THREE.Color('#' + fundo);
-scene.add(new THREE.HemisphereLight(0xeaf1f7, 0x7a8794, Q.has('rim') ? 0.55 : 1.0));
-const key = new THREE.DirectionalLight(0xfff1dc, Q.has('rim') ? 1.6 : 2.4);
+scene.add(new THREE.HemisphereLight(0xeaf1f7, 0x7a8794, 1.0));
+const key = new THREE.DirectionalLight(0xfff1dc, 2.4);
 key.position.set(3, 5, 4); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
 Object.assign(key.shadow.camera, { left: -6, right: 6, top: 4, bottom: -2, near: 0.5, far: 30 }); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02;
 scene.add(key);
-if (Q.has('rim')) { const r = new THREE.DirectionalLight(0xffc27a, 3.2); r.position.set(-4, 3, -3.5); scene.add(r); }
 const chao = new THREE.Mesh(new THREE.CircleGeometry(60, 64), new THREE.MeshStandardMaterial({ color: Q.get('chao') ? '#' + Q.get('chao') : 0x8c9aa6, roughness: 1 }));
 chao.rotation.x = -Math.PI / 2; chao.receiveShadow = true; scene.add(chao);
-if (!Q.has('semgrade')) { const g = new THREE.GridHelper(40, 40, 0x56606b, 0x7b8794); g.position.y = 0.002; g.material.transparent = true; g.material.opacity = 0.35; scene.add(g); }
+// esteira: faixas no chão que correm para trás na velocidade do clipe (mostra que os pés não escorregam)
+const marcas = new THREE.Group();
+const ESP_MARCA = 0.6;
+if (!Q.has('semgrade')) {
+  const mm = new THREE.MeshBasicMaterial({ color: 0x6f7c88, transparent: true, opacity: 0.55 });
+  for (let i = -30; i < 30; i++) { const f = new THREE.Mesh(new THREE.PlaneGeometry(12, 0.05), mm); f.rotation.x = -Math.PI / 2; f.position.set(0, 0.003, i * ESP_MARCA); marcas.add(f); }
+  scene.add(marcas);
+}
 
 const arquivo = Q.get('f') || 'corredor.glb';
 const base = await Corredor.carregar(arquivo);
+if (Q.has('rim') || arquivo.endsWith('corredor.glb') && !Q.has('semrim')) base.silhueta();
+if (Q.has('contorno')) base.contorno({ cor: Q.get('contorno') && Q.get('contorno') !== '1' ? '#' + Q.get('contorno') : '#0a0d14' });
 const nomes = base.clipes.map(c => c.name);
 const clip = Q.get('clip') || nomes[0];
 const folha = num('folha', 0);                 // N poses do mesmo ciclo lado a lado
@@ -67,13 +75,17 @@ camera.lookAt(...alvo);
 
 const ui = document.getElementById('ui');
 if (Q.has('still') || folha) document.body.classList.add('sem-ui');
-nomes.forEach(n => { const b = document.createElement('button'); b.textContent = n; b.onclick = () => { pers[0].tocar(n, { fade: 0.25 }); [...ui.children].forEach(c => c.classList.toggle('on', c === b)); }; if (n === clip) b.className = 'on'; ui.appendChild(b); });
+nomes.forEach(n => { const b = document.createElement('button'); b.textContent = n; b.onclick = () => { pers[0].tocar(n, { fade: 0.25 }); pers[0].ultimo = n; [...ui.children].forEach(c => c.classList.toggle('on', c === b)); }; if (n === clip) b.className = 'on'; ui.appendChild(b); });
 
-window.__setTime = t => { pers.forEach(p => p.pose(clip, t)); renderer.render(scene, camera); };
+const veloc = () => (pers[0].info(pers[0].ultimo || clip).velocidade || 0);
+let deslocado = 0;                                           // quanto o chão já correu (m)
+const moverChao = d => { deslocado = d; marcas.position.z = -(((d % ESP_MARCA) + ESP_MARCA) % ESP_MARCA); };
+window.__setTime = t => { pers.forEach(p => p.pose(clip, t)); moverChao(((base.info(clip).velocidade) || 0) * t); renderer.render(scene, camera); };
+if (Q.has('t') && !folha) moverChao(((base.info(clip).velocidade) || 0) * num('t', 0));
 let ult = performance.now();
 function loop(now) {
   const dt = Math.min(0.05, (now - ult) / 1000); ult = now;
-  if (!Q.has('t') && !folha) pers.forEach(p => p.atualizar(dt));
+  if (!Q.has('t') && !folha) { pers.forEach(p => p.atualizar(dt)); moverChao(deslocado + veloc() * dt); }
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
 }
