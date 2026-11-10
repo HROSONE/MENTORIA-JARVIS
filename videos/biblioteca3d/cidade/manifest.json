@@ -3419,7 +3419,7 @@
    "arquivo": "esporte/estadio-futebol.glb",
    "descricao": "Estádio de futebol de 144 x 108 m: campo 100 x 64 m com marcações e traves, quatro arquibancadas cobertas, quatro torres de refletores, placar e letreiro ESTÁDIO HRYZ",
    "tris": 7376,
-   "kb": 751.5,
+   "kb": 749.1,
    "bbox": {
     "min": [
      -72.0,
@@ -3464,59 +3464,63 @@
    "luzes": [
     {
      "pos": [
-      -68.5174943151202,
+      -68.52,
       39.05,
-      -50.643365363349716
+      -50.64
      ],
      "dir": [
-      0.55,
-      -0.6,
-      0.4
+      0.732,
+      -0.413,
+      0.541
      ],
      "cor": "#fff6e0",
-     "alcance": 90
+     "alcance": 100,
+     "foco": 34
     },
     {
      "pos": [
-      -68.5174943151202,
+      -68.52,
       39.05,
-      50.643365363349716
+      50.64
      ],
      "dir": [
-      0.55,
-      -0.6,
-      -0.4
+      0.732,
+      -0.413,
+      -0.541
      ],
      "cor": "#fff6e0",
-     "alcance": 90
+     "alcance": 100,
+     "foco": 34
     },
     {
      "pos": [
-      68.5174943151202,
+      68.52,
       39.05,
-      -50.643365363349716
+      -50.64
      ],
      "dir": [
-      -0.55,
-      -0.6,
-      0.4
+      -0.732,
+      -0.413,
+      0.541
      ],
      "cor": "#fff6e0",
-     "alcance": 90
+     "alcance": 100,
+     "foco": 34
     },
     {
      "pos": [
-      68.5174943151202,
+      68.52,
       39.05,
-      50.643365363349716
+      50.64
      ],
      "dir": [
-      -0.55,
-      -0.6,
-      -0.4
+      -0.732,
+      -0.413,
+      -0.541
      ],
      "cor": "#fff6e0",
-     "alcance": 90
+     "alcance": 100,
+     "foco": 34
     }
    ]
   },
@@ -3526,7 +3530,7 @@
    "arquivo": "esporte/campo-futebol.glb",
    "descricao": "Campo de várzea de 72 x 48 m (campo 64 x 40 m): gramado listrado, terra batida nos gols, traves com rede, bancos e quatro postes de luz",
    "tris": 1254,
-   "kb": 109.3,
+   "kb": 109.4,
    "bbox": {
     "min": [
      -36.0,
@@ -3567,12 +3571,13 @@
       -21.7
      ],
      "dir": [
-      0,
-      -1,
-      0
+      0.807,
+      -0.262,
+      0.53
      ],
      "cor": "#fff6e0",
-     "alcance": 40
+     "alcance": 48,
+     "foco": 48
     },
     {
      "pos": [
@@ -3581,12 +3586,13 @@
       21.7
      ],
      "dir": [
-      0,
-      -1,
-      0
+      0.807,
+      -0.262,
+      -0.53
      ],
      "cor": "#fff6e0",
-     "alcance": 40
+     "alcance": 48,
+     "foco": 48
     },
     {
      "pos": [
@@ -3595,12 +3601,13 @@
       -21.7
      ],
      "dir": [
-      0,
-      -1,
-      0
+      -0.807,
+      -0.262,
+      0.53
      ],
      "cor": "#fff6e0",
-     "alcance": 40
+     "alcance": 48,
+     "foco": 48
     },
     {
      "pos": [
@@ -3609,12 +3616,13 @@
       21.7
      ],
      "dir": [
-      0,
-      -1,
-      0
+      -0.807,
+      -0.262,
+      -0.53
      ],
      "cor": "#fff6e0",
-     "alcance": 40
+     "alcance": 48,
+     "foco": 48
     }
    ]
   }
@@ -3635,7 +3643,10 @@
   "rotacao": "girar 90° em Y leva a conexão S para E, depois N, depois W",
   "rotatoria": "a rotatória grande tem 36 x 36 m (3 x 3 ladrilhos, o centro cai no centro de um ladrilho); suas conexões ficam a 18 m do centro; o anel é de mão única, anti-horário visto de cima (mão direita)",
   "caminho": "calcada-reta/curva/t/cruzamento/fim: caminho de 2,5 m cortado na grama, com as conexões no meio das bordas (como as ruas)",
-  "luzes": "cada poste de luz traz em extras.luzes a lista de {pos, dir, cor, alcance} onde pôr PointLight/SpotLight; a lâmpada é o nó Luz (acenda com kit.luzEstado)",
+  "luzes": "cada poste de luz (e os edifícios, o estádio e o campo) traz em extras.luzes a lista de {pos, dir, cor, alcance[, foco]} onde pôr PointLight (ou SpotLight, quando há foco); a lâmpada é o nó Luz, as janelas sorteadas o nó VidroLuz e os letreiros o nó Letreiro (acenda tudo com kit.luzEstado)",
+  "edificios": "casas, prédios e edifícios públicos são props: origem no centro da pegada (extras.pegada, múltiplos de 12 m), pé em y = 0, frente (porta, vitrine, letreiro) em +Z; coloque em y = 0,15 sobre a grama ou a calçada",
+  "ladrilhos_grandes": "rotatoria, estadio-futebol e campo-futebol cobrem vários ladrilhos e já trazem o chão em y = 0,15: coloque em y = 0",
+  "cercas": "trechos de 12 m ao longo de X, origem no centro, face de fora em +Z; os postes das pontas se sobrepõem, então os trechos se emendam",
   "escala_veiculo_kenney": 1.7
  }
 }

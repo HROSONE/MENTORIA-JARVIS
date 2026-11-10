@@ -268,7 +268,10 @@ def estadio():
             est, lamp, (dxz, ytopo) = refletor(24.0, ex, ez)
             o.setdefault('Torres', Malha()).add(est, T(ex, 13.7, ez))
             o.setdefault('Luz', Malha()).add(lamp, T(ex, 13.7, ez))
-            luzes.append({'pos': [ex + dxz[0] * 0.6, round(13.7 + ytopo, 2), ez + dxz[1] * 0.6], 'dir': [round(-sx * 0.55, 3), -0.6, round(-sz * 0.4, 3)], 'cor': '#fff6e0', 'alcance': 90})
+            py = 13.7 + ytopo
+            n = math.sqrt(ex * ex + (py - CH) ** 2 + ez * ez)
+            luzes.append({'pos': [round(ex + dxz[0] * 0.6, 2), round(py, 2), round(ez + dxz[1] * 0.6, 2)], 'dir': [round(-ex / n, 3), round(-(py - CH) / n, 3), round(-ez / n, 3)],
+                          'cor': '#fff6e0', 'alcance': 100, 'foco': 34})
     return [(k, m) for k, m in o.items() if m.n_tris], {'pegada': [144.0, 108.0], 'tile': 144.0, 'luzes': luzes}
 
 
@@ -331,7 +334,9 @@ def campo_varzea():
                     lm.caixa(LAMPADA, -0.9 + i * 0.75, -0.9 + i * 0.75 + 0.5, -0.38 + j * 0.45, -0.38 + j * 0.45 + 0.35, -0.05, 0.04, '+z')
             M = T(x, CH + 11.0, z) @ Ry(ang)
             post.add(quadro, M); luz.add(lm, M)
-            luzes.append({'pos': [round(x - sx * 0.3, 2), CH + 10.9, round(z - sz * 0.3, 2)], 'dir': [0, -1, 0], 'cor': '#fff6e0', 'alcance': 40})
+            n = math.sqrt(x * x + 10.9 ** 2 + z * z)
+            luzes.append({'pos': [round(x - sx * 0.3, 2), CH + 10.9, round(z - sz * 0.3, 2)], 'dir': [round(-x / n, 3), round(-10.9 / n, 3), round(-z / n, 3)],
+                          'cor': '#fff6e0', 'alcance': 48, 'foco': 48})
     o['Bancos'], o['Postes'], o['Luz'] = bc, post, luz
     return [(k, m) for k, m in o.items() if m.n_tris], {'pegada': [72.0, 48.0], 'tile': 72.0, 'luzes': luzes}
 

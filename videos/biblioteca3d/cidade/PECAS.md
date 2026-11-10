@@ -95,7 +95,7 @@ Arquivo gerado por `gerador/gerar.py`; não edite à mão. Medidas em metros (la
 | `predios/predio-comercial-10.glb` | Torre comercial de vidro de 10 andares (24 x 12 m) com lobby de dois andares e marquise | 20.24 x 48.60 x 11.52 | 1314 | 111.3 | — |
 | `predios/predio-loja-3.glb` | Prédio de 3 andares com loja no térreo (vitrines, toldo listrado, letreiro) e apartamentos com sacadinhas de ferro | 11.50 x 12.77 x 10.65 | 2626 | 231.6 | — |
 
-## Hospital, delegacia, supermercado e cinema
+## Hospital, delegacia, supermercado, cinema e estacionamento
 
 | Peça | O que é | Tamanho (m) | Triângulos | KB | Conexões |
 |---|---|---|---|---|---|
@@ -105,12 +105,12 @@ Arquivo gerado por `gerador/gerar.py`; não edite à mão. Medidas em metros (la
 | `equipamentos/cinema.glb` | Cinema de 24 x 24 m: marquise com lâmpadas, letreiro CINEMA, cartazes, bilheteria, placa vertical e sala alta nos fundos | 20.67 x 14.65 x 19.96 | 1544 | 418.4 | — |
 | `equipamentos/estacionamento.glb` | Ladrilho de estacionamento de 12 x 12 m (topo em y = 0,15): quatro vagas de 3 x 5 m com calços e corredor de 7 m; emenda lado a lado | 12.00 x 0.12 x 12.00 | 54 | 6.9 | — |
 
-## Esporte
+## Esporte (ladrilhos grandes: coloque em y = 0)
 
 | Peça | O que é | Tamanho (m) | Triângulos | KB | Conexões |
 |---|---|---|---|---|---|
-| `esporte/estadio-futebol.glb` | Estádio de futebol de 144 x 108 m: campo 100 x 64 m com marcações e traves, quatro arquibancadas cobertas, quatro torres de refletores, placar e letreiro ESTÁDIO HRYZ | 144.00 x 40.60 x 107.60 | 7376 | 751.5 | — |
-| `esporte/campo-futebol.glb` | Campo de várzea de 72 x 48 m (campo 64 x 40 m): gramado listrado, terra batida nos gols, traves com rede, bancos e quatro postes de luz | 72.00 x 11.60 x 48.00 | 1254 | 109.3 | — |
+| `esporte/estadio-futebol.glb` | Estádio de futebol de 144 x 108 m: campo 100 x 64 m com marcações e traves, quatro arquibancadas cobertas, quatro torres de refletores, placar e letreiro ESTÁDIO HRYZ | 144.00 x 40.60 x 107.60 | 7376 | 749.1 | — |
+| `esporte/campo-futebol.glb` | Campo de várzea de 72 x 48 m (campo 64 x 40 m): gramado listrado, terra batida nos gols, traves com rede, bancos e quatro postes de luz | 72.00 x 11.60 x 48.00 | 1254 | 109.4 | — |
 
 ## Mesas, cadeiras e móveis
 

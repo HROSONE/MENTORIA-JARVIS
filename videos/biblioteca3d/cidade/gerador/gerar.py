@@ -137,7 +137,7 @@ def escrever_lista():
     """PECAS.md: tabela de todas as peças (gerada, não edite à mão)"""
     nomes = {'ruas': 'Ruas e chão', 'rotatorias': 'Rotatórias', 'calcadas': 'Calçadas e caminhos de pedestres', 'gramados': 'Gramados (ladrilhos de 12 x 12 m)',
              'natureza': 'Árvores e arbustos', 'cercas': 'Cercas, muros e portões (trechos de 12 m)', 'energia': 'Rede elétrica',
-             'casas': 'Casas', 'predios': 'Prédios', 'equipamentos': 'Hospital, delegacia, supermercado e cinema', 'esporte': 'Esporte',
+             'casas': 'Casas', 'predios': 'Prédios', 'equipamentos': 'Hospital, delegacia, supermercado, cinema e estacionamento', 'esporte': 'Esporte (ladrilhos grandes: coloque em y = 0)',
              'moveis': 'Mesas, cadeiras e móveis', 'faixas': 'Faixas pintadas (decalques)', 'placas': 'Placas',
              'mobiliario': 'Semáforos, postes de luz e hidrantes'}
     linhas = ['# Peças do kit cidade', '', 'Arquivo gerado por `gerador/gerar.py`; não edite à mão. Medidas em metros (largura x altura x profundidade).', '']
@@ -180,7 +180,10 @@ def main():
             'rotacao': 'girar 90° em Y leva a conexão S para E, depois N, depois W',
             'rotatoria': 'a rotatória grande tem 36 x 36 m (3 x 3 ladrilhos, o centro cai no centro de um ladrilho); suas conexões ficam a 18 m do centro; o anel é de mão única, anti-horário visto de cima (mão direita)',
             'caminho': 'calcada-reta/curva/t/cruzamento/fim: caminho de 2,5 m cortado na grama, com as conexões no meio das bordas (como as ruas)',
-            'luzes': 'cada poste de luz traz em extras.luzes a lista de {pos, dir, cor, alcance} onde pôr PointLight/SpotLight; a lâmpada é o nó Luz (acenda com kit.luzEstado)',
+            'luzes': 'cada poste de luz (e os edifícios, o estádio e o campo) traz em extras.luzes a lista de {pos, dir, cor, alcance[, foco]} onde pôr PointLight (ou SpotLight, quando há foco); a lâmpada é o nó Luz, as janelas sorteadas o nó VidroLuz e os letreiros o nó Letreiro (acenda tudo com kit.luzEstado)',
+            'edificios': 'casas, prédios e edifícios públicos são props: origem no centro da pegada (extras.pegada, múltiplos de 12 m), pé em y = 0, frente (porta, vitrine, letreiro) em +Z; coloque em y = 0,15 sobre a grama ou a calçada',
+            'ladrilhos_grandes': 'rotatoria, estadio-futebol e campo-futebol cobrem vários ladrilhos e já trazem o chão em y = 0,15: coloque em y = 0',
+            'cercas': 'trechos de 12 m ao longo de X, origem no centro, face de fora em +Z; os postes das pontas se sobrepõem, então os trechos se emendam',
             'escala_veiculo_kenney': 1.7,
         },
     })
