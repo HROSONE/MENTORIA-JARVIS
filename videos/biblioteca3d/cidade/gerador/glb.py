@@ -31,7 +31,7 @@ class Material:
 
 
 class Prim:
-    def __init__(self, material, positions, normals, indices, uvs=None, joints=None, weights=None):
+    def __init__(self, material, positions, normals, indices, uvs=None, joints=None, weights=None, colors=None):
         self.material = material
         self.positions = np.asarray(positions, dtype='<f4').reshape(-1, 3)
         self.normals = np.asarray(normals, dtype='<f4').reshape(-1, 3)
@@ -39,6 +39,7 @@ class Prim:
         self.uvs = None if uvs is None else np.asarray(uvs, dtype='<f4').reshape(-1, 2)
         self.joints = None if joints is None else np.asarray(joints, dtype='<u2').reshape(-1, 4)       # malha com esqueleto: 4 juntas por vértice
         self.weights = None if weights is None else np.asarray(weights, dtype='<f4').reshape(-1, 4)    # e os 4 pesos (somam 1)
+        self.colors = None if colors is None else np.asarray(colors, dtype='<f4').reshape(-1, 3)       # cor por vértice (COLOR_0, multiplica a cor do material): sujeira, olheiras, barba
 
 
 class Skin:
@@ -114,6 +115,8 @@ def write_glb(path, roots, generator='Hryz Animation - kit cidade', animations=N
             attrs = {'POSITION': add_accessor(p.positions, 5126, 'VEC3', 34962, True), 'NORMAL': add_accessor(p.normals, 5126, 'VEC3', 34962)}
             if p.uvs is not None:
                 attrs['TEXCOORD_0'] = add_accessor(p.uvs, 5126, 'VEC2', 34962)
+            if p.colors is not None:
+                attrs['COLOR_0'] = add_accessor(p.colors, 5126, 'VEC3', 34962)
             if p.joints is not None:
                 attrs['JOINTS_0'] = add_accessor(p.joints, 5123, 'VEC4', 34962)
                 attrs['WEIGHTS_0'] = add_accessor(p.weights, 5126, 'VEC4', 34962)
