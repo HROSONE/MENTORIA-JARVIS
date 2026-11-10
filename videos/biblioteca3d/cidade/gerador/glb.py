@@ -31,16 +31,31 @@ class Material:
 
 
 class Prim:
-    def __init__(self, material, positions, normals, indices, uvs=None):
+    def __init__(self, material, positions, normals, indices, uvs=None, joints=None, weights=None):
         self.material = material
         self.positions = np.asarray(positions, dtype='<f4').reshape(-1, 3)
         self.normals = np.asarray(normals, dtype='<f4').reshape(-1, 3)
         self.indices = np.asarray(indices, dtype='<u4').reshape(-1)
         self.uvs = None if uvs is None else np.asarray(uvs, dtype='<f4').reshape(-1, 2)
+        self.joints = None if joints is None else np.asarray(joints, dtype='<u2').reshape(-1, 4)       # malha com esqueleto: 4 juntas por vértice
+        self.weights = None if weights is None else np.asarray(weights, dtype='<f4').reshape(-1, 4)    # e os 4 pesos (somam 1)
+
+
+class Skin:
+    """esqueleto de uma malha: `joints` (lista de Node, na ordem dos índices JOINTS_0) e `ibms` (matriz 4x4 inversa da pose de repouso de cada junta)"""
+    def __init__(self, joints, ibms, nome='Esqueleto', raiz=None):
+        self.joints, self.ibms, self.nome, self.raiz = joints, ibms, nome, raiz
+
+
+class Animacao:
+    """clipe: `canais` = [(Node, 'rotation' | 'translation' | 'scale', tempos, valores)], interpolação linear"""
+    def __init__(self, nome, canais):
+        self.nome, self.canais = nome, canais
 
 
 class Node:
-    def __init__(self, name, prims=None, children=None, translation=(0, 0, 0), rotation=(0, 0, 0, 1), scale=(1, 1, 1), extras=None):
+    def __init__(self, name, prims=None, children=None, translation=(0, 0, 0), rotation=(0, 0, 0, 1), scale=(1, 1, 1), extras=None, skin=None):
+        self.skin = skin
         self.name = name
         self.prims = prims or []
         self.children = children or []
@@ -50,7 +65,7 @@ class Node:
         self.extras = extras
 
 
-def write_glb(path, roots, generator='Hryz Animation - kit cidade'):
+def write_glb(path, roots, generator='Hryz Animation - kit cidade', animations=None):
     buf = bytearray()
     views, accessors, jmats, jimgs, jtex, jmeshes, jnodes = [], [], [], [], [], [], []
     mat_index, tex_index = {}, {}
@@ -99,6 +114,9 @@ def write_glb(path, roots, generator='Hryz Animation - kit cidade'):
             attrs = {'POSITION': add_accessor(p.positions, 5126, 'VEC3', 34962, True), 'NORMAL': add_accessor(p.normals, 5126, 'VEC3', 34962)}
             if p.uvs is not None:
                 attrs['TEXCOORD_0'] = add_accessor(p.uvs, 5126, 'VEC2', 34962)
+            if p.joints is not None:
+                attrs['JOINTS_0'] = add_accessor(p.joints, 5123, 'VEC4', 34962)
+                attrs['WEIGHTS_0'] = add_accessor(p.weights, 5126, 'VEC4', 34962)
             if p.positions.shape[0] < 65535:
                 idx = add_accessor(p.indices.astype('<u2'), 5123, 'SCALAR', 34963)
             else:
@@ -107,10 +125,15 @@ def write_glb(path, roots, generator='Hryz Animation - kit cidade'):
         jmeshes.append({'name': node.name, 'primitives': prims})
         return len(jmeshes) - 1
 
+    node_index, skin_nodes = {}, []
+
     def emit(node):
         idx = len(jnodes)
         jn = {'name': node.name}
         jnodes.append(jn)
+        node_index[id(node)] = idx
+        if node.skin is not None:
+            skin_nodes.append((idx, node.skin))
         if node.prims:
             jn['mesh'] = make_mesh(node)
         if tuple(node.translation) != (0, 0, 0):
@@ -126,11 +149,34 @@ def write_glb(path, roots, generator='Hryz Animation - kit cidade'):
         return idx
 
     scene_nodes = [emit(r) for r in roots]
+    jskins, skin_idx = [], {}
+    for idx, sk in skin_nodes:                       # esqueletos: matrizes inversas de repouso (MAT4, colunas em sequência)
+        if id(sk) not in skin_idx:
+            ibm = np.stack([np.asarray(m, dtype='<f4').flatten(order='F') for m in sk.ibms])
+            d = {'joints': [node_index[id(j)] for j in sk.joints], 'inverseBindMatrices': add_accessor(ibm, 5126, 'MAT4', None), 'name': sk.nome}
+            if sk.raiz is not None:
+                d['skeleton'] = node_index[id(sk.raiz)]
+            jskins.append(d)
+            skin_idx[id(sk)] = len(jskins) - 1
+        jnodes[idx]['skin'] = skin_idx[id(sk)]
+    janims = []
+    for an in animations or []:                      # clipes de animação: um amostrador linear por canal
+        samplers, channels = [], []
+        for nodo, caminho, tempos, valores in an.canais:
+            t = np.asarray(tempos, dtype='<f4').reshape(-1, 1)
+            v = np.asarray(valores, dtype='<f4').reshape(len(t), -1)
+            samplers.append({'input': add_accessor(t, 5126, 'SCALAR', None, True), 'output': add_accessor(v, 5126, 'VEC4' if caminho == 'rotation' else 'VEC3', None), 'interpolation': 'LINEAR'})
+            channels.append({'sampler': len(samplers) - 1, 'target': {'node': node_index[id(nodo)], 'path': caminho}})
+        janims.append({'name': an.nome, 'samplers': samplers, 'channels': channels})
     while len(buf) % 4:
         buf.append(0)
     doc = {'asset': {'version': '2.0', 'generator': generator}, 'scene': 0, 'scenes': [{'nodes': scene_nodes}],
            'nodes': jnodes, 'meshes': jmeshes, 'materials': jmats, 'accessors': accessors,
            'bufferViews': views, 'buffers': [{'byteLength': len(buf)}]}
+    if jskins:
+        doc['skins'] = jskins
+    if janims:
+        doc['animations'] = janims
     if jimgs:
         doc['images'] = jimgs
         doc['textures'] = jtex
