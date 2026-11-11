@@ -15,9 +15,9 @@ function imagemColormap() {
 
 // onde fica a tinta de cada modelo no colormap de 512 px (descoberto pelos UVs do corpo): [x0, y0, x1, y1]
 const PINTURA = {
-  'hatchback-sports': [192, 128, 256, 256],
-  'sedan-sports': [384, 128, 448, 256],
-  'sedan': [384, 128, 448, 256],
+  'hatchback-sports': [[192, 128, 256, 256], [192, 256, 256, 384]],
+  'sedan-sports': [[384, 128, 448, 256]],
+  'sedan': [[384, 128, 448, 256]],
   'suv': null, 'police': null, 'taxi': null,
 };
 // luzes (em unidades do modelo, antes da escala): frente [x, y, z], trás [x, y, z]
@@ -39,10 +39,12 @@ async function texturas(modelo, pintura) {
   g.fillStyle = gr; g.fillRect(0, 384, 64, 128);
   // faróis: branco quente
   g.fillStyle = '#fff6dc'; g.fillRect(64, 384, 64, 128);
-  const rect = PINTURA[modelo];
-  if (rect && pintura) {
-    gr = g.createLinearGradient(0, rect[1], 0, rect[3]); gr.addColorStop(0, pintura[0]); gr.addColorStop(1, pintura[1]);
-    g.fillStyle = gr; g.fillRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
+  const rects = PINTURA[modelo];
+  if (rects && pintura) {
+    for (const rect of rects) {
+      gr = g.createLinearGradient(0, rect[1], 0, rect[3]); gr.addColorStop(0, pintura[0]); gr.addColorStop(1, pintura[1]);
+      g.fillStyle = gr; g.fillRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
+    }
   }
   const map = new THREE.CanvasTexture(c); map.flipY = false; map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 4;
   const e = document.createElement('canvas'); e.width = e.height = 512;
@@ -161,6 +163,7 @@ export class Carro {
   }
   amassar(nome, k) {
     if (!this.corpo || !this.D[nome]) return;
+    if (Math.abs(this.nivel[nome] - k) < 5e-4) return;
     this.nivel[nome] = k;
     const a = this.corpo.geometry.attributes.position, pos = a.array;
     pos.set(this.orig);

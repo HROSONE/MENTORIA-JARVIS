@@ -17,6 +17,23 @@ Todos têm esqueleto, **rosto que mexe** (olhos, pálpebras, sobrancelhas, boca 
 
 Cada GLB tem cerca de 2 MB. Outros arquivos: `elenco.js` (ajudante em Three.js), `elenco.html` (visualizador), `cena-susto.html` (cena noturna de teste), `previews/`, `gerador/`.
 
+## Elenco 2 — adolescentes e adultos (para cenas dramáticas)
+
+Mais dez personagens do canal, gerados pelo mesmo sistema (`gerador/personagens2.py`, `gerar.py`). **Rostos genéricos: nenhum representa pessoa real.** Usados no Short "A campainha" (`videos/anurag/`).
+Têm os mesmos clipes (`Parado`, `Andar`, `Correr`, `Pular`, `Assustado`; os adultos sem `Fugir`) e o mesmo rosto que mexe, agora com **malha da cabeça mais fina** (`res=2`: o buraco da boca é um retângulo alinhado à malha, sob os lábios, com chapa escura atrás).
+
+| Arquivo | Nome | Altura | Triângulos | Quem é |
+|---|---|---|---|---|
+| `jovem_a.glb` | Jovem A | 1,68 m | 96.642 | adolescente de 16 anos, moletom verde-azulado com capuz, jeans, tênis branco, cabelo preto curto repicado |
+| `jovem_b.glb` | Jovem B | 1,68 m | 80.112 | adolescente de 16 anos, jaqueta vermelha de time com faixas brancas, jeans preto, cabelo castanho cacheado |
+| `jovem_c.glb` | Jovem C | 1,69 m | 85.677 | adolescente de 16 anos, jaqueta puffer azul-marinho, calça de moletom cinza, óculos, cabelo curto |
+| `homem.glb` | Homem | 1,78 m | 91.075 | adulto de meia-idade, camiseta cinza, jeans escuro, barba por fazer |
+| `mae.glb` | Mãe | 1,65 m | 75.902 | mulher de uns 44 anos, vestido preto, colar de pérolas, rabo de cavalo simulado |
+| `pai.glb` | Pai | 1,82 m | 86.409 | homem de terno preto (V da camisa e gravata pintados por vértice), óculos redondos |
+| `policial.glb` | Policial | 1,83 m | 78.768 | uniforme azul-marinho, quepe, cinto de utilidades com coldre e porta-algemas, distintivo e rádio |
+| `velha_luto.glb` | Dona Lurdes (luto) | 1,56 m | 61.115 | a Dona Lurdes com cardigã e saia escuros |
+| `terno2.glb`, `terno3.glb` | Homens de terno | 1,84 / 1,80 m | ~85.000 | variações do pai (outra pele, cabelo e porte) para cortejos e multidões |
+
 ## Uso rápido (Three.js r160)
 
 ```js

@@ -89,7 +89,7 @@ export function brilho(cor = '255,214,150', tam = 1, op = 1) {
 // ---------------------------------------------------------------------------------------------------- partículas determinísticas
 // Cada partícula nasce em t0 e a posição é função fechada do tempo (gravidade, arrasto, chão): o vídeo pode ser renderizado em qualquer ordem.
 export class Rajada {
-  constructor(pai, { n, geo, mat, t0 = 0, vida = 2, semente = 1, origem = [0, 0, 0], raio = 0.2, vel = [4, 8], dir = [0, 1, 0], abre = 1.0, grav = 9.8, arrasto = 0.4, tam = [0.02, 0.05], tam1 = null,
+  constructor(pai, { n, geo, mat, t0 = 0, vida = 2, semente = 1, origem = [0, 0, 0], raio = 0.2, vel = [4, 8], dir = [0, 1, 0], v0 = [0, 0, 0], abre = 1.0, grav = 9.8, arrasto = 0.4, tam = [0.02, 0.05], tam1 = null,
                      gira = 8, chao = 0.02, quica = 0.25, billboard = false, cores = null, nasce = 0, fim = 'some', crescer = 0, sobe = 0 }) {
     this.n = n; this.t0 = t0; this.vida = vida; this.grav = grav; this.arrasto = arrasto; this.chao = chao; this.quica = quica; this.billboard = billboard; this.fim = fim; this.crescer = crescer; this.sobe = sobe;
     const r = mulberry32(semente);
@@ -97,7 +97,7 @@ export class Rajada {
     const d0 = new THREE.Vector3(...dir).normalize();
     for (let i = 0; i < n; i++) {
       const u = new THREE.Vector3(r() - 0.5, r() - 0.5, r() - 0.5).normalize().multiplyScalar(abre).add(d0).normalize();
-      const v = u.multiplyScalar(lerp(vel[0], vel[1], r()));
+      const v = u.multiplyScalar(lerp(vel[0], vel[1], r())).add(new THREE.Vector3(...v0));
       const p = new THREE.Vector3(origem[0] + (r() - 0.5) * 2 * raio, origem[1] + (r() - 0.5) * 2 * raio, origem[2] + (r() - 0.5) * 2 * raio);
       this.P.push({ p, v, nasce: t0 + r() * nasce, t: lerp(tam[0], tam[1], r()), t1: tam1 ? lerp(tam1[0], tam1[1], r()) : null,
                     eixo: new THREE.Vector3(r() - 0.5, r() - 0.5, r() - 0.5).normalize(), w: (r() - 0.5) * 2 * gira, fase: r() * 6.28, cor: cores ? cores[Math.floor(r() * cores.length)] : null, vida: vida * lerp(0.7, 1.15, r()) });
@@ -142,6 +142,17 @@ export class Rajada {
       this.mesh.setMatrixAt(i, this._m);
     }
     this.mesh.instanceMatrix.needsUpdate = true;
+  }
+  ajustar(fn) {                                                                     // fn(i, partícula) pode mudar p (origem), nasce, v...
+    this.P.forEach((q, i) => fn(i, q));
+    for (const q of this.P) {
+      q.th = Infinity;
+      for (let tau = 0.02; tau < q.vida * 1.3; tau += 0.01) {
+        const f = this.arrasto > 0 ? (1 - Math.exp(-this.arrasto * tau)) / this.arrasto : tau;
+        if (q.p.y + q.v.y * f - 0.5 * this.grav * tau * tau + this.sobe * tau < this.chao) { q.th = tau; break; }
+      }
+    }
+    return this;
   }
   mostrar(v) { this.mesh.visible = v; }
 }

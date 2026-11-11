@@ -46,14 +46,13 @@ def cor_terno(cp, jaqueta, camisa, gravata, t_v=0.50):
 def jovem_a():
     e, cab, cp, S, _ = base_personagem(TEEN, dict(FACE_TEEN, nariz_comp=0.0135, sobr_esp=0.0056, olheira=0.05), TEEN_CORPO)
     pal = paleta_rosto('#d6a07a', iris='#3a2412', sobr='#1b120b')
-    pal.update({'cabelo': ('#15110e', .8), 'moletom': ('#2a8c86', .9), 'mol_barra': ('#1f716c', .92), 'mol_bolso': ('#257d78', .92), 'cordao': ('#eeeeee', .8),
+    pal.update({'cabelo': ('#15110e', .8), 'moletom': ('#2a8c86', .9), 'mol_barra': ('#1f716c', .92), 'mol_bolso': ('#257d78', .92), 'cordao': ('#eeeeee', .8), 'jeans_plano': ('#44608e', .9),
                 'jeans': dict(cor='#ffffff', rug=.9, textura=T.jeans((66, 94, 140)), repete=True), 'jeans_punho': ('#4a6892', .9),
                 'tenis': ('#f2f2f2', .7), 'sola': ('#e6e6e6', .7), 'tenis_det': ('#1b1b1f', .7)})
     yh, yf = alinhar_hem(cp, -0.30, 0.08)
-    cp.casca_torso(S, -0.30, 0.98, 1.17, 0.011, lambda t: 'mol_barra' if t < -0.20 else 'moletom', n_an=26, y_hem_seguir=(yh, yf), gola=(0.022, 0.016),
-                   flare=lambda t: (0.006, 0.006) if t < -0.2 else (0, 0))
+    cp.casca_torso(S, -0.30, 0.98, 1.17, 0.011, lambda t: 'jeans_plano' if t < -0.15 else ('mol_barra' if t < -0.07 else 'moletom'), n_an=34, y_hem_seguir=(yh, yf), gola=(0.022, 0.016),
+                   flare=lambda t: (0.004, 0.004) if -0.15 <= t < -0.04 else (0, 0))
     cp.capuz(S, 'moletom', tam=1.0)
-    bolso(S, e, cp, 'mol_bolso', t=0.06, larg=0.060, alt=0.026, off=0.012)
     c, rx, rz = cp.torso(0.96)
     for sg in (-1.0, 1.0):
         pts = [c + np.array([sg * 0.030, 0.0, rz * 1.17 + 0.011 + 0.006]), c + np.array([sg * 0.034, -0.05, rz * 1.17 + 0.014]), c + np.array([sg * 0.036, -0.12, rz * 1.17 + 0.010])]
@@ -65,8 +64,8 @@ def jovem_a():
         cp.sapato(S, lado, 'tenis', 'tenis', 'sola', 'tenis_det')
     hl = lambda th: 0.78 - 0.16 * (1 - math.exp(-(th / 1.2) ** 2)) - 0.12 * (abs(th) > 2.2)
     H.touca(S, cab, 'cabelo', borda=hl, grossura=0.007)
-    H.tufos_aleatorios(S, cab, 'cabelo', 60, (0.74, 0.99), (-3.1, 3.1), (0.011, 0.022), 0.0088, up=0.6, lado=0.4, sementes=61, evitar_frente=0.0, u_min_fn=lambda th: hl(th) + 0.015)
-    H.tufos_aleatorios(S, cab, 'cabelo', 14, (0.86, 0.95), (-0.8, 0.8), (0.022, 0.034), 0.0092, up=0.8, lado=0.0, sementes=62)       # topete
+    H.tufos_aleatorios(S, cab, 'cabelo', 200, (0.74, 0.99), (-3.1, 3.1), (0.009, 0.017), 0.0048, up=0.6, lado=0.4, sementes=61, evitar_frente=0.0, u_min_fn=lambda th: hl(th) + 0.015)
+    H.tufos_aleatorios(S, cab, 'cabelo', 46, (0.86, 0.95), (-0.8, 0.8), (0.018, 0.028), 0.0054, up=0.8, lado=0.0, sementes=62)       # topete
     return e, S, pal, finalizar(cab, {'nome': 'Jovem A', 'papel': 'adolescente', 'idade': 16}, {'parado': {'T': 3.4, 'inquieto': 1.2, 'sway': 0.012}, 'andar': {'quica': 1.2}})
 
 
@@ -76,12 +75,12 @@ def jovem_b():
                                        dict(TEEN_CORPO, k_peito=0.96, k_ombro=0.95))
     pal = paleta_rosto('#f0c9ab', labio='#c27971', iris='#4d6b4a', sobr='#4a2f1b')
     pal.update({'cabelo': ('#4b2e1a', .85), 'jaqueta': ('#bb3430', .75), 'jaq_barra': ('#f0f0f0', .85), 'jaq_gola': ('#f0f0f0', .85), 'jaq_faixa': ('#f0f0f0', .8), 'zip': ('#c9ced6', .35, .6),
-                'jeans': dict(cor='#ffffff', rug=.9, textura=T.jeans((38, 40, 50)), repete=True), 'jeans_punho': ('#2a2c35', .9),
+                'jeans': dict(cor='#ffffff', rug=.9, textura=T.jeans((38, 40, 50)), repete=True), 'jeans_punho': ('#2a2c35', .9), 'jeans_plano': ('#272931', .9),
                 'tenis': ('#f6f6f6', .7), 'sola': ('#bb3430', .7), 'tenis_det': ('#bb3430', .7)})
     yh = cp.torso(-0.30)[0][1]
     yf = cp.torso(0.08)[0][1]
-    cp.casca_torso(S, -0.30, 0.98, 1.15, 0.010, lambda t: 'jaq_barra' if t < -0.20 else 'jaqueta', n_an=26, y_hem_seguir=(yh, yf), gola=(0.026, 0.012),
-                   flare=lambda t: (0.012 * max(0.0, (-0.05 - t) / 0.25), 0.008 * max(0.0, (-0.05 - t) / 0.25)))
+    cp.casca_torso(S, -0.30, 0.98, 1.15, 0.010, lambda t: 'jeans_plano' if t < -0.16 else ('jaq_barra' if t < -0.08 else 'jaqueta'), n_an=34, y_hem_seguir=(yh, yf), gola=(0.026, 0.012),
+                   flare=lambda t: (0.004, 0.003) if -0.16 <= t < -0.04 else (0, 0))
     zipper(S, e, cp, 'zip', -0.28, 0.99, 1.15, 0.010)
     for lado in 'ED':
         cp.membro(S, 'braco', lado, -0.2, 2.04, 1.17, 0.008, lambda s: 'jaq_barra' if s >= 1.84 else ('jaq_faixa' if 0.60 <= s <= 0.74 else 'jaqueta'), n_an=18)
@@ -103,7 +102,7 @@ def jovem_c():
                 'jogger': ('#70747d', .85), 'tenis': ('#d9cfbd', .7), 'sola': ('#f4f1ea', .7), 'tenis_det': ('#2b2b30', .7), 'aro': ('#17171b', .45, .2)})
     yh, yf = alinhar_hem(cp, -0.30, 0.08)
     seg = lambda t: 0.5 + 0.5 * math.cos((t + 0.30) / 1.28 * 2 * math.pi * 4.0)
-    cp.casca_torso(S, -0.30, 0.98, 1.20, 0.013, lambda t: 'puffer_sulco' if seg(t) > 0.93 else 'puffer', n_an=44, y_hem_seguir=(yh, yf), gola=(0.026, 0.016),
+    cp.casca_torso(S, -0.30, 0.98, 1.20, 0.013, lambda t: 'jogger' if t < -0.14 else ('puffer_sulco' if seg(t) > 0.93 else 'puffer'), n_an=50, y_hem_seguir=(yh, yf), gola=(0.026, 0.016),
                    perfil_extra=lambda t: 1 + 0.030 * (1 - seg(t)), flare=None)
     zipper(S, e, cp, 'zip', -0.28, 0.99, 1.20, 0.013)
     for lado in 'ED':
@@ -139,7 +138,7 @@ def homem():
         cp.membro(S, 'perna', lado, -0.12, 2.12, 1.15, 0.007, lambda s: 'jeans_punho' if 1.94 <= s < 2.06 else 'jeans', uv=(0.12, 0.12), n_an=18)
         cp.sapato(S, lado, 'tenis', 'tenis', 'sola', 'tenis_det')
     H.touca(S, cab, 'cabelo', borda=lambda th: 0.84 - 0.30 * (1 - math.exp(-(th / 0.95) ** 2)) - 0.10 * (abs(th) > 2.3), grossura=0.0055)
-    H.tufos_aleatorios(S, cab, 'cabelo', 46, (0.55, 0.97), (-3.1, 3.1), (0.012, 0.024), 0.0075, up=0.6, lado=0.45, sementes=71, evitar_frente=0.0,
+    H.tufos_aleatorios(S, cab, 'cabelo', 200, (0.55, 0.97), (-3.1, 3.1), (0.009, 0.018), 0.0050, up=0.6, lado=0.45, sementes=71, evitar_frente=0.0,
                        u_min_fn=lambda th: 0.84 - 0.30 * (1 - math.exp(-(th / 0.95) ** 2)) + 0.03)
     return e, S, pal, finalizar(cab, {'nome': 'Homem', 'papel': 'adulto', 'idade': 45}, {
         'parado': {'T': 4.4, 'sway': 0.012, 'inquieto': 0.8},
@@ -210,6 +209,42 @@ def pai():
     return e, S, pal, finalizar(cab, {'nome': 'Pai', 'papel': 'adulto', 'idade': 48}, {
         'parado': {'T': 4.6, 'sway': 0.010, 'inquieto': 0.5, 'cab_pitch': 0.06},
         'andar': {'lean': 0.03, 'braco_amp': 0.22, 'quica': 0.8, 'v': 1.1}, 'correr': {'lean': 0.2}, 'fugir': None})
+
+
+# ---------------------------------------------------------------------------------------------------- Homens de terno (variações do pai, para o cortejo)
+def _terno(nome, papel, idade, pele, cabelo_cor, face=None, oculos=False, altura=1.0, largura=1.0, grisalho=False):
+    e, cab, cp, S, _ = base_personagem(
+        dict(perna=1.02 * altura, tronco=1.02 * altura, braco=1.02 * altura, pescoco=1.04, cabeca=1.0, ombros=1.0 * largura, quadril=0.98 * largura, pe=1.02, curva=0.04),
+        dict(dict(res=2.0, sx=1.02, sz=1.03, mand=0.003, bochecha=0.002, olho_r=0.0123, olho_fundo=0.72, olho_x=0.0314, lid_aberta=26, iris=0.52, nariz_comp=0.0215, nariz_larg=0.0112, nariz_ponta=0.0094,
+             boca_larg=0.0295, labio=0.0036, sobr_esp=0.0072, sobr_larg=0.040, barba=0.60, olheira=0.45, rugas_testa=2, rugas_olho=1, rugas_nariz=0.8, dentes=6), **(face or {})),
+        dict(k_braco=1.0, k_perna=1.0, k_peito=1.02, k_ombro=1.02, k_quad=1.02, k_barriga=0.016, k_mao=1.04))
+    pal = paleta_rosto(pele, iris='#3a2616', sobr='#1c1510')
+    pal.update({'cabelo': (cabelo_cor, .7), 'terno': ('#ffffff', .8), 'terno_manga': ('#17181d', .85), 'calca': ('#131418', .85), 'camisa_pulso': ('#f2f2f4', .8), 'gola_camisa': ('#f2f2f4', .8),
+                'sapato': ('#0c0c0e', .5), 'sola': ('#050506', .85), 'sapato_det': ('#1d1d21', .6), 'aro': ('#2b2b30', .4, .3)})
+    yh, yf = alinhar_hem(cp, -0.30, 0.08)
+    cp.casca_torso(S, -0.30, 0.98, 1.13, 0.010, 'terno', n_an=52, nseg=72, y_hem_seguir=(yh, yf), gola=(0.026, 0.016), cor=cor_terno(cp, '#17181d', '#f2f2f4', '#0e0e12'),
+                   flare=lambda t: (0.010, 0.008) if t < -0.12 else (0, 0))
+    gola_redonda(S, e, cp, 'gola_camisa', t=0.985, folga=0.016, tub=0.0062)
+    for lado in 'ED':
+        cp.membro(S, 'braco', lado, -0.2, 2.0, 1.17, 0.010, 'terno_manga', n_an=18)
+        cp.membro(S, 'braco', lado, 1.90, 2.06, 1.0, 0.0, 'camisa_pulso', n_an=3, fecha=(True, False))
+        cp.mao(S, lado)
+        cp.membro(S, 'perna', lado, -0.12, 2.12, 1.14, 0.008, 'calca', n_an=18)
+        cp.sapato(S, lado, 'bota', 'sapato', 'sola', 'sapato_det', cano=False)
+    H.touca(S, cab, 'cabelo', borda=lambda th: 0.80 - 0.26 * (1 - math.exp(-(th / 1.0) ** 2)) - 0.1 * (abs(th) > 2.3), grossura=0.0050)
+    if oculos:
+        H.oculos(S, cab, 'aro', raio=0.0178, espessura=0.0018)
+    return e, S, pal, finalizar(cab, {'nome': nome, 'papel': papel, 'idade': idade}, {
+        'parado': {'T': 4.6, 'sway': 0.010, 'inquieto': 0.5, 'cab_pitch': 0.06},
+        'andar': {'lean': 0.03, 'braco_amp': 0.22, 'quica': 0.8, 'v': 1.1}, 'correr': {'lean': 0.2}, 'fugir': None})
+
+
+def terno2():
+    return _terno('Homem de terno 2', 'adulto', 34, '#9c6a46', '#0f0c0a', face=dict(barba=0.0, olheira=0.2, rugas_testa=0, rugas_olho=0, nariz_comp=0.0185, sobr_esp=0.0078, mand=0.006, sx=0.98, boca_larg=0.0285), oculos=False, altura=1.01, largura=1.03)
+
+
+def terno3():
+    return _terno('Homem de terno 3', 'adulto', 58, '#efc7a6', '#c9c7c3', face=dict(barba=0.15, olheira=0.55, rugas_testa=3, rugas_olho=2, nariz_comp=0.0225, sx=1.06, sz=1.05, bochecha=0.008, boca_larg=0.0305), oculos=False, altura=0.98, largura=1.10)
 
 
 # ---------------------------------------------------------------------------------------------------- Policial
