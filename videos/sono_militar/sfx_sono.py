@@ -1444,7 +1444,7 @@ def montar():
     add(zumbido2(d, 0.5, 61.0), a, 0.22, 0.0, 'guarita', 0.2)
     add(riser(d - 0.2, 200, 4000, 0.7, 0.4), a, 0.20, 0.0, 'guarita', 0.2)
     add(respirar(d, 1.7, 0.6, 0.8), a, 0.22, 0.0, 'guarita', 0.2)
-    silencio_corte(28.10, 0.0, 0.25)                                                                 # silêncio total antes da sala de aula
+    silencio_corte(28.10, 0.0, 0.58)                                                                 # silêncio total antes da sala de aula
 
     # ---------------------------------------------------------------- D) A ESCOLA DE PRÉ-VOO (28,2 a 38 s): a calma depois do caos
     a0 = P['sala']['t0']
@@ -1501,7 +1501,7 @@ def montar():
     a, d = seg('cronometro')
     add(respirar_dormindo(d + 0.2, 0.20, 1.0, 0.40), a, 0.46, -0.1, 'quarto', 0.2)
     add(cronometro_tique(d, 7.0, 1.0), a, 0.10, 0.45, 'quarto', 0.3)
-    add(clique2(1.0, 'botao'), a + d - 0.08, 0.55, 0.45, 'quarto', 0.3)                              # o cronômetro para
+    add(clique2(1.0, 'botao'), a + d - 0.08, 0.60, 0.45, 'quarto', 0.3)                              # o cronômetro para
 
     # ---------------------------------------------------------------- F) O FECHO (53,2 a 57,8 s): a guerra volta, mas ele continua dormindo
     for id_, gg in (('volta', 0.48), ('fim', 0.40)):
