@@ -6,6 +6,6 @@ set -euo pipefail
 Q=${1:?pasta dos quadros}; WAV=${2:?som.wav}; OUT=${3:?saida.mp4}
 ffmpeg -y -loglevel error -framerate 30 -i "$Q/f%05d.jpg" -i "$WAV" \
   -vf "eq=contrast=1.05:saturation=1.06,vignette=PI/6,noise=alls=5:allf=t,format=yuv420p" \
-  -c:v libx264 -preset slow -b:v 3000k -maxrate 3800k -bufsize 7600k -profile:v high -movflags +faststart \
+  -c:v libx264 -preset slow -b:v 2800k -maxrate 3500k -bufsize 7000k -profile:v high -movflags +faststart \
   -c:a aac -b:a 128k -shortest "$OUT"
 ls -la "$OUT"
