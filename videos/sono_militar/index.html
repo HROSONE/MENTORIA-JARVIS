@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Como soldados dormem em dois minutos (Short)</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#000}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<script type="module">
+// Short "Dormir em dois minutos": método da Escola de Pré-Voo da Marinha dos EUA. O vídeo inteiro é uma função do tempo: window.__setTime(t) / window.__frame(t, opções).
+import * as THREE from 'three';
+import { renderer, scene, cam, mundos, capturar, tremor } from './js/motor.js';
+import { construirTudo, atualizar, efeitos } from "./js/planos.js";
+import { acharPlano } from './js/base.js';
+
+const Q = new URLSearchParams(location.search);
+const T = await construirTudo();
+function desenhar(t) { atualizar(t); renderer.render(scene, cam); }
+window.__setTime = t => { desenhar(t); };
+window.__frame = (t, opc = {}) => {
+  const e = efeitos(t);
+  const pl = acharPlano(t), lo = pl.t0, hi = pl.t0 + pl.dur - 1e-4;                 // as subamostras do borrão não passam do plano atual (sem "fantasma" nos cortes)
+  const des = tk => desenhar(Math.min(Math.max(tk, lo), hi));
+  return capturar(des, t, { subs: opc.subs ?? e.subs ?? 1, obturador: opc.obturador ?? e.obturador ?? 0.5, fade: e.fade, flash: e.flash, flashCor: e.flashCor, jpeg: opc.jpeg ?? 0.92, tintas: e.tintas });
+};
+window.__total = T.total;
+window.__planos = T.planos.map(p => [p.id, +p.t0.toFixed(3), +p.dur.toFixed(3)]);
+window.__THREE = THREE; window.__cam = cam; window.__scene = scene; window.__render = () => renderer.render(scene, cam); window.__S = T;
+window.__ready = true;
+if (Q.has('t')) { desenhar(+Q.get('t')); } else if (Q.has('cam')) { desenhar(0); }
+</script>
+</body>
+</html>

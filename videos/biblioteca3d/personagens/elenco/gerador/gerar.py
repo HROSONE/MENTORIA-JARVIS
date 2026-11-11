@@ -9,17 +9,19 @@ import personagens as P                                                 # noqa: 
 import animacoes as A                                                   # noqa: E402
 import personagens2 as P2                                               # noqa: E402
 import personagens3 as P3                                               # noqa: E402
+import personagens4 as P4                                               # noqa: E402
 
 SAIDA = os.path.normpath(os.path.join(AQUI, '..'))
 ELENCO = ['davi', 'teo', 'lia', 'nina', 'maniaco', 'velha']
 ELENCO2 = ['jovem_a', 'jovem_b', 'jovem_c', 'homem', 'mae', 'pai', 'policial', 'velha_luto', 'terno2', 'terno3']
 ELENCO3 = ['faxineira', 'entregador', 'bombeiro']
+ELENCO4 = ['soldado', 'aviador']
 
 if __name__ == '__main__':
-    nomes = sys.argv[1:] or ELENCO + ELENCO2 + ELENCO3
+    nomes = sys.argv[1:] or ELENCO + ELENCO2 + ELENCO3 + ELENCO4
     for n in nomes:
         t = time.time()
-        e, S, pal, ex = (getattr(P, n, None) or getattr(P2, n, None) or getattr(P3, n))()
+        e, S, pal, ex = (getattr(P, n, None) or getattr(P2, n, None) or getattr(P3, n, None) or getattr(P4, n))()
         clipes = A.todos_os_clipes(e, ex.get('anim'))
         ex['pe'] = {'calcanhar': [float(v) for v in e.PE_CALC], 'bola': [float(v) for v in e.PE_BOLA], 'junta': [float(v) for v in e.PE_JUNTA]}
         ex['altura_m'] = round(e.altura, 3)
