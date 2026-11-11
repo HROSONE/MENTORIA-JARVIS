@@ -81,3 +81,22 @@ def trico(base, n=128):
             d.line((i, j, i + 4, j + 7), fill=esc, width=2)
             d.line((i + 8, j, i + 4, j + 7), fill=cla, width=2)
     return _png(im)
+
+
+def fios(cor, n=256, semente=7):
+    """fios de cabelo: listras finas verticais (do alto da cabeça para a linha do cabelo) mais claras e mais escuras que `cor`, com um leve brilho"""
+    rnd = random.Random(semente)
+    im = Image.new('RGB', (n, n), cor)
+    d = ImageDraw.Draw(im, 'RGBA')
+    for _ in range(n * 2):
+        x = rnd.randrange(n)
+        v = rnd.randrange(-34, 40)
+        c = tuple(max(0, min(255, k + v)) for k in cor)
+        w = rnd.choice((1, 1, 2))
+        ond = rnd.random() * 6
+        pts = [(x + math.sin(y * 0.05 + ond) * 1.6, y) for y in range(0, n + 8, 8)]
+        d.line(pts, fill=c + (rnd.randrange(60, 170),), width=w)
+    for _ in range(6):
+        x = rnd.randrange(n)
+        d.rectangle((x, 0, x + 3, n), fill=(255, 245, 235, 22))
+    return _png(im.filter(ImageFilter.GaussianBlur(0.4)))
