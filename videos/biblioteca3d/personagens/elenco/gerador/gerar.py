@@ -11,7 +11,7 @@ import personagens2 as P2                                               # noqa: 
 
 SAIDA = os.path.normpath(os.path.join(AQUI, '..'))
 ELENCO = ['davi', 'teo', 'lia', 'nina', 'maniaco', 'velha']
-ELENCO2 = ['jovem_a', 'jovem_b', 'jovem_c', 'homem', 'mae', 'pai', 'policial', 'velha_luto']
+ELENCO2 = ['jovem_a', 'jovem_b', 'jovem_c', 'homem', 'mae', 'pai', 'policial', 'velha_luto', 'terno2', 'terno3']
 
 if __name__ == '__main__':
     nomes = sys.argv[1:] or ELENCO + ELENCO2

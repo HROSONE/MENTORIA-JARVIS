@@ -160,6 +160,17 @@ export class Ator {
     }
   }
 
+  // troca a cor de materiais pelo nome (clona antes: o modelo é compartilhado entre instâncias). mapa: { 'M_moletom': '#d0763b', ... }
+  pintar(mapa) {
+    this.obj.traverse(o => {
+      if (!o.isMesh) return;
+      const arr = Array.isArray(o.material) ? o.material : [o.material];
+      const novo = arr.map(m => { if (!(m.name in mapa)) return m; const n = m.clone(); n.color.set(mapa[m.name]); return n; });
+      o.material = Array.isArray(o.material) ? novo : novo[0];
+    });
+    return this;
+  }
+
   // tinge materiais (clona antes: o modelo é compartilhado entre instâncias)
   tingir(cor, nomes = []) {
     const c = new THREE.Color(cor);

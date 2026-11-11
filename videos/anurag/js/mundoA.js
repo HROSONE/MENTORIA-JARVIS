@@ -151,7 +151,7 @@ export async function construirA() {
   // ---- luz ambiente do mundo A
   const hemi = new THREE.HemisphereLight(0x6f86c4, 0x1c1710, 0.85); A.add(hemi);
   const lua = new THREE.DirectionalLight(0x9fb4ff, 1.1); lua.position.set(-14, 22, 12); lua.target.position.set(0, 0, -6);
-  lua.castShadow = true; lua.shadow.mapSize.set(2048, 2048); Object.assign(lua.shadow.camera, { left: -16, right: 16, top: 14, bottom: -14, near: 1, far: 70 }); lua.shadow.bias = -0.0004; lua.shadow.normalBias = 0.04;
+  lua.castShadow = true; lua.shadow.mapSize.set(1024, 1024); Object.assign(lua.shadow.camera, { left: -16, right: 16, top: 14, bottom: -14, near: 1, far: 70 }); lua.shadow.bias = -0.0004; lua.shadow.normalBias = 0.04;
   A.add(lua); A.add(lua.target); dados.lua = lua;
   dados.hemi = hemi;
   return dados;
