@@ -420,7 +420,7 @@ def ding(f=1318.0, g=1.0):
 def parada_seca():
     n = int(2.0 * SR)
     x = np.zeros(n)
-    cl = batida_grave(72, 32, 0.8, 0.22) * 1.0 + banda(ruido(0.5), 140, 1300) * ad(int(0.5 * SR), 0.002, 0.10) * 0.9
+    cl = somar(batida_grave(72, 32, 0.8, 0.22) * 1.0, banda(ruido(0.5), 140, 1300) * ad(int(0.5 * SR), 0.002, 0.10) * 0.9)
     x[:len(cl)] += cl
     mm = metal_amassando(0.5, 0.7); x[:len(mm)] += mm * 0.6
     rg = rangido(1.0, 150, 70, 1.0); x[int(0.05 * SR):int(0.05 * SR) + len(rg)] += rg
@@ -613,7 +613,7 @@ def montar():
     cama('parado', zumbido(d, 60, 0.9) + vento(d, 0.07, 260), 0.45)
     add(rangido(1.3, 105, 80, 0.7), a + 0.5, 0.20, 0.2)
     for k, off in enumerate((0.25, 0.95, 1.55, 2.05)):
-        add(tom(rng.uniform(900, 2600), 0.08, ((1, 0.5), (2.4, 0.2)), 0.015) + banda(ruido(0.04), 800, 3000) * ad(int(0.04 * SR), 0.001, 0.01), a + off, 0.07 + 0.03 * k, rng.uniform(-0.5, 0.5))
+        add(somar(tom(rng.uniform(900, 2600), 0.08, ((1, 0.5), (2.4, 0.2)), 0.015), banda(ruido(0.04), 800, 3000) * ad(int(0.04 * SR), 0.001, 0.01)), a + off, 0.07 + 0.03 * k, rng.uniform(-0.5, 0.5))
     add(respiracao(d, 0.8), a, 0.22, 0.0)
     add(crepitar(0.35, 0.5, 60), a + 1.35, 0.20)
     # 8: botões: ela aperta e aperta, nada responde

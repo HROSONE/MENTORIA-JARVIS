@@ -13,6 +13,7 @@
 import * as THREE from 'three';
 import { renderer, scene, cam, mundos, capturar, tremor } from './js/motor.js';
 import { construirTudo, atualizar, efeitos } from "./js/planos.js";
+import { acharPlano } from './js/base.js';
 
 const Q = new URLSearchParams(location.search);
 const T = await construirTudo();
@@ -20,7 +21,9 @@ function desenhar(t) { atualizar(t); renderer.render(scene, cam); }
 window.__setTime = t => { desenhar(t); };
 window.__frame = (t, opc = {}) => {
   const e = efeitos(t);
-  return capturar(desenhar, t, { subs: opc.subs ?? e.subs ?? 1, obturador: opc.obturador ?? e.obturador ?? 0.5, fade: e.fade, flash: e.flash, flashCor: e.flashCor, jpeg: opc.jpeg ?? 0.92, tintas: e.tintas });
+  const pl = acharPlano(t), lo = pl.t0, hi = pl.t0 + pl.dur - 1e-4;                 // as subamostras do borrão não passam do plano atual (sem "fantasma" nos cortes)
+  const des = tk => desenhar(Math.min(Math.max(tk, lo), hi));
+  return capturar(des, t, { subs: opc.subs ?? e.subs ?? 1, obturador: opc.obturador ?? e.obturador ?? 0.5, fade: e.fade, flash: e.flash, flashCor: e.flashCor, jpeg: opc.jpeg ?? 0.92, tintas: e.tintas });
 };
 window.__total = T.total;
 window.__planos = T.planos.map(p => [p.id, +p.t0.toFixed(3), +p.dur.toFixed(3)]);
