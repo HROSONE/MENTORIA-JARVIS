@@ -1,4 +1,4 @@
-"""Efeitos sonoros do Short "O elevador" (sem música): tudo sintetizado com numpy a partir dos tempos dos planos (planos.json, gerado por exportar_planos.js).
+"""Efeitos sonoros do Short "O elevador" v2 — design de som em camadas (sem música): tudo sintetizado com numpy a partir dos tempos dos planos (planos.json, gerado por exportar_planos.js).
 Uso:  python3 sfx_elevador.py [saida.wav]
 Camadas: zumbido da cabine, motor e parada seca, grade de latão, botões, telefone mudo, batidas, relógio de pé, tempo-lapso (dia/noite), campainha e eco,
 sirene e buzina, pé-de-cabra, madeira estalando, manta térmica, rua. Respirações, soluços e gritos são sintéticos (vozes de apoio): a locução é do dono do canal."""
@@ -347,22 +347,598 @@ def grilos(d, g=1.0):
 
 
 
-# ------------------------------------------------------------------ sons novos deste Short
-def reverb(x, rt=1.2, molhado=0.5, hi=4500, atraso=0.012):
-    n = len(x)
-    ir = ruido(rt * 1.4) * np.exp(-T(rt * 1.4) / (rt * 0.33))
-    ir = filtro(ir, hi=hi)
-    ir[:int(atraso * SR)] = 0
-    rev = np.fft.irfft(np.fft.rfft(x, n + len(ir)) * np.fft.rfft(ir, n + len(ir)), n + len(ir))[:n]
-    return x + norm(rev, 1.0) * np.abs(x).max() * molhado
+# ================================================================== v2: ACÚSTICA, VOZES, FOLEY E AMBIENTES
+def fit(x, n):
+    return x[:n] if len(x) >= n else np.concatenate([x, np.zeros(n - len(x))])
 
 
-def zumbido(d, f=60.0, g=1.0):
-    """zumbido elétrico da cabine/casa: fundamental e harmônicas com leve oscilação"""
+def hann(n):
+    return np.sin(np.pi * np.arange(n) / max(n - 1, 1)) ** 2
+
+
+def lento(d, hi=2.0):
+    """ruído lento normalizado (para modulações)"""
+    x = filtro(ruido(d), hi=hi)
+    return x / (np.abs(x).max() + 1e-9)
+
+
+# ---- barramentos de reverb (um por espaço): cabine, sala/corredor, casa vazia (grande) e rua
+BUS = {k: [np.zeros(N), np.zeros(N)] for k in ('cab', 'sala', 'casa', 'rua')}
+
+
+def add(sig, t, g=1.0, pan=0.0, rv=None, w=0.3):
+    i = int(max(t, 0) * SR)
+    if i >= N or len(sig) == 0:
+        return
+    sig = sig[:max(0, N - i)] * g
+    pl, pr = np.sqrt((1 - pan) / 2) * 1.4142, np.sqrt((1 + pan) / 2) * 1.4142
+    L[i:i + len(sig)] += sig * pl
+    R[i:i + len(sig)] += sig * pr
+    if rv:
+        BUS[rv][0][i:i + len(sig)] += sig * pl * w
+        BUS[rv][1][i:i + len(sig)] += sig * pr * w
+
+
+def addpan(sig, t, g, p0, p1, rv=None, w=0.3):
+    """pan que varre de p0 a p1 durante o som (passagens de carro, sirene)"""
+    i = int(max(t, 0) * SR)
+    if i >= N:
+        return
+    sig = sig[:max(0, N - i)] * g
+    p = np.linspace(p0, p1, len(sig))
+    pl, pr = np.sqrt((1 - p) / 2) * 1.4142, np.sqrt((1 + p) / 2) * 1.4142
+    L[i:i + len(sig)] += sig * pl
+    R[i:i + len(sig)] += sig * pr
+    if rv:
+        BUS[rv][0][i:i + len(sig)] += sig * pl * w
+        BUS[rv][1][i:i + len(sig)] += sig * pr * w
+
+
+def fftconv(x, h):
+    n = len(x) + len(h) - 1
+    m = 1 << (n - 1).bit_length()
+    return np.fft.irfft(np.fft.rfft(x, m) * np.fft.rfft(h, m), m)[:len(x)]
+
+
+def construir_ir(rt, hi, pre, taps, seed, lo=90):
+    r = np.random.default_rng(seed)
+    n = int((rt * 1.6 + pre + 0.1) * SR)
+    h = r.standard_normal(n) * np.exp(-np.arange(n) / SR / (rt / 6.9))
+    h = filtro(h, hi=hi, lo=lo)
+    h[:int(pre * SR)] = 0
+    pico = np.abs(h).max()
+    for tt, a in taps:
+        j = int(tt * SR)
+        if j < n:
+            h[j] += a * pico * 2.5
+    return h / np.sqrt((h ** 2).sum() + 1e-12)
+
+
+IRPAR = {'cab': (0.32, 9500, 0.003, [(0.004, .8), (0.0075, .6), (0.012, .45)], 40),
+         'sala': (0.80, 7500, 0.010, [(0.016, .5), (0.027, .4)], 90),
+         'casa': (1.9, 3800, 0.030, [(0.062, .4), (0.118, .3)], 60),
+         'rua': (1.0, 5500, 0.022, [(0.046, .5), (0.092, .4), (0.145, .3)], 110)}
+GANHO_RV = {'cab': 0.9, 'sala': 0.9, 'casa': 1.0, 'rua': 0.8}
+
+
+def aplicar_reverbs():
+    for nome, (rt, hi, pre, taps, lo) in IRPAR.items():
+        for c, (sinal, saida) in enumerate(((BUS[nome][0], L), (BUS[nome][1], R))):
+            if np.abs(sinal).max() < 1e-9:
+                continue
+            h = construir_ir(rt, hi, pre, taps, 100 + 7 * c + len(nome), lo)
+            saida += fftconv(sinal, h) * GANHO_RV[nome] * 1.0
+
+
+# ---- vozes (síntese aditiva com formantes): vogais, choro, arfada, grito
+FORM = {'a': (850, 1220, 2810), 'o': (500, 920, 2650), 'e': (600, 1700, 2600), 'i': (330, 2700, 3300), 'u': (380, 950, 2600), 'ae': (720, 1500, 2700)}
+
+
+def voz(d, f0, vogal='a', resp=0.15, tens=0.5, vib=0.0, jit=0.012):
+    n = int(d * SR)
+    t = np.arange(n) / SR
+    f0t = (f0(t) if callable(f0) else np.full(n, float(f0)))
+    f0t = f0t * (1 + jit * lento(d, 30) * 3.0 + vib * np.sin(2 * np.pi * 5.4 * t))
+    ph = np.cumsum(f0t) / SR * 2 * np.pi
+    F = FORM[vogal]
+    bw = (110, 160, 220)
+    out = np.zeros(n)
+    kmax = int(5200 / max(np.mean(f0t), 60)) + 1
+    for k in range(1, kmax):
+        fk = k * f0t
+        a = sum(g_ * np.exp(-0.5 * ((fk - F[i_] * (1 + 0.04 * tens)) / bw[i_]) ** 2) for i_, g_ in ((0, 1.0), (1, 0.6), (2, 0.28)))
+        a = a + 0.04
+        out += a * k ** (-0.55 + 0.35 * (1 - tens)) * np.sin(k * ph + 0.3 * k)
+    out = out / (np.abs(out).max() + 1e-9)
+    asp = banda(ruido(d), 900, 6500) * resp
+    return (out + asp) * np.minimum(t / 0.02, 1) * np.minimum((d - t) / 0.05, 1)
+
+
+def choro(d, f0=270.0, forca=1.0, vogal='ae', seed=0):
+    n = int(d * SR)
+    x = np.zeros(n)
+    t = 0.0
+    while t < d - 0.35:
+        dur = rng.uniform(0.28, 0.42)
+        f_ = f0 * rng.uniform(0.94, 1.08)
+        v = voz(dur, lambda tt, f_=f_, dur=dur: f_ * (1.12 - 0.30 * tt / dur), vogal, resp=0.28, tens=0.30, jit=0.03)
+        v = v * hann(len(v)) ** 0.7
+        i = int(t * SR)
+        x[i:i + len(v)] += fit(v, max(0, n - i))[:len(v)] if i < n else 0
+        ins = banda(ruido(0.17), 500, 3800) * hann(int(0.17 * SR)) ** 1.2 * 0.55
+        j = int((t + dur + 0.04) * SR)
+        if j < n:
+            x[j:j + len(ins)] += ins[:n - j]
+        t += dur + 0.04 + 0.17 + rng.uniform(0.04, 0.22)
+    return x * forca
+
+
+def arfada(forca=1.0):
+    ins = banda(ruido(0.28), 450, 4200) * hann(int(0.28 * SR)) ** 1.1 * 0.8
+    v = voz(0.22, lambda tt: 300 - 90 * tt / 0.22, 'a', resp=0.3, tens=0.5, jit=0.03) * 0.5
+    return np.concatenate([ins, v * hann(len(v)) ** 0.6]) * forca
+
+
+def respirar(d, ritmo=0.9, g=1.0, medo=0.3):
+    """respiração pelo nariz/boca: inspira (ruído que sobe) e expira (mais grave, com um fio de voz)"""
+    n = int(d * SR)
+    x = np.zeros(n)
+    p = 1.0 / ritmo
+    k = 0
+    while k * p < d - 0.2:
+        t0_ = k * p + rng.uniform(-0.03, 0.03) * p
+        li = int(p * 0.38 * SR)
+        ins = banda(ruido(p * 0.38), 600, 4600) * hann(li) ** 1.4 * (0.55 + 0.35 * medo)
+        ins += np.sin(2 * np.pi * np.cumsum(np.linspace(780, 1020, li)) / SR) * hann(li) * 0.03 * medo       # fio de assobio nasal
+        le = int(p * 0.42 * SR)
+        exp_ = banda(ruido(p * 0.42), 300, 2600) * hann(le) ** 1.2 * 0.5
+        j = max(0, int(t0_ * SR))
+        if j + li < n:
+            x[j:j + li] += ins
+        j2 = j + int(p * 0.46 * SR)
+        if j2 + le < n:
+            x[j2:j2 + le] += exp_
+        k += 1
+    return x * g
+
+
+def grito2(d=0.7, f0=620.0, g=1.0):
     t = T(d)
-    x = sum(a * np.sin(2 * np.pi * f * k * t + rng.uniform(0, 6.28)) for k, a in ((1, 1.0), (2, 0.5), (3, 0.28), (5, 0.12), (7, 0.06)))
-    x *= 0.85 + 0.15 * np.sin(2 * np.pi * 0.31 * t + rng.uniform(0, 6))
-    return x * g * 0.12
+    v = voz(d, lambda tt: f0 * (0.9 + 0.55 * np.minimum(tt / 0.25, 1)) * (1 - 0.12 * tt / d), 'a', resp=0.35, tens=0.95, vib=0.02, jit=0.04)
+    v = np.tanh(v * 2.2) * 0.6 + banda(ruido(d), 1800, 7000) * 0.12 * np.minimum(t / 0.05, 1)
+    return v * np.minimum((d - t) / 0.14, 1) * g
+
+
+# ---- metal e mecânica da cabine
+def metal_bate(f0=900.0, d=0.9, g=1.0):
+    """pancada em latão/aço: modos inarmônicos com decaimentos diferentes + transitório de ruído"""
+    t = T(d)
+    x = sum(a * np.sin(2 * np.pi * f0 * m * t + rng.uniform(0, 6.28)) * np.exp(-t / dd) for m, a, dd in ((1.0, 1.0, 0.30), (2.32, 0.7, 0.20), (4.25, 0.5, 0.13), (6.63, 0.35, 0.09), (9.38, 0.2, 0.06)))
+    tr = banda(ruido(0.03), 1500, 9000)
+    x[:len(tr)] += tr * np.exp(-np.arange(len(tr)) / (0.004 * SR)) * 1.2
+    return x * g * 0.5
+
+
+def rattle(d, g=1.0, dens=70, f=(2200, 7000)):
+    n = int(d * SR)
+    x = np.zeros(n)
+    for k in range(max(1, int(d * dens))):
+        i = int(rng.uniform(0, max(d - 0.05, 0.01)) * SR)
+        m = min(int(rng.uniform(0.015, 0.06) * SR), n - i)
+        if m <= 0:
+            continue
+        ff = rng.uniform(*f)
+        x[i:i + m] += fit(tom(ff, m / SR + 0.002, ((1, 0.6), (2.3, 0.3), (3.8, 0.15)), 0.012), m) * rng.uniform(0.15, 0.8)
+    return x * g
+
+
+def grade_desliza2(d, g=1.0):
+    """grade pantográfica: rumor do trilho + estalos dos segmentos + tremor das hastes"""
+    t = T(d)
+    n = len(t)
+    rail = banda(ruido(d), 160, 900) * (0.4 + 0.6 * np.abs(lento(d, 9))) * 0.35
+    cl = rattle(d, 1.0, 85, (1800, 6500)) * 0.7
+    ts = np.zeros(n)
+    for k in range(int(d * 14)):
+        i = int(rng.uniform(0, max(d - 0.05, 0.01)) * SR)
+        m = min(int(0.05 * SR), n - i)
+        ts[i:i + m] += banda(ruido(0.05), 700, 5000)[:m] * np.exp(-np.arange(m) / (0.008 * SR)) * rng.uniform(0.2, 0.9)
+    return (rail + cl + ts * 0.5) * np.sin(np.pi * np.arange(n) / n) ** 0.5 * g
+
+
+def motor_elev2(d, f0=46.0, f1=94.0, g=1.0):
+    t = T(d)
+    k = np.clip(t / d, 0, 1)
+    f = f0 + (f1 - f0) * k ** 1.2
+    ph = np.cumsum(f) / SR * 2 * np.pi
+    hum = sum(a * np.sin(m * ph + 0.4 * m) for m, a in ((1, 1.0), (2, .6), (3, .45), (4, .3), (5, .2), (6, .14), (8, .08)))
+    inv = np.sin(2 * np.pi * np.cumsum(1800 + 2600 * k ** 1.3) / SR) * 0.07 + np.sin(2 * np.pi * np.cumsum(3600 + 5200 * k ** 1.3) / SR) * 0.025
+    cabo = banda(ruido(d), 900, 3500) * 0.08 * k
+    rod = filtro(ruido(d), lo=30, hi=240) * 0.28
+    ar = banda(ruido(d), 150, 900) * 0.13 * np.minimum(k * 3, 1)
+    return (hum * 0.18 + inv + cabo + rod + ar) * np.minimum(t / 0.10, 1) * g
+
+
+def queima_motor(d=1.0, g=1.0):
+    """o motor de içamento morrendo: sobe o assobio, distorce, cai; arco elétrico e estalo"""
+    t = T(d)
+    f = 2400 + 3800 * np.minimum(t / 0.25, 1) - 3200 * np.clip((t - 0.25) / 0.6, 0, 1)
+    w = np.tanh(np.sin(2 * np.pi * np.cumsum(f) / SR) * 3.0) * np.exp(-t / 0.35) * 0.3
+    arco = crepitar(d, 1.0, 140) * np.exp(-t / 0.4) * 0.8
+    zzt = banda(ruido(d), 1200, 8000) * np.exp(-t / 0.12) * 0.6
+    pop = np.zeros_like(t)
+    j = int(0.30 * SR)
+    pop[j:j + int(0.05 * SR)] = banda(ruido(0.05), 300, 5000)[:int(0.05 * SR)] * np.exp(-np.arange(int(0.05 * SR)) / (0.008 * SR)) * 1.4
+    return (w + arco + zzt + pop) * g
+
+
+def buzz_lampada(d, padrao, passo=1 / 24.0, g=1.0):
+    """zumbido da lâmpada defeituosa seguindo o padrão de piscadas (1 = acesa)"""
+    t = T(d)
+    idx = np.minimum((t / passo).astype(int), len(padrao) - 1)
+    amp = np.array(padrao)[idx]
+    x = sum(np.sin(2 * np.pi * 120 * m * t + m) / m for m in range(1, 9)) * 0.25
+    return (x * amp + crepitar(d, 0.3, 90) * (1 - amp)) * g
+
+
+def parada_v2():
+    n = int(3.0 * SR)
+    x = np.zeros(n)
+    sub = batida_grave(60, 24, 1.2, 0.30) * 1.3
+    x[:len(sub)] += sub
+    cl = somar(banda(ruido(0.25), 120, 3200) * ad(int(0.25 * SR), 0.001, 0.07) * 1.1, metal_bate(430, 0.9, 1.0), metal_bate(1180, 0.6, 0.7))
+    x[:len(cl)] += cl
+    sq = np.sin(2 * np.pi * np.cumsum(np.linspace(1900, 1250, int(0.30 * SR))) / SR) * hann(int(0.30 * SR)) * 0.25 + banda(ruido(0.30), 1500, 6000) * hann(int(0.30 * SR)) * 0.2
+    x[int(0.02 * SR):int(0.02 * SR) + len(sq)] += sq
+    t = T(2.4)
+    rope = filtro(ruido(2.4), lo=16, hi=75) * (1 + 0.9 * np.sin(2 * np.pi * 2.8 * t)) * np.exp(-t / 0.75) * 2.0
+    x[:len(rope)] += rope
+    for off, f0_, f1_ in ((0.25, 150, 85), (0.95, 120, 70), (1.7, 95, 60)):
+        rg = rangido(0.9, f0_, f1_, 1.0)
+        i = int(off * SR)
+        x[i:i + len(rg)] += rg[:n - i] * 0.7
+    qm = queima_motor(1.0, 1.0)
+    x[:len(qm)] += qm
+    pad = [1, .15, 1, .05, .6, 0.0, .9, .1, 1, .25, .85, .5, 1, .2, 1, 1]
+    lb = buzz_lampada(int(1.1 * SR) / SR, pad, 1 / 22.0, 0.55)
+    x[int(0.08 * SR):int(0.08 * SR) + len(lb)] += lb
+    for k in range(7):
+        i = int(rng.uniform(0.15, 1.2) * SR)
+        x[i:i + int(0.12 * SR)] += tom(rng.uniform(4200, 9000), 0.12, ((1, 0.5), (2.2, 0.2)), 0.03)[:int(0.12 * SR)] * rng.uniform(0.08, 0.2)
+    return x
+
+
+def clique2(g=1.0, tipo='botao'):
+    """botão de elevador: estalo do contato + sobretom plástico + relé"""
+    x = somar(banda(ruido(0.03), 1800, 7000) * ad(int(0.03 * SR), 0.0004, 0.005) * 0.9,
+              tom(2150, 0.06, ((1, 0.4),), 0.010) * 0.25,
+              0.35 * batida_grave(300, 160, 0.05, 0.010))
+    if tipo == 'botao':
+        r = somar(banda(ruido(0.02), 900, 4000) * ad(int(0.02 * SR), 0.0004, 0.004) * 0.5)
+        x = np.concatenate([x, np.zeros(int(0.02 * SR))]); x[int(0.03 * SR):int(0.03 * SR) + len(r)] += r[:len(x) - int(0.03 * SR)]
+    return x * g
+
+
+def bipe(f=1568.0, d=0.12, g=1.0):
+    t = T(d)
+    return np.tanh(np.sin(2 * np.pi * f * t) * 1.5) * np.minimum(t / 0.004, 1) * np.minimum((d - t) / 0.02, 1) * 0.25 * g
+
+
+def zumbido2(d, g=1.0, f=60.0):
+    """transformador + reator da lâmpada: 60 Hz com batimento, harmônicas e um fio agudo"""
+    t = T(d)
+    x = sum(a * np.sin(2 * np.pi * (f + 0.35 * np.sin(m)) * m * t + rng.uniform(0, 6.28)) for m, a in ((1, 1.0), (2, 0.6), (3, 0.3), (4, 0.18), (6, 0.08)))
+    x *= 0.85 + 0.15 * np.sin(2 * np.pi * 0.27 * t)
+    fio = np.sin(2 * np.pi * 7800 * t) * 0.012 * (0.6 + 0.4 * lento(d, 3))
+    ar = banda(ruido(d), 180, 520) * 0.03 * (0.5 + 0.5 * np.abs(lento(d, 0.6)))
+    return (x * 0.10 + fio + ar) * g
+
+
+# ---- ambientes
+def vento2(d, g=1.0, cor=520.0):
+    t = T(d)
+    x = banda(ruido(d), 120, cor * 2.0)
+    rajada = 0.35 + 0.65 * np.abs(lento(d, 0.5)) ** 1.3
+    uivo = np.sin(2 * np.pi * np.cumsum(480 + 260 * lento(d, 0.35)) / SR) * 0.02 * rajada ** 2
+    return (x * rajada * 0.5 + uivo) * g
+
+
+def passagem_carro(g=1.0, vel=1.0, dur=2.2):
+    n = int(dur * SR)
+    eng = motor(dur, lambda t: 1250 + 260 * np.sin(t * 2.0), 0.0, 0.8, 1.2, 4) * 0.5
+    pneu = chiado_pneu(dur, 900, 0.5, 14)
+    base = eng + pneu
+    t = np.arange(n) / SR
+    tp = dur * 0.5
+    rate = 1.0 + 0.11 * np.tanh(-(t - tp) * 2.6) * vel
+    idx = np.clip(np.cumsum(rate) - rate[0], 0, n - 1)
+    y = np.interp(idx, np.arange(n), base)
+    env = 1.0 / (1 + ((t - tp) / (0.42 / max(vel, 0.4))) ** 2) ** 1.2
+    return y * env * g
+
+
+def buzina_taxi(g=1.0):
+    t = T(0.35)
+    x = (np.sin(2 * np.pi * 410 * t) + 0.5 * np.sin(2 * np.pi * 2 * 410 * t) + np.sin(2 * np.pi * 515 * t) + 0.4 * np.sin(2 * np.pi * 2 * 515 * t))
+    return np.tanh(x * 0.8) * np.minimum(t / 0.01, 1) * np.minimum((0.35 - t) / 0.05, 1) * 0.3 * g
+
+
+def cidade(d, intens=1.0, noite=False, dens=1.0):
+    t = T(d)
+    n = len(t)
+    rumor = filtro(ruido(d), lo=26, hi=150) * (0.55 + 0.45 * np.abs(lento(d, 0.3))) * 0.9
+    lavagem = banda(ruido(d), 180, 1500) * (0.10 + 0.08 * np.abs(lento(d, 0.4)))
+    hv = np.sin(2 * np.pi * 100 * t) * 0.02 + np.sin(2 * np.pi * 200.3 * t) * 0.012
+    x = rumor + lavagem + hv
+    for k in range(int(d / (2.6 if not noite else 4.5) * dens)):
+        tt = rng.uniform(0, max(d - 1.0, 0.1))
+        p = passagem_carro(rng.uniform(0.18, 0.45) * (0.6 if noite else 1.0), rng.uniform(0.7, 1.4))
+        i = int(tt * SR)
+        m = min(len(p), n - i)
+        if m > 0:
+            x[i:i + m] += p[:m]
+    for k in range(int(d / 9.0 * dens)):
+        tt = rng.uniform(0, max(d - 0.5, 0.1))
+        i = int(tt * SR)
+        b = buzina_taxi(0.35)
+        m = min(len(b), n - i)
+        if m > 0:
+            x[i:i + m] += b[:m]
+    return x * intens
+
+
+def pardal(g=1.0):
+    d = rng.uniform(0.25, 0.6)
+    n = int(d * SR)
+    x = np.zeros(n)
+    t = 0.0
+    while t < d - 0.06:
+        du = rng.uniform(0.03, 0.07)
+        tt = T(du)
+        f = rng.uniform(2800, 4600) + rng.uniform(-1400, 1400) * tt / du
+        s = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.sin(np.pi * tt / du) ** 1.3
+        i = int(t * SR)
+        x[i:i + len(s)] += s[:n - i] * 0.6
+        t += du + rng.uniform(0.02, 0.07)
+    return x * g
+
+
+def passaros2(d, g=1.0, dens=1.0):
+    n = int(d * SR)
+    x = np.zeros(n)
+    for k in range(int(d * 2.4 * dens)):
+        i = int(rng.uniform(0, max(d - 0.7, 0.01)) * SR)
+        p = pardal(rng.uniform(0.04, 0.09))
+        m = min(len(p), n - i)
+        if m > 0:
+            x[i:i + m] += p[:m]
+    return x * g
+
+
+def pombo(g=1.0):
+    d = 1.1
+    t = T(d)
+    f = 420 + 80 * np.sin(2 * np.pi * 3.0 * t) * np.exp(-t / 0.7) - 60 * t
+    gate = (np.sin(2 * np.pi * 2.6 * t) > -0.2) * np.minimum(t / 0.05, 1) * np.minimum((d - t) / 0.2, 1)
+    return np.tanh(np.sin(2 * np.pi * np.cumsum(f) / SR) * 1.4) * gate * 0.08 * g
+
+
+def sala_vazia(d, g=1.0):
+    t = T(d)
+    n = len(t)
+    x = banda(ruido(d), 90, 700) * 0.025 * (0.6 + 0.4 * np.abs(lento(d, 0.5)))
+    x += np.sin(2 * np.pi * 50 * t) * 0.012 + np.sin(2 * np.pi * 100.2 * t) * 0.006 + filtro(ruido(d), hi=60) * 0.06
+    for k in range(int(d / 1.4)):
+        i = int(rng.uniform(0, max(d - 0.9, 0.05)) * SR)
+        r = rangido(rng.uniform(0.35, 0.9), rng.uniform(70, 160), rng.uniform(50, 110), 0.5)
+        m = min(len(r), n - i)
+        if m > 0:
+            x[i:i + m] += r[:m] * 0.5
+    for k in range(int(d / 2.0)):
+        i = int(rng.uniform(0, max(d - 0.1, 0.05)) * SR)
+        m = min(int(0.04 * SR), n - i)
+        if m > 0:
+            x[i:i + m] += banda(ruido(0.04), 200, 2400)[:m] * np.exp(-np.arange(m) / (0.008 * SR)) * 0.25
+    return x * g
+
+
+# ---- foley
+def passo2(sup='concreto', forca=1.0, calc='tenis'):
+    if sup == 'madeira':
+        base = somar(batida_grave(115, 52, 0.22, 0.08) * 0.9, banda(ruido(0.12), 160, 1800) * ad(int(0.12 * SR), 0.002, 0.03) * 0.6)
+        if rng.random() < 0.28:
+            base = somar(base, rangido(0.28, rng.uniform(110, 190), rng.uniform(80, 130), 0.5) * 0.6)
+        return base * forca
+    if sup == 'concreto':
+        s = passo('concreto', 1.0)
+        if calc == 'bota':
+            s = somar(s, 0.5 * batida_grave(95, 48, 0.14, 0.04), banda(ruido(0.05), 1500, 6000) * ad(int(0.05 * SR), 0.0006, 0.008) * 0.5)
+        return s * forca
+    return passo(sup, forca)
+
+
+def roupa(d, g=1.0, dens=1.0):
+    n = int(d * SR)
+    x = banda(ruido(d), 500, 5200) * (0.15 + 0.85 * np.abs(lento(d, 7.0)) ** 1.5) * 0.18
+    for k in range(int(d * 4 * dens)):
+        i = int(rng.uniform(0, max(d - 0.2, 0.01)) * SR)
+        m = min(int(rng.uniform(0.05, 0.16) * SR), n - i)
+        if m > 0:
+            x[i:i + m] += banda(ruido(0.2), 800, 6500)[:m] * hann(m) * rng.uniform(0.15, 0.5)
+    return x * g
+
+
+def papelao(d, g=1.0):
+    n = int(d * SR)
+    x = banda(ruido(d), 250, 2400) * (0.2 + 0.8 * np.abs(lento(d, 8))) * 0.22
+    x += crepitar(d, 0.18, 30)
+    return x * g
+
+
+def luva(g=1.0):
+    d = 0.18
+    t = T(d)
+    f = 1800 + 1300 * t / d
+    return (np.sin(2 * np.pi * np.cumsum(f) / SR) * 0.35 + banda(ruido(d), 1500, 6000) * 0.25) * hann(len(t)) * g
+
+
+def amassa_manta2(d, g=1.0):
+    n = int(d * SR)
+    x = np.zeros(n)
+    rate = 55
+    for k in range(int(d * rate)):
+        i = int(rng.uniform(0, max(d - 0.05, 0.01)) * SR)
+        m = int(rng.uniform(0.006, 0.04) * SR)
+        if i + m < n:
+            x[i:i + m] += banda(ruido(0.04), 2500, 13000)[:m] * np.exp(-np.arange(m) / (0.007 * SR)) * rng.uniform(0.2, 1.0)
+    x += banda(ruido(d), 1200, 6000) * 0.04 * (0.4 + 0.6 * np.abs(lento(d, 9)))
+    return x * g
+
+
+def equipamento(d, g=1.0):
+    """capacete, machado e fivelas batendo na correria"""
+    n = int(d * SR)
+    x = np.zeros(n)
+    for k in range(max(2, int(d * 9))):
+        i = int(rng.uniform(0, max(d - 0.1, 0.01)) * SR)
+        m = min(int(0.1 * SR), n - i)
+        if m > 0:
+            x[i:i + m] += tom(rng.uniform(900, 3200), 0.1, ((1, 0.5), (2.6, 0.3)), 0.02)[:m] * rng.uniform(0.15, 0.6)
+    return x * g
+
+
+def radio2(d=1.4, g=1.0):
+    t = T(d)
+    n = len(t)
+    f0 = rng.uniform(110, 190)
+    ph = np.cumsum(f0 * (1 + 0.12 * np.sin(2 * np.pi * 1.1 * t))) / SR * 2 * np.pi
+    gl = sum(np.sin(k * ph) / k for k in range(1, 16))
+    sil = np.maximum(0, np.sin(2 * np.pi * 4.2 * t)) ** 1.2
+    v = banda(banda(gl, 500, 900) + 0.6 * banda(gl, 1300, 1800) + 0.3 * banda(gl, 2400, 3000), 400, 3000) * sil
+    chiado = banda(ruido(d), 500, 3200) * 0.15
+    x = np.tanh((v * 0.5 + chiado) * 2.0) * 0.4
+    sq = banda(ruido(0.06), 800, 3500) * ad(int(0.06 * SR), 0.001, 0.015)
+    x[:len(sq)] += sq * 0.8
+    bip = tom(1500, 0.1, ((1, 1),), 0.15)
+    x[-len(bip) - int(0.02 * SR):-int(0.02 * SR)] += bip * 0.25
+    return x * np.minimum(t / 0.01, 1) * np.minimum((d - t) / 0.06, 1) * g
+
+
+def murmurio2(d, g=1.0, vozes=2):
+    t = T(d)
+    out = np.zeros_like(t)
+    for v in range(vozes):
+        f0 = rng.uniform(95, 215)
+        f = f0 * (1 + 0.10 * np.sin(2 * np.pi * rng.uniform(0.6, 1.5) * t + v) + 0.03 * np.sin(2 * np.pi * 5.7 * t))
+        ph = np.cumsum(f) / SR * 2 * np.pi
+        gl = sum(np.sin(k * ph) / k ** 1.05 for k in range(1, 18))
+        sil = np.maximum(0, np.sin(2 * np.pi * rng.uniform(3.0, 5.2) * t + rng.uniform(0, 6))) ** 1.2 * (0.45 + 0.55 * np.abs(np.sin(2 * np.pi * rng.uniform(0.35, 0.9) * t + rng.uniform(0, 6))))
+        vog = np.sin(2 * np.pi * rng.uniform(0.9, 2.0) * t) > 0
+        fa, fb = (700, 1200) if rng.random() < 0.5 else (450, 1800)
+        form = banda(gl, fa * 0.8, fa * 1.2) + 0.7 * banda(gl, fb * 0.85, fb * 1.15) + 0.3 * banda(gl, 2400, 3200)
+        out += form * sil
+    return out * g * 0.3
+
+
+def grito_homem(d=0.7, g=1.0):
+    return voz(d, lambda tt: 190 * (1 + 0.35 * np.minimum(tt / 0.2, 1)), 'o', resp=0.25, tens=0.9, jit=0.03) * np.minimum((d - T(d)) / 0.1, 1) * 0.7 * g
+
+
+# ---- sirenes, diesel, impactos, risers
+def sirene2(d, tpico, base=0.0, g=1.0, yelp=False):
+    t = T(d)
+    per = 1.1 if yelp else 3.4
+    k = 1.07 - 0.14 / (1 + np.exp(-(t - tpico) * 4.5))
+    f = (900 + 450 * np.sin(2 * np.pi * (t + base) / per - 1.4)) * k
+    ph = np.cumsum(f) / SR * 2 * np.pi
+    x = np.sin(ph) + 0.35 * np.sin(2 * ph) + 0.15 * np.sin(3 * ph)
+    env = 1.0 / (1 + ((t - tpico) / 1.4) ** 2)
+    return np.tanh(x * 1.6) * 0.5 * env * np.minimum(t / 0.1, 1) * g
+
+
+def diesel2(d, g=1.0, rpm=760):
+    t = T(d)
+    base = motor(d, lambda tt: rpm + 40 * np.sin(2 * np.pi * 1.6 * tt), 0.0, 0.4, 1.9, 6)
+    base = filtro(base, hi=850)
+    pulso = (0.8 + 0.2 * np.sin(2 * np.pi * rpm / 60 * 3 * t))
+    return base * pulso * g
+
+
+def freio_ar2(g=1.0):
+    sq = np.sin(2 * np.pi * np.cumsum(np.linspace(2200, 1400, int(0.45 * SR))) / SR) * hann(int(0.45 * SR)) * 0.15 + banda(ruido(0.45), 1800, 7000) * hann(int(0.45 * SR)) * 0.2
+    pss = banda(ruido(1.0), 2500, 9500) * ad(int(1.0 * SR), 0.02, 0.35) * 0.55 + banda(ruido(1.0), 400, 2200) * ad(int(1.0 * SR), 0.02, 0.25) * 0.25
+    x = np.concatenate([sq, np.zeros(int(0.1 * SR))])
+    out = np.zeros(int(1.6 * SR))
+    out[:len(x)] += x
+    out[int(0.35 * SR):int(0.35 * SR) + len(pss)] += pss
+    return out * g
+
+
+def sub_boom(f0=60.0, f1=26.0, d=1.6, g=1.0):
+    t = T(d)
+    fr = f1 + (f0 - f1) * np.exp(-t * 6)
+    x = np.sin(2 * np.pi * np.cumsum(fr) / SR) * np.exp(-t / (d * 0.30))
+    x += filtro(ruido(d), hi=300) * np.exp(-t / 0.25) * 0.5
+    return x * g
+
+
+def riser(d, f0=200.0, f1=5000.0, g=1.0, tom_=0.3):
+    t = T(d)
+    k = (t / d) ** 2
+    c = f0 * (f1 / f0) ** (t / d)
+    r = np.zeros_like(t)
+    seg = 32
+    for s in range(seg):
+        a, b = int(len(t) * s / seg), int(len(t) * (s + 1) / seg)
+        fc = c[(a + b) // 2]
+        r[a:b] = banda(ruido(d), fc * 0.7, fc * 1.4)[a:b]
+    tone = np.sin(2 * np.pi * np.cumsum(c * 0.5) / SR) * tom_ * 0.12
+    return (r * 0.35 + tone) * k * np.minimum((d - t) / 0.02, 1) * g
+
+
+def swell_ar(d, g=1.0, lo=2500.0):
+    t = T(d)
+    return banda(ruido(d), lo, 10000) * np.sin(np.pi * t / d) ** 2 * g * 0.5
+
+
+def sino2(f0=131.0, d=6.0, g=1.0):
+    t = T(d)
+    parc = ((0.5, 0.5, 4.5), (1.0, 1.0, 3.8), (1.19, 0.6, 2.8), (1.56, 0.45, 2.6), (2.0, 0.55, 2.2), (2.5, 0.3, 1.7), (3.0, 0.22, 1.3), (4.2, 0.12, 0.9))
+    x = sum(a * np.sin(2 * np.pi * f0 * k * t + rng.uniform(0, 6.28)) * np.exp(-t / dd) for k, a, dd in parc)
+    x += banda(ruido(d), 500, 3000) * np.exp(-t / 0.05) * 0.3
+    return x * np.minimum(t / 0.004, 1) / 2.2 * g
+
+
+def tictac2(n_ticks, gap, g=1.0, acelera=0.0):
+    """relógio de pé com caixa de madeira ressoando; `acelera` encurta o intervalo a cada tique"""
+    ts = []
+    tt = 0.0
+    gp = gap
+    for k in range(n_ticks):
+        ts.append(tt)
+        tt += gp
+        gp = max(0.05, gp * (1 - acelera))
+    d = ts[-1] + 0.4
+    x = np.zeros(int(d * SR))
+    for k, tt in enumerate(ts):
+        f = 1750 if k % 2 == 0 else 1280
+        s = somar(banda(ruido(0.05), 900, 5200) * ad(int(0.05 * SR), 0.0005, 0.007) * 0.8, tom(f, 0.1, ((1, 0.5), (2.2, 0.3)), 0.022) * 0.55, 0.5 * batida_grave(250, 120, 0.09, 0.02), tom(185, 0.25, ((1, 0.5), (1.9, 0.2)), 0.07) * 0.3)
+        i = int(tt * SR)
+        x[i:i + len(s)] += s[:len(x) - i]
+    return x * g
+
+
+# ---- peças da v1 que continuam úteis
+def crepitar(d, g=1.0, dens=60):
+    n = int(d * SR)
+    x = np.zeros(n)
+    for k in range(int(d * dens)):
+        i = int(rng.uniform(0, max(d - 0.02, 0.005)) * SR)
+        m = int(rng.uniform(0.001, 0.008) * SR)
+        m = min(m, n - i)
+        if m > 0:
+            x[i:i + m] += banda(ruido(0.01), 1500, 9000)[:m] * np.exp(-np.arange(m) / (0.0018 * SR)) * rng.uniform(0.2, 1.0)
+    return x * g
 
 
 def rangido(d, f0=140.0, f1=90.0, g=1.0):
@@ -373,72 +949,12 @@ def rangido(d, f0=140.0, f1=90.0, g=1.0):
     return filtro(s, lo=110, hi=2400) * np.sin(np.pi * t / d) ** 0.7 * g * 0.35
 
 
-def crepitar(d, g=1.0, dens=60):
-    n = int(d * SR)
-    x = np.zeros(n)
-    for k in range(int(d * dens)):
-        i = int(rng.uniform(0, d - 0.02) * SR)
-        m = int(rng.uniform(0.001, 0.008) * SR)
-        x[i:i + m] += banda(ruido(0.01), 1500, 9000)[:m] * np.exp(-np.arange(m) / (0.0018 * SR)) * rng.uniform(0.2, 1.0)
-    return x * g
-
-
-def motor_elev(d, f0=48.0, f1=92.0, g=1.0):
-    t = T(d)
-    f = f0 + (f1 - f0) * np.clip(t / d, 0, 1) ** 1.2
-    ph = np.cumsum(f) / SR * 2 * np.pi
-    x = sum(a * np.sin(k * ph + 0.4 * k) for k, a in ((1, 1.0), (2, 0.55), (3, 0.4), (4, 0.25), (6, 0.16)))
-    wh = np.sin(2 * np.pi * np.cumsum(1500 + 1800 * np.clip(t / d, 0, 1)) / SR) * 0.10
-    ar = filtro(ruido(d), lo=180, hi=1100) * 0.18
-    return (x * 0.20 + wh + ar) * np.minimum(t / 0.12, 1) * g
-
-
-def clique(g=1.0):
-    return somar(banda(ruido(0.03), 1500, 6500) * ad(int(0.03 * SR), 0.0005, 0.006), tom(2300, 0.05, ((1, 0.4),), 0.012) * 0.3) * g
-
-
 def clack(g=1.0):
     return somar(banda(ruido(0.1), 1200, 6000) * ad(int(0.1 * SR), 0.001, 0.02) * 0.9, tom(900, 0.2, ((1, 0.6), (2.6, 0.3)), 0.04) * 0.5, 0.5 * batida_grave(160, 80, 0.12, 0.03)) * g
 
 
-def grade_desliza(d, g=1.0):
-    n = int(d * SR)
-    x = np.zeros(n)
-    for k in range(int(d * 90)):
-        i = int(rng.uniform(0, max(d - 0.03, 0.01)) * SR)
-        f = rng.uniform(2200, 6500)
-        m = min(int(0.03 * SR), n - i)
-        x[i:i + m] += tom(f, 0.03, ((1, 0.5), (2.1, 0.25)), 0.012)[:m] * rng.uniform(0.2, 0.8)
-    x += banda(ruido(d), 600, 3500) * 0.16 * np.sin(np.pi * np.arange(n) / n)
-    return x * g * 0.5
-
-
 def ding(f=1318.0, g=1.0):
     return tom(f, 1.3, ((1, 1.0), (2, 0.3), (3, 0.12)), 0.4) * g
-
-
-def parada_seca():
-    n = int(2.0 * SR)
-    x = np.zeros(n)
-    cl = somar(batida_grave(72, 32, 0.8, 0.22) * 1.0, banda(ruido(0.5), 140, 1300) * ad(int(0.5 * SR), 0.002, 0.10) * 0.9)
-    x[:len(cl)] += cl
-    mm = metal_amassando(0.5, 0.7); x[:len(mm)] += mm * 0.6
-    rg = rangido(1.0, 150, 70, 1.0); x[int(0.05 * SR):int(0.05 * SR) + len(rg)] += rg
-    cr = crepitar(0.9, 0.8, 70); x[int(0.10 * SR):int(0.10 * SR) + len(cr)] += cr
-    x[:int(0.4 * SR)] += tom(1800, 0.4, ((1, 0.3), (2.7, 0.2)), 0.07) * 0.25
-    return x
-
-
-def tique_taque(n_ticks, gap, g=1.0):
-    """relógio de pé: tique agudo e taque grave alternados"""
-    d = n_ticks * gap + 0.3
-    x = np.zeros(int(d * SR))
-    for k in range(n_ticks):
-        i = int(k * gap * SR)
-        f = 1700 if k % 2 == 0 else 1250
-        s = somar(banda(ruido(0.04), 900, 5000) * ad(int(0.04 * SR), 0.0006, 0.007), tom(f, 0.08, ((1, 0.5), (2.2, 0.3)), 0.02) * 0.6, 0.4 * batida_grave(260, 130, 0.06, 0.012))
-        x[i:i + len(s)] += s[:len(x) - i]
-    return x * g
 
 
 def toc(g=1.0):
@@ -451,45 +967,13 @@ def buzina_ar(d=0.9, g=1.0):
     return np.tanh(x * 0.6) * np.minimum(t / 0.03, 1) * np.minimum((d - t) / 0.08, 1) * g * 0.5
 
 
-def sirene_doppler(d, tpico, base=0.0, g=1.0):
-    t = T(d)
-    k = 1.07 - 0.14 / (1 + np.exp(-(t - tpico) * 5.0))
-    f = (900 + 450 * np.sin(2 * np.pi * (t + base) / 3.4 - 1.4)) * k
-    ph = np.cumsum(f) / SR * 2 * np.pi
-    x = np.sin(ph) + 0.35 * np.sin(2 * ph) + 0.15 * np.sin(3 * ph)
-    env = 1.0 / (1 + ((t - tpico) / 1.3) ** 2)
-    return np.tanh(x * 1.6) * 0.5 * env * np.minimum(t / 0.1, 1) * g
-
-
-def diesel(d, g=1.0):
-    m = motor(d, lambda t: 760 + 40 * np.sin(2 * np.pi * 1.7 * t), 0.0, 0.5, 1.8, 6)
-    return filtro(m, hi=900) * g
-
-
-def freio_ar(d=0.9, g=1.0):
-    n = int(d * SR)
-    x = banda(ruido(d), 2500, 9000) * ad(n, 0.01, d * 0.35) * 0.6
-    x += banda(ruido(d), 400, 2000) * ad(n, 0.01, d * 0.2) * 0.3
-    return x * g
-
-
-def amassa_manta(d, g=1.0):
-    n = int(d * SR)
-    x = np.zeros(n)
-    for k in range(int(d * 38)):
-        i = int(rng.uniform(0, max(d - 0.06, 0.01)) * SR)
-        m = int(rng.uniform(0.01, 0.05) * SR)
-        x[i:i + m] += banda(ruido(0.06), 3000, 12000)[:m] * np.exp(-np.arange(m) / (0.010 * SR)) * rng.uniform(0.2, 1.0)
-    return x * g
-
-
 def madeira_estalo(g=1.0):
     n = int(0.9 * SR)
     x = np.zeros(n)
     m0 = int(0.05 * SR)
     x[:m0] += banda(ruido(0.05), 400, 6000)[:m0] * ad(m0, 0.0005, 0.01) * 1.2
     x[:int(0.5 * SR)] += batida_grave(120, 55, 0.5, 0.12) * 0.8
-    for k in range(16):
+    for k in range(18):
         i = int(rng.uniform(0.02, 0.45) * SR); m = int(0.012 * SR)
         x[i:i + m] += banda(ruido(0.012), 1000, 7000)[:m] * np.exp(-np.arange(m) / (0.003 * SR)) * rng.uniform(0.2, 0.8)
     return x * g
@@ -502,49 +986,6 @@ def raspa_metal(d, g=1.0):
     return x * np.sin(np.pi * t / d) ** 0.6 * g * 0.5
 
 
-def murmurio(d, g=1.0, vozes=2):
-    """vozes ao longe, sem palavras: pulsos silábicos com formantes"""
-    t = T(d)
-    out = np.zeros_like(t)
-    for v in range(vozes):
-        f0 = rng.uniform(95, 210)
-        f = f0 * (1 + 0.08 * np.sin(2 * np.pi * rng.uniform(0.7, 1.4) * t) + 0.03 * np.sin(2 * np.pi * 5.5 * t))
-        ph = np.cumsum(f) / SR * 2 * np.pi
-        gl = sum(np.sin(k * ph) / k ** 1.1 for k in range(1, 18))
-        sil = np.maximum(0, np.sin(2 * np.pi * rng.uniform(3.2, 5.0) * t + rng.uniform(0, 6))) ** 1.3 * (0.5 + 0.5 * np.sin(2 * np.pi * rng.uniform(0.4, 0.9) * t + rng.uniform(0, 6)))
-        form = banda(gl, 500, 900) + 0.6 * banda(gl, 1200, 1800) + 0.3 * banda(gl, 2400, 3200)
-        out += form * sil
-    return out * g * 0.3
-
-
-def trafego(d, g=1.0):
-    t = T(d)
-    x = filtro(ruido(d), lo=40, hi=260) * (0.6 + 0.4 * np.sin(2 * np.pi * t / 7.3 + rng.uniform(0, 6)))
-    for k in range(int(d / 3.5)):
-        i = int(rng.uniform(0, d) * SR)
-        m = int(1.6 * SR)
-        j = min(m, len(x) - i)
-        if j > 0:
-            x[i:i + j] += filtro(ruido(1.6), lo=60, hi=900)[:j] * np.sin(np.pi * np.arange(j) / m) ** 2 * rng.uniform(0.15, 0.4)
-    return x * g
-
-
-def passaros(d, g=1.0):
-    n = int(d * SR)
-    x = np.zeros(n)
-    for k in range(int(d * 3.2)):
-        i = int(rng.uniform(0, max(d - 0.4, 0.01)) * SR)
-        for j in range(rng.integers(2, 6)):
-            dur = rng.uniform(0.04, 0.09)
-            tt = T(dur)
-            f = rng.uniform(2600, 4800) + rng.uniform(-900, 900) * tt / dur
-            s = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.sin(np.pi * tt / dur) ** 1.2
-            ii = i + int(j * (dur + 0.045) * SR)
-            if ii + len(s) < n:
-                x[ii:ii + len(s)] += s * 0.05
-    return x * g
-
-
 def abafar(x, hi=700):
     return filtro(x, hi=hi, ordem=2) * 1.25
 
@@ -553,224 +994,368 @@ def seg(id, extra=0.0):
     return P[id]['t0'], P[id]['dur'] + extra
 
 
-# ------------------------------------------------------------------ roteiro sonoro
-def cama(id, sinal, g=1.0, pan=0.0, extra=0.0, fade=0.12):
-    """coloca uma cama sonora cobrindo o plano `id` (com entrada/saída suaves)"""
-    a, d = seg(id, extra)
-    n = len(sinal)
+def cama(id, fn, g=1.0, pan=0.0, rv=None, w=0.3, fade=0.1):
+    """cama sonora do plano `id`: fn(d) gera d segundos; entra 0,1 s antes e sai 0,1 s depois, com fusão suave"""
+    a, d = seg(id)
+    dd = d + 2 * fade
+    x = fit(fn(dd), int(dd * SR))
+    n = len(x)
     env = np.minimum(1, np.minimum(np.arange(n) / (fade * SR), (n - np.arange(n)) / (fade * SR)))
-    add(sinal * env, a, g, pan)
+    add(x * env, a - fade, g, pan, rv, w)
+
+
+def partida_motor(g=1.0):
+    d = 1.4
+    t = T(d)
+    st = np.sin(2 * np.pi * np.cumsum(70 + 160 * np.minimum(t / 0.5, 1)) / SR) * (t < 0.55) * 0.25 + banda(ruido(d), 500, 3000) * (t < 0.55) * 0.12
+    mt = motor(d, lambda tt: np.where(tt < 0.5, 160 + 700 * tt / 0.5, 820), 0.0, 0.6, 1.8, 8) * (t > 0.45) * np.minimum((t - 0.45) / 0.15, 1)
+    return (st + mt) * np.minimum((d - t) / 0.3, 1) * g
+
+
+def fim_cena(sig):
+    return sig
+
+
+# ================================================================== ROTEIRO SONORO (v2)
+PADRAO_LAMPADA = [1, .15, 1, .05, .6, 0.0, .9, .1, 1, .25, .85]
+JANELAS_VOZ = [(0.3, 4.9), (5.4, 9.4), (9.9, 11.9), (12.0, 13.6), (14.9, 15.7), (15.9, 18.0), (18.3, 21.4), (21.9, 24.1), (25.2, 25.9), (27.9, 28.6), (30.5, 31.2),
+               (31.6, 33.0), (33.5, 36.1), (36.4, 40.4), (40.6, 42.8), (43.6, 45.5), (46.2, 46.9), (47.6, 49.2)]
+CORTES = []                                                                       # (instante, nivel, duração) de quedas bruscas do volume (silêncio dramático)
+
+
+def coracao(t_ini, t_fim, bpm, g, rv='cab'):
+    for tt in np.arange(t_ini, t_fim, 60.0 / bpm):
+        add(batimento(bpm, 1.0)[:int(0.45 * SR)], tt, g, 0.0, rv, 0.2)
 
 
 def montar():
-    # ---------- ATO 1 ----------
-    # 0: gancho, a cabine: zumbido, ar do poço, respiração rápida; a lâmpada crepita no fim e corta
+    # ---------------------------------------------------------------- ATO 1
+    # 1) GANCHO: dentro da cabine, perto do rosto: zumbido do reator, respiração curta e rápida, coração, latão tremendo; a lâmpada crepita e a imagem corta
     a, d = seg('grade')
-    add(zumbido(d, 60, 0.9), a, 0.6); add(vento(d, 0.05, 260), a, 1.0); add(respiracao(d, 0.7), a, 0.34, 0.05)
-    add(rangido(1.2, 95, 72, 0.6), a + 0.3, 0.18, -0.2)
-    add(crepitar(0.45, 1.0, 130), a + 1.22, 0.55, 0.0)
-    # 1: a casa de bonecas, entardecer: um estrondo grave no corte e a cidade ao longe
+    cama('grade', lambda dd: zumbido2(dd, 1.0) + vento2(dd, 0.04, 260) + sala_vazia(dd, 0.35), 0.55, 0.0, 'cab', 0.3, 0.2)
+    add(respirar(d + 0.3, 1.9, 1.0, 0.9), a, 0.36, 0.05, 'cab', 0.3)
+    coracao(a + 0.15, a + 1.55, 118, 0.17)
+    add(rattle(1.4, 0.16, 14), a + 0.1, 1.0, 0.0, 'cab', 0.35)
+    add(riser(0.55, 400, 3600, 0.8, 0.5), a + 1.05, 0.34, 0.0, 'cab', 0.2)
+    add(buzz_lampada(0.4, PADRAO_LAMPADA, 1 / 24.0, 1.0), a + 1.22, 0.42, 0.0, 'cab', 0.25)
+
+    # 2) a casa em corte ao entardecer: estrondo no corte, cidade ao longe, casa oca, relógio longe, gemido de estrutura
     a, d = seg('casa')
-    add(batida_grave(62, 30, 1.4, 0.5) * 1.0, a, 0.7); add(banda(ruido(0.5), 60, 500) * ad(int(0.5 * SR), 0.004, 0.18), a, 0.25)
-    cama('casa', trafego(d, 0.8) + vento(d, 0.12, 300), 0.5); cama('casa', zumbido(d, 50, 0.6), 0.45)
-    add(sirene_doppler(d, d * 0.8, 0.0, 0.5), a, 0.05, 0.3)
-    # 2: fachada, rua ao entardecer
+    add(sub_boom(62, 26, 2.4, 1.0), a, 0.70, 0.0, 'casa', 0.45)
+    add(banda(ruido(0.6), 80, 700) * ad(int(0.6 * SR), 0.004, 0.2), a, 0.22, 0.0, 'casa', 0.4)
+    cama('casa', lambda dd: cidade(dd, 0.45, True, 0.6) + vento2(dd, 0.12, 300) + sala_vazia(dd, 0.6), 0.55, 0.0, 'casa', 0.5)
+    cama('casa', lambda dd: zumbido2(dd, 0.7), 0.35, 0.0, 'casa', 0.4)
+    add(sirene2(d, d * 0.85, 0.0, 0.4), a, 0.05, 0.3, 'rua', 0.5)
+    add(tictac2(int(d / 0.5), 0.5, 0.4), a, 0.07, 0.3, 'casa', 0.5)
+    add(rangido(1.5, 72, 46, 1.0), a + 1.2, 0.22, -0.2, 'casa', 0.6)
+
+    # 3) fachada ao entardecer: rua viva, poste zumbindo, buzina de táxi, subida de câmera (whoosh suave)
     a, d = seg('fachada')
-    cama('fachada', trafego(d, 1.0) + vento(d, 0.14, 380), 0.55)
-    add(motor(1.6, lambda t: 1500 + 700 * np.clip(t / 1.6, 0, 1)), a + 0.1, 0.07, -0.4); add(whoosh(0.9, 220, 1500), a + 0.55, 0.12, 0.3)
-    add(sirene_doppler(2.2, 1.6, 0.9, 0.5), a, 0.04, -0.4)
-    # 3: faxina: sala vazia, relógio de pé, passos de madeira, cesto de plástico rangendo
+    cama('fachada', lambda dd: cidade(dd, 0.95, False, 1.3) + vento2(dd, 0.14, 380), 0.58, 0.0, 'rua', 0.35)
+    cama('fachada', lambda dd: zumbido2(dd, 0.35, 100.0), 0.25, -0.5, 'rua', 0.2)
+    add(buzina_taxi(1.0), a + 1.15, 0.12, 0.4, 'rua', 0.4)
+    add(whoosh(2.0, 250, 1800), a + 0.1, 0.10, 0.0, 'rua', 0.2)
+    add(sirene2(d, d * 0.3, 0.9, 0.5), a, 0.05, -0.4, 'rua', 0.6)
+
+    # 4) faxina: sala de pé-direito alto: relógio de pé, passos na madeira (tábuas rangendo), cesto, toalhas, chaves, cristais do lustre
     a, d = seg('faxina')
-    cama('faxina', zumbido(d, 50, 0.5) + filtro(ruido(d), lo=120, hi=900) * 0.02, 0.5)
-    add(tique_taque(int(d / 0.5), 0.5, 0.7), a, 0.28, 0.25)
+    cama('faxina', lambda dd: sala_vazia(dd, 1.0) + zumbido2(dd, 0.2), 0.60, 0.0, 'sala', 0.4)
+    cama('faxina', lambda dd: abafar(cidade(dd, 0.4, True, 0.5), 450), 0.35, 0.0, 'sala', 0.3)
+    add(tictac2(int(d / 0.5), 0.5, 0.9), a, 0.30, 0.25, 'sala', 0.4)
     for k in range(int(d / 0.52)):
-        add(passo('madeira', 1.0), a + 0.2 + k * 0.52, 0.20, 0.1)
-    for k in range(3):
-        add(rangido(0.25, 900, 700, 0.5) * 0.8, a + 0.3 + k * 0.7, 0.07, 0.1)
-    # 4: o SUV dos donos dá a partida e sai; luzes vermelhas, rua vazia
+        add(passo2('madeira', 1.0), a + 0.2 + k * 0.52, 0.26, -0.15 + 0.06 * k, 'sala', 0.5)
+    for k in range(4):
+        add(somar(rangido(0.22, 900, 700, 0.5) * 0.6, roupa(0.3, 0.6)), a + 0.15 + k * 0.55, 0.09, 0.1, 'sala', 0.4)
+    add(chaves_tilintando(0.6), a + 0.4, 0.05, 0.1, 'sala', 0.4)
+    add(rattle(0.8, 0.6, 22, (4500, 9000)), a + 0.6, 0.05, 0.2, 'sala', 0.6)
+    add(roupa(d, 0.7, 1.0), a, 0.10, 0.0, 'sala', 0.3)
+
+    # 5) o SUV dos donos: partida, motor pegando, pisca-alerta, aceleração, pneus; a rua fica vazia
     a, d = seg('donos')
-    cama('donos', trafego(d, 0.9) + vento(d, 0.12, 380), 0.5)
-    add(motor(d + 0.2, lambda t: 850 + 3200 * np.clip((t - 0.1) / 1.7, 0, 1) ** 1.3, 0.0, 1.0, 1.3, 6) * np.minimum(1, (d + 0.2 - T(d + 0.2)) / 0.5), a - 0.05, 0.30, 0.2)
-    add(chiado_pneu(0.6, 1300, 0.6), a + 0.9, 0.15, 0.3); add(whoosh(0.8, 300, 1800), a + 0.7, 0.16, 0.3)
-    # 5: ela fecha a grade de latão e aperta o botão
+    cama('donos', lambda dd: cidade(dd, 0.9, False, 1.0) + vento2(dd, 0.10, 400), 0.52, 0.0, 'rua', 0.35)
+    add(partida_motor(1.0), a - 0.45, 0.28, 0.1, 'rua', 0.3)
+    mot = motor(d + 0.4, lambda t: 820 + 3400 * np.clip((t - 0.35) / 1.3, 0, 1) ** 1.3, 0.0, 1.0, 1.7, 6) * np.minimum(1, (d + 0.4 - T(d + 0.4)) / 0.7)
+    addpan(mot, a - 0.05, 0.34, 0.05, 0.75, 'rua', 0.35)
+    for k in range(3):
+        add(clique2(0.5), a + 0.1 + k * 0.7, 0.12, 0.2, 'rua', 0.2); add(clique2(0.35), a + 0.45 + k * 0.7, 0.10, 0.2, 'rua', 0.2)
+    add(chiado_pneu(0.9, 1300, 0.55), a + 0.95, 0.16, 0.3, 'rua', 0.3)
+    add(whoosh(0.9, 300, 1800), a + 0.7, 0.14, 0.4, 'rua', 0.3)
+
+    # 6) ela fecha a grade (latão correndo no trilho, estalos dos segmentos, trinco) e aperta o botão (estalo, bipe, freio solta, motor liga)
     a, d = seg('porta_grade')
-    cama('porta_grade', zumbido(d, 55, 0.7) + filtro(ruido(d), lo=100, hi=700) * 0.015, 0.45)
-    add(grade_desliza(1.0, 1.0), a + 0.2, 0.55, -0.1); add(clack(1.0), a + 1.10, 0.8, -0.1)
+    cama('porta_grade', lambda dd: zumbido2(dd, 0.6) + sala_vazia(dd, 0.5), 0.52, 0.0, 'sala', 0.35)
+    add(grade_desliza2(1.0, 1.0), a + 0.2, 0.60, -0.1, 'cab', 0.4)
+    add(somar(metal_bate(700, 0.5, 0.8), clack(0.9)), a + 1.10, 0.50, -0.1, 'cab', 0.4)
+    add(roupa(0.9, 0.8), a + 0.15, 0.10, 0.1, 'cab', 0.3)
     a, d = seg('botao')
-    cama('botao', zumbido(d, 55, 0.6), 0.45)
-    add(clique(1.0), a + 0.30, 0.55, -0.2); add(tom(1046, 0.18, ((1, 0.6), (2, 0.2)), 0.07), a + 0.31, 0.12, -0.2)
-    add(clack(0.6), a + 0.62, 0.35, 0.1)                                          # trava da porta do poço
-    # 6: a subida: motor de elevador subindo e a PARADA SECA (a lâmpada pisca, o motor morre)
+    cama('botao', lambda dd: zumbido2(dd, 0.6), 0.50, 0.0, 'cab', 0.3)
+    add(clique2(1.0), a + 0.30, 0.60, -0.2, 'cab', 0.3); add(bipe(1568, 0.12, 1.0), a + 0.31, 0.40, -0.2, 'cab', 0.25)
+    add(roupa(0.6, 0.7), a + 0.1, 0.10, 0.0, 'cab', 0.3)
+    add(clack(0.6), a + 0.58, 0.40, 0.1, 'cab', 0.3); add(batida_grave(90, 50, 0.3, 0.08), a + 0.65, 0.30, 0.0, 'cab', 0.3)
+    add(motor_elev2(0.5, 30, 46, 1.0), a + 0.62, 0.22, 0.0, 'cab', 0.3)
+
+    # 7) a subida e a PARADA SECA
     a, d = seg('sobe')
     tstop = a + 1.3275
-    add(motor_elev(tstop - (a - 0.15), 46, 94, 1.0), a - 0.15, 0.50, 0.0)
-    add(rangido(0.7, 130, 110, 0.5), a + 0.4, 0.10, 0.2)
-    add(parada_seca(), tstop - 0.01, 1.0, 0.0)
-    add(respiracao(0.5, 1.0) * 1.8, tstop + 0.30, 0.30, 0.05)
-    cama('sobe', zumbido(d, 55, 0.5) * np.concatenate([np.zeros(int(1.3 * SR)), np.ones(int(d * SR) - int(1.3 * SR))]), 0.4)
-    # 7: parado entre os andares: silêncio, rangidos de cabo, o zumbido da lâmpada
+    add(motor_elev2(tstop - (a - 0.05), 46, 94, 1.0), a - 0.05, 0.55, 0.0, 'cab', 0.3)
+    add(metal_bate(300, 0.3, 0.6), a + 0.15, 0.14, 0.2, 'cab', 0.3)
+    add(sub_boom(55, 35, 0.9, 0.5), a + 0.70, 0.18, -0.3, 'casa', 0.3)
+    for k in range(6):
+        add(batida_grave(120, 70, 0.06, 0.015), a + 0.2 + k * 0.19, 0.07, -0.2, 'cab', 0.3)
+    add(parada_v2(), tstop - 0.01, 1.0, 0.0, 'cab', 0.55)
+    add(sub_boom(48, 22, 2.0, 1.0), tstop - 0.01, 0.50, 0.0, 'casa', 0.35)
+    add(arfada(1.0), tstop + 0.12, 0.40, 0.05, 'cab', 0.4)
+    add(roupa(0.6, 1.0, 2.0), tstop + 0.04, 0.24, 0.1, 'cab', 0.3)
+    add(metal_bate(950, 0.7, 0.8), tstop + 0.22, 0.30, 0.1, 'cab', 0.4)
+    CORTES.append((tstop - 0.03, 0.35, 0.10))
+
+    # 8) parado entre os andares: o silêncio pesa; cabos rangendo, estrutura estalando, lâmpada zumbindo, coração e choramingo
     a, d = seg('parado')
-    cama('parado', zumbido(d, 60, 0.9) + vento(d, 0.07, 260), 0.45)
-    add(rangido(1.3, 105, 80, 0.7), a + 0.5, 0.20, 0.2)
-    for k, off in enumerate((0.25, 0.95, 1.55, 2.05)):
-        add(somar(tom(rng.uniform(900, 2600), 0.08, ((1, 0.5), (2.4, 0.2)), 0.015), banda(ruido(0.04), 800, 3000) * ad(int(0.04 * SR), 0.001, 0.01)), a + off, 0.07 + 0.03 * k, rng.uniform(-0.5, 0.5))
-    add(respiracao(d, 0.8), a, 0.22, 0.0)
-    add(crepitar(0.35, 0.5, 60), a + 1.35, 0.20)
-    # 8: botões: ela aperta e aperta, nada responde
+    cama('parado', lambda dd: zumbido2(dd, 0.9) + vento2(dd, 0.07, 260) + sala_vazia(dd, 0.5), 0.52, 0.0, 'casa', 0.5)
+    add(rangido(1.6, 105, 70, 1.0), a + 0.4, 0.28, -0.2, 'casa', 0.6)
+    add(rangido(1.1, 88, 58, 1.0), a + 1.5, 0.22, 0.2, 'casa', 0.6)
+    for off, f_ in ((0.25, 1500), (0.95, 2100), (1.55, 1100), (2.05, 1800)):
+        add(somar(metal_bate(f_, 0.25, 0.35), banda(ruido(0.04), 800, 3000) * ad(int(0.04 * SR), 0.001, 0.01)), a + off, 0.10, rng.uniform(-0.5, 0.5), 'casa', 0.5)
+    add(respirar(d, 1.5, 1.0, 0.6), a, 0.22, 0.0, 'cab', 0.3)
+    coracao(a + 0.2, a + d, 96, 0.17, 'casa')
+    add(choro(1.1, 260, 0.5), a + 1.1, 0.14, 0.0, 'cab', 0.4)
+    add(buzz_lampada(0.6, [1, .5, 1, .85, 1, 1, .7, 1, 1, 1, 1], 1 / 20.0, 0.8), a + 1.35, 0.20, 0.0, 'cab', 0.2)
+
+    # 9) botões: cliques em sequência, nenhum bipe (tudo morto), respiração e coração disparando
     a, d = seg('botoes')
-    cama('botoes', zumbido(d, 55, 0.7), 0.4)
+    cama('botoes', lambda dd: zumbido2(dd, 0.7), 0.46, 0.0, 'cab', 0.3)
     for i in range(6):
-        add(clique(1.0), a + 0.10 + i * 0.19, 0.50 + 0.04 * i, rng.uniform(-0.3, 0.1))
-    add(respiracao(d, 1.1), a, 0.30, 0.0)
-    # 9: telefone mudo: o monofone sai do gancho; só chiado; ela bate no gancho; recoloca
+        add(clique2(1.0, 'seco'), a + 0.10 + i * 0.19, 0.55 + 0.03 * i, rng.uniform(-0.3, 0.1), 'cab', 0.3)
+    add(respirar(d, 2.3, 1.0, 1.0), a, 0.32, 0.0, 'cab', 0.3)
+    add(roupa(d, 0.8, 1.2), a, 0.12, 0.1, 'cab', 0.3)
+    coracao(a, a + d, 124, 0.20)
+
+    # 10) telefone mudo: monofone sai do gancho, só um fio de chiado; ela bate no gancho; sussurra "alô"; recoloca
     a, d = seg('telefone')
-    cama('telefone', zumbido(d, 55, 0.7), 0.4)
-    add(clack(0.7), a + 0.10, 0.55, 0.0)
-    add(banda(ruido(0.8), 900, 4200) * 0.025 * np.minimum(T(0.8) / 0.1, 1) * np.minimum((0.8 - T(0.8)) / 0.2, 1), a + 0.30, 1.0, -0.2)
-    add(clique(1.0), a + 1.05, 0.5); add(clique(1.0), a + 1.20, 0.5); add(clack(0.6), a + 1.50, 0.45)
-    add(soluco(0.45, 300), a + 0.62, 0.22, 0.0); add(respiracao(d, 0.7), a, 0.22, 0.0)
-    # 10: ela bate na grade e grita (ninguém ouve): batidas, chacoalhar de latão, voz sintética abafada
+    cama('telefone', lambda dd: zumbido2(dd, 0.7), 0.46, 0.0, 'cab', 0.3)
+    add(somar(clack(0.7), roupa(0.3, 0.5)), a + 0.10, 0.50, 0.0, 'cab', 0.3)
+    add(banda(ruido(0.8), 1500, 5500) * 0.02 * hann(int(0.8 * SR)) ** 0.5, a + 0.30, 1.0, -0.2, None)
+    add(voz(0.30, lambda tt: 235 - 30 * tt / 0.30, 'a', resp=0.6, tens=0.2) * hann(int(0.30 * SR)), a + 0.55, 0.10, 0.0, 'cab', 0.4)
+    add(clique2(0.8), a + 1.05, 0.5, 0.0, 'cab', 0.3); add(clique2(0.8), a + 1.20, 0.5, 0.0, 'cab', 0.3)
+    add(clack(0.6), a + 1.50, 0.45, 0.0, 'cab', 0.3)
+    add(respirar(d, 1.3, 1.0, 0.7), a, 0.22, 0.0, 'cab', 0.3)
+    coracao(a, a + d, 104, 0.16)
+
+    # 11) ela bate na grade: pancadas na palma com o latão tilintando; gritos e choro (abafados pelo poço); corte seco no fim
     a, d = seg('bate')
-    cama('bate', zumbido(d, 55, 0.6), 0.35)
+    cama('bate', lambda dd: zumbido2(dd, 0.6), 0.36, 0.0, 'cab', 0.3)
     for k in range(5):
         tt = a + 0.12 + k * 0.2856
-        add(toc(1.0), tt, 0.75, 0.15); add(grade_desliza(0.14, 1.0), tt, 0.5, 0.0)
-    add(reverb(grito(0.55, 560), 0.8, 0.5), a + 0.15, 0.20, 0.0); add(reverb(grito(0.50, 520), 0.8, 0.5), a + 0.75, 0.18, 0.0)
-    add(soluco(d, 280), a, 0.30, 0.0)
-    # 11: silêncio: a casa toda à noite (tom agudo, cidade ao longe, coração lento)
-    a, d = seg('silencio')
-    cama('silencio', abafar(trafego(d, 0.7), 400) + zumbido(d, 50, 0.3), 0.40)
-    add(tinido(d + 0.3, 3900) * np.minimum(T(d + 0.3) / 0.6, 1), a, 0.10, 0.0)
-    for tt in np.arange(a + 0.2, a + d, 1.0):
-        add(batimento(60, 1.0)[: int(0.6 * SR)], tt, 0.16, 0.0)
-    add(soluco(0.9, 260), a + 0.85, 0.16, 0.0)
-    # 12: relógio de pé: o tique-taque acelera; no fim, uma badalada grave
-    a, d = seg('relogio')
-    tt, gap, k = a, 0.5, 0
-    while tt < a + d - 0.05:
-        add(tique_taque(2, gap * 0.5, 0.8)[: int(0.25 * SR)], tt, 0.34, 0.3)
-        tt += gap; gap = max(0.07, gap * 0.80); k += 1
-    add(sino(131.0, 5.0), a + d - 0.12, 0.34, 0.0)
+        add(metal_bate(820 + 55 * k, 0.9, 1.0), tt, 0.52, 0.1, 'cab', 0.5)
+        add(toc(1.0), tt, 0.45, 0.1, 'cab', 0.3)
+        add(grade_desliza2(0.25, 1.0), tt, 0.35, 0.0, 'cab', 0.3)
+    add(grito2(0.70, 610, 1.0), a + 0.12, 0.20, 0.0, 'cab', 0.55)
+    add(grito2(0.60, 560, 1.0), a + 0.72, 0.18, 0.0, 'cab', 0.55)
+    add(choro(d + 0.2, 280, 0.9), a, 0.24, 0.0, 'cab', 0.4)
+    add(respirar(d, 2.0, 1.0, 1.0), a, 0.20, 0.0, 'cab', 0.3)
+    CORTES.append((a + d - 0.02, 0.10, 0.40))
 
-    # ---------- ATO 2: tempo-lapso (sexta -> segunda), 8 s ----------
-    a0 = P['tempo_1']['t0']; dTL = P['tempo_3']['t0'] + P['tempo_3']['dur'] - a0
+    # 12) silêncio: a casa toda à noite, cidade distante, tom agudo, pressão grave e o coração devagar
+    a, d = seg('silencio')
+    cama('silencio', lambda dd: abafar(cidade(dd, 0.5, True, 0.4), 500) + zumbido2(dd, 0.35) + vento2(dd, 0.06, 250), 0.45, 0.0, 'casa', 0.6)
+    add(tinido(d + 0.5, 3800) * np.minimum(T(d + 0.5) / 0.6, 1), a, 0.09, 0.0, 'casa', 0.4)
+    add(sub_boom(40, 30, 2.6, 0.6), a + 0.1, 0.16, 0.0, 'casa', 0.4)
+    coracao(a + 0.2, a + d, 58, 0.20, 'casa')
+    add(choro(1.0, 255, 0.5), a + 0.8, 0.14, 0.0, 'cab', 0.4)
+
+    # 13) relógio de pé: o tique-taque acelera, o ar se enche de tensão e uma badalada grave abre o tempo-lapso
+    a, d = seg('relogio')
+    add(fit(tictac2(16, 0.5, 1.0, 0.17), int(d * SR)), a, 0.45, 0.2, 'sala', 0.4)
+    add(riser(d - 0.05, 150, 3500, 1.0, 0.6), a, 0.30, 0.0, 'sala', 0.3)
+    add(sino2(131.0, 6.0, 1.0), a + d - 0.12, 0.40, 0.0, 'casa', 0.6)
+    add(sub_boom(46, 30, 1.6, 0.7), a + d - 0.12, 0.25, 0.0, 'casa', 0.3)
+
+    # ---------------------------------------------------------------- ATO 2: tempo-lapso (sexta -> segunda), 8 s — inverno: sem grilos
+    a0 = P['tempo_1']['t0']
+    dTL = P['tempo_3']['t0'] + P['tempo_3']['dur'] - a0
     tt_ = T(dTL)
     Hh = 24.0 + 7.0 * tt_
     dia = np.clip(np.sin((Hh - 6.0) / 12.0 * np.pi), 0, 1)
-    bed = dia * (trafego(dTL, 0.9) + passaros(dTL, 1.4)) + (1 - dia) * (vento(dTL, 0.22, 300) + grilos(dTL, 1.2) + trafego(dTL, 0.3))
-    tl = bed * 0.5 + zumbido(dTL, 50, 0.4) * 0.3
+    diurno = cidade(dTL, 0.9, False, 1.8) + passaros2(dTL, 1.0, 1.1)
+    noturno = cidade(dTL, 0.38, True, 0.8) + vento2(dTL, 0.2, 300)
+    tl = (dia * diurno + (1 - dia) * noturno) * 0.55 + zumbido2(dTL, 0.4) * 0.3
     dentro = np.zeros_like(tt_)
     for id_ in ('dentro_1', 'dentro_2'):
         s0, dd = seg(id_)
         dentro += np.clip(np.minimum((tt_ - (s0 - a0)) / 0.06, (s0 + dd - a0 - tt_) / 0.06), 0, 1)
     dentro = np.clip(dentro, 0, 1)
-    tl = tl * (1 - dentro) + abafar(tl, 600) * dentro * 0.8
-    add(tl, a0, 1.0, 0.0)
-    add(tique_taque(int(dTL / 0.11), 0.11, 0.55), a0, 0.16, 0.2)
+    tl = tl * (1 - dentro) + abafar(tl, 550) * dentro * 0.8
+    add(tl, a0, 1.0, 0.0, 'casa', 0.25)
+    add(fit(tictac2(int(dTL / 0.1), 0.1, 0.5), int(dTL * SR)), a0, 0.13, 0.2, 'sala', 0.3)
     for H0, up in ((30, 1), (42, 0), (54, 1), (66, 0), (78, 1)):
         tw = a0 + (H0 - 24.0) / 7.0
-        if 0 < tw - a0 < dTL - 0.5:
-            add(whoosh(0.9, 300, 2600) if up else whoosh(0.9, 2600, 300), tw - 0.45, 0.20, 0.0)
-    # dentro da cabine, nos dois cortes: respiração lenta e o choro dela
+        if 0 < tw - a0 < dTL - 0.4:
+            add(whoosh(0.9, 300, 2600) if up else whoosh(0.9, 2600, 300), tw - 0.45, 0.18, 0.0, 'casa', 0.3)
+            add(swell_ar(1.0, 0.6, 2200 if up else 1200), tw - 0.5, 0.14, 0.0)
+            add(sub_boom(54, 32, 1.1, 0.45), tw - 0.05, 0.12, 0.0, 'casa', 0.3)
+    for H0 in (36, 60):                                                            # sinos distantes ao meio-dia de sábado e de domingo
+        tw = a0 + (H0 - 24.0) / 7.0
+        add(sino2(196.0, 5.0, 1.0), tw - 0.1, 0.07, 0.4, 'rua', 0.8)
     for id_, f0 in (('dentro_1', 250), ('dentro_2', 270)):
         s0, dd = seg(id_)
-        add(soluco(dd + 0.2, f0), s0 - 0.05, 0.42, 0.0); add(respiracao(dd, 0.9), s0, 0.18, 0.0)
+        add(choro(dd + 0.3, f0, 1.0), s0 - 0.05, 0.40, 0.0, 'cab', 0.4)
+        add(respirar(dd, 0.62, 1.0, 0.1), s0, 0.18, 0.0, 'cab', 0.3)
+        add(roupa(dd, 0.6, 0.8), s0, 0.08, 0.1, 'cab', 0.3)
 
-    # ---------- ATO 3: segunda de manhã ----------
+    # ---------------------------------------------------------------- ATO 3: segunda de manhã
     a, d = seg('segunda_cab')
-    cama('segunda_cab', abafar(passaros(d, 1.0) + trafego(d, 0.8), 1400), 0.5)
-    add(zumbido(d, 55, 0.5), a, 0.2)
-    add(respiracao(d, 0.9), a + 0.1, 0.28, 0.0); add(soluco(0.6, 255), a + 0.45, 0.18, 0.0)
-    # entregador: passos nos degraus, caixa, o dedo no botão, o gongo da campainha lá dentro
+    cama('segunda_cab', lambda dd: abafar(passaros2(dd, 1.0, 1.5) + cidade(dd, 0.6, False, 0.8), 1500) + zumbido2(dd, 0.4), 0.50, 0.0, 'cab', 0.3)
+    add(swell_ar(d, 0.5, 3500), a, 0.20, 0.0)
+    add(respirar(d, 0.7, 1.0, 0.1), a + 0.1, 0.28, 0.0, 'cab', 0.3)
+    add(choro(0.8, 250, 0.4), a + 0.4, 0.14, 0.0, 'cab', 0.4)
+
     a, d = seg('campainha')
-    cama('campainha', trafego(d, 0.9) + passaros(d, 1.0) + vento(d, 0.08, 420), 0.5)
-    for k, off in enumerate((0.20, 0.62, 1.00, 1.18)):
-        add(passo('concreto', 1.0), a + off, 0.30, 0.2)
-    add(banda(ruido(0.15), 600, 3800) * ad(int(0.15 * SR), 0.01, 0.05) * 0.6, a + 0.35, 0.10)
+    cama('campainha', lambda dd: cidade(dd, 0.9, False, 1.2) + passaros2(dd, 1.0, 1.2) + vento2(dd, 0.08, 420), 0.55, 0.0, 'rua', 0.35)
+    for off in (0.20, 0.62, 1.00, 1.18):
+        add(passo2('concreto', 1.0), a + off, 0.30, 0.2, 'rua', 0.4)
+    add(papelao(1.2, 1.0), a + 0.2, 0.12, 0.2, 'rua', 0.2)
     tp = a + 1.30
-    add(clique(1.0), tp, 0.55, 0.3)
-    add(abafar(ding(1318.0, 1.0), 1800), tp + 0.01, 0.35, 0.0)
+    add(clique2(1.0), tp, 0.50, 0.3, 'rua', 0.2)
+    add(abafar(ding(1318.0, 1.0), 1800), tp + 0.01, 0.30, 0.0, 'sala', 0.9)
+    add(abafar(ding(987.8, 1.0), 1800), tp + 0.45, 0.28, 0.0, 'sala', 0.9)
+
     a, d = seg('eco')
-    cama('eco', abafar(passaros(d, 0.9) + trafego(d, 0.7), 1300) + zumbido(d, 55, 0.4), 0.4)
-    add(reverb(abafar(tom(987.8, 1.8, ((1, 1.0), (2, 0.3), (3, 0.12)), 0.6), 1400), 1.8, 0.8), a + 0.05, 0.38, 0.0)
-    add(respiracao(0.5, 1.0) * 2.0, a + 0.15, 0.28, 0.0); add(soluco(0.7, 260), a + 0.35, 0.28, 0.0)
+    cama('eco', lambda dd: abafar(passaros2(dd, 0.9, 1.0) + cidade(dd, 0.7, False, 0.7), 1300) + zumbido2(dd, 0.4), 0.42, 0.0, 'cab', 0.3)
+    add(abafar(ding(987.8, 1.0), 1400), a + 0.05, 0.28, 0.0, 'casa', 1.3)
+    add(arfada(1.0), a + 0.12, 0.40, 0.0, 'cab', 0.4)
+    add(choro(0.7, 260, 0.6), a + 0.35, 0.22, 0.0, 'cab', 0.4)
+    coracao(a + 0.15, a + d, 100, 0.26)
+
     a, d = seg('entregador')
-    cama('entregador', trafego(d, 0.9) + passaros(d, 0.9) + vento(d, 0.06, 420), 0.5)
+    cama('entregador', lambda dd: cidade(dd, 0.9, False, 1.2) + passaros2(dd, 0.9, 1.0) + vento2(dd, 0.06, 420), 0.52, 0.0, 'rua', 0.35)
     for off in (0.38, 0.72, 1.06):
-        add(toc(1.0), a + off, 0.38, 0.0)
-    add(murmurio(1.0, 1.0, 1), a + 0.75, 0.22, 0.2)
-    add(passo('concreto', 0.6), a + 0.1, 0.12, 0.0); add(passo('concreto', 0.6), a + 0.55, 0.12, 0.0)
-    # chegada dos bombeiros: sirene com Doppler, buzina de ar, diesel, freio, passos correndo, rádio
+        add(toc(1.0), a + off, 0.38, 0.0, 'sala', 0.7)
+    add(passo2('concreto', 0.6), a + 0.1, 0.12, 0.0, 'rua', 0.3); add(passo2('concreto', 0.6), a + 0.55, 0.12, 0.0, 'rua', 0.3)
+    for k, (f1_, f2_) in enumerate(((697, 1209), (770, 1336), (852, 1477), (941, 1209), (697, 1336))):
+        tt = a + 0.80 + k * 0.10
+        add(somar(tom(f1_, 0.07, ((1, 1.0),), 0.04), tom(f2_, 0.07, ((1, 1.0),), 0.04)), tt, 0.04, 0.2)
+    add(murmurio2(1.0, 1.0, 1), a + 0.95, 0.22, 0.2, 'rua', 0.3)
+    add(roupa(d, 0.7, 1.0), a, 0.08, 0.2)
+
     a, d = seg('chegam')
-    cama('chegam', trafego(d, 0.8) + passaros(d, 0.6), 0.4)
-    add(sirene_doppler(3.0, 2.0, 0.0, 1.0), a - 0.7, 0.30, -0.3)
-    add(buzina_ar(0.8), a + 0.65, 0.34, -0.2)
-    add(diesel(1.6, 1.0), a + 0.55, 0.30, -0.1); add(freio_ar(0.9), a + 0.80, 0.30, 0.0)
+    cama('chegam', lambda dd: cidade(dd, 0.8, False, 1.1) + passaros2(dd, 0.6, 0.8), 0.45, 0.0, 'rua', 0.35)
+    addpan(sirene2(3.6, 2.5, 0.0, 1.0), a - 1.0, 0.34, -0.7, 0.3, 'rua', 0.5)
+    addpan(sirene2(3.0, 2.2, 1.2, 0.6, True), a - 0.5, 0.14, -0.6, 0.4, 'rua', 0.5)
+    add(buzina_ar(0.9), a + 0.60, 0.36, -0.2, 'rua', 0.5)
+    add(diesel2(1.9, 1.0, 900), a + 0.45, 0.30, -0.1, 'rua', 0.4)
+    add(freio_ar2(1.0), a + 0.85, 0.32, 0.0, 'rua', 0.4)
+    add(porta_batendo(), a + 1.05, 0.30, 0.2, 'rua', 0.4)
     for k in range(3):
-        for s in range(3):
-            add(passo('concreto', 1.2), a + 0.95 + k * 0.10 + s * 0.28, 0.20, rng.uniform(-0.4, 0.4))
-    add(radio(1.0), a + 1.2, 0.16, 0.3)
-    # corredor do 3º andar: botas, pé-de-cabra na fresta, a madeira cede
+        for s in range(4):
+            add(passo2('concreto', 1.2, 'bota'), a + 0.95 + k * 0.10 + s * 0.26, 0.20, rng.uniform(-0.4, 0.4), 'rua', 0.4)
+    add(equipamento(1.0, 1.0), a + 0.90, 0.16, 0.0, 'rua', 0.3)
+    add(radio2(1.2), a + 1.10, 0.14, 0.3, 'rua', 0.3)
+    add(grito_homem(0.5, 1.0), a + 1.30, 0.12, 0.3, 'rua', 0.5)
+
     a, d = seg('forcam')
-    cama('forcam', filtro(ruido(d), lo=120, hi=800) * 0.02 + zumbido(d, 50, 0.3), 0.4)
+    cama('forcam', lambda dd: sala_vazia(dd, 0.8) + zumbido2(dd, 0.3), 0.46, 0.0, 'sala', 0.4)
     for off in (0.05, 0.40, 0.75):
-        add(passo('madeira', 1.4), a + off, 0.28, rng.uniform(-0.3, 0.3))
-    add(raspa_metal(0.4), a + 0.36, 0.45, 0.0)
-    add(rangido(0.9, 230, 150, 0.9), a + 0.55, 0.30, 0.0)
-    add(madeira_estalo(1.0), a + 1.20, 0.80, 0.0)
-    add(radio(0.8), a + 0.2, 0.12, 0.4)
-    # a luz: a porta desliza, muito ar e luz, vozes, o coração dela
+        add(passo2('madeira', 1.4, 'bota'), a + off, 0.28, rng.uniform(-0.3, 0.3), 'sala', 0.4)
+    add(respirar(d, 1.1, 1.0, 0.2), a, 0.12, 0.2, 'sala', 0.3)
+    add(somar(metal_bate(520, 0.5, 0.8), raspa_metal(0.4)), a + 0.36, 0.45, 0.0, 'sala', 0.4)
+    add(rangido(0.9, 230, 150, 0.9), a + 0.55, 0.30, 0.0, 'sala', 0.4)
+    add(madeira_estalo(1.0), a + 1.20, 0.80, 0.0, 'sala', 0.5)
+    add(radio2(0.9), a + 0.2, 0.12, 0.4, 'sala', 0.3)
+    add(equipamento(1.2, 1.0), a + 0.05, 0.10, 0.0, 'sala', 0.3)
+
     a, d = seg('luz')
-    cama('luz', abafar(filtro(ruido(d), lo=150, hi=1500) * 0.03, 1200), 0.4)
-    add(grade_desliza(0.6, 1.0) * 0.6, a - 0.05, 0.45, 0.2)
-    add(whoosh(1.1, 200, 5000), a - 0.1, 0.30, 0.0)
-    add(banda(ruido(1.2), 2500, 9000) * np.exp(-T(1.2) / 0.45) * 0.20, a, 0.30, 0.0)
-    add(murmurio(1.3, 1.0, 2), a + 0.1, 0.30, 0.3); add(radio(0.8), a + 0.5, 0.13, 0.4)
-    add(respiracao(0.6, 1.0) * 2.0, a + 0.2, 0.30, 0.0)
-    for tt in np.arange(a, a + d, 60 / 86):
-        add(batimento(86, 1.0)[: int(0.6 * SR)], tt, 0.22, 0.0)
-    # mão: a grade de latão desliza, vozes calmas, o choro de alívio
+    cama('luz', lambda dd: abafar(sala_vazia(dd, 0.6) + roupa(dd, 0.4, 1.0), 1500), 0.40, 0.0, 'sala', 0.5)
+    add(grade_desliza2(0.7, 1.0), a - 0.05, 0.40, 0.2, 'sala', 0.5)
+    add(sub_boom(48, 30, 1.5, 1.0), a, 0.30, 0.0, 'casa', 0.3)
+    add(whoosh(1.2, 200, 5200), a - 0.1, 0.26, 0.0, 'sala', 0.3)
+    add(swell_ar(1.5, 0.55, 2200), a - 0.1, 0.30, 0.0, 'sala', 0.3)
+    add(murmurio2(1.3, 1.0, 2), a + 0.1, 0.28, 0.3, 'sala', 0.6)
+    add(radio2(0.9), a + 0.5, 0.13, 0.4, 'sala', 0.3)
+    add(arfada(1.0), a + 0.2, 0.38, 0.0, 'cab', 0.4)
+    coracao(a, a + d, 90, 0.24)
+    add(rattle(0.9, 0.5, 30, (5500, 10000)), a + 0.1, 0.07, 0.2, 'cab', 0.6)
+
     a, d = seg('mao')
-    cama('mao', filtro(ruido(d), lo=150, hi=1500) * 0.025, 0.4)
-    add(grade_desliza(0.6, 1.0), a + 0.40, 0.6, 0.0)
-    add(murmurio(1.0, 1.0, 1), a + 0.25, 0.28, 0.3)
-    add(soluco(d + 0.2, 275), a - 0.05, 0.55, 0.0); add(respiracao(d, 1.0), a, 0.24, 0.0)
-    # tira: botas, tecido, a manta térmica que amassa
+    cama('mao', lambda dd: abafar(sala_vazia(dd, 0.6), 1800) + roupa(dd, 0.3, 1.0), 0.40, 0.0, 'sala', 0.4)
+    add(grade_desliza2(0.6, 1.0), a + 0.40, 0.55, 0.0, 'cab', 0.4)
+    add(luva(1.0), a + 0.50, 0.18, 0.3, 'cab', 0.3)
+    add(murmurio2(1.0, 1.0, 1), a + 0.25, 0.26, 0.3, 'sala', 0.5)
+    add(choro(d + 0.3, 275, 1.0), a - 0.05, 0.40, 0.0, 'cab', 0.4)
+    add(respirar(d, 0.8, 1.0, 0.2), a, 0.20, 0.0, 'cab', 0.3)
+    coracao(a, a + d, 80, 0.18)
+
     a, d = seg('tira')
-    cama('tira', filtro(ruido(d), lo=150, hi=1500) * 0.025, 0.4)
+    cama('tira', lambda dd: abafar(sala_vazia(dd, 0.6), 2000) + roupa(dd, 0.3, 1.0), 0.40, 0.0, 'sala', 0.4)
     for k in range(4):
-        add(passo('madeira', 1.2), a + 0.20 + k * 0.42, 0.20, rng.uniform(-0.4, 0.4))
-    add(banda(ruido(d), 400, 3000) * 0.05 * (0.5 + 0.5 * np.sin(2 * np.pi * 4 * T(d))), a, 0.5, 0.0)
-    add(amassa_manta(d - 0.5, 1.0), a + 0.55, 0.40, 0.0)
-    add(murmurio(1.2, 1.0, 2), a + 0.2, 0.22, 0.3); add(soluco(1.0, 270), a + 0.1, 0.30, 0.0)
-    # rua: a porta abre (dobradiça), a cidade, o diesel parado, rádios, a manta
+        add(passo2('madeira', 1.2, 'bota'), a + 0.20 + k * 0.42, 0.22, rng.uniform(-0.4, 0.4), 'sala', 0.4)
+    add(roupa(d, 1.0, 1.8), a, 0.22, 0.0, 'sala', 0.3)
+    add(amassa_manta2(d - 0.5, 1.0), a + 0.55, 0.42, 0.0, 'sala', 0.3)
+    add(murmurio2(1.2, 1.0, 2), a + 0.2, 0.22, 0.3, 'sala', 0.5)
+    add(choro(d, 270, 0.7), a + 0.1, 0.30, 0.0, 'cab', 0.3)
+    add(equipamento(1.0, 1.0), a + 0.2, 0.08, 0.2, 'sala', 0.3)
+
     a, d = seg('rua_final')
-    cama('rua_final', trafego(d, 0.9) + passaros(d, 0.8) + vento(d, 0.07, 420), 0.5)
-    add(rangido(0.6, 320, 210, 0.9), a + 0.0, 0.26, 0.0)
-    add(diesel(d, 0.8), a, 0.16, -0.3)
+    cama('rua_final', lambda dd: cidade(dd, 0.9, False, 1.2) + passaros2(dd, 1.0, 1.1) + vento2(dd, 0.07, 420), 0.52, 0.0, 'rua', 0.35)
+    add(somar(rangido(0.7, 300, 200, 1.0), clack(0.8)), a + 0.0, 0.28, 0.0, 'rua', 0.3)
+    add(diesel2(d, 0.9, 780), a, 0.16, -0.3, 'rua', 0.3)
     for k in range(5):
-        add(passo('concreto', 1.0), a + 0.55 + k * 0.45, 0.22, 0.2)
-    add(amassa_manta(d - 0.4, 1.0), a + 0.4, 0.35, 0.0)
-    add(radio(0.9), a + 0.9, 0.14, 0.4); add(murmurio(d, 0.8, 2), a, 0.20, 0.3)
-    # rosto final: calmaria, pássaros, o suspiro dela
+        add(passo2('concreto', 1.0), a + 0.55 + k * 0.45, 0.24, 0.2, 'rua', 0.4)
+    add(amassa_manta2(d - 0.4, 1.0), a + 0.4, 0.35, 0.0, 'rua', 0.3)
+    add(radio2(1.0), a + 0.9, 0.14, 0.4, 'rua', 0.3)
+    add(murmurio2(d, 0.8, 2), a, 0.20, 0.3, 'rua', 0.4)
+    add(pombo(1.0), a + 1.4, 0.6, 0.5, 'rua', 0.4)
+
     a, d = seg('rosto_final')
-    cama('rosto_final', passaros(d, 1.0) + trafego(d, 0.4) + vento(d, 0.05, 420), 0.5)
-    add(diesel(d, 0.5), a, 0.08, -0.3)
-    add(soluco(d, 265), a - 0.05, 0.34, 0.0); add(respiracao(d, 0.9), a, 0.18, 0.0)
-    # cartela: o som some devagar
+    cama('rosto_final', lambda dd: passaros2(dd, 1.0, 1.2) + cidade(dd, 0.4, False, 0.6) + vento2(dd, 0.05, 420), 0.52, 0.0, 'rua', 0.3)
+    add(diesel2(d, 0.5, 780), a, 0.08, -0.3, 'rua', 0.3)
+    add(choro(d, 265, 0.8), a - 0.05, 0.30, 0.0, 'cab', 0.3)
+    add(respirar(d, 0.7, 1.0, 0.1), a, 0.20, 0.0, 'cab', 0.3)
+    add(banda(ruido(0.9), 300, 2400) * hann(int(0.9 * SR)) * 0.5, a + 0.5, 0.22, 0.0, 'rua', 0.3)
+
     a, d = seg('cartela')
-    n = int(d * SR)
-    add(zumbido(d, 55, 0.5) * np.exp(-T(d) / 1.1), a, 0.20)
-    add(passaros(d, 0.8) * np.exp(-T(d) / 0.9), a, 0.18)
+    add(zumbido2(d, 0.5) * np.exp(-T(d) / 1.2), a, 0.20, 0.0, 'casa', 0.3)
+    add(passaros2(d, 0.8, 0.8) * np.exp(-T(d) / 0.9), a, 0.16, 0.0, 'rua', 0.3)
 
 
-def finalizar(saida):
-    montar()
-    pico = max(np.abs(L).max(), np.abs(R).max(), 1e-6)
-    ganho = 0.92 / pico
+def curva_cortes(n):
+    g = np.ones(n)
+    for t_, nivel, dur in CORTES:
+        i0 = int(t_ * SR)
+        i1 = min(n, i0 + int(dur * SR))
+        if i0 >= n:
+            continue
+        rampa = np.concatenate([np.linspace(1, nivel, int(0.02 * SR)), np.full(max(0, i1 - i0 - int(0.02 * SR) - int(0.25 * SR)), nivel), np.linspace(nivel, 1, int(0.25 * SR))])
+        m = min(len(rampa), n - i0)
+        g[i0:i0 + m] = np.minimum(g[i0:i0 + m], rampa[:m])
+    return g
+
+
+def curva_voz(n, duck=0.5):
+    g = np.ones(n)
+    for a_, b_ in JANELAS_VOZ:
+        i0, i1 = int(a_ * SR), int(b_ * SR)
+        g[i0:i1] = duck
+    k = int(0.15 * SR)
+    return np.convolve(g, np.ones(k) / k, 'same')
+
+
+def finalizar(saida, para_voz=False):
     for c in (L, R):
-        c *= ganho
+        c[:] = 0
+    for b in BUS.values():
+        b[0][:] = 0; b[1][:] = 0
+    CORTES.clear()
+    montar()
+    gc = curva_cortes(N)
+    for c in (L, R):
+        c *= gc
+    for b in BUS.values():
+        b[0] *= gc; b[1] *= gc
+    aplicar_reverbs()
     st = np.stack([L, R], 1)
+    pico = max(np.abs(st).max(), 1e-6)
+    st = st * (0.92 / pico)
+    # compressor suave (RMS de 40 ms, razão 3:1) e saturação leve
     env = np.sqrt(np.convolve((st ** 2).mean(1), np.ones(int(0.04 * SR)) / int(0.04 * SR), 'same') + 1e-9)
     thr = 0.07
     g = np.where(env > thr, (env / thr) ** (-(1 - 1 / 3.0)), 1.0)
@@ -781,15 +1366,20 @@ def finalizar(saida):
     st = st[:int((TOTAL + 0.3) * SR)]
     for c in range(2):
         st[:, c] = filtro(st[:, c], lo=25, ordem=2)
+    if para_voz:
+        st = st * curva_voz(len(st))[:, None]
     st *= 0.89 / max(np.abs(st).max(), 1e-6)
-    fim = int(0.9 * SR)                                                         # fade-out final
+    fim = int(0.9 * SR)
     st[-fim:] *= np.linspace(1, 0, fim)[:, None]
     with wave.open(saida, 'wb') as w:
         w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
         w.writeframes((st * 32767).astype(np.int16).tobytes())
-    rms = np.sqrt((st ** 2).mean())
-    print('ok', saida, '%.2f s' % (len(st) / SR), 'pico %.2f rms %.3f' % (np.abs(st).max(), rms))
+    print('ok', saida, '%.2f s' % (len(st) / SR), 'pico %.2f rms %.3f' % (np.abs(st).max(), np.sqrt((st ** 2).mean())))
 
 
 if __name__ == '__main__':
-    finalizar(sys.argv[1] if len(sys.argv) > 1 else os.path.join(AQUI, 'elevador_sfx.wav'))
+    saida = sys.argv[1] if len(sys.argv) > 1 else os.path.join(AQUI, 'elevador_sfx.wav')
+    finalizar(saida, para_voz=False)
+    base, ext = os.path.splitext(saida)
+    rng = np.random.default_rng(11)                                               # mesmas "sementes" na segunda passada
+    finalizar(base + '_para_voz' + ext, para_voz=True)
