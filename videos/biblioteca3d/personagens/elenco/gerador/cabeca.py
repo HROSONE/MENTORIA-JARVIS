@@ -13,7 +13,8 @@ PAD = dict(sx=1.0, sz=1.0, mand=0.0, queixo=0.0, bochecha=0.0, testa=0.0, crista
            sobr_larg=0.036, sobr_esp=0.0055, sobr_u=0.085, sobr_incl=0.0, sobr_assim=0.0, sobr_junta=0.0,
            dentes=6, dente_irreg=0.0, dente_falta=(), dente_tam=1.0,
            rubor=0.0, olheira=0.0, barba=0.0, nariz_vermelho=0.0, mancha=0.0,
-           rugas_testa=0, rugas_olho=0, rugas_nariz=0.0, rugas_prof=1.0, cicatriz=0)
+           rugas_testa=0, rugas_olho=0, rugas_nariz=0.0, rugas_prof=1.0, cicatriz=0,
+           res=1.0)           # res > 1: malha do crânio mais fina (o buraco da boca fica sob os lábios) e dentes de baixo recolhidos
 
 # perfil do crânio (adulto): u (0 = queixo, 1 = topo), semilargura, semiprofundidade, deslocamento para frente
 BASE = [(0.000, 0.000, 0.000, 0.034), (0.038, .026, .038, .036), (0.113, .048, .060, .030), (0.218, .065, .079, .020), (0.364, .074, .091, .010),
@@ -35,7 +36,7 @@ class Cabeca:
         sx, sz = p['sx'] * esq.par['cabeca'], p['sz'] * esq.par['cabeca']
         self.sx, self.sz = sx, sz
         tab = np.array(BASE)
-        F = catmull(tab, 6)
+        F = catmull(tab, int(round(6 * p['res'])))
         U, RX, RZ, CZ = F[:, 0], F[:, 1] * sx, F[:, 2] * sz, F[:, 3] * sz
         RX = RX + p['mand'] * gauss(U, 0.12, 0.10) * sx + p['bochecha'] * gauss(U, 0.38, 0.13) * sx + p['cranio'] * gauss(U, 0.72, 0.2) * sx
         RZ = RZ + p['testa'] * 0.5 * gauss(U, 0.78, 0.13) * sz
@@ -43,6 +44,14 @@ class Cabeca:
         polos = (U < 1e-6) | (U > 1 - 1e-6)
         RX = np.where(polos, 0.0, np.maximum(RX, 0.004))
         RZ = np.where(polos, 0.0, np.maximum(RZ, 0.004))
+        self.boca_ya = (0.0050, 0.0052)
+        if p['res'] > 1.0:                                    # anéis exatamente nas bordas de cima e de baixo do buraco da boca: a borda fica reta, sem degraus
+            ym_ = self.chin + p['boca_u'] * h
+            for ue in ((ym_ + self.boca_ya[0] - self.chin) / h, (ym_ - self.boca_ya[1] - self.chin) / h):
+                if np.min(np.abs(U - ue)) > 1e-5:
+                    k = int(np.searchsorted(U, ue))
+                    rx_e, rz_e, cz_e = np.interp(ue, U, RX), np.interp(ue, U, RZ), np.interp(ue, U, CZ)
+                    U, RX, RZ, CZ = np.insert(U, k, ue), np.insert(RX, k, rx_e), np.insert(RZ, k, rz_e), np.insert(CZ, k, cz_e)
         self.U, self.RX, self.RZ, self.CZ = U, RX, RZ, CZ + self.zc
         # pontos de referência
         self.u_olho, self.u_boca = p['u_olho'], p['boca_u']
@@ -150,7 +159,20 @@ class Cabeca:
         def recorte(cen):                                   # buraco da boca
             dentro = ((cen[:, 0] / (0.93 * wm)) ** 2 + ((cen[:, 1] - (ym + 0.0004)) / 0.0072) ** 2) < 1.0
             return dentro & (cen[:, 2] > zc + 0.03)
-        loft(S, np.column_stack([np.zeros_like(yw), yw, CZ]), RX, RZ, U, pesos_cabeca, 'pele', n=2.0, nseg=64, sub=1, frame=(X_, Z_),
+        if p['res'] > 1.0:                                  # res > 1: retângulo alinhado às colunas e aos anéis da malha (borda reta sob os lábios)
+            nseg_h = int(round(64 * p['res']))
+            dphi = 2 * np.pi / nseg_h
+            rx_m = float(np.interp(self.u_boca, U, RX))
+            m_col = max(int(0.88 * wm / (rx_m * dphi)), 2)
+            ya_t, ya_b = self.boca_ya
+
+            def recorte(cen):
+                u = (cen[:, 1] - self.chin) / self.h
+                rxc, rzc, czc = np.interp(u, U, RX), np.interp(u, U, RZ), np.interp(u, U, CZ)
+                th = np.arctan2((cen[:, 2] - czc) / np.maximum(rzc, 1e-6), cen[:, 0] / np.maximum(rxc, 1e-6))
+                phi = (th - np.pi / 2 + np.pi) % (2 * np.pi) - np.pi
+                return (np.abs(phi) < m_col * dphi) & (cen[:, 1] < ym + ya_t) & (cen[:, 1] > ym - ya_b) & (cen[:, 2] > zc + 0.03)
+        loft(S, np.column_stack([np.zeros_like(yw), yw, CZ]), RX, RZ, U, pesos_cabeca, 'pele', n=2.0, nseg=int(round(64 * p['res'])), sub=1, frame=(X_, Z_),
              fecha=(False, False), ajuste=ajuste, cor=self.cor_pele, recorte=recorte)
         cab = osso(nb, idx, Cabeca=1)
         jaw = osso(nb, idx, Mandibula=1)
@@ -215,11 +237,14 @@ class Cabeca:
         elipsoide(S, np.array([0.0, ym + 0.002, zmin - 0.016]), X_, Y_, Z_, wm * 1.0, 0.012, 0.010, cab, 'boca_dentro', aneis=7, nseg=24)
         elipsoide(S, np.array([0.0, ym - 0.016, zmin - 0.016]), X_, Y_, Z_, wm * 1.0, 0.016, 0.010, jaw, 'boca_dentro', aneis=7, nseg=24)
         elipsoide(S, np.array([0.0, ym - 0.012, zmin - 0.034]), X_, Y_, Z_, wm * 1.15, 0.030, 0.016, osso(nb, idx, Cabeca=0.5, Mandibula=0.5), 'boca_dentro', aneis=9, nseg=24)
+        if p['res'] > 1.0:                                        # chapa escura logo atrás do buraco: nada de ver o fundo da cena pelos cantos da boca
+            elipsoide(S, np.array([0.0, ym - 0.004, zmin - 0.020]), X_, Y_, Z_, wm * 1.8, 0.045, 0.006, cab, 'boca_dentro', aneis=7, nseg=24)
         lingua_c = np.array([0.0, ym - 0.012, zmin - 0.010])
         elipsoide(S, lingua_c, X_, Y_, Z_, wm * 0.55, 0.0065, 0.008, jaw, 'lingua', aneis=7, nseg=16)
         nd = int(p['dentes'])
         rng = np.random.RandomState(5)
-        for linha, (yy, wd, ymax) in enumerate(((ym + 0.0002, cab, 0.0058), (ym - 0.0048, jaw, 0.0050))):
+        dn = ((ym + 0.0002, cab, 0.0058), (ym - 0.0048, jaw, 0.0050)) if p['res'] <= 1.0 else ((ym + 0.0002, cab, 0.0056), (ym - 0.0030, jaw, 0.0040))
+        for linha, (yy, wd, ymax) in enumerate(dn):
             for k in range(nd):
                 xk = (k - (nd - 1) / 2) * (2 * wm * 0.60 / max(nd - 1, 1)) if nd > 1 else 0.0
                 if (linha, k) in p['dente_falta']:

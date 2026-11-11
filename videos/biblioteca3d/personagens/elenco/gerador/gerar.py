@@ -7,15 +7,17 @@ sys.path.insert(0, AQUI)
 import exportar as X                                                    # noqa: E402
 import personagens as P                                                 # noqa: E402
 import animacoes as A                                                   # noqa: E402
+import personagens2 as P2                                               # noqa: E402
 
 SAIDA = os.path.normpath(os.path.join(AQUI, '..'))
 ELENCO = ['davi', 'teo', 'lia', 'nina', 'maniaco', 'velha']
+ELENCO2 = ['jovem_a', 'jovem_b', 'jovem_c', 'homem', 'mae', 'pai', 'policial', 'velha_luto']
 
 if __name__ == '__main__':
-    nomes = sys.argv[1:] or ELENCO
+    nomes = sys.argv[1:] or ELENCO + ELENCO2
     for n in nomes:
         t = time.time()
-        e, S, pal, ex = getattr(P, n)()
+        e, S, pal, ex = (getattr(P, n, None) or getattr(P2, n))()
         clipes = A.todos_os_clipes(e, ex.get('anim'))
         ex['pe'] = {'calcanhar': [float(v) for v in e.PE_CALC], 'bola': [float(v) for v in e.PE_BOLA], 'junta': [float(v) for v in e.PE_JUNTA]}
         ex['altura_m'] = round(e.altura, 3)
