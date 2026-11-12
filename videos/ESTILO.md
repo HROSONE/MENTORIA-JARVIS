@@ -37,3 +37,17 @@ Os mais fracos: "ELES SÃO GÊMEOS" (2,7 mil), "Gota de melado" (3,1 mil), Caval
 - História real do tipo "como isso é possível?" vence curiosidade explicativa.
 - Vídeos longos (aba Vídeos/busca) aí sim dependem de miniatura e título.
 - Caso "Bananeira até a Ferrari" (27 s): ~60% arrastaram, mas quem ficou viu 23 de 27 s. O meio prende; quem perdeu foi a abertura (por cima do ombro, escura, calma, frase de contexto). Regra: o quadro 0 é a imagem mais absurda do vídeo (o momento-recompensa), clara e colorida, e a história volta para explicar.
+
+## Gramática de câmera (referência: Zack D. Films; lição dos Shorts do elevador e do sono)
+Câmera sempre em movimento, mas suave e com propósito. Não precisa ser eletrizante; só não pode ficar parada, estática ou monótona.
+- **Um herói por plano:** só o objeto de que a locução fala fica nítido e bem iluminado; o resto escurece, entra em névoa ou sai de quadro. Nada de cenário cheio atrás.
+- **Movimentos-base:** push-in (zoom perto) no detalhe, pull-out (zoom out) revelando o conjunto, órbita de 360° em volta do objeto, giro com whoosh. Aceleração e frenagem suaves.
+- **Sincronia com a fala:** quando a locução cita o objeto, a câmera já está indo até ele.
+- **Transições:** whoosh no giro/zoom; o corte se esconde no meio do movimento.
+- **Poucos cortes, mais câmera:** ~8–12 planos em 45 s, cada um com um movimento completo (perto, longe, giro). Evitar 20+ planos em 58 s.
+- **Efeitos só no ponto-chave:** clarão e sacudida de câmera ficam para o impacto da história, não para o vídeo inteiro (nada de tremor constante).
+- **Antes de renderizar:** listar os planos com "objeto herói + movimento" e mostrar ao dono do canal.
+
+## Metas de retenção (dono do canal)
+Só viralizam quando ≥75% continuam assistindo (rejeição ≤ ~20%); a meta é manter "continuaram assistindo" sempre acima de 80%. Medir cada vídeo contra isso (Envolvimento → Engajamento dos espectadores) e registrar aqui o que mudou.
+Referência de 12/11: campainha 67,1%, soldados 60,1% (2 h), elevador 57,9%. Hipóteses: gancho em afirmação (usar pergunta/promessa em até 2 s), recompensa tarde (levar o método/revelação para ~0:15), vídeos longos (preferir 40–45 s).
