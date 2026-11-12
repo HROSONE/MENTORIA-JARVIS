@@ -94,7 +94,7 @@ def write_glb(path, roots, generator='Hryz Animation - kit cidade', animations=N
         jm = {'name': m.name, 'pbrMetallicRoughness': pbr}
         if m.texture is not None:
             if id(m.texture) not in tex_index:
-                jimgs.append({'bufferView': add_view(m.texture), 'mimeType': 'image/png', 'name': m.name})
+                jimgs.append({'bufferView': add_view(m.texture), 'mimeType': 'image/jpeg' if bytes(m.texture[:2]) == b'\xff\xd8' else 'image/png', 'name': m.name})
                 jtex.append({'sampler': 1 if m.repeat else 0, 'source': len(jimgs) - 1})
                 tex_index[id(m.texture)] = len(jtex) - 1
             pbr['baseColorTexture'] = {'index': tex_index[id(m.texture)]}
