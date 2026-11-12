@@ -87,6 +87,22 @@ Mostrar a decupagem ao dono junto com o plano de cenas, antes de renderizar.
 
 **5. Conferir antes de entregar.** Folha de quadros de cada plano (início, meio e fim): o ângulo escolhido aparece? O herói está nítido e iluminado? O corte respeita os 180° e varia o tamanho do plano? Texto nunca espelhado?
 
+## O que aprendi lendo virais (Zack D. Films, pesquisa de 12/11)
+Material lido: a narração completa de "How Stitches Work" (253 milhões de visualizações, 30 s), tirada da legenda do YouTube, e os títulos e visualizações dos 96 Shorts mais recentes do canal. Os outros roteiros não puderam ser baixados (o YouTube bloqueou), então a amostra de roteiros é de **um vídeo só**: tratar como hipótese a testar, não como lei.
+
+**O roteiro de 253 milhões, inteiro:** "When you get stitches, a doctor threads a needle through your wound and pulls it tight to close the skin. As the stitches hold the edges together, the wound becomes inflamed as new cells begin to repair the tissue. Afterwards, connective tissues and collagens start to create skin, then blood vessels form to nourish these developing tissues, filling in the area, and over a few weeks the wound will have healed together and the stitches are removed."
+
+| O que o viral faz | Como estamos fazendo | O que testar |
+|---|---|---|
+| **Cerca de 78 palavras em 30 s (2,6 por segundo)**: a imagem tem tempo de respirar | 145 a 175 palavras em 40 a 45 s (3,6 a 4,3 por segundo) | Próximo vídeo com **30 a 35 s e 80 a 100 palavras**; cortar explicação que a imagem já mostra |
+| **A primeira frase já é a ação mais forte** ("a doctor threads a needle through your wound"): sem "imagina", sem contexto, sem pergunta | Abrimos com pergunta ou premissa ("Essa arma nunca…", "Imagina que…") | Testar abrir no meio da ação, com a frase descrevendo exatamente o quadro 0 |
+| **Um processo só, passo a passo**, cada frase é uma mudança visível (agulha, pele fechando, inflamação, pele nova, pontos saindo) | Várias situações em sequência (bom), às vezes com frase de dado ou explicação | Cada frase = uma mudança na tela; frase sem mudança visual sai |
+| **Termina no instante em que o processo acaba** ("the stitches are removed"): sem "se inscreve", sem moral | Fechamos com frase de inscrição | Testar terminar na resposta e deixar o loop fazer o trabalho; "se inscreve" só se couber na imagem |
+| **"Você" no corpo da história** ("your wound") | Já fazemos no "acordasse" | Manter |
+| **Título curto (mediana de 6 palavras) e um emoji**; ficção marcada "(fiction)" no título | Títulos variam | Título de até 6 palavras + 1 emoji; marcar ficção no título também |
+
+**Títulos e visualizações nos 96 Shorts recentes** (mediana do canal: 8,6 milhões): "What if…" teve mediana de 14 milhões (só 3 vídeos), histórias reais de perigo no corpo (preso, cai, encontra cobra) 11 milhões (5 vídeos), "How…" e "Why…" ficaram na média. Os menos vistos foram temas abstratos ou de nicho: "How Fear Can Turn Into Attachment" (0,7 milhão), "How To Air Layer A Plant" (2,7 milhões). Amostra pequena e vídeos de idades diferentes: serve de pista, não de prova.
+
 ## Metas de retenção (dono do canal)
 Só viralizam quando ≥75% continuam assistindo (rejeição ≤ ~20%); a meta é manter "continuaram assistindo" sempre acima de 80%. Medir cada vídeo contra isso (Envolvimento → Engajamento dos espectadores) e registrar aqui o que mudou.
 Referência de 12/11: campainha 67,1%, soldados 60,1% (2 h), elevador 57,9%. Hipóteses: gancho em afirmação (usar pergunta/promessa em até 2 s), recompensa tarde (levar o método/revelação para ~0:15), vídeos longos (preferir 40–45 s).
