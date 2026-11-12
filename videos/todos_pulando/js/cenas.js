@@ -15,12 +15,20 @@ function cartao(u) { const a = clamp(inv(0.4, 0.8, u)); return (g, w, h) => { if
 export function montarPlanos() {
   const m = () => S.m;
   const espaco = (t, spin = 0.05) => { m().mostrar('espaco'); m().terra.visible = true; m().globo.rotation.y = t * spin; m().rachaduras.visible = false; m().terra.position.set(0, 0, 0); m().terra.scale.set(1, 1, 1); m().terra.rotation.set(0, 0, 0.1); m().atm.visible = true; m().pessoaEspaco.visible = true; m().orbita.visible = true; };
-  const pessoa = t => { const p = m().pessoaEspaco; p.position.set(EX + 1.4, 0.4 + 0.12 * Math.sin(t * 1.6), 14); p.rotation.set(0.3 * Math.sin(t * 0.9), t * 0.5, 0.2); p.scale.setScalar(6); };
+  const pessoa = t => { const p = m().pessoaEspaco; p.position.set(EX + 1.4, 0.4 + 0.12 * Math.sin(t * 1.6), 14); p.rotation.set(0.3 * Math.sin(t * 0.9), t * 0.5, 0.2); p.scale.setScalar(9); };
 
-  // 1) a pergunta: push-in na Terra com a pessoa no ar em primeiro plano (quadro 0 e fecho)
-  plano('terra', 5.0, 'espaco', (u, t) => {
+  // 0) gancho: a multidão pulando, câmera sobe atrás do herói; ondas de choque no chão
+  plano('abertura', 4.0, 'cidade', (u, t) => {
+    m().mostrar('cidade'); const h = m().heroi; h.grupo.visible = true; const tp = u - 0.9; m().multidao(1, tp); m().ondas(tp);
+    const d = h.duracao('Pular'); h.colocar(0, 0, 18, 0); h.anim('Pular', clamp(tp / 1.2, 0, 1) * d * 0.98, { laco: false });
+    const k = suave(u / 4.0);
+    camara({ pos: [lerp(-1.2, 0, k), lerp(1.3, 15, k), lerp(9, -2, k)], alvo: [0, lerp(3.2, 2, k), lerp(32, 44, k)], fov: lerp(50, 56, k), t, tr: tp > 0 && tp < 0.5 ? 2.5 : 0.3 });
+  }, { efeito: (u) => ({ subs: 3, obturador: 0.4, flash: u > 0.9 && u < 1.1 ? 0.5 * (1 - (u - 0.9) / 0.2) : 0 }) });
+
+  // 1) a pergunta: push-in na Terra com a pessoa no ar em primeiro plano
+  plano('terra', 3.2, 'espaco', (u, t) => {
     espaco(t); pessoa(t);
-    const k = suave(u / 5.0);
+    const k = suave(u / 3.2);
     camara({ pos: [EX + lerp(-2.0, -0.6, k), lerp(2.2, 1.0, k), lerp(30, 21, k)], alvo: [EX + 0.2, 0.2, 0], fov: 38, roll: lerp(0.05, 0, k), t });
   }, { efeito: () => ({ subs: 2 }) });
 
@@ -41,52 +49,59 @@ export function montarPlanos() {
     camara({ pos: [EX + Math.sin(ang) * 17, lerp(1, 6, u / 3), Math.cos(ang) * 17], alvo: [EX, 0, 0], fov: 40, t });
   }, { efeito: () => ({ subs: 3, tintas: selo('SUPOSIÇÃO 2') }) });
 
+  // 3b) reinicia: a cena volta no tempo (rebobinar) até o motivo
+  plano('reinicia', 2.4, 'cidade', (u, t) => {
+    m().mostrar('cidade'); m().heroi.grupo.visible = false; m().ondas(-1); m().multidao(1 - suave(u / 2.2), -1);
+    const k = suave5(u / 2.4);
+    camara({ pos: lerpV([0, 80, 150], [0.5, 1.7, 7], k), alvo: lerpV([0, 0, 28], [0, 1.5, 2], k), fov: lerp(55, 45, k), t, tr: 0.6 });
+  }, { efeito: (u) => ({ subs: 3, obturador: 0.7, flash: u < 0.15 ? 0.7 : 0, tintas: (g, w, h) => { g.save(); g.fillStyle = 'rgba(0,0,0,0.18)'; for (let y = 0; y < h; y += 6) g.fillRect(0, y, w, 2); g.globalAlpha = 1; g.textAlign = 'center'; g.font = `bold ${w * 0.075}px "DejaVu Sans", sans-serif`; g.fillStyle = '#fff'; g.fillText('⟲ VOLTANDO', w / 2, h * 0.70); g.font = `bold ${w * 0.045}px "DejaVu Sans", sans-serif`; g.fillStyle = '#ffd84a'; g.fillText('POR QUE TODO MUNDO PULOU?', w / 2, h * 0.75); g.restore(); } }) });
+
   // 4) alerta no celular
-  plano('alerta', 5.0, 'celular', (u, t) => {
-    m().mostrar('celular'); S.m.telaCel(t, inv(0.6, 3.4, u));
-    m().cel.rotation.set(0.05 * Math.sin(t * 1.3), 0.3 * Math.sin(t * 0.7), 0.03 * Math.sin(t * 2));
-    const k = suave5(u / 5.0);
+  plano('alerta', 4.6, 'celular', (u, t) => {
+    m().mostrar('celular'); S.m.telaCel(t, inv(0.6, 3.2, u));
+    m().cel.rotation.set(0.05 * Math.sin(t * 1.3), 0.3 * Math.sin(t * 0.7), 0.03 * Math.sin(t * 2)); m().cel.position.set(0.02 * Math.sin(t * 61), 0.02 * Math.sin(t * 53), 0);
+    const k = suave5(u / 4.6);
     camara({ pos: [CX + lerp(-0.3, 0.0, k), lerp(0.55, 0, k), lerp(1.9, 3.3, k)], alvo: [CX, lerp(0.35, 0, k), 0], fov: 36, t, tr: 0.3 });
   }, { efeito: (u) => ({ subs: 2, tintas: selo('E SE…') }) });
 
   // 5) todo mundo sai de casa e se prepara: da porta até a multidão cobrindo a praça
-  plano('saem', 6.0, 'cidade', (u, t) => {
+  plano('saem', 5.5, 'cidade', (u, t) => {
     m().mostrar('cidade'); m().heroi.grupo.visible = false;
-    const cheia = suave(u / 5.4); m().multidao(cheia, -1);
+    const cheia = suave(u / 5.0); m().multidao(cheia, -1);
     m().saindo.forEach((a, i) => { a.grupo.visible = true; const z = clamp((u - i * 0.45) * 3.2, 0, 40) + 0.6; a.colocar(-1.2 + i * 1.2, 0, z, 0); a.anim('Correr', (u - i * 0.45) * 1.4); a.rosto({ expressao: 'medo', forca: 0.4 }); a.atualizarRosto(); });
-    const k = suave5(u / 6.0);
+    const k = suave5(u / 5.5);
     camara({ pos: lerpV([0.5, 1.7, 7], [0, 80, 150], k), alvo: lerpV([0, 1.5, 2], [0, 0, 28], k), fov: lerp(45, 55, k), t });
     m().relogio.visible = true;
   }, { efeito: () => ({ subs: 3, tintas: selo('E SE…') }) });
 
   // 6) chega meio-dia: relógio gigante 11:59 -> 12:00
-  plano('meiodia', 5.0, 'cidade', (u, t) => {
+  plano('meiodia', 4.5, 'cidade', (u, t) => {
     m().mostrar('cidade'); m().heroi.grupo.visible = false; m().multidao(1, -1);
-    const dep = u > 3.6; m().horaRelogio(dep ? '12:00' : (Math.floor(u * 2) % 2 ? '11:59' : '11 59'), dep ? 1.0 : 0.4);
-    const k = suave(u / 5.0);
+    const dep = u > 3.3; m().horaRelogio(dep ? '12:00' : (Math.floor(u * 2) % 2 ? '11:59' : '11 59'), dep ? 1.0 : 0.4);
+    const k = suave(u / 4.5);
     camara({ pos: [lerp(-8, 0, k), lerp(10, 14, k), lerp(14, 8, k)], alvo: [0, 14, -42], fov: lerp(46, 38, k), t });
-  }, { efeito: (u) => ({ subs: 2, flash: u > 3.6 && u < 3.9 ? 0.6 * (1 - (u - 3.6) / 0.3) : 0, tintas: selo('E SE…') }) });
+  }, { efeito: (u) => ({ subs: 2, flash: u > 3.3 && u < 3.6 ? 0.6 * (1 - (u - 3.3) / 0.3) : 0, tintas: selo('E SE…') }) });
 
   // 7) todo mundo pula: órbita de 360° no herói e a multidão saltando
-  plano('pulo', 4.0, 'cidade', (u, t) => {
-    m().mostrar('cidade'); const h = m().heroi; h.grupo.visible = true; m().multidao(1, u - 0.9);
+  plano('pulo', 4.5, 'cidade', (u, t) => {
+    m().mostrar('cidade'); const h = m().heroi; h.grupo.visible = true; m().multidao(1, u - 0.9); m().ondas(u - 1.5);
     const d = h.duracao('Pular'); h.colocar(0, 0, 18, PI); h.anim('Pular', clamp((u - 0.9) / 1.2, 0, 1) * d * 0.98, { laco: false }); h.rosto({ expressao: 'sorriso', forca: 0.5 }); h.atualizarRosto();
-    const ang = lerp(0, 2 * PI, suave(u / 4.0));
-    camara({ pos: [Math.sin(ang) * 6, lerp(1.4, 3, u / 4), 18 + Math.cos(ang) * 6], alvo: [0, 1.2 + clamp((u - 0.9) * 0.4, 0, 0.6), 18], fov: 42, t });
-  }, { efeito: (u) => ({ subs: 3, obturador: 0.4, tintas: selo('E SE…') }) });
+    const ang = lerp(0, 2 * PI, suave(u / 4.5)); const sh = u > 1.5 && u < 2.6 ? 2.2 * Math.exp(-(u - 1.5) * 2.5) : 0.2;
+    camara({ pos: [Math.sin(ang) * 7, lerp(1.4, 4.5, u / 4.5), 18 + Math.cos(ang) * 7], alvo: [0, 1.2 + clamp((u - 0.9) * 0.4, 0, 0.6), 22], fov: 46, t, tr: sh });
+  }, { efeito: (u) => ({ subs: 3, obturador: 0.4, flash: u > 1.5 && u < 1.75 ? 0.6 * (1 - (u - 1.5) / 0.25) : 0, tintas: selo('E SE…') }) });
 
   // 8) o que realmente acontece: nada (a Terra continua parada), zoom out
-  plano('real', 3.4, 'espaco', (u, t) => {
+  plano('real', 3.2, 'espaco', (u, t) => {
     espaco(t, 0.04); m().pessoaEspaco.visible = false; m().orbita.visible = false;
-    const k = suave(u / 3.4);
+    const k = suave(u / 3.2);
     camara({ pos: [EX + lerp(0, -3, k), lerp(1, 3, k), lerp(20, 36, k)], alvo: [EX, 0, 0], fov: 38, t });
   }, { efeito: () => ({ subs: 2, tintas: selo('REAL', '#5be37a') }) });
 
   // 9) escala: push-in até um átomo (a Terra se mexeria menos que a largura dele)
-  plano('atomo', 3.6, 'atomo', (u, t) => {
+  plano('atomo', 3.4, 'atomo', (u, t) => {
     m().mostrar('atomo');
     m().eletrons.forEach(e => { const a = t * e.vel * 2 + e.fase; e.e.position.set(Math.cos(a) * e.raio, Math.sin(a) * e.raio, 0); });
-    const k = suave(u / 3.6);
+    const k = suave(u / 3.4);
     camara({ pos: [AX + lerp(-2, 1.2, k), lerp(1.5, 0.4, k), lerp(24, 7.5, k)], alvo: [AX, 0, 0], fov: 38, t });
   }, { efeito: () => ({ subs: 3, tintas: (g, w, h) => { selo('REAL', '#5be37a')(g, w, h); legenda('MENOS QUE A LARGURA DE UM ÁTOMO')(g, w, h); } }) });
 
