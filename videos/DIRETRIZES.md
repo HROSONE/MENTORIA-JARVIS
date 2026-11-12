@@ -111,3 +111,12 @@ Complementa o `ESTILO.md`. Ler antes de começar qualquer vídeo novo.
 - Render: `PAGE=… FR=… VW=… VH=… node render_svg.js <worker> 4 30` (4 processos, um por worker).
 - Som: `sfx_<nome>.py` (numpy + BigSoundBank em `sons/bsb` + Kenney) com limitador tanh.
 - Stills: `shotf.js`; folhas: `sheet.py` (vertical) e `sheet169b.py` (16:9).
+
+
+## Antes de criar um vídeo: checar a biblioteca (obrigatório)
+1. Ler `biblioteca3d/INVENTARIO.md` (cidade, veículos, personagens, módulos de cena e som já feitos).
+2. Listar o que o roteiro precisa (cenário, paisagem, personagens, objetos, efeitos) e marcar, item por item, **o que já existe** e o que falta.
+3. **Reutilizar** o que existe (copiar a pasta `js/` do Short mais parecido e trocar só o mundo e as cenas); criar do zero **só o que falta**.
+4. Mostrar essa lista ao dono do canal junto com o plano de planos, antes de renderizar.
+5. Ao terminar, **registrar no inventário** tudo o que foi criado de novo (e salvar modelos `.glb` na biblioteca), para o próximo vídeo.
+6. Personagem pedido pelo dono ("camisa vermelha, calça azul") se acha no inventário; se o modelo existente não tem esqueleto, avisar e usar o mais próximo animado, repintado.
