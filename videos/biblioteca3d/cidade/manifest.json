@@ -3625,6 +3625,828 @@
      "foco": 48
     }
    ]
+  },
+  {
+   "nome": "rodovia-reta",
+   "categoria": "rodovias",
+   "arquivo": "rodovias/rodovia-reta.glb",
+   "descricao": "Rodovia de 36 x 12 m ao longo de Z: 3 faixas por sentido, acostamentos, canteiro de grama com mureta de concreto",
+   "tris": 56,
+   "kb": 9.8,
+   "bbox": {
+    "min": [
+     -18.0,
+     0.0,
+     -6.0
+    ],
+    "max": [
+     18.0,
+     0.96,
+     6.0
+    ]
+   },
+   "nos": [
+    "Asfalto",
+    "Grama",
+    "Faixas",
+    "Mureta"
+   ],
+   "conexoes": [
+    {
+     "lado": "N",
+     "pos": [
+      0,
+      0,
+      -6
+     ],
+     "dir": [
+      0,
+      0,
+      -1
+     ],
+     "perfil": "rodovia-6-faixas"
+    },
+    {
+     "lado": "S",
+     "pos": [
+      0,
+      0,
+      6
+     ],
+     "dir": [
+      0,
+      0,
+      1
+     ],
+     "perfil": "rodovia-6-faixas"
+    }
+   ],
+   "pegada": [
+    36.0,
+    12.0
+   ],
+   "tile": 12.0,
+   "tipo": "rodovia",
+   "faixas_x": [
+    -12.75,
+    -9.25,
+    -5.75,
+    5.75,
+    9.25,
+    12.75
+   ]
+  },
+  {
+   "nome": "rodovia-acesso",
+   "categoria": "rodovias",
+   "arquivo": "rodovias/rodovia-acesso.glb",
+   "descricao": "Rodovia com a saída para uma rua comum no lado +X (encaixa num ladrilho de rua em x = +18 m), com zebrado no acostamento",
+   "tris": 90,
+   "kb": 12.5,
+   "bbox": {
+    "min": [
+     -18.0,
+     0.0,
+     -6.0
+    ],
+    "max": [
+     18.0,
+     0.96,
+     6.0
+    ]
+   },
+   "nos": [
+    "Asfalto",
+    "Grama",
+    "Faixas",
+    "Mureta"
+   ],
+   "conexoes": [
+    {
+     "lado": "N",
+     "pos": [
+      0,
+      0,
+      -6
+     ],
+     "dir": [
+      0,
+      0,
+      -1
+     ],
+     "perfil": "rodovia-6-faixas"
+    },
+    {
+     "lado": "S",
+     "pos": [
+      0,
+      0,
+      6
+     ],
+     "dir": [
+      0,
+      0,
+      1
+     ],
+     "perfil": "rodovia-6-faixas"
+    },
+    {
+     "lado": "E",
+     "pos": [
+      18,
+      0,
+      0
+     ],
+     "dir": [
+      1,
+      0,
+      0
+     ],
+     "perfil": "rua-2-faixas"
+    }
+   ],
+   "pegada": [
+    36.0,
+    12.0
+   ],
+   "tile": 12.0,
+   "tipo": "rodovia",
+   "faixas_x": [
+    -12.75,
+    -9.25,
+    -5.75,
+    5.75,
+    9.25,
+    12.75
+   ]
+  },
+  {
+   "nome": "poste-rodovia",
+   "categoria": "rodovias",
+   "arquivo": "rodovias/poste-rodovia.glb",
+   "descricao": "Poste de 12 m para o canteiro central, com dois braços e duas luminárias",
+   "tris": 156,
+   "kb": 15.5,
+   "bbox": {
+    "min": [
+     -3.8,
+     0.0,
+     -0.28
+    ],
+    "max": [
+     3.8,
+     12.4,
+     0.28
+    ]
+   },
+   "nos": [
+    "Detalhes",
+    "Luz"
+   ],
+   "luzes": [
+    {
+     "pos": [
+      -3.2,
+      12.0,
+      0.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 26
+    },
+    {
+     "pos": [
+      3.2,
+      12.0,
+      0.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 26
+    }
+   ],
+   "tipo": "poste-luz",
+   "origem": "pé do poste (y = 0); no canteiro, y = 0,15",
+   "frente": "braços em +X e -X"
+  },
+  {
+   "nome": "placa-rodovia-saida",
+   "categoria": "rodovias",
+   "arquivo": "rodovias/placa-rodovia-saida.glb",
+   "descricao": "Placa verde de rodovia (6 x 3 m em dois postes): SAÍDA / CENTRO",
+   "tris": 52,
+   "kb": 67.3,
+   "bbox": {
+    "min": [
+     -3.0,
+     0.0,
+     -0.166
+    ],
+    "max": [
+     3.0,
+     5.6,
+     0.006
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Letreiro"
+   ],
+   "tipo": "placa",
+   "frente": "+Z",
+   "origem": "pé dos postes (y = 0)"
+  },
+  {
+   "nome": "placa-rodovia-aeroporto",
+   "categoria": "rodovias",
+   "arquivo": "rodovias/placa-rodovia-aeroporto.glb",
+   "descricao": "Placa verde de rodovia: AEROPORTO / PRÓXIMA SAÍDA",
+   "tris": 52,
+   "kb": 82.9,
+   "bbox": {
+    "min": [
+     -3.0,
+     0.0,
+     -0.166
+    ],
+    "max": [
+     3.0,
+     5.6,
+     0.006
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Letreiro"
+   ],
+   "tipo": "placa",
+   "frente": "+Z",
+   "origem": "pé dos postes (y = 0)"
+  },
+  {
+   "nome": "placa-rodovia-cidade",
+   "categoria": "rodovias",
+   "arquivo": "rodovias/placa-rodovia-cidade.glb",
+   "descricao": "Placa verde de rodovia: HRYZ / BEM-VINDO",
+   "tris": 52,
+   "kb": 58.9,
+   "bbox": {
+    "min": [
+     -3.0,
+     0.0,
+     -0.166
+    ],
+    "max": [
+     3.0,
+     5.6,
+     0.006
+    ]
+   },
+   "nos": [
+    "Poste",
+    "Letreiro"
+   ],
+   "tipo": "placa",
+   "frente": "+Z",
+   "origem": "pé dos postes (y = 0)"
+  },
+  {
+   "nome": "pista-reta",
+   "categoria": "aeroporto",
+   "arquivo": "aeroporto/pista-reta.glb",
+   "descricao": "Trecho de 48 x 48 m da pista de pouso (45 m de pavimento): bordas brancas, eixo tracejado e luzes de borda",
+   "tris": 268,
+   "kb": 24.6,
+   "bbox": {
+    "min": [
+     -24.0,
+     0.16,
+     -24.0
+    ],
+    "max": [
+     24.0,
+     0.51,
+     24.0
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Molduras",
+    "Detalhes",
+    "Luz"
+   ],
+   "tipo": "aeroporto",
+   "pegada": [
+    48.0,
+    48.0
+   ],
+   "tile": 48.0,
+   "origem": "centro; coloque em y = 0",
+   "frente": "pista ao longo de Z"
+  },
+  {
+   "nome": "pista-cabeceira",
+   "categoria": "aeroporto",
+   "arquivo": "aeroporto/pista-cabeceira.glb",
+   "descricao": "Cabeceira da pista (48 x 48 m): barras brancas, número 09, linha e luzes verdes no fim (-Z)",
+   "tris": 1262,
+   "kb": 130.9,
+   "bbox": {
+    "min": [
+     -24.0,
+     0.16,
+     -24.0
+    ],
+    "max": [
+     24.0,
+     0.51,
+     24.0
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Molduras",
+    "Detalhes",
+    "Letreiro",
+    "Luz"
+   ],
+   "tipo": "aeroporto",
+   "pegada": [
+    48.0,
+    48.0
+   ],
+   "tile": 48.0,
+   "origem": "centro; coloque em y = 0",
+   "frente": "o fim da pista fica em -Z; o número lê de quem chega de -Z"
+  },
+  {
+   "nome": "pista-taxi",
+   "categoria": "aeroporto",
+   "arquivo": "aeroporto/pista-taxi.glb",
+   "descricao": "Pista de táxi de 24 x 12 m: eixo e bordas amarelas, luzes azuis",
+   "tris": 144,
+   "kb": 15.2,
+   "bbox": {
+    "min": [
+     -12.0,
+     0.16,
+     -6.0
+    ],
+    "max": [
+     12.0,
+     0.51,
+     6.0
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Molduras",
+    "Detalhes",
+    "Luz"
+   ],
+   "tipo": "aeroporto",
+   "pegada": [
+    24.0,
+    12.0
+   ],
+   "tile": 12.0,
+   "origem": "centro; coloque em y = 0",
+   "frente": "ao longo de Z"
+  },
+  {
+   "nome": "patio",
+   "categoria": "aeroporto",
+   "arquivo": "aeroporto/patio.glb",
+   "descricao": "Pátio de concreto de 24 x 24 m com juntas a cada 6 m",
+   "tris": 14,
+   "kb": 2.9,
+   "bbox": {
+    "min": [
+     -12.0,
+     0.16,
+     -12.0
+    ],
+    "max": [
+     12.0,
+     0.164,
+     12.0
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Molduras"
+   ],
+   "tipo": "aeroporto",
+   "pegada": [
+    24.0,
+    24.0
+   ],
+   "tile": 24.0,
+   "origem": "centro; coloque em y = 0"
+  },
+  {
+   "nome": "patio-posicao",
+   "categoria": "aeroporto",
+   "arquivo": "aeroporto/patio-posicao.glb",
+   "descricao": "Posição de estacionamento de avião (48 x 48 m): linha de entrada amarela, barra de parada e limites das asas",
+   "tris": 38,
+   "kb": 7.0,
+   "bbox": {
+    "min": [
+     -24.0,
+     0.16,
+     -24.0
+    ],
+    "max": [
+     24.0,
+     0.172,
+     24.0
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Molduras"
+   ],
+   "tipo": "aeroporto",
+   "pegada": [
+    48.0,
+    48.0
+   ],
+   "tile": 48.0,
+   "origem": "centro; coloque em y = 0",
+   "frente": "o avião entra de +Z andando para -Z e para com o nariz em z = -12; com o terminal 51 m ao norte (-Z), a porta esquerda encosta no finger"
+  },
+  {
+   "nome": "terminal-aeroporto",
+   "categoria": "aeroporto",
+   "arquivo": "aeroporto/terminal-aeroporto.glb",
+   "descricao": "Terminal de 120 x 36 m: dois andares de vidro, marquise de embarque, letreiro AEROPORTO HRYZ e três fingers nos fundos (posições de avião a x = -48, 0, 48, centro 51 m atrás)",
+   "tris": 850,
+   "kb": 139.6,
+   "bbox": {
+    "min": [
+     -61.5,
+     0.0,
+     -36.0
+    ],
+    "max": [
+     61.5,
+     21.3,
+     27.0
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "Molduras",
+    "Vidro",
+    "VidroLuz",
+    "Detalhes",
+    "Letreiro",
+    "Luz"
+   ],
+   "tipo": "edificio",
+   "pegada": [
+    120.0,
+    36.0
+   ],
+   "frente": "+Z (embarque, para a rua); fundos -Z (pátio, fingers até z = -36)",
+   "origem": "centro da pegada, no chão; sobre a grama ou a calçada, y = 0,15",
+   "luzes": [
+    {
+     "pos": [
+      -48.0,
+      7.2,
+      22.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 16
+    },
+    {
+     "pos": [
+      -24.0,
+      7.2,
+      22.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 16
+    },
+    {
+     "pos": [
+      0.0,
+      7.2,
+      22.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 16
+    },
+    {
+     "pos": [
+      24.0,
+      7.2,
+      22.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 16
+    },
+    {
+     "pos": [
+      48.0,
+      7.2,
+      22.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 16
+    }
+   ]
+  },
+  {
+   "nome": "torre-controle",
+   "categoria": "aeroporto",
+   "arquivo": "aeroporto/torre-controle.glb",
+   "descricao": "Torre de controle de 39 m: prédio de base, fuste, cabine de vidro escuro com sacada, antenas e luz vermelha",
+   "tris": 1138,
+   "kb": 96.6,
+   "bbox": {
+    "min": [
+     -5.3,
+     0.0,
+     -5.3
+    ],
+    "max": [
+     5.3,
+     39.58,
+     5.3
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "Molduras",
+    "Vidro",
+    "VidroLuz",
+    "Detalhes",
+    "Luz"
+   ],
+   "tipo": "edificio",
+   "pegada": [
+    12.0,
+    12.0
+   ],
+   "frente": "+Z",
+   "origem": "centro da pegada, no chão; sobre a grama, y = 0,15",
+   "luzes": [
+    {
+     "pos": [
+      1.0,
+      39.3,
+      0.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ff4a3a",
+     "alcance": 10
+    }
+   ]
+  },
+  {
+   "nome": "hangar",
+   "categoria": "aeroporto",
+   "arquivo": "aeroporto/hangar.glb",
+   "descricao": "Hangar de 48 x 36 m com teto em arco, portão de folhas metálicas e letreiro HANGAR HRYZ",
+   "tris": 212,
+   "kb": 60.1,
+   "bbox": {
+    "min": [
+     -24.0,
+     0.0,
+     -18.0
+    ],
+    "max": [
+     24.0,
+     11.0,
+     18.528
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "Portas",
+    "Detalhes",
+    "Letreiro",
+    "Luz"
+   ],
+   "tipo": "edificio",
+   "pegada": [
+    48.0,
+    36.0
+   ],
+   "frente": "+Z",
+   "origem": "centro da pegada, no chão; sobre o pátio, y = 0,16",
+   "luzes": [
+    {
+     "pos": [
+      -14.0,
+      6.8,
+      19.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 14
+    },
+    {
+     "pos": [
+      0.0,
+      6.8,
+      19.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 14
+    },
+    {
+     "pos": [
+      14.0,
+      6.8,
+      19.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 14
+    }
+   ]
+  },
+  {
+   "nome": "biruta",
+   "categoria": "aeroporto",
+   "arquivo": "aeroporto/biruta.glb",
+   "descricao": "Biruta de 6 m: cone listrado laranja e branco apontando para +X",
+   "tris": 168,
+   "kb": 15.5,
+   "bbox": {
+    "min": [
+     -0.07,
+     0.0,
+     -0.439
+    ],
+    "max": [
+     4.1,
+     6.45,
+     0.439
+    ]
+   },
+   "nos": [
+    "Detalhes"
+   ],
+   "tipo": "prop",
+   "origem": "pé do mastro",
+   "frente": "o cone aponta para +X (o vento sopra para +X)"
+  },
+  {
+   "nome": "guarita",
+   "categoria": "condominio",
+   "arquivo": "condominio/guarita.glb",
+   "descricao": "Portaria de condomínio para um ladrilho de rua: cobertura, guarita de vidro, ilha, duas cancelas e letreiro CONDOMÍNIO JARDIM HRYZ",
+   "tris": 284,
+   "kb": 79.9,
+   "bbox": {
+    "min": [
+     -6.0,
+     0.0,
+     -3.0
+    ],
+    "max": [
+     6.0,
+     7.92,
+     3.0
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Telhado",
+    "VidroLuz",
+    "Detalhes",
+    "Letreiro",
+    "Luz"
+   ],
+   "tipo": "prop",
+   "pegada": [
+    12.0,
+    12.0
+   ],
+   "frente": "+Z (letreiro dos dois lados)",
+   "luzes": [
+    {
+     "pos": [
+      -3.0,
+      5.0,
+      0.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 12
+    },
+    {
+     "pos": [
+      3.0,
+      5.0,
+      0.0
+     ],
+     "dir": [
+      0,
+      -1,
+      0
+     ],
+     "cor": "#ffd98a",
+     "alcance": 12
+    }
+   ],
+   "origem": "centro do ladrilho; ponha em y = 0 em cima de um rua-reta (rua ao longo de Z)"
+  },
+  {
+   "nome": "piscina",
+   "categoria": "condominio",
+   "arquivo": "condominio/piscina.glb",
+   "descricao": "Área de piscina de 24 x 12 m: deque, piscina de 14 x 6 m com escada, quatro espreguiçadeiras e dois guarda-sóis",
+   "tris": 376,
+   "kb": 34.2,
+   "bbox": {
+    "min": [
+     -12.0,
+     0.0,
+     -6.0
+    ],
+    "max": [
+     12.0,
+     3.05,
+     6.0
+    ]
+   },
+   "nos": [
+    "Paredes",
+    "Molduras",
+    "Vidro",
+    "Detalhes"
+   ],
+   "tipo": "prop",
+   "pegada": [
+    24.0,
+    12.0
+   ],
+   "origem": "centro, no chão; sobre a grama, y = 0,15",
+   "frente": "+Z (espreguiçadeiras do lado +Z)"
   }
  ],
  "versao": 1,

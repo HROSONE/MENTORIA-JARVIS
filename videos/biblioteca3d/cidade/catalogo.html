@@ -15,7 +15,7 @@
 </head>
 <body>
 <div id="rot"></div>
-<div id="info">Kit cidade — arraste para girar, roda para zoom · ?cat=ruas|rotatorias|calcadas|gramados|natureza|cercas|casas|predios|equipamentos|esporte|moveis|energia|faixas|placas|mobiliario · ?cam=obl|topo|baixo · ?so=nome1,nome2 · ?cols=4 · ?alvo=4.2</div>
+<div id="info">Kit cidade — arraste para girar, roda para zoom · ?cat=ruas|rotatorias|calcadas|gramados|natureza|cercas|casas|predios|equipamentos|esporte|moveis|energia|faixas|placas|mobiliario|rodovias|aeroporto|condominio · ?cam=obl|topo|baixo · ?so=nome1,nome2 · ?cols=4 · ?alvo=4.2</div>
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -50,8 +50,8 @@ scene.add(sun, sun.target);
 
 const manifest = await (await fetch('manifest.json')).json();
 const loader = new GLTFLoader();
-const ORDEM = ['ruas', 'rotatorias', 'calcadas', 'gramados', 'natureza', 'cercas', 'casas', 'predios', 'equipamentos', 'esporte', 'moveis', 'energia', 'faixas', 'placas', 'mobiliario'];
-const ESC1 = ['ruas', 'rotatorias', 'calcadas', 'faixas', 'gramados', 'cercas', 'energia', 'casas', 'predios', 'equipamentos', 'esporte'];   // categorias mostradas em tamanho real
+const ORDEM = ['ruas', 'rotatorias', 'calcadas', 'gramados', 'natureza', 'cercas', 'casas', 'predios', 'equipamentos', 'esporte', 'moveis', 'energia', 'faixas', 'placas', 'mobiliario', 'rodovias', 'aeroporto', 'condominio'];
+const ESC1 = ['ruas', 'rotatorias', 'calcadas', 'faixas', 'gramados', 'cercas', 'energia', 'casas', 'predios', 'equipamentos', 'esporte', 'rodovias', 'aeroporto', 'condominio'];   // categorias mostradas em tamanho real
 let pecas = manifest.pecas.filter(p => (CAT === 'tudo' || p.categoria === CAT) && (!SEL || SEL.includes(p.nome)));
 pecas.sort((a, b) => ORDEM.indexOf(a.categoria) - ORDEM.indexOf(b.categoria));
 

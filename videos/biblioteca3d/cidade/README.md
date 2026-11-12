@@ -20,7 +20,7 @@ Cinco mapas montados só com peças do kit, de dia e de noite (`demo_cidade.html
 | **cinema à noite** ![cinema com marquise e letreiros acesos](previews/demo-cinema-noite.webp) | **estádio** ![estádio de futebol com rua e estacionamento](previews/demo-estadio.webp) |
 | **estádio à noite** ![estádio com refletores](previews/demo-estadio-noite.webp) | **dentro do estádio** ![campo, arquibancadas e placar](previews/demo-estadio-campo.webp) |
 
-- **94 peças** em 15 categorias; a lista completa, com medidas e triângulos, está em [`PECAS.md`](PECAS.md):
+- **111 peças** em 18 categorias (com rodovia, aeroporto e condomínio); a lista completa, com medidas e triângulos, está em [`PECAS.md`](PECAS.md):
 
 | Categoria | Peças |
 |---|---|
@@ -43,6 +43,50 @@ Cinco mapas montados só com peças do kit, de dia e de noite (`demo_cidade.html
 - Medidas em **metros reais**, cores chapadas em estilo low poly, no mesmo visual dos veículos do Kenney em `../veiculos/`.
 - Cada arquivo tem nós com nome (`Asfalto`, `Paredes`, `Telhado`, `Vidro`, `VidroLuz`, `Letreiro`, `Copa`, `Tronco`, `Luz`...), então dá para esconder ou recolorir as partes.
 - Todas as peças passaram no validador oficial do glTF (Khronos), com 0 erros e 0 avisos.
+
+## Cidade oficial (`cidade_oficial.html`)
+
+O mapa oficial do canal: **uma cidade inteira com tudo o que a biblioteca tem**, montada em código. Cerca de 600 x 600 m de cidade
+(25 quadras de 60 x 60 m), mais a rodovia, o aeroporto e o estádio.
+
+![cidade vista do alto](previews/oficial-aereo.webp)
+
+| | |
+|---|---|
+| **centro** ![centro](previews/oficial-centro.webp) | **rua** ![rua do centro](previews/oficial-rua.webp) |
+| **aeroporto** ![aeroporto](previews/oficial-aeroporto.webp) | **pista** ![decolagem](previews/oficial-pista.webp) |
+| **condomínio** ![condomínio Jardim Hryz](previews/oficial-condominio.webp) | **rodovia** ![rodovia](previews/oficial-rodovia.webp) |
+| **parque e estádio** ![parque](previews/oficial-parque.webp) | **bairro** ![bairro](previews/oficial-bairro.webp) |
+| **à noite** ![noite](previews/oficial-noite.webp) | |
+
+| Região | Onde | O que tem |
+|---|---|---|
+| Ruas | grade com ruas nos ladrilhos gx = 3, 9, 15, 21, 27, 33 e gz = 2, 8, 14, 20, 26, 32 | a rede é gerada sozinha (reta, curva, T, cruzamento, fim); rotatória em (21, 20); postes, semáforos no centro, placas, hidrantes e carros |
+| Rodovia | oeste, x = 12, de ponta a ponta | 3 faixas por sentido, canteiro com mureta, postes de 12 m, placas verdes, trânsito; saídas para a cidade (gz = 8) e para o aeroporto (gz = 34) |
+| Centro | quadras do meio | hospital com ambulância, delegacia, praça com palmeiras, torres comerciais, supermercado com estacionamento, cinema e lojas |
+| Bairros | oeste, sul e leste | casas do kit (com cercas) e as casas texturizadas da pasta `casas/` (com a caixa de correio Hryz) |
+| Condomínio de prédios | quadra (0, 2) | quatro torres, piscina, palmeiras e muro com portão |
+| Condomínio de casas "Jardim Hryz" | quadras (3, 3) e (3, 4) | rua interna com portaria (guarita e cancelas), casas, piscina, área verde e muro |
+| Parque | quadras (4, 0) e (4, 1) | campo de várzea, árvores, bancos e mesas |
+| Estádio | leste | estádio de futebol com estacionamento |
+| Aeroporto | sul | avenida com estacionamento, terminal com três jatos Hryz nos fingers, pista de táxi, pista de 480 m com cabeceiras, torre, hangar, biruta, um avião taxiando e outro decolando |
+| Pessoas | praça, hospital, terminal | oito personagens do elenco (desligue com `?pessoas=0`) |
+
+Câmeras prontas: `?cam=aereo|topo|centro|rua|aeroporto|pista|rodovia|condominio|predios|estadio|parque|bairro`, ou livre com `?pos=x,y,z&alvo=x,y,z&fov=45&raio=200`
+(`raio` = área da sombra). `?noite` acende janelas, postes e letreiros. Norte = -Z, leste = +X; o ladrilho (gx, gz) tem o centro em (12 gx, 12 gz).
+
+### Peças novas do kit (rodovia, aeroporto e condomínio)
+
+![rodovia](previews/catalogo-rodovias.webp)
+![aeroporto](previews/catalogo-aeroporto.webp)
+
+| Categoria | Peças |
+|---|---|
+| `rodovias` (6) | `rodovia-reta` e `rodovia-acesso` (36 x 12 m, 3 faixas por sentido; o acesso liga uma rua no lado +X), `poste-rodovia`, `placa-rodovia-saida`, `placa-rodovia-aeroporto`, `placa-rodovia-cidade` |
+| `aeroporto` (9) | `pista-reta` e `pista-cabeceira` (48 x 48 m), `pista-taxi` (24 x 12 m), `patio` (24 x 24 m), `patio-posicao` (48 x 48 m, o avião para com o nariz na barra e a porta no finger), `terminal-aeroporto` (120 x 36 m, letreiro AEROPORTO HRYZ e três fingers), `torre-controle`, `hangar` (letreiro HANGAR HRYZ), `biruta` |
+| `condominio` (2) | `guarita` (portaria para pôr em cima de um `rua-reta`: cobertura, guarita, cancelas e letreiro CONDOMÍNIO JARDIM HRYZ) e `piscina` (24 x 12 m, deque elevado, espreguiçadeiras e guarda-sóis) |
+
+Pavimentos do aeroporto têm o topo em y = 0,16 (coloque em y = 0); a rodovia segue as ruas (asfalto em y = 0). Geradas por `gerador/transporte.py`.
 
 ## Convenções
 

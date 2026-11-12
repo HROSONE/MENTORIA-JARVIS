@@ -171,4 +171,36 @@ Arquivo gerado por `gerador/gerar.py`; não edite à mão. Medidas em metros (la
 | `mobiliario/poste-luz-duplo.glb` | Poste de luz de 8 m com dois braços opostos (canteiro central), acesa | 0.40 x 8.10 x 4.76 | 1194 | 95.3 | — |
 | `mobiliario/poste-luz-pedestre.glb` | Poste ornamental de pedestre (4,4 m) com globo aceso, para calçadas e praças | 0.62 x 4.52 x 0.60 | 514 | 42.8 | — |
 
-Total: 94 peças, 69383 triângulos, 6.9 MB.
+## Rodovia (peças de 36 x 12 m, coloque em y = 0)
+
+| Peça | O que é | Tamanho (m) | Triângulos | KB | Conexões |
+|---|---|---|---|---|---|
+| `rodovias/rodovia-reta.glb` | Rodovia de 36 x 12 m ao longo de Z: 3 faixas por sentido, acostamentos, canteiro de grama com mureta de concreto | 36.00 x 0.96 x 12.00 | 56 | 9.8 | N S |
+| `rodovias/rodovia-acesso.glb` | Rodovia com a saída para uma rua comum no lado +X (encaixa num ladrilho de rua em x = +18 m), com zebrado no acostamento | 36.00 x 0.96 x 12.00 | 90 | 12.5 | N S E |
+| `rodovias/poste-rodovia.glb` | Poste de 12 m para o canteiro central, com dois braços e duas luminárias | 7.60 x 12.40 x 0.56 | 156 | 15.5 | — |
+| `rodovias/placa-rodovia-saida.glb` | Placa verde de rodovia (6 x 3 m em dois postes): SAÍDA / CENTRO | 6.00 x 5.60 x 0.17 | 52 | 67.3 | — |
+| `rodovias/placa-rodovia-aeroporto.glb` | Placa verde de rodovia: AEROPORTO / PRÓXIMA SAÍDA | 6.00 x 5.60 x 0.17 | 52 | 82.9 | — |
+| `rodovias/placa-rodovia-cidade.glb` | Placa verde de rodovia: HRYZ / BEM-VINDO | 6.00 x 5.60 x 0.17 | 52 | 58.9 | — |
+
+## Aeroporto (pavimentos em y = 0; edifícios em y = 0,15)
+
+| Peça | O que é | Tamanho (m) | Triângulos | KB | Conexões |
+|---|---|---|---|---|---|
+| `aeroporto/pista-reta.glb` | Trecho de 48 x 48 m da pista de pouso (45 m de pavimento): bordas brancas, eixo tracejado e luzes de borda | 48.00 x 0.35 x 48.00 | 268 | 24.6 | — |
+| `aeroporto/pista-cabeceira.glb` | Cabeceira da pista (48 x 48 m): barras brancas, número 09, linha e luzes verdes no fim (-Z) | 48.00 x 0.35 x 48.00 | 1262 | 130.9 | — |
+| `aeroporto/pista-taxi.glb` | Pista de táxi de 24 x 12 m: eixo e bordas amarelas, luzes azuis | 24.00 x 0.35 x 12.00 | 144 | 15.2 | — |
+| `aeroporto/patio.glb` | Pátio de concreto de 24 x 24 m com juntas a cada 6 m | 24.00 x 0.00 x 24.00 | 14 | 2.9 | — |
+| `aeroporto/patio-posicao.glb` | Posição de estacionamento de avião (48 x 48 m): linha de entrada amarela, barra de parada e limites das asas | 48.00 x 0.01 x 48.00 | 38 | 7.0 | — |
+| `aeroporto/terminal-aeroporto.glb` | Terminal de 120 x 36 m: dois andares de vidro, marquise de embarque, letreiro AEROPORTO HRYZ e três fingers nos fundos (posições de avião a x = -48, 0, 48, centro 51 m atrás) | 123.00 x 21.30 x 63.00 | 850 | 139.6 | — |
+| `aeroporto/torre-controle.glb` | Torre de controle de 39 m: prédio de base, fuste, cabine de vidro escuro com sacada, antenas e luz vermelha | 10.60 x 39.58 x 10.60 | 1138 | 96.6 | — |
+| `aeroporto/hangar.glb` | Hangar de 48 x 36 m com teto em arco, portão de folhas metálicas e letreiro HANGAR HRYZ | 48.00 x 11.00 x 36.53 | 212 | 60.1 | — |
+| `aeroporto/biruta.glb` | Biruta de 6 m: cone listrado laranja e branco apontando para +X | 4.17 x 6.45 x 0.88 | 168 | 15.5 | — |
+
+## Condomínio
+
+| Peça | O que é | Tamanho (m) | Triângulos | KB | Conexões |
+|---|---|---|---|---|---|
+| `condominio/guarita.glb` | Portaria de condomínio para um ladrilho de rua: cobertura, guarita de vidro, ilha, duas cancelas e letreiro CONDOMÍNIO JARDIM HRYZ | 12.00 x 7.92 x 6.00 | 284 | 79.9 | — |
+| `condominio/piscina.glb` | Área de piscina de 24 x 12 m: deque, piscina de 14 x 6 m com escada, quatro espreguiçadeiras e dois guarda-sóis | 24.00 x 3.05 x 12.00 | 376 | 34.2 | — |
+
+Total: 111 peças, 74595 triângulos, 7.7 MB.
