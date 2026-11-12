@@ -1,0 +1,41 @@
+{
+ "total": 25.0,
+ "s": [
+  {
+   "k": "b1",
+   "t0": 0.1,
+   "t1": 4.2,
+   "txt": "Esse grão esquenta, e a gota de água dentro dele vira vapor."
+  },
+  {
+   "k": "b2",
+   "t0": 4.4,
+   "t1": 8.4,
+   "txt": "A casca é forte e segura o vapor, então a pressão só sobe."
+  },
+  {
+   "k": "b3",
+   "t0": 8.6,
+   "t1": 12.8,
+   "txt": "A 180 graus, ela chega a umas dez vezes a pressão do ar."
+  },
+  {
+   "k": "b4",
+   "t0": 13.0,
+   "t1": 17.4,
+   "txt": "Aí a casca rompe, e o amido mole vira espuma e cresce de uma vez."
+  },
+  {
+   "k": "b5",
+   "t0": 17.6,
+   "t1": 21.4,
+   "txt": "O estalo não é a casca quebrando, é o vapor escapando."
+  },
+  {
+   "k": "b6",
+   "t0": 21.8,
+   "t1": 24.4,
+   "txt": "O grão pula e cai já pipoca."
+  }
+ ]
+}
