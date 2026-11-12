@@ -139,29 +139,53 @@ function sAmassa(t) {
   return s + VIG(.9) + GRAINV(t);
 }
 // 6. o corpo inteiro (pull-out): o caminho acende e a fita métrica mede o intestino
-function tratoDigestivo(t, brilho, ponto) {   // coordenadas de um corpo em pé de 1700 de altura, pés em y = 1800, centro x = 540
-  const esof = 'M540 420 L540 760', est = 'M540 760 Q640 760 650 840 Q660 940 560 960 Q500 970 490 920',
-    del = 'M490 930 Q420 960 430 1010 Q440 1060 520 1050 Q600 1040 620 1080 Q630 1120 560 1130 Q480 1140 470 1180 Q470 1220 540 1220 Q620 1220 630 1260 Q620 1300 560 1300',
-    gro = 'M560 1300 Q680 1310 690 1240 L690 1000 Q690 960 640 960 Q520 970 430 980 Q380 990 390 1040 L390 1260 Q390 1320 460 1330 Q520 1340 540 1380';
-  let s = `<path d="${gro}" stroke="#C88A5A" stroke-width="44" fill="none" stroke-linecap="round" opacity=".9"/><path d="${gro}" stroke="#E8B080" stroke-width="16" fill="none" stroke-dasharray="6 26" stroke-linecap="round"/>`;
-  s += `<path d="${esof}" stroke="#E8848E" stroke-width="22" fill="none" stroke-linecap="round"/><path d="${est}" stroke="#E8848E" stroke-width="40" fill="none" stroke-linecap="round"/><path d="${del}" stroke="#F0A0A8" stroke-width="22" fill="none" stroke-linecap="round"/>`;
-  s += `<path d="${del}" stroke="#FFF4C0" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="${f1(1400 * brilho)} 2000" opacity=".9"/>`;
+// corpo de frente (silhueta) e o tubo digestivo na posição real: esôfago no meio do peito, estômago do lado esquerdo da pessoa
+// (direita da tela), delgado enrolado no centro, grosso em moldura (sobe à direita da pessoa, cruza, desce à esquerda) e reto no meio
+const suave = (p, fecha) => { let d = `M${f1((p[0][0] + p[1][0]) / 2)} ${f1((p[0][1] + p[1][1]) / 2)}`; const n = p.length;
+  for (let i = 1; i < (fecha ? n + 1 : n - 1); i++) { const a = p[i % n], b = p[(i + 1) % n]; d += ` Q${a[0]} ${a[1]} ${f1((a[0] + b[0]) / 2)} ${f1((a[1] + b[1]) / 2)}`; } return d + (fecha ? 'Z' : ''); };
+const linha = p => 'M' + p.map(q => `${f1(q[0])} ${f1(q[1])}`).join(' L');
+const compr = p => p.slice(1).reduce((a, q, i) => a + Math.hypot(q[0] - p[i][0], q[1] - p[i][1]), 0);
+const noCaminho = (p, u) => { let alvo = compr(p) * Math.min(1, Math.max(0, u)); for (let i = 1; i < p.length; i++) { const l = Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); if (alvo <= l) return [lerp(p[i - 1][0], p[i][0], alvo / l), lerp(p[i - 1][1], p[i][1], alvo / l)]; alvo -= l; } return p[p.length - 1]; };
+const MEIO = [[580, 430], [586, 480], [700, 515], [760, 545], [785, 610], [792, 800], [806, 1010], [812, 1150], [790, 1205], [768, 1150], [762, 1010], [745, 800], [728, 650], [718, 820], [700, 980], [730, 1120], [738, 1210], [722, 1500], [708, 1755], [740, 1800], [592, 1800], [596, 1500], [550, 1250]];
+const CORPO_PTS = [...MEIO, ...MEIO.slice().reverse().map(([x, y]) => [1080 - x, y])];
+const TRONCO = [[586, 480], [700, 515], [740, 560], [728, 650], [718, 820], [700, 980], [730, 1120], [738, 1210], [540, 1260], [342, 1210], [350, 1120], [380, 980], [362, 820], [352, 650], [340, 560], [380, 515], [494, 480]];
+const ESOF = [[540, 470], [542, 560], [548, 650], [560, 720], [588, 752]];
+const ESTOMAGO = [[588, 748], [630, 722], [676, 746], [700, 800], [688, 862], [648, 902], [590, 912], [540, 904], [528, 888], [560, 878], [606, 860], [628, 824], [622, 786], [600, 770]];
+const DELG = (() => { const p = [[536, 896], [500, 904], [484, 930], [500, 958], [540, 966]]; for (let r = 0; r < 7; r++) { const y = 985 + r * 27, ida = r % 2 === 0; for (let k = 0; k <= 8; k++) { const u = ida ? k / 8 : 1 - k / 8; p.push([470 + 150 * u + Math.sin(k * 1.9 + r) * 9, y + Math.sin(k * 2.3 + r * 1.3) * 8 + (u - .5) * 6]); } } p.push([470, 1180], [452, 1196]); return p; })();
+const GROSSO = [[446, 1200], [430, 1140], [426, 1040], [430, 968], [452, 940], [500, 948], [545, 958], [590, 952], [636, 940], [664, 952], [672, 1010], [672, 1100], [668, 1170], [640, 1214], [596, 1206], [566, 1222], [546, 1250], [542, 1290]];
+function tratoDigestivo(t, brilho) {
+  let s = `<path d="${suave([[452, 760], [520, 742], [600, 752], [606, 800], [560, 860], [480, 870], [430, 830], [424, 780]], 1)}" fill="#8A3040" opacity=".5"/>`;   // fígado (translúcido, atrás)
+  s += `<path d="${suave(GROSSO)}" stroke="#9A6038" stroke-width="50" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${suave(GROSSO)}" stroke="#D49A68" stroke-width="40" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  s += `<path d="${suave(GROSSO)}" stroke="#9A6038" stroke-width="40" fill="none" stroke-dasharray="3 22" stroke-linecap="butt" opacity=".8"/><path d="${suave(GROSSO)}" stroke="#F0C498" stroke-width="10" fill="none" stroke-linecap="round" opacity=".6" transform="translate(-6,-6)"/>`;   // bolsas (haustros) e brilho
+  s += `<path d="${suave(ESOF)}" stroke="#B85060" stroke-width="26" fill="none" stroke-linecap="round"/><path d="${suave(ESOF)}" stroke="#F09AA4" stroke-width="16" fill="none" stroke-linecap="round"/>`;
+  s += `<path d="${suave(ESTOMAGO, 1)}" fill="#E8848E" stroke="#B85060" stroke-width="7"/>`;
+  for (let i = 0; i < 5; i++) s += `<path d="M${612 + i * 12} ${784 + i * 4} q${20 - i * 2} ${40} ${-10 - i * 8} ${80 - i * 6}" stroke="#C25866" stroke-width="5" fill="none" opacity=".55" stroke-linecap="round"/>`;   // pregas do estômago
+  s += `<ellipse cx="640" cy="790" rx="20" ry="10" fill="#FFFFFF" opacity=".35" transform="rotate(-30 640 790)"/>`;
+  s += `<path d="${suave(DELG)}" stroke="#C25866" stroke-width="22" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${suave(DELG)}" stroke="#F4A8B0" stroke-width="14" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const Ld = compr(DELG);
+  s += `<path d="${suave(DELG)}" stroke="#FFF6C8" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="${f1(Ld * brilho)} ${f1(Ld * 2)}" opacity=".95"/>`;
   return s;
 }
 function sCorpo(t) {
   const { L, d, k } = loc(t, 'corpo'), [jx, jy] = hand2(t);
-  const sai = easeInOut(range(L, 0, 1.4));
-  setCam(lerp(540, 540, sai) + jx, lerp(1100, 1060, sai) + jy, lerp(3.2, 1.0, sai), 0, [540, 960, 1]);
+  const sai = easeInOut(range(L, 0, 1.3));
+  setCam(540 + jx, lerp(900, 1010, sai) + jy, lerp(3.4, 1.05, sai), 0, [540, 960, 1]);
   let s = `<rect width="1080" height="1920" fill="#3A4E78"/>`;
-  s += lay(.2, `${Array.from({ length: 30 }, (_, i) => `<circle cx="${(i * 197) % 1300 - 100}" cy="${(i * 331) % 2000}" r="${3 + i % 3 * 2}" fill="#6A7AA8" opacity=".5"/>`).join('')}`);
-  const corpo = sil({ x: 540, y: 1800, s: 1.7, kind: 'homem', col: NAVY, rim: RIM, rimK: [1, -.35], shadow: .3 });
-  s += lay(1, corpo);
-  s += lay(1, `<ellipse cx="540" cy="1050" rx="230" ry="420" fill="#2A3450" opacity=".8"/>` + tratoDigestivo(t, easeInOut(range(L, .9, d)), 0));
-  // fita métrica ao lado do intestino com "6 m"
+  s += lay(.2, `${Array.from({ length: 30 }, (_, i) => `<circle cx="${(i * 197) % 1300 - 100}" cy="${(i * 331) % 2000}" r="${3 + i % 3 * 2}" fill="#8A9AC8" opacity=".5"/>`).join('')}`);
+  const cp = nid('tr'); def(`<clipPath id="${cp}"><path d="${suave(TRONCO, 1)}"/></clipPath><radialGradient id="${cp}g" cx=".5" cy=".55" r=".6"><stop offset="0" stop-color="#4A5C88"/><stop offset="1" stop-color="#232E4C"/></radialGradient>`);
+  let c = `<ellipse cx="540" cy="1810" rx="260" ry="26" fill="#000" opacity=".3" filter="url(#b12)"/>`;
+  c += `<path d="${suave(CORPO_PTS, 1)}" fill="${NAVY}"/><ellipse cx="540" cy="318" rx="98" ry="118" fill="${NAVY}"/>`;
+  c += `<path d="${suave(CORPO_PTS, 1)}" fill="none" stroke="${RIM}" stroke-width="5" opacity=".7"/><ellipse cx="540" cy="318" rx="98" ry="118" fill="none" stroke="${RIM}" stroke-width="5" opacity=".7"/>`;
+  c += `<g clip-path="url(#${cp})"><rect x="300" y="460" width="480" height="820" fill="url(#${cp}g)" opacity=".9"/>${tratoDigestivo(t, easeInOut(range(L, .9, d)))}</g>`;
+  c += `<path d="M540 392 L541 560" stroke="#B85060" stroke-width="26" stroke-linecap="round"/><path d="M540 392 L541 560" stroke="#F09AA4" stroke-width="16" stroke-linecap="round"/><ellipse cx="540" cy="380" rx="34" ry="14" fill="#7A1E30"/>`;   // garganta e boca
+  c += `<path d="${suave(TRONCO, 1)}" fill="none" stroke="#9AB0E0" stroke-width="3" stroke-dasharray="14 10" opacity=".5"/>`;
+  s += lay(1, c);
+  // fita métrica medindo o delgado
   const fita = easeOut(range(L, 1.2, 2.0));
-  s += lay(1, `<g opacity="${op(fita)}"><rect x="700" y="1060" width="${f1(260 * fita)}" height="70" rx="8" fill="#F2C840" stroke="#8A6A10" stroke-width="5"/>${Array.from({ length: 12 }, (_, i) => `<rect x="${710 + i * 20}" y="1060" width="4" height="${i % 5 ? 20 : 34}" fill="#5A4210" opacity="${op(fita)}"/>`).join('')}<text x="${f1(700 + 130 * fita)}" y="1118" font-size="40" fill="#3A2A08" text-anchor="middle">6 m</text><path d="M700 1095 L640 1095" stroke="#F2C840" stroke-width="8"/></g>`);
-  // a bola rosa brilhando no ponto em que está (entrando no intestino)
-  s += lay(1, `<circle cx="490" cy="930" r="${f1(26 + 6 * Math.sin(t * 8))}" fill="#FF8AC4" stroke="#FFFFFF" stroke-width="4"/><circle cx="490" cy="930" r="60" fill="url(#gWarm)" opacity=".6"/>`);
+  s += lay(1, `<g opacity="${op(fita)}"><path d="M860 1075 L630 1075" stroke="#F2C840" stroke-width="5" stroke-dasharray="10 8"/><rect x="840" y="1040" width="${f1(200 * fita)}" height="70" rx="8" fill="#F2C840" stroke="#8A6A10" stroke-width="5"/>${Array.from({ length: 9 }, (_, i) => `<rect x="${850 + i * 20}" y="1040" width="4" height="${i % 4 ? 18 : 30}" fill="#5A4210" opacity="${op(fita)}"/>`).join('')}<text x="${f1(840 + 100 * fita)}" y="1096" font-size="40" font-weight="bold" fill="#3A2A08" text-anchor="middle">6 m</text></g>`);
+  // a bola rosa saindo do estômago e entrando no delgado
+  const [bx, by] = noCaminho(DELG, range(L, 1.0, d) * .12);
+  s += lay(1, `<circle cx="${f1(bx)}" cy="${f1(by)}" r="40" fill="url(#gWarm)" opacity=".6"/><circle cx="${f1(bx)}" cy="${f1(by)}" r="${f1(15 + 3 * Math.sin(t * 8))}" fill="#FF8AC4" stroke="#FFFFFF" stroke-width="3"/>`);
   return s + VIG(.8) + GRAINV(t);
 }
 // 7. intestino delgado: vilosidades e a bola espremida, câmera acompanhando
