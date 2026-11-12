@@ -239,57 +239,102 @@ def arrasto(d):
     return x * (.6 + .4 * np.abs(np.sin(2 * np.pi * 1.6 * t)))
 
 
-cortes = [T['b2'] - .1, T['b3'] - .1, T['b4'] - .1, T['b5'] - .1, T['b6'] - .1, T['b7'] - .1, T['b8'] - .1, T['b8'] + 3.1]
-for c in cortes:
-    add(c - .3, whoosh(), .3)
-# 1. gancho: ronronado alto, fungada, tremidinha
-s = 0
-add(s, ronrono(T['b2'] - .1), .9)
-add(s + 1.2, fungada(), .5, .2)
-add(s + .4, dentes(1.0), .25, -.3)
-# 2. a pata: fungada, passinhos fugindo, baque fofo no travesseiro
-s = T['b2'] - .1
-add(s, ronrono(T['b3'] - .1 - s) * np.linspace(1, .4, int((T['b3'] - .1 - s) * SR)), .6)
-add(s + .6, fungada(), .5)
-for k in range(9):
-    add(s + 1.6 + k * .08, passinho(), .5, -.3)
-add(s + 2.0, baque_fofo(), 1.0)
-# 3. corre e pula da cama
-s = T['b3'] - .1
-for k in range(22):
-    add(s + .3 + k * .085, passinho(), .5, .2)
-add(s + 2.2, whoosh(.6), .5)
-# 4. a queda: vento, guincho do rato, puf no tapete, rato saindo correndo
-s = T['b4'] - .1
-add(s, vento(4.5), .7)
-add(s + 1.0, guincho(), .5, .4)
-add(s + 4.3, puf(), 1.0)
-add(s + 4.35, puf() * .5, .6, .4)
-add(s + 5.1, guincho(), .6, .5)
+def tique():
+    return parciais(.05, [3200, 5100], [.008, .005], [1, .5])
+
+
+def bipe_alarme(d):
+    y = np.zeros(int(d * SR))
+    for k in range(int(d / .25)):
+        if k % 4 == 3:
+            continue
+        b = bipe(3100, .09)
+        i = int(k * .25 * SR)
+        y[i:i + len(b)] += b[:len(y) - i]
+    return y
+
+
+def coracao(d, bpm=150):
+    y = np.zeros(int(d * SR))
+    for k in range(int(d * bpm / 60)):
+        for dt, g in ((0, 1), (.12, .6)):
+            c = lp(ruido(.12), 90) * env(int(.12 * SR), .005, .03) * g * 2
+            i = int((k * 60 / bpm + dt) * SR)
+            y[i:i + len(c)] += c[:len(y) - i] if i < len(y) else 0
+    return y
+
+
+def crocante():
+    return bp(ruido(.09), 1500, 6000) * env(int(.09 * SR), .001, .02) * 1.2
+
+
+def respiro(d):
+    t = np.arange(int(d * SR)) / SR
+    return lp(ruido(d), 700) * (np.sin(2 * np.pi * .4 * t) ** 2) * .5
+
+
+# cortes dos planos (iguais a _cenas.js)
+CORTES = [1.65, 2.75, T['b2'] - .1, 5.1, 6.5, 7.9, T['b3'] - .1, 11.0, 12.4, T['b4'] - .1, 17.7, T['b5'] - .1, 23.5, T['b6'] - .1, 29.2, T['b7'] - .1, 35.1, T['b8'] - .1, 40.1]
+for c in CORTES:
+    add(c - .25, whoosh(.4), .22)
+# noite: tique-taque e respiração; manhã: passarinhos
+for k in range(4):
+    add(.1 + k * .5, tique(), .35, .5)
+add(0, respiro(1.65), .6)
+add(1.65, passaros(1.1), 1)
+# acorda: despertador tocando
+add(2.75, bipe_alarme(T['b2'] - .1 - 2.75), .7, .4)
+# olho do gato, focinho farejando, sombra e pata
+s0 = T['b2'] - .1
+add(s0, ronrono(1.4), .9)
+add(5.1, fungada(), .7)
+add(5.6, fungada(), .6)
+add(6.5, ronrono(1.4), .6)
+add(6.5, impacto() * .4, .5)
+add(7.9 + .45, baque_fofo(), 1.1)
+add(7.9 + .5, puf() * .6, .5)
+for k in range(5):
+    add(7.9 + .35 + k * .07, passinho(), .5, -.3)
+# corre, beira da cama (vertigem e coração), pulo
+for k in range(18):
+    add(T['b3'] - .1 + .1 + k * .085, passinho(), .5, .2)
+add(11.0, vento(1.4) * .5, .6)
+add(11.0, coracao(1.4), .8)
+add(12.4 + .25, whoosh(.6), .5)
+# queda e pouso
+s4 = T['b4'] - .1
+add(s4, vento(4.3), .7)
+add(s4 + 1.0, guincho(), .5, .4)
+add(s4 + 4.25, puf(), 1.0)
+add(s4 + 4.3, puf() * .5, .6, .4)
+add(s4 + 5.15, guincho(), .6, .5)
 for k in range(10):
-    add(s + 5.3 + k * .07, passinho() * .6, .5, .6)
-# 5. a gota: pingo caindo, plic, a água subindo e puxando
-s = T['b5'] - .1
-add(s + .9, plic(1100), .9)
-add(s + 1.7, plic(600), .6)
-add(s + 2.2, gluglu(3.4), .7)
-# 6. frio e fome: bipe da balança, dentes batendo, barriga roncando
-s = T['b6'] - .1
-add(s + .3, bipe(), .7)
-add(s + .45, bipe(), .7)
-add(s + .6, dentes(5.2), .45)
-add(s + 3.4, barriga(), 1.0)
-# 7. a migalha: arrasto, passinhos, formiga
-s = T['b7'] - .1
-add(s + .2, arrasto(T['b8'] - .3 - s), .45)
-for k in range(30):
-    add(s + .3 + k * .14, passinho(), .4, -.2)
-# 8. o ronronado chega por trás e a volta ao gancho
-s = T['b8'] - .1
-x = ronrono(TOTAL - s)
-add(s, x * np.minimum(1, np.linspace(0, 2.2, len(x))), 1.0)
-add(s + 2.2, whoosh(.4), .4)
-add(s + 3.4, fungada(), .5)
+    add(s4 + 5.3 + k * .07, passinho() * .6, .5, .6)
+# sede: pingo na poça, passos, encosta; preso: a água gruda
+s5 = T['b5'] - .1
+add(s5 + .8, plic(1100), .9)
+for k in range(10):
+    add(s5 + .35 + k * .16, passinho(), .4)
+add(s5 + 1.95, plic(500), .6)
+add(s5 + 2.4, gluglu(3.6), .7)
+# balança: bipes; frio: dentes e barriga
+s6 = T['b6'] - .1
+add(s6 + .25, bipe(), .7)
+add(s6 + .4, bipe(), .7)
+add(29.2, dentes(3.6), .45)
+add(29.2 + 1.6, barriga(), 1.0)
+# cozinha: correndo; biscoito: arrasto
+for k in range(20):
+    add(T['b7'] - .1 + .4 + k * .085, passinho(), .45, -.1)
+add(35.2, arrasto(T['b8'] - .3 - 35.2), .45)
+# sombra2: mastigando o biscoito, o ronronado chegando, susto; gato: de volta
+s8 = T['b8'] - .1
+for k in range(9):
+    add(s8 + .1 + k * .19, crocante(), .6, .1)
+x = ronrono(TOTAL - s8)
+add(s8, x * np.minimum(1, np.linspace(0, 2.0, len(x))), 1.0)
+add(s8 + 1.85, whoosh(.4), .5)
+add(40.1 + .4, fungada(), .5)
 
 mix = np.stack([L, R], 1)
 mix = mix / max(1e-6, np.abs(mix).max()) * .89

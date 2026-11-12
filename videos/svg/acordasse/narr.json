@@ -1,47 +1,47 @@
 {
- "total": 43.2,
+ "total": 43.3,
  "s": [
   {
    "k": "b1",
    "t0": 0.1,
-   "t1": 3.9,
-   "txt": "E se você acordasse amanhã com dois centímetros de altura?"
+   "t1": 3.7,
+   "txt": "Imagina que você vai dormir com 1 metro e 67… e acorda com 10 centímetros."
   },
   {
    "k": "b2",
-   "t0": 4.0,
-   "t1": 8.9,
-   "txt": "A primeira coisa que você ia ver era essa: o seu gato… achando que você é um brinquedo."
+   "t0": 3.8,
+   "t1": 9.3,
+   "txt": "Do tamanho de um rato. E a primeira coisa que você vê é o seu gato… te olhando como se você fosse um brinquedo."
   },
   {
    "k": "b3",
-   "t0": 9.0,
-   "t1": 13.6,
+   "t0": 9.4,
+   "t1": 13.8,
    "txt": "Você pula da cama pra fugir, e aqui vem a parte estranha: a queda não te machuca."
   },
   {
    "k": "b4",
-   "t0": 13.7,
-   "t1": 20.6,
-   "txt": "Um ratinho pode cair no fundo de um poço de mina de quase um quilômetro, levar um susto e sair andando. No seu tamanho, o ar te segura."
+   "t0": 13.9,
+   "t1": 20.7,
+   "txt": "Um rato pode cair no fundo de um poço de mina de quase um quilômetro, levar um susto e sair andando. No seu tamanho, o ar te segura."
   },
   {
    "k": "b5",
-   "t0": 20.7,
-   "t1": 26.8,
-   "txt": "Mas aí bate a sede. E uma gota d’água vira uma armadilha: a água que gruda no seu corpo pesa tanto quanto você."
+   "t0": 20.8,
+   "t1": 26.9,
+   "txt": "Mas aí bate a sede. Se você escorregar na água, ela gruda no seu corpo e pesa quase tanto quanto você."
   },
   {
    "k": "b6",
-   "t0": 26.9,
-   "t1": 32.8,
+   "t0": 27.0,
+   "t1": 32.9,
    "txt": "E você vai sentir frio e fome o tempo todo. Um rato come um quarto do próprio peso por dia só pra se manter quente."
   },
   {
    "k": "b7",
-   "t0": 32.9,
+   "t0": 33.0,
    "t1": 37.4,
-   "txt": "Então você vai até a cozinha… e uma migalha de pão vira o banquete da sua vida."
+   "txt": "Então você vai até a cozinha… e um biscoito vira o banquete da sua vida."
   },
   {
    "k": "b8",

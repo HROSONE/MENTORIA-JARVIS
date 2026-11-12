@@ -1,45 +1,57 @@
-# E se você acordasse com 2 centímetros de altura? Roteiro para narrar
+# Imagina que você vai dormir com 1,67 m e acorda com 10 cm: roteiro para narrar
 
-Short vertical de 43,2 s em animação SVG, sem legenda e sem música, só com efeitos sonoros. São 8 cenas e o último plano emenda no primeiro (loop).
-Você aparece em silhueta azul-marinho sem rosto. O gato é o mesmo do Short da CIA (`svg/gato`).
-É uma hipótese ("e se…"), mas a física por trás de cada perigo é real e tem fonte (veja abaixo).
+Short vertical de 43.3 s em animação SVG, sem legenda e sem música, só com efeitos sonoros. São 20 planos com cortes rápidos (cerca de 1 a 1,5 s no começo).
+O último plano volta ao gato do começo da história. Você aparece em silhueta azul-marinho sem rosto; o gato é o do Short da CIA (`svg/gato`).
+É uma hipótese ("imagina…"), mas a física de cada perigo é real e tem fonte (veja abaixo). Com 10 cm você fica do tamanho e do peso de um rato, então os fatos sobre ratos valem direto para você.
 
 | Tempo | Fala |
 |---|---|
-| 0:00,1 – 0:03,9 | E se você acordasse amanhã com dois centímetros de altura? |
-| 0:04,0 – 0:08,9 | A primeira coisa que você ia ver era essa: o seu gato… achando que você é um brinquedo. |
-| 0:09,0 – 0:13,6 | Você pula da cama pra fugir, e aqui vem a parte estranha: a queda não te machuca. |
-| 0:13,7 – 0:20,6 | Um ratinho pode cair no fundo de um poço de mina de quase um quilômetro, levar um susto e sair andando. No seu tamanho, o ar te segura. |
-| 0:20,7 – 0:26,8 | Mas aí bate a sede. E uma gota d’água vira uma armadilha: a água que gruda no seu corpo pesa tanto quanto você. |
-| 0:26,9 – 0:32,8 | E você vai sentir frio e fome o tempo todo. Um rato come um quarto do próprio peso por dia só pra se manter quente. |
-| 0:32,9 – 0:37,4 | Então você vai até a cozinha… e uma migalha de pão vira o banquete da sua vida. |
+| 0:00,1 – 0:03,7 | Imagina que você vai dormir com 1 metro e 67… e acorda com 10 centímetros. |
+| 0:03,8 – 0:09,3 | Do tamanho de um rato. E a primeira coisa que você vê é o seu gato… te olhando como se você fosse um brinquedo. |
+| 0:09,4 – 0:13,8 | Você pula da cama pra fugir, e aqui vem a parte estranha: a queda não te machuca. |
+| 0:13,9 – 0:20,7 | Um rato pode cair no fundo de um poço de mina de quase um quilômetro, levar um susto e sair andando. No seu tamanho, o ar te segura. |
+| 0:20,8 – 0:26,9 | Mas aí bate a sede. Se você escorregar na água, ela gruda no seu corpo e pesa quase tanto quanto você. |
+| 0:27,0 – 0:32,9 | E você vai sentir frio e fome o tempo todo. Um rato come um quarto do próprio peso por dia só pra se manter quente. |
+| 0:33,0 – 0:37,4 | Então você vai até a cozinha… e um biscoito vira o banquete da sua vida. |
 | 0:37,5 – 0:42,9 | Até que você escuta um ronronado bem atrás de você. Se inscreve… antes que ele te ache. |
 
-São 155 palavras, cerca de 3,6 por segundo. Corte o áudio em "ache" para o loop ficar limpo.
+São 162 palavras, cerca de 3,75 por segundo. Corte o áudio em "ache".
 
 ## Decupagem (direção de cena)
 
-| # | Cena | Plano e ângulo | Movimento e motivo | Luz e foco |
-|---|---|---|---|---|
-| 1 | Gancho: o gato olhando | Contra-plongée do travesseiro, grande-angular: você no terço de baixo, o rosto do gato ocupando o alto (o gato vira um gigante) | Push-in lento; as pupilas dilatam (interesse do gato) | Sol da manhã pela janela, poeira brilhando; quarto desfocado |
-| 2 | A pata | Plongée, ponto de vista do gato: você pequeno e indefeso | A sombra chega antes da pata; tremor no impacto; você foge | Luz clara e difusa no travesseiro |
-| 3 | O pulo da cama | Plano geral lateral: a beira do colchão vira um penhasco, o gato observa ao fundo | Você corre e pula; a câmera desce junto (usa a altura do vertical) | Fundo desfocado, gato fora de foco |
-| 4 | A queda que não machuca | Travelling vertical: os móveis passam para cima; um ratinho cai ao lado | Linhas de vento; no fim, pouso fofo no tapete e o rato sai correndo | Tapete em close, fios balançando |
-| 5 | A gota | Macro na altura dos olhos, fundo de banheiro desfocado | Push-in quando você toca a água; a água sobe pelo braço e te puxa | Luz fria e reflexos na gota |
-| 6 | Frio e fome | Plano médio que fecha no visor "0,1 g" e volta para você tremendo | Zoom no número, zoom de volta; bafo de frio; barriga roncando | Luz azul de manhã fria |
-| 7 | A migalha | Travelling lateral baixo, junto ao chão | Você empurra a migalha, que rola; uma formiga passa ao fundo | Luz quente da cozinha |
-| 8 | O ronronado | Plano médio: uma sombra enorme cobre você, você vira; corta para o contra-plongée do gancho | A sombra escurece o quadro; volta ao gato (loop) | Quadro escurecendo |
+| # | Tempo | Plano | Ângulo, movimento e motivo |
+|---|---|---|---|
+| 1 | 0:00 – 0:01,6 | Noite: você dorme do tamanho normal; a régua de altura na porta marca **1,67 m** | Plano de conjunto do quarto, luz azul da lua; deixa a régua legível |
+| 2 | 0:01,6 – 0:02,7 | Manhã, mesmo enquadramento: cama vazia, marca nova **10 cm** na régua, um volume minúsculo no travesseiro | Mesmo quadro (comparação); push-in rápido até o volume |
+| 3 | 0:02,7 – 0:03,7 | Close no travesseiro: o despertador "07:00" toca, você sai de baixo do lenço e se espreguiça | Altura do travesseiro; o despertador gigante ao fundo |
+| 4 | 0:03,7 – 0:05,1 | O olho do gato enche a tela; a pupila dilata e você aparece refletido nela | Seu ponto de vista; push-in |
+| 5 | 0:05,1 – 0:06,5 | Focinho e bigodes descendo, farejando | Contra-plongée: o gato vira um gigante |
+| 6 | 0:06,5 – 0:07,9 | A sombra da pata cresce sobre você | Plongée, ponto de vista do gato (você indefeso) |
+| 7 | 0:07,9 – 0:09,3 | A pata bate, flocos voam, você se joga para o lado | Plongée inclinada, tremor no impacto |
+| 8 | 0:09,3 – 0:11,0 | Você corre pelo travesseiro; o gato vem atrás, desfocado | Travelling lateral baixo, câmera acompanhando |
+| 9 | 0:11,0 – 0:12,4 | Olhando para baixo da beira da cama: tapete, chinelos e um rato lá embaixo; as pontas dos seus pés na borda | Seu ponto de vista; zoom pulsando (vertigem) |
+| 10 | 0:12,4 – 0:13,8 | Você pula | Plano lateral; a câmera começa a descer |
+| 11 | 0:13,8 – 0:17,7 | A queda, com um rato caindo junto | Travelling vertical, móveis passando para cima |
+| 12 | 0:17,7 – 0:20,7 | Pouso fofo no tapete, quique, o rato sai correndo | Mais perto e mais baixo |
+| 13 | 0:20,7 – 0:23,5 | Banheiro: o pingo cai na poça, você anda até ela e encosta | Macro na altura dos olhos, fundo desfocado |
+| 14 | 0:23,5 – 0:26,9 | A água sobe pelo corpo e te puxa | Close fechando |
+| 15 | 0:26,9 – 0:29,2 | Visor da balança: **14 g** | Plano detalhe, seus pés no alto |
+| 16 | 0:29,2 – 0:32,9 | Tremendo de frio, bafo, barriga roncando | Plano médio, luz azul |
+| 17 | 0:32,9 – 0:35,1 | Você vê o biscoito brilhando e corre até ele | Travelling baixo; formiga ao fundo |
+| 18 | 0:35,1 – 0:37,4 | Você empurra o biscoito rolando | Travelling lateral |
+| 19 | 0:37,4 – 0:40,1 | Comendo, uma sombra enorme cobre você; você vira | Plano médio, o quadro escurece |
+| 20 | 0:40,1 – 0:43,3 | O gato de novo | Contra-plongée do começo |
 
-Nada importante fica nos 20% de baixo do quadro nem na faixa da direita, que o app do Shorts cobre.
+Você sempre olha e corre para o lado em que está indo (a silhueta é espelhada conforme a direção). Nada importante fica nos 20% de baixo do quadro nem na faixa da direita.
 
 ## Fatos e fonte
 Todos os perigos vêm do ensaio *On Being the Right Size*, de J. B. S. Haldane (1926): [texto no marxists.org](https://www.marxists.org/archive/haldane/works/1920s/right-size.htm).
-- **Queda:** "You can drop a mouse down a thousand-yard mine shaft; and, on arriving at the bottom, it gets a slight shock and walks away" (desde que o chão seja macio). Mil jardas são cerca de 914 m, por isso "quase um quilômetro". O motivo é que a resistência do ar cresce com a superfície do corpo, e o peso cai muito mais rápido que a superfície quando você encolhe.
-- **Água:** "A wet mouse has to carry about its own weight of water", e um inseto que vai beber está "in as great danger as a man leaning out over a precipice". Com 2 cm você pesa cerca de 0,1 g, e uma película de água sobre o corpo pesa mais ou menos isso.
-- **Comida e frio:** "a mouse eats about one quarter its own weight of food every day, which is mainly used in keeping it warm".
-- **Peso na balança:** um adulto de 70 kg reduzido para 2 cm pesa cerca de 0,1 g (70 kg × (2/175)³), por isso o visor mostra "0,1 g".
+- **Seu peso:** encolher de 1,67 m para 10 cm divide cada medida por 16,7; o peso cai 16,7³ vezes (cerca de 4.650). Uma pessoa de 65 kg passa a pesar uns 14 g, o peso de um rato pequeno.
+- **Queda:** "You can drop a mouse down a thousand-yard mine shaft; and, on arriving at the bottom, it gets a slight shock and walks away" (desde que o chão seja macio). Mil jardas são cerca de 914 m. O ar segura porque a resistência cresce com a superfície, e o peso cai muito mais que a superfície.
+- **Água:** "A wet mouse has to carry about its own weight of water."
+- **Frio e fome:** "a mouse eats about one quarter its own weight of food every day, which is mainly used in keeping it warm."
 
 ## Arquivos
-- **Animação:** `acordasse_src.html` (cenas e decupagem nos comentários); `_gato.js` (o gato do Short da CIA); `build.py` monta `acordasse.html`.
+- **Animação:** `acordasse_src.html` (página), `_cenas.js` (os 20 planos e a decupagem), `_gato.js` (o gato do Short da CIA); `build.py` monta `acordasse.html`.
 - **Sons:** `sfx_acordasse.py`, todos sintetizados.
 - **Render:** a partir de `videos/`, rode `PAGE=svg/acordasse/acordasse.html FR=<pasta> VW=1080 VH=1920 node render_svg.js <i> 4 30` em 4 processos e depois o ffmpeg (cerca de 18 MB).
