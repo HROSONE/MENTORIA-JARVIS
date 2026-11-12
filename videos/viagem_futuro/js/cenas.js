@@ -220,14 +220,19 @@ export function montarPlanos() {
   };
   const feixe = (boca, alvo, t, ligado) => { const r = m().raio, im = m().impacto; r.visible = ligado; im.visible = ligado; if (!ligado) return; const dir = alvo.clone().sub(boca), Lg = dir.length(); r.position.copy(boca).addScaledVector(dir, 0.5); const w = 1 + 0.35 * Math.sin(t * 70); r.scale.set(w, Lg, w); r.quaternion.setFromUnitVectors(V(0, 1, 0), dir.normalize()); im.position.copy(alvo); im.scale.setScalar(0.9 + 0.3 * Math.sin(t * 60)); im.material.opacity = 0.95; };
 
+  // câmera "over the shoulder": atrás e ao lado do ombro da arma (direito), olhando por cima dele para a multidão; o corpo e a arma ficam à vista
+  const ots = (dir0, { lado = 0.62, atras = 1.2, alto = 0.3, mira = 4.5, dy = -0.12, ao = -0.15 } = {}) => {
+    const cab = hero().pos('Cabeca', V()), d = dir0.clone().setY(0).normalize(), dr = V(-d.z, 0, d.x);
+    return { pos: [cab.x - d.x * atras + dr.x * lado, cab.y + alto, cab.z - d.z * atras + dr.z * lado], alvo: [cab.x + d.x * mira + dr.x * ao, cab.y + dy, cab.z + d.z * mira + dr.z * ao] };
+  };
   // 5b: macro no cano da arma carregando e disparando (câmera atrás do braço, olhando ao longo do cano)
   plano('atira1', 2.0, 'seca', (u, t) => {
     secoBase(); const alvoP = V(LV[ALVO2][0], 1.0, LV[ALVO2][1]);
     vivos(t, { ocultar: [] });
     const r = heroiAtira(t, alvoP, suave(u / 1.2)); const disp = u > 1.15;
     feixe(r.boca, alvoP, t, disp);
-    const k = suave(u / 2.0), g = m().arma.position, lado = V(r.dir.z, 0, -r.dir.x);
-    camara({ pos: [g.x + lado.x * lerp(0.75, 1.1, k) - r.dir.x * 0.25, g.y + lerp(0.12, 0.25, k), g.z + lado.z * lerp(0.75, 1.1, k) - r.dir.z * 0.25], alvo: [g.x + r.dir.x * lerp(0.35, 1.2, k), g.y, g.z + r.dir.z * lerp(0.35, 1.2, k)], fov: lerp(32, 42, k), t, near: 0.03, tr: disp ? 0.3 : 0.05 });
+    const k = suave(u / 2.0), c = ots(r.dir, { lado: lerp(0.85, 1.0, k), atras: lerp(1.9, 2.3, k), alto: lerp(0.45, 0.55, k), mira: 4.0, dy: -0.35, ao: -0.7 });
+    camara({ pos: c.pos, alvo: c.alvo, fov: lerp(48, 52, k), t, near: 0.03, tr: disp ? 0.25 : 0.04 });
   }, { efeito: (u) => ({ subs: 2, flash: u > 1.15 && u < 1.28 ? 0.35 : 0, flashCor: '150,210,255' }) });
 
   // 5c: o raio atinge uma pessoa: ela vira formiguinha; a câmera desce junto até o nível do chão, olhando para ela e o gigante atrás
@@ -244,8 +249,8 @@ export function montarPlanos() {
     secoBase(); encolher(t, { olharPara: V(HT[0], 1.6, HT[2]) });
     const idx = ORDEM.findIndex(p => t < TS[p] + 0.3), cur = idx < 0 ? null : ORDEM[idx], alvoP = cur === null ? V(LV[ORDEM[15]][0], 1, LV[ORDEM[15]][1]) : V(LV[cur][0], 1.0, LV[cur][1]);
     const r = heroiAtira(t, alvoP, 1), fogo = cur !== null && t > TS[ORDEM[0]] - 0.3 && t < TS[ORDEM[15]] + 0.3; feixe(r.boca, alvoP.clone().setY(0.6), t, fogo);
-    const k = suave(u / 2.5);
-    camara({ pos: [lerp(-5.5, 4.5, k), lerp(1.2, 3.4, suave5(k)), lerp(4.0, 6.4, k)], alvo: [lerp(1.0, 1.5, k), lerp(0.9, 0.3, k), lerp(11.0, 11.0, k)], fov: lerp(52, 50, k), t, tr: 0.1, near: 0.02 });
+    const k = suave(u / 2.5), base = V(1.4 - HT[0], 0, 11.4 - HT[2]), c = ots(base, { lado: lerp(1.0, 0.7, k), atras: lerp(2.2, 2.6, k), alto: lerp(0.5, 0.8, k), mira: 5.0, dy: lerp(-0.35, -0.55, k), ao: -0.45 });
+    camara({ pos: c.pos, alvo: c.alvo, fov: lerp(52, 56, k), t, tr: 0.1, near: 0.03 });
   }, { efeito: () => ({ subs: 3, obturador: 0.45 }) });
 
   // ============================================================================================================= 6) CIDADE MINIATURA
