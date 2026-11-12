@@ -67,7 +67,7 @@ function sPressao(t) {
 /* ===================== 4. a panela esquenta (plano geral) ===================== */
 function sCalor(t) {
   const { L, d, k } = loc(t, 'calor'), [jx, jy] = hand2(t), heat = heatAt(t), tremor = lerp(1, 7, easeIn(k));
-  setCam(540 + jx * (1 + 2.5 * k) + Math.sin(t * 43) * tremor * .6, lerp(1010, 1000, k) + jy + Math.cos(t * 37) * tremor * .6, lerp(1.5, 1.0, easeInOut(range(L, 0, 3.2))), lerp(-1.2, 0, k), BASE);
+  setCam(540 + jx * (1 + 2.5 * k) + Math.sin(t * 43) * tremor * .6, lerp(1010, 1000, k) + 45 * easeIn(range(L, 3.2, 4.4)) + jy + Math.cos(t * 37) * tremor * .6, L < 3.2 ? lerp(1.5, 1.0, easeInOut(range(L, 0, 3.2))) : lerp(1.0, 1.32, easeIn(range(L, 3.2, 4.4))), lerp(-1.2, 0, k), BASE);
   return lay(1, panelaTopo(t, heat, tremor, range(t, 12.0, 12.8))) + termometro(tempAt(t), t, 1) + manometro(presAt(t), t, 1) + VIG(.6) + GRAINV(t);
 }
 /* ===================== 5. o estouro em câmera lenta ===================== */
