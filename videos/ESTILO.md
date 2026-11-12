@@ -48,6 +48,45 @@ Câmera sempre em movimento, mas suave e com propósito. Não precisa ser eletri
 - **Efeitos só no ponto-chave:** clarão e sacudida de câmera ficam para o impacto da história, não para o vídeo inteiro (nada de tremor constante).
 - **Antes de renderizar:** listar os planos com "objeto herói + movimento" e mostrar ao dono do canal.
 
+## Direção de cena: pensar como diretor de cinema (regra do dono)
+Todo vídeo é dirigido, não só animado. Antes de escrever qualquer cena, decidir **como a câmera conta aquele momento**: de onde ela olha, a que distância, com que lente, por que se mexe e como passa para a cena seguinte. Cada escolha tem um motivo dramático.
+
+**1. Decupagem obrigatória (antes de animar).** Para cada plano, uma linha com:
+
+| Campo | O que decidir |
+|---|---|
+| Função | o que o espectador precisa sentir ou entender aqui (tensão, revelação, alívio, piada) |
+| Tamanho do plano | grande plano geral (onde estamos), plano geral (o corpo e o espaço), plano médio (a ação), close (a emoção ou o objeto), plano detalhe (a pista) |
+| Ângulo | altura dos olhos (neutro), contra-plongée, de baixo (poder, ameaça, grandeza), plongée, de cima (fragilidade, prisão, vigilância), holandês, inclinado (algo errado), ponto de vista (o espectador vira o personagem), por cima do ombro (diálogo, confronto) |
+| Lente | grande-angular perto do assunto (dinâmico, exagera a distância e a ameaça); teleobjetiva (fundo achatado e desfocado, isola o herói, sensação de espionagem) |
+| Movimento e motivo | push-in quando a tensão sobe, pull-out para revelar, travelling acompanhando a ação, órbita para valorizar um objeto, câmera na mão para o perigo. Nada de movimento sem motivo |
+| Luz e foco | onde está o herói do plano (iluminado e nítido); o que fica em silhueta, em contraluz ou desfocado |
+| Transição | corte seco, corte no movimento, whip pan, match cut (mesma forma ou posição de uma cena para a outra), raccord de olhar |
+
+Mostrar a decupagem ao dono junto com o plano de cenas, antes de renderizar.
+
+**2. Escolher o ângulo pela emoção, não pela facilidade.**
+- **Ameaça e poder:** quem domina a cena é filmado de baixo; quem está acuado, de cima. Na mesma cena, trocar os ângulos quando o poder muda de lado.
+- **Objeto-chave:** a pista da história ganha plano detalhe com luz própria e entra antes de ser explicada (mostrar primeiro, a fala confirma depois).
+- **Envolver o espectador:** usar o ponto de vista do personagem no momento decisivo (a mão entrando no quadro, a fresta, o buraco da fechadura).
+- **Revelação:** esconder com enquadramento, primeiro plano ou sombra, e revelar com pull-out ou mudança de foco. Uma revelação por cena.
+- **Localização:** o plano geral que mostra onde estamos é curto (cerca de 1 s) e logo dá lugar ao plano da ação.
+
+**3. Gramática entre os cortes.**
+- **Variar o tamanho do plano a cada corte:** de geral para close, de close para médio. Dois planos parecidos seguidos parecem um erro ("jump cut").
+- **Regra dos 180°:** quem anda para a direita continua andando para a direita no plano seguinte, e dois personagens não trocam de lado sem a câmera mostrar a passagem.
+- **Raccord de olhar e de movimento:** se o personagem olha para a esquerda, o plano seguinte mostra o que está à esquerda; o corte se esconde no meio do gesto.
+- **Match cut e loop:** sempre que possível, a última imagem repete a forma ou a posição da primeira.
+- **Ritmo:** planos mais curtos e mais perto quando a tensão sobe; um plano mais aberto e mais longo para respirar depois do clímax.
+
+**4. Composição no vertical (9:16).**
+- **Usar a altura:** corpo inteiro, prédios, quedas e subidas aproveitam o quadro alto; o horizonte fica no terço de baixo ou de cima, nunca no meio por acaso.
+- **Assunto grande e legível no celular,** com o herói do plano perto do centro ou num terço.
+- **Áreas cobertas pelo app:** nada importante (rosto, objeto-chave, texto) nos ~20% de baixo, onde ficam o título e a legenda, nem na faixa da direita, onde ficam os botões do Shorts.
+- **Profundidade:** primeiro plano escuro ou desfocado emoldurando a ação (grade, ombro, porta) dá cara de cinema.
+
+**5. Conferir antes de entregar.** Folha de quadros de cada plano (início, meio e fim): o ângulo escolhido aparece? O herói está nítido e iluminado? O corte respeita os 180° e varia o tamanho do plano? Texto nunca espelhado?
+
 ## Metas de retenção (dono do canal)
 Só viralizam quando ≥75% continuam assistindo (rejeição ≤ ~20%); a meta é manter "continuaram assistindo" sempre acima de 80%. Medir cada vídeo contra isso (Envolvimento → Engajamento dos espectadores) e registrar aqui o que mudou.
 Referência de 12/11: campainha 67,1%, soldados 60,1% (2 h), elevador 57,9%. Hipóteses: gancho em afirmação (usar pergunta/promessa em até 2 s), recompensa tarde (levar o método/revelação para ~0:15), vídeos longos (preferir 40–45 s).
