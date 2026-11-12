@@ -144,9 +144,9 @@ function metade(sg, q) {       // meia casca do grão voando para o lado
 }
 
 /* ===================== instrumentos (em tela) ===================== */
-function termometro(temp, t, k = 1, x = 860, y = 390) {
+function termometro(temp, t, k = 1, x = 860, y = 390) {      // termômetro digital do óleo, com a marca do canal na caixa
   const c = temp >= 175 ? '#FF5A3C' : temp >= 160 ? '#FFB020' : '#B6FF5A';
-  return `<g opacity="${op(k)}" transform="translate(${x},${y})"><rect x="-150" y="-62" width="300" height="124" rx="22" fill="#000" opacity=".35" transform="translate(5,8)"/><rect x="-150" y="-62" width="300" height="124" rx="22" fill="#1B1C21" stroke="#5A5E68" stroke-width="4"/><rect x="-134" y="-46" width="268" height="92" rx="12" fill="#1C2B20"/><text x="-122" y="-24" font-size="16" fill="#6FA070">ÓLEO</text><text x="122" y="34" font-size="64" fill="${c}" text-anchor="end">${Math.floor(temp)}°C</text><rect x="-134" y="-46" width="268" height="38" rx="12" fill="#fff" opacity=".05"/></g>`;
+  return `<g opacity="${op(k)}" transform="translate(${x},${y})"><rect x="-165" y="-62" width="330" height="170" rx="22" fill="#000" opacity=".35" transform="translate(5,8)"/><rect x="-165" y="-62" width="330" height="170" rx="22" fill="#1B1C21" stroke="#5A5E68" stroke-width="4"/><rect x="-149" y="-46" width="298" height="92" rx="12" fill="#1C2B20"/><text x="-137" y="-24" font-size="16" fill="#6FA070">ÓLEO</text><text x="136" y="34" font-size="64" fill="${c}" text-anchor="end">${Math.floor(temp)}°C</text><rect x="-149" y="-46" width="298" height="38" rx="12" fill="#fff" opacity=".05"/><path d="M-149 58 L149 58" stroke="#3A3D46" stroke-width="3"/><text x="0" y="92" text-anchor="middle"><tspan fill="#FFB347" font-size="34">HRYZ</tspan><tspan fill="#EDEDED" font-size="26" dx="10">Animation</tspan></text></g>`;
 }
 function manometro(val, t, k = 1, cx = 235, cy = 440, r = 150) {
   const ang = v => (135 + 270 * clamp(v / 11)) * Math.PI / 180, P = (v, rr) => [cx + Math.cos(ang(v)) * rr, cy + Math.sin(ang(v)) * rr];
@@ -181,15 +181,18 @@ function panela(t, heat, subject = '', fg = true) {
   return s;
 }
 // a panela vista de cima, com vários grãos no óleo (plano geral)
-function panelaTopo(t, heat, tremor, crack = 0) {
+const GRAOS_TOPO = [[540, 1040, .55, 0], [330, 960, .36, 40], [720, 950, .38, -30], [260, 1090, .34, 70], [820, 1100, .36, -60], [450, 1170, .37, 20], [650, 1180, .35, -20], [420, 880, .33, 100], [650, 870, .34, -90], [560, 1230, .32, 60], [200, 1000, .3, 10], [880, 1010, .31, 160]];   // [x, y, escala, rotação]; o primeiro é o grão-herói
+const POPS_CORO = [25.12, 25.28, 25.45, 25.6, 25.78, 25.95, 26.12, 26.3, 26.5, 26.65, 26.82];   // quando cada um dos outros estoura (os mesmos tempos estão em sfx_pipoca.py)
+function panelaTopo(t, heat, tremor, crack = 0, custom = null) {
   let s = `<rect x="-900" y="-1400" width="2900" height="4600" fill="#1A0A05"/>`;
   s += `<ellipse cx="540" cy="1250" rx="900" ry="380" fill="url(#gWarm)" opacity="${op(.55 + .4 * heat)}"/>`;
   s += blur(6, `<ellipse cx="540" cy="1190" rx="680" ry="380" fill="#FF7A1A" opacity="${op(.35 + .4 * heat)}"/>`);
   s += `<path d="M-20 1040 L-20 1260 A560 345 0 0 0 1100 1260 L1100 1040Z" fill="url(#gLado)"/><ellipse cx="540" cy="1040" rx="560" ry="345" fill="#2B2D33" stroke="#9AA0AC" stroke-width="10"/><ellipse cx="540" cy="1030" rx="520" ry="318" fill="#17181C"/>`;
   s += `<ellipse cx="540" cy="1040" rx="500" ry="300" fill="url(#gOleoTopo)"/>`;
   s += `<ellipse cx="400" cy="900" rx="170" ry="46" fill="#fff" opacity=".16" transform="rotate(-12 400 900)"/><ellipse cx="720" cy="1180" rx="120" ry="26" fill="#FFD9A0" opacity=".2"/>`;
-  const ks = [[540, 1040, .55, 0], [330, 960, .36, 40], [720, 950, .38, -30], [260, 1090, .34, 70], [820, 1100, .36, -60], [450, 1170, .37, 20], [650, 1180, .35, -20], [420, 880, .33, 100], [650, 870, .34, -90], [560, 1230, .32, 60], [200, 1000, .3, 10], [880, 1010, .31, 160]];
-  ks.forEach(([x, y, sc, rot], i) => {
+  const ks = GRAOS_TOPO;
+  if (custom !== null) s += custom;
+  else ks.forEach(([x, y, sc, rot], i) => {
     const tr = Math.sin(t * (28 + 18 * hh(i, 1)) + i) * tremor * (i ? .5 : 1), tr2 = Math.cos(t * (31 + 14 * hh(i, 2))) * tremor * (i ? .5 : 1);
     s += `<ellipse cx="${x}" cy="${y + 120 * sc}" rx="${f1(190 * sc)}" ry="${f1(54 * sc)}" fill="#000" opacity=".4"/>`;
     s += `<g transform="translate(${f1(x + tr)},${f1(y + tr2)}) scale(${f1(sc * 1000) / 1000},${f1(sc * .86 * 1000) / 1000}) rotate(${rot})">${grao(t, { glow: i ? heat * .25 : heat * .9, crack: i ? 0 : crack })}</g>`;
@@ -197,4 +200,28 @@ function panelaTopo(t, heat, tremor, crack = 0) {
   });
   for (let i = 0; i < 7; i++) { const y = 700 - ((t * 80 * (.4 + hh(i)) + hh(i, 1) * 400) % 520), x = 300 + 460 * hh(i, 2) + Math.sin(t + i) * 40; s += `<ellipse cx="${f1(x)}" cy="${f1(y)}" rx="${f1(70 + 40 * hh(i, 3))}" ry="${f1(40 + 30 * hh(i, 4))}" fill="#fff" opacity="${f1(.12 * heat + .04)}" filter="url(#b30)"/>`; }
   return s;
+}
+
+// o coro: a grandona já é pipoca no centro e os outros grãos estouram um atrás do outro e pulam (vista de cima)
+function coroPipocas(t) {
+  const L = [];
+  L.push({ y: 1040, s: `<ellipse cx="540" cy="1110" rx="240" ry="64" fill="#000" opacity=".35"/><g transform="translate(540,1004) scale(${f1(.58 * (1 + .01 * Math.sin(t * 2)) * 1000) / 1000},${f1(.58 * .9 * 1000) / 1000})">${espuma(1, t)}</g>` });
+  for (let i = 1; i < GRAOS_TOPO.length; i++) {
+    const [x, y, sc, rot] = GRAOS_TOPO[i], tp = POPS_CORO[i - 1], dt = t - tp, pk = range(dt, -.6, 0), q = range(dt, .08, .93), arc = 4 * q * (1 - q), H = 150 + 130 * hh(i, 1);
+    let s = `<ellipse cx="${x + (dt >= 0 ? f1((hh(i, 2) - .5) * 120 * q) : 0)}" cy="${f1(y + 120 * sc)}" rx="${f1(190 * sc * (dt >= 0 ? 1.8 * (1 - .3 * arc) : 1))}" ry="${f1(54 * sc * (dt >= 0 ? 1.8 * (1 - .3 * arc) : 1))}" fill="#000" opacity="${f1(.4 * (1 - .5 * arc))}"/>`;
+    if (dt < .1) {
+      const jx = Math.sin(t * (50 + 10 * i)) * (1 + 6 * pk), jy = Math.cos(t * (43 + 7 * i)) * (.5 + 3 * pk);
+      s += `<g opacity="${op(1 - range(dt, 0, .1))}"><g transform="translate(${f1(x + jx)},${f1(y + jy)}) scale(${f1(sc * 1000) / 1000},${f1(sc * .86 * 1000) / 1000}) rotate(${rot})">${grao(t, { glow: .25 + .7 * pk, crack: pk > .5 ? range(pk, .5, 1) : 0 })}</g></g>`;
+    }
+    if (dt >= 0) {
+      const fk = 1 - Math.pow(1 - range(dt, 0, .6), 4), px = x + (hh(i, 2) - .5) * 120 * q, py = y - H * arc, scl = 1.06 * sc * (1 + .3 * arc);
+      const rp = rot + (hh(i, 3) > .5 ? 1 : -1) * (160 + 200 * hh(i, 4)) * q, land = dt - .93, sq = land > 0 ? 1 - .1 * Math.exp(-land * 7) * Math.cos(land * 24) : 1;
+      s += `<g transform="translate(${f1(px)},${f1(py)}) rotate(${f1(rp)}) scale(${f1(scl * 1000) / 1000},${f1(scl * .9 * sq * 1000) / 1000})">${espuma(fk, t)}</g>`;
+      const rk = easeOut(range(dt, 0, .3));
+      if (rk < 1) s += `<ellipse cx="${x}" cy="${y}" rx="${f1(50 + 760 * sc * rk)}" ry="${f1((50 + 760 * sc * rk) * .62)}" fill="none" stroke="#FFF6DC" stroke-width="${f1(10 * (1 - rk) + 1)}" opacity="${op((1 - rk) * .85)}"/>`;
+      for (let j = 0; j < 7; j++) { const an = hh(i * 7 + j, 5) * 6.28, rr = (30 + 190 * sc * 2.2 * easeOut(range(dt, 0, .5))) * (.6 + .6 * hh(i * 7 + j, 6)); s += gota(x + Math.cos(an) * rr, y + Math.sin(an) * rr * .6 - 40 * Math.sin(range(dt, 0, .5) * Math.PI), 5 + 4 * hh(i * 7 + j, 7), 1 - range(dt, .3, .7)); }
+    }
+    L.push({ y, s });
+  }
+  return L.sort((p, q2) => p.y - q2.y).map(p => p.s).join('');
 }

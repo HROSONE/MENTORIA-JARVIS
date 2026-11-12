@@ -16,7 +16,9 @@ N = int(SR * TOTAL)
 L, R = np.zeros(N), np.zeros(N)
 rng = np.random.default_rng(1985)
 
-SH = {'grao': 0, 'corte': 2.2, 'pressao': T['b2'] - .1, 'calor': T['b3'] - .1, 'estouro': T['b4'] - .1, 'estalo': T['b5'] - .1, 'pula': 21.6, 'pouso': 24.0}
+SH = {'grao': 0, 'corte': 2.2, 'pressao': T['b2'] - .1, 'calor': T['b3'] - .1, 'estouro': T['b4'] - .1, 'estalo': T['b5'] - .1, 'pula': 21.6, 'pouso': 24.0, 'coro': 25.0}
+POPS_CORO = [25.12, 25.28, 25.45, 25.6, 25.78, 25.95, 26.12, 26.3, 26.5, 26.65, 26.82]   # iguais aos de _arte.js
+XS_CORO = [330, 720, 260, 820, 450, 650, 420, 650, 560, 200, 880]
 POP = 13.85
 VAPOR = SH['estalo'] + 2.2
 
@@ -195,7 +197,7 @@ def cruzamentos(fn, a, b, passo, dt=.01):
 
 
 # ---------------------------------------------------------------- linha do tempo
-for c in (SH['corte'], SH['pressao'], SH['calor'], SH['estalo'], SH['pula']):
+for c in (SH['corte'], SH['pressao'], SH['calor'], SH['estalo'], SH['pula'], SH['coro']):
     add(c - .25, whoosh(), .28)
 
 # ambiente: chama (rumor grave) e óleo chiando, mais forte conforme esquenta
@@ -254,7 +256,7 @@ add(POP, queda_de_tom(.7, 380, 50), .3)
 add(POP + .3, whoosh(.9, 160), .35)
 # o coro de pipocas ao fundo, cada vez mais denso
 t = POP + .6
-while t < TOTAL - .3:
+while t < SH['coro'] - .15:
     if not (VAPOR - .15 < t < VAPOR + .15):
         add(t, popsom(rng.uniform(600, 1400), .22), rng.uniform(.18, .35), rng.uniform(-.9, .9))
     t += rng.exponential(1.0 / (3 + 5 * min(1, (t - POP) / 5)))
@@ -280,7 +282,12 @@ add(SH['pouso'] + .02, popsom(300, .2), .35)
 add(SH['pouso'] + .15, sizzle(.8, .8, .4), .5)
 for k in range(3):
     add(SH['pouso'] + .3 + k * .22, borbulha(rng.uniform(250, 500)) * .6, 1, rng.uniform(-.3, .3))
-add(TOTAL - .35, tic(1900), .22)
+# 9. o coro: as outras pipocas estouram e pulam, cada uma no seu tempo e no seu lado do quadro
+for tp, x in zip(POPS_CORO, XS_CORO):
+    pan = (x - 540) / 540
+    add(tp, popsom(rng.uniform(650, 1250), .22), .62, pan)
+    add(tp + .03, lp(ruido(.35), 1600) * env(int(.35 * SR), .004, .1) * .5, 1, pan)
+    add(tp + .93, lp(ruido(.18), 500) * env(int(.18 * SR), .003, .05) * 1.1, .28, pan)
 
 mix = np.stack([L, R], 1)
 mix = np.tanh(mix * 1.1)

@@ -1,5 +1,5 @@
 /* =====================================================================================
-   POR QUE A PIPOCA ESTOURA? 🍿  (Short de 25 s, 71 palavras, 8 planos; primeiro corte aos 2,2 s)
+   POR QUE A PIPOCA ESTOURA? 🍿  (Short de 28,2 s, 71 palavras, 9 planos; primeiro corte aos 2,2 s)
    Formato dos virais: a 1ª frase descreve o quadro 0; cada frase muda a tela; termina quando o processo
    termina; o último plano repete o primeiro (a pipoca no lugar do grão, no centro do quadro).
 
@@ -17,11 +17,13 @@
     6 estalo  17,5 – 21,6  PLANO MÉDIO "esquemático": a casca racha em silêncio (medidor de som parado); o vapor escapa
                            e o medidor dispara (anéis de som saem do vapor, não da casca).
     7 pula    21,6 – 24,0  CONTRA-PLONGÉE, tilt acompanhando o voo: a perna de amido empurra, a pipoca gira no ar.
-    8 pouso   24,0 – 25,0  CLOSE, mesmo enquadramento do quadro 0: a pipoca cai no lugar do grão e assenta (loop).
+    8 pouso   24,0 – 25,0  CLOSE: a pipoca cai no lugar do grão e assenta.
+    9 coro    25,0 – 28,2  PLANO GERAL, plongée, pull-out lento: a grandona já é pipoca e os outros grãos estouram um atrás
+                           do outro e pulam (cada estouro dá um tranco na câmera). Termômetro HRYZ Animation no canto.
    ===================================================================================== */
 const SH = [['grao', 0, 2.2], ['corte', 2.2, T('b2') - .1], ['pressao', T('b2') - .1, T('b3') - .1], ['calor', T('b3') - .1, T('b4') - .1], ['estouro', T('b4') - .1, T('b5') - .1],
-  ['estalo', T('b5') - .1, 21.6], ['pula', 21.6, 24.0], ['pouso', 24.0, TOTAL]];
-const FLASH = ['estalo', 'pula'];
+  ['estalo', T('b5') - .1, 21.6], ['pula', 21.6, 24.0], ['pouso', 24.0, 25.0], ['coro', 25.0, TOTAL]];
+const FLASH = ['estalo', 'pula', 'coro'];
 const hand2 = t => [Math.sin(t * 1.3) * 3 + Math.sin(t * 3.1) * 1.5, Math.cos(t * 1.1) * 3];
 const shotAt = t => SH.find(s => t >= s[1] && t < s[2]) || SH[SH.length - 1];
 const loc = (t, id) => { const s = SH.find(x => x[0] === id); return { L: t - s[1], d: s[2] - s[1], k: (t - s[1]) / (s[2] - s[1]) }; };
@@ -140,4 +142,11 @@ function sPouso(t) {
   sub += `<ellipse cx="540" cy="${OIL}" rx="${f1(220 + 760 * easeOut(rk))}" ry="${f1(26 + 60 * easeOut(rk))}" fill="none" stroke="#FFF0B0" stroke-width="${f1(10 * (1 - rk) + 1)}" opacity="${op((1 - rk) * .8)}"/>`;
   return panela(t, 1, sub + oleo(t) + bolhasOleo(t, 1), false) + VIG(.5) + GRAINV(t);
 }
-const FN = { grao: sGrao, corte: sCorte, pressao: sPressao, calor: sCalor, estouro: sEstouro, estalo: sEstalo, pula: sPula, pouso: sPouso };
+/* ===================== 9. as outras pipocas estouram e pulam ===================== */
+function sCoro(t) {
+  const { L, d, k } = loc(t, 'coro'), [jx, jy] = hand2(t);
+  let kick = 0; for (const tp of POPS_CORO) if (t > tp) kick += 6 * Math.exp(-(t - tp) * 11);
+  setCam(540 + jx + Math.sin(t * 57) * kick * .6, lerp(1010, 1000, k) + jy + Math.cos(t * 49) * kick, lerp(1.18, .98, easeOut(k)), lerp(-.8, 0, k), BASE);
+  return lay(1, panelaTopo(t, 1, 0, 0, coroPipocas(t))) + termometro(180, t, 1) + VIG(.55) + GRAINV(t);
+}
+const FN = { coro: sCoro, grao: sGrao, corte: sCorte, pressao: sPressao, calor: sCalor, estouro: sEstouro, estalo: sEstalo, pula: sPula, pouso: sPouso };

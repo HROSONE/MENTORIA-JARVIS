@@ -1,6 +1,6 @@
 # Por Que a Pipoca Estoura? 🍿
 
-Short 2D (SVG), 1080×1920, 25 s, 8 planos. Terceiro teste do formato dos virais (ESTILO.md, "O que aprendi lendo virais"), já curto como o dono prefere (24 a 26 s): 71 palavras (2,8 por segundo), a primeira frase descreve o quadro 0, cada frase muda a tela, a resposta surpreende no fim (o estalo não é a casca) e o último plano repete o primeiro (a pipoca no lugar do grão, no centro do quadro). Primeiro corte aos 2,2 s. Instrumentos em tela (termômetro e manômetro) fazem o papel de contador diegético.
+Short 2D (SVG), 1080×1920, 28,2 s, 9 planos. Terceiro teste do formato dos virais (ESTILO.md, "O que aprendi lendo virais"): 71 palavras faladas nos primeiros 24,4 s (2,8 por segundo), a primeira frase descreve o quadro 0, cada frase muda a tela e a resposta surpreende (o estalo não é a casca). Depois da fala, um final só com imagem e som: as outras pipocas estouram e pulam (pedido do dono). Primeiro corte aos 2,2 s. Instrumentos em tela (termômetro e manômetro) fazem o papel de contador diegético. **A marca HRYZ Animation está na caixa do termômetro** (planos 1, 2, 4, 5 e 9).
 
 ## Narração (narr.json)
 | bloco | tempo | texto | o que muda na tela |
@@ -11,6 +11,7 @@ Short 2D (SVG), 1080×1920, 25 s, 8 planos. Terceiro teste do formato dos virais
 | b4 | 13,0–17,4 | Aí a casca rompe, e o amido mole vira espuma e cresce de uma vez. | o grão racha e estoura (câmera lenta, flash suave, onda de choque); a espuma de amido cresce e a câmera recua |
 | b5 | 17,6–21,4 | O estalo não é a casca quebrando, é o vapor escapando. | esquema: a casca racha em silêncio (medidor de som parado); o vapor sai e o medidor dispara (anéis de som saem do vapor) |
 | b6 | 21,8–24,4 | O grão pula e cai já pipoca. | a perna de amido empurra, a pipoca gira no ar e cai no lugar do grão |
+| (sem fala) | 25,0–28,2 | (opcional, para o dono: "E aí os outros também.") | a grandona fica no centro e os outros grãos estouram um atrás do outro e pulam, até a panela encher de pipoca |
 
 ## Decupagem (diretor)
 | # | Plano | Tempo | Tamanho e ângulo | Lente e movimento (motivo) | Luz, foco e transição |
@@ -22,10 +23,11 @@ Short 2D (SVG), 1080×1920, 25 s, 8 planos. Terceiro teste do formato dos virais
 | 5 | estouro | 12,9–17,5 | close em câmera lenta | punch-in e tremor no impacto; depois recuo para mostrar o tamanho | flash suave, onda de choque |
 | 6 | estalo | 17,5–21,6 | plano médio "esquemático" | câmera quase parada (a explicação pede clareza) | fundo escuro de diagrama; medidor de som; flash no corte |
 | 7 | pula | 21,6–24,0 | contra-plongée | tilt acompanhando o voo | contraluz da chama; flash no corte |
-| 8 | pouso | 24,0–25,0 | close, igual ao quadro 0 | assenta com ondulação no óleo | loop: pipoca no lugar do grão |
+| 8 | pouso | 24,0–25,0 | close, igual ao quadro 0 | assenta com ondulação no óleo | pipoca no lugar do grão |
+| 9 | coro | 25,0–28,2 | plano geral, plongée | pull-out lento; cada estouro dá um tranco na câmera | a grandona já é pipoca; os outros grãos brilham, tremem, estouram e pulam, um depois do outro; flash no corte; termômetro com a marca no canto |
 
 ## Som (sfx_pipoca.py, tudo sintetizado, sem música)
-Chama (rumor grave) e óleo chiando que aumentam com o calor; bolhas; termômetro bipando a cada 5 °C; varredura de luz abrindo o grão; vapor batendo na casca (tinks cada vez mais densos); tique do manômetro a cada unidade; subida de tensão com batimento acelerando e rangidos da casca; um suspiro de silêncio antes do estouro; o ESTOURO (estrondo grave, estalo seco, espuma saindo, estilhaços tilintando); o coro de outras pipocas estourando ao fundo; a casca racha quase sem som; o vapor sai com um sibilo e um estalo e os anéis de som viram "pings" de sonar; a perna de amido, o voo e o pouso.
+Chama (rumor grave) e óleo chiando que aumentam com o calor; bolhas; termômetro bipando a cada 5 °C; varredura de luz abrindo o grão; vapor batendo na casca (tinks cada vez mais densos); tique do manômetro a cada unidade; subida de tensão com batimento acelerando e rangidos da casca; um suspiro de silêncio antes do estouro; o ESTOURO (estrondo grave, estalo seco, espuma saindo, estilhaços tilintando); o coro de outras pipocas estourando ao fundo; a casca racha quase sem som; o vapor sai com um sibilo e um estalo e os anéis de som viram "pings" de sonar; a perna de amido, o voo e o pouso; no final, um estouro sincronizado para cada um dos outros grãos (cada um no seu lado do quadro) e o baque suave de cada pipoca ao cair.
 
 ## Fatos e fontes (conferidos em 12/11)
 - O grão estoura a cerca de **180 °C**, quando a pressão dentro dele chega a uns **10 bar** (umas dez vezes a pressão do ar). Muita gente cita 9 atm; a fonte (Virot e Ponomarenko, 2015, *Journal of the Royal Society Interface*) diz cerca de 10 bar, por isso a fala diz "umas dez vezes".
