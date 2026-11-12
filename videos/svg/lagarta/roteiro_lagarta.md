@@ -7,8 +7,8 @@ Short 2D (SVG), 1080×1920, 25,8 s, 8 planos. Segundo teste do formato dos virai
 |---|---|---|---|
 | b1 | 0,1–4,6 | Essa lagarta se pendura, troca de pele pela última vez e vira uma crisálida. | a lagarta-monarca em J endireita, a pele rasga e sobe enrolada, a crisálida jade aparece, a pele cai |
 | b2 | 4,8–9,1 | Lá dentro, enzimas dissolvem quase todo o corpo dela, até virar uma sopa. | a "lupa" abre na crisálida; enzimas chegam, o corpo derrete e a casca enche de sopa |
-| b3 | 9,3–12,6 | Mas ela guarda grupos de células especiais: os discos imaginais. | a luz apaga e dez discos acendem, um por vez (etiqueta "DISCOS IMAGINAIS") |
-| b4 | 12,8–16,5 | Eles se alimentam da sopa e crescem: asas, pernas, olhos, antenas. | olhos, antenas, pernas, asas e corpo nascem; a sopa baixa; contador DIA 1, 2, 3… |
+| b3 | 9,3–12,6 | Mas ela guarda grupos de células especiais: os discos imaginais. | a luz apaga e dez discos acendem, um por vez; a etiqueta "DISCOS IMAGINAIS" aparece junto com a fala |
+| b4 | 12,8–16,5 | Eles se alimentam da sopa e crescem: asas, pernas, olhos, antenas. | asas, pernas, olhos e antenas nascem na ordem da fala; a sopa baixa; contador DIA 1, 2, 3… |
 | b5 | 16,7–20,9 | Em uns dez dias, a crisálida fica transparente: dá pra ver as asas. | céu em time-lapse até DIA 10; a casca fica transparente e as asas laranja aparecem; tremor |
 | b6 | 21,1–25,2 | Aí ela racha, e a borboleta sai, abre as asas e voa. | a casca racha, a cabeça sai; a borboleta incha as asas, abre, bate e some no sol; sobra a casca vazia |
 
