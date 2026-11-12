@@ -1,0 +1,53 @@
+{
+ "total": 40.5,
+ "s": [
+  {
+   "k": "b1",
+   "t0": 0.15,
+   "t1": 4.55,
+   "txt": "Essa arma nunca disparou um único tiro… e mesmo assim tirou um homem da cadeia."
+  },
+  {
+   "k": "b2",
+   "t0": 4.65,
+   "t1": 11.35,
+   "txt": "Em 1934, as autoridades juravam que a cadeia de Crown Point era à prova de fuga. Lá dentro estava John Dillinger, o assaltante de bancos mais famoso dos Estados Unidos."
+  },
+  {
+   "k": "b3",
+   "t0": 11.45,
+   "t1": 16.95,
+   "txt": "Ele contou depois que entalhou um bloco de madeira com uma lâmina de barbear e pintou tudo com graxa de sapato."
+  },
+  {
+   "k": "b4",
+   "t0": 17.05,
+   "t1": 20.95,
+   "txt": "Numa manhã de março, apontou aquele pedaço de madeira pro guarda. E funcionou."
+  },
+  {
+   "k": "b5",
+   "t0": 21.05,
+   "t1": 27.75,
+   "txt": "Um por um, trancou os guardas nas celas, trocou a arma de mentira por metralhadoras de verdade e fugiu no carro da própria xerife."
+  },
+  {
+   "k": "b6",
+   "t0": 27.85,
+   "t1": 32.55,
+   "txt": "Só que, ao cruzar a divisa do estado com aquele carro, ele colocou o FBI atrás dele."
+  },
+  {
+   "k": "b7",
+   "t0": 32.65,
+   "t1": 35.75,
+   "txt": "Quatro meses depois, foi morto na saída de um cinema."
+  },
+  {
+   "k": "b8",
+   "t0": 35.85,
+   "t1": 40.4,
+   "txt": "E até hoje ninguém sabe se essa arma foi mesmo entalhada por ele… ou entregue escondida."
+  }
+ ]
+}

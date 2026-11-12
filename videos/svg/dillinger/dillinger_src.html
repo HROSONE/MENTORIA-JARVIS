@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A arma de madeira</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s,1));background:#000}
+  svg{display:block}
+  text{font-family:'DejaVu Sans','Arial Black',sans-serif;font-weight:800}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font:800 54px sans-serif;background:rgba(0,0,0,.55);cursor:pointer}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+<svg id="s" width="1080" height="1920" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
+<defs id="defs"></defs>
+<g id="root"></g>
+</svg>
+<div id="start">▶ CLIQUE (com som)</div>
+</div>
+<!--AUDIO-->
+<!--NARR-->
+<script>
+/*LIB*/
+const W = 1080, H = 1920;
+const N = window.NARR, S = Object.fromEntries(N.s.map(x => [x.k, x]));
+const T = k => S[k].t0, E = k => S[k].t1, TOTAL = N.total;
+const R = (() => { let s = 23; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+/*SHARED*/
+
+/* =====================================================================================
+   A arma de madeira (John Dillinger, Crown Point, 1934). Silhuetas sem rosto:
+   Dillinger azul-marinho quase preto com borda de luz quente; guardas laranja-terroso.
+   ===================================================================================== */
+const NAVY = '#121726', NAVYRIM = '#FFB46A', GUARD = '#6A3416', GUARDRIM = '#FFD9A0';
+const WOOD = '#C08A52', WOODD = '#8A5A30', POL = '#16141A', POLH = '#6A6A78';
+const txt = (x, y, s, size, fill, extra = '') => `<text x="${x}" y="${y}" font-size="${size}" fill="${fill}" text-anchor="middle" ${extra}>${s}</text>`;
+
+// pistola de madeira, cano para +x. pol = quanto já está pintada de graxa (0..1, da esquerda p/ direita); lasca = madeira aparecendo
+function pistol(x, y, s, rot = 0, o = {}) {
+  const pol = o.pol ?? 1, lasca = o.lasca || 0, bloco = o.bloco || 0, id = nid('pg');
+  const shape = `<path d="M-170 -70 L230 -70 Q246 -70 246 -54 L246 -10 Q246 6 230 6 L-40 6 L-40 20 Q-34 80 10 92 L14 110 Q-50 104 -70 40 L-80 6 L-96 6 L-60 250 Q-58 268 -76 268 L-176 268 Q-196 268 -194 248 L-170 6Z"/>`;
+  let p = `<defs><clipPath id="${id}">${shape}</clipPath></defs>`;
+  p += `<ellipse cx="10" cy="300" rx="260" ry="30" fill="#000" opacity=".35" filter="url(#b12)"/>`;
+  // bloco de madeira bruto (antes de entalhar)
+  if (bloco > 0) p += `<rect x="-210" y="-90" width="470" height="380" rx="10" fill="${WOOD}" opacity="${op(bloco)}"/>` + Array.from({ length: 9 }, (_, i) => `<path d="M-210 ${-70 + i * 40} q120 ${i % 2 ? 12 : -10} 470 0" stroke="${WOODD}" stroke-width="5" fill="none" opacity="${op(bloco * .7)}"/>`).join('');
+  // madeira
+  p += `<g clip-path="url(#${id})"><rect x="-260" y="-120" width="560" height="420" fill="${WOOD}"/>`;
+  for (let i = 0; i < 14; i++) p += `<path d="M-260 ${-80 + i * 26} q140 ${i % 2 ? 14 : -12} 560 ${i % 3 - 1}" stroke="${WOODD}" stroke-width="4" fill="none" opacity=".6"/>`;
+  // graxa (cobre da esquerda até pol)
+  if (pol > 0) {
+    const xw = lerp(-260, 300, pol);
+    p += `<rect x="-260" y="-120" width="${f1(xw + 260)}" height="420" fill="${POL}"/>`;
+    p += `<path d="M-160 -56 L220 -56" stroke="${POLH}" stroke-width="8" opacity="${op(.55 * pol)}" stroke-linecap="round"/><path d="M-180 30 L-150 240" stroke="${POLH}" stroke-width="6" opacity="${op(.35 * pol)}" stroke-linecap="round"/>`;
+    if (pol < 1) p += `<path d="M${f1(xw)} -120 q-26 140 10 220 q-30 110 0 200" stroke="${POL}" stroke-width="30" fill="none" opacity=".7"/>`;
+  }
+  // lasca: graxa raspada mostrando a madeira perto do cano
+  if (lasca > 0) p += `<path d="M120 -64 L200 -64 L188 -30 L140 -38Z" fill="${WOOD}" opacity="${op(lasca)}"/><path d="M128 -56 L190 -52 M134 -44 L180 -42" stroke="${WOODD}" stroke-width="4" opacity="${op(lasca)}"/>`;
+  p += `</g>`;
+  // cano (cabo de lâmina de barbear) e miras de prego
+  p += `<rect x="236" y="-58" width="70" height="40" rx="8" fill="#3A3C44"/><rect x="236" y="-58" width="70" height="10" rx="4" fill="#8A8E9A" opacity=".8"/>`;
+  p += `<rect x="214" y="-90" width="10" height="22" fill="#9A9EA8"/><rect x="-150" y="-86" width="10" height="18" fill="#9A9EA8"/>`;
+  p += `<path d="M-20 20 L-6 60" stroke="${pol > .5 ? '#2A2830' : WOODD}" stroke-width="12" stroke-linecap="round"/>`;
+  return `<g transform="translate(${f1(x)},${f1(y)}) rotate(${f1(rot)}) scale(${f1(s * 1000) / 1000})">${p}</g>`;
+}
+// punho fechado (silhueta) segurando a pistola pelo cabo
+function fist(x, y, s, rot = 0, col = NAVY, rim = NAVYRIM) {   // mão fechada no cabo; (x, y) = centro do cabo
+  const id = rig({ amb: '#ffffff', k: [-1, -.2], shO: 0, rims: [{ c: rim, k: [1, -.5], w: 7, o: 1, glow: true }] });
+  return `<g transform="translate(${f1(x)},${f1(y)}) rotate(${f1(rot)}) scale(${f1(s * 1000) / 1000})" filter="url(#${id})">
+    <path d="M-150 120 L-90 520 L90 520 L60 110Z" fill="${col}"/>
+    <rect x="-96" y="-70" width="190" height="220" rx="70" fill="${col}"/>
+    ${[0, 1, 2, 3].map(i => `<rect x="${44 + i * 0}" y="${-56 + i * 48}" width="76" height="46" rx="22" fill="${col}"/>`).join('')}
+    <path d="M-40 -74 Q30 -110 96 -86" stroke="${col}" stroke-width="44" fill="none" stroke-linecap="round"/></g>`;
+}
+// centro do cabo de uma pistola desenhada com pistol(x, y, s, rot)
+const caboDe = (x, y, s, rot) => { const a = rot * Math.PI / 180, lx = -128, ly = 140; return [x + s * (lx * Math.cos(a) - ly * Math.sin(a)), y + s * (lx * Math.sin(a) + ly * Math.cos(a))]; };
+const pistolaNaMao = (x, y, s, rot, o = {}, col = NAVY, rim = NAVYRIM) => { const [cx, cy] = caboDe(x, y, s, rot); return pistol(x, y, s, rot, o) + fist(cx, cy, s * .82, rot, col, rim); };
+function tinGraxa(x, y, s, open = 1) {
+  return `<g transform="translate(${f1(x)},${f1(y)}) scale(${s})"><ellipse cx="0" cy="70" rx="190" ry="40" fill="#000" opacity=".4" filter="url(#b12)"/>
+    <rect x="-150" y="-10" width="300" height="80" rx="20" fill="#B8862E"/><ellipse cx="0" cy="70" rx="150" ry="30" fill="#8A6020"/>
+    <ellipse cx="0" cy="-10" rx="150" ry="34" fill="${open ? '#0E0C10' : '#D8A040'}"/>${open ? `<ellipse cx="-40" cy="-16" rx="50" ry="8" fill="#5A5A66" opacity=".7"/>` : ''}
+    <rect x="-110" y="8" width="220" height="50" rx="8" fill="#1B2A4A"/>${txt(0, 46, 'HRYZ', 34, '#F6E7C8')}</g>`;
+}
+function blade(x, y, s, rot) {
+  return `<g transform="translate(${f1(x)},${f1(y)}) rotate(${f1(rot)}) scale(${s})"><path d="M-80 -24 L80 -24 L90 0 L80 24 L-80 24 L-90 0Z" fill="#C9CED8" stroke="#7A808C" stroke-width="4"/><rect x="-36" y="-8" width="72" height="16" rx="8" fill="#5A606C"/><path d="M-80 -24 L80 -24" stroke="#fff" stroke-width="4" opacity=".8"/></g>`;
+}
+function tommy(x, y, s, rot = 0) {   // metralhadora (silhueta metálica com coronha de madeira)
+  return `<g transform="translate(${f1(x)},${f1(y)}) rotate(${f1(rot)}) scale(${s})"><rect x="-60" y="-30" width="320" height="44" rx="10" fill="#26282E"/><rect x="250" y="-22" width="90" height="22" fill="#26282E"/>
+    <circle cx="70" cy="50" r="62" fill="#1A1C22"/><circle cx="70" cy="50" r="40" fill="#30333A"/><path d="M-60 -20 L-240 0 L-240 60 L-60 14Z" fill="#6A4022"/><rect x="0" y="14" width="34" height="80" rx="10" fill="#6A4022"/><rect x="170" y="14" width="30" height="64" rx="8" fill="#6A4022"/></g>`;
+}
+function fordXerife(x, y, s, t, mv = 0, flip = 1) {   // Ford 1933 preto da xerife, de lado (frente para +x)
+  const wr = mv * t * 14;
+  const wheel = cx => `<g transform="translate(${cx},60)"><circle r="78" fill="#0A0A0E"/><circle r="44" fill="#C9CDD4"/><g transform="rotate(${f1(wr * 57)})"><rect x="-4" y="-40" width="8" height="80" fill="#6A6E78"/><rect x="-40" y="-4" width="80" height="8" fill="#6A6E78"/></g><circle r="12" fill="#3A3C44"/></g>`;
+  return `<g transform="translate(${f1(x)},${f1(y)}) scale(${f1(s * flip * 1000) / 1000},${s})"><ellipse cx="0" cy="140" rx="480" ry="34" fill="#000" opacity=".45" filter="url(#b12)"/>
+    <path d="M-420 60 Q-430 -40 -330 -60 L-200 -70 L-140 -200 Q-120 -230 -80 -230 L170 -230 Q210 -230 230 -200 L290 -80 L400 -70 Q450 -60 450 10 L450 60Z" fill="#101016"/>
+    <path d="M-110 -210 L-80 -110 L60 -110 L60 -210Z M90 -210 L90 -110 L250 -110 L210 -205Z" fill="#7A92B8" opacity=".55"/>
+    <path d="M-440 60 Q-420 -30 -300 -40 Q-200 -40 -180 60Z M180 60 Q200 -40 300 -40 Q420 -30 440 60Z" fill="#1C1C24"/>
+    <rect x="-180" y="40" width="360" height="22" fill="#1C1C24"/><rect x="420" y="-30" width="40" height="70" rx="10" fill="#C9CDD4"/><circle cx="440" cy="-50" r="22" fill="#FFE6A0"/>
+    <path d="M-30 -60 l14 30 34 4 -26 22 8 34 -30 -18 -30 18 8 -34 -26 -22 34 -4Z" fill="#E8B23A"/>
+    ${wheel(-300)}${wheel(310)}</g><g transform="translate(${f1(x - 10 * s * flip)},${f1(y + 30 * s)}) scale(${s})">${txt(0, 0, 'XERIFE', 30, '#E8B23A')}</g>`;
+}
+function brick(x0, y0, w, h, c1 = '#8A4A34', c2 = '#7A3E2C', m = '#5A2E22') {
+  let s = `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="${m}"/>`;
+  for (let r = 0; r * 44 < h; r++) for (let c = -1; c * 120 < w; c++) { const x = x0 + c * 120 + (r % 2) * 60; s += `<rect x="${x + 4}" y="${y0 + r * 44 + 4}" width="112" height="36" rx="3" fill="${(r * 3 + c) % 4 ? c1 : c2}"/>`; }
+  return s;
+}
+function hat(x, y, s, rot = 0) {
+  return `<g transform="translate(${f1(x)},${f1(y)}) rotate(${f1(rot)}) scale(${s})"><ellipse cx="0" cy="0" rx="150" ry="36" fill="#1A1A22"/><path d="M-90 -6 Q-96 -110 -10 -120 Q90 -118 90 -6Z" fill="#22222C"/><path d="M-92 -30 L92 -30 L90 -6 L-90 -6Z" fill="#6A2020"/></g>`;
+}
+
+/* ===================== cenas ===================== */
+const SH = [['gun', 0, T('b2') - .1], ['jail', T('b2') - .1, T('b3') - .1], ['carve', T('b3') - .1, T('b4') - .1], ['point', T('b4') - .1, T('b5') - .1],
+  ['lock', T('b5') - .1, T('b5') + 3.3], ['car', T('b5') + 3.3, T('b6') - .1], ['line', T('b6') - .1, T('b7') - .1], ['cinema', T('b7') - .1, T('b8') - .1], ['end', T('b8') - .1, TOTAL]];
+const shotAt = t => SH.find(s => t >= s[1] && t < s[2]) || SH[SH.length - 1];
+const loc = (t, id) => { const s = SH.find(x => x[0] === id); return { L: t - s[1], d: s[2] - s[1], k: (t - s[1]) / (s[2] - s[1]) }; };
+const GRAINV = t => { const j = Math.floor(t * 24); return `<rect x="-200" y="-200" width="1480" height="2320" fill="url(#noiseP)" opacity=".05" transform="translate(${(j * 37) % 200 - 100},${(j * 53) % 200 - 100})"/>`; };
+const hand2 = t => [Math.sin(t * 1.3) * 3 + Math.sin(t * 3.1) * 1.5, Math.cos(t * 1.1) * 3];      // tremor leve de câmera na mão
+
+// corredor da cadeia com luz quente (fundo dos planos 1, 4 e 9)
+function corredor(t, foco = 0) {
+  let s = `<rect x="-800" y="-800" width="2700" height="3600" fill="#3A2A20"/>`;
+  s += `<rect x="-800" y="-800" width="2700" height="1900" fill="#8A6A50"/><ellipse cx="540" cy="400" rx="1000" ry="900" fill="url(#gWarm)" opacity="1"/>`;
+  s += `<rect x="-800" y="1100" width="2700" height="1500" fill="#4A3A30"/>${Array.from({ length: 10 }, (_, i) => `<line x1="-800" y1="${1140 + i * 90}" x2="1900" y2="${1140 + i * 92}" stroke="#3A2C22" stroke-width="5"/>`).join('')}`;
+  s += bars(-300, 380, 80, 1120, 7, '#2A2024', '#C89A70') + bars(700, 1400, 80, 1120, 7, '#2A2024', '#C89A70');
+  for (let i = 0; i < 3; i++) s += `<rect x="${420 + i * 90}" y="-200" width="10" height="${260 + i * 10}" fill="#2A2024"/><circle cx="${425 + i * 90}" cy="${70 + i * 10}" r="26" fill="#FFF0C0"/><circle cx="${425 + i * 90}" cy="${70 + i * 10}" r="90" fill="url(#gWarm)" opacity="${op(.7 + .3 * Math.sin(t * 9 + i))}"/>`;
+  return s;
+}
+
+// 1. GANCHO: a arma preta apontada; atrás, um guarda de mãos para cima. No fim, uma lasca mostra a madeira.
+function sGun(t) {
+  const { L, d, k } = loc(t, 'gun'), [jx, jy] = hand2(t);
+  setCam(540 + jx, 980 + jy, lerp(1.0, 1.22, easeInOut(k)), lerp(-1.5, 1, k), [540, 980, 1]);
+  let s = lay(.2, `<g filter="url(#b4)">${corredor(t)}${sil({ x: 600, y: 1250, s: .8, kind: 'soldado', col: GUARD, rim: GUARDRIM, rimK: [-1, -.3], armF: [-160 - 6 * Math.sin(t * 20), -12], armB: [160 + 6 * Math.sin(t * 19), 12], shadow: 0 })}</g>`);
+  const lasca = easeOut(range(L, 2.3, 3.0));
+  const bob = Math.sin(t * 2.2) * 6;
+  s += lay(1, pistolaNaMao(520, 1120 + bob, 1.35, -8, { pol: 1, lasca }));
+  if (lasca > 0 && lasca < 1) for (let i = 0; i < 4; i++) { const q = range(L, 2.3 + i * .08, 3.2 + i * .08); if (q > 0) s += lay(1, `<rect x="${f1(780 + i * 14 + q * 40)}" y="${f1(900 + q * 520 + i * 10)}" width="14" height="8" rx="2" fill="${POL}" transform="rotate(${f1(q * 400)} ${f1(780 + i * 14 + q * 40)} ${f1(900 + q * 520)})" opacity="${op(1 - q)}"/>`); }
+  return s + VIG(.9) + GRAINV(t);
+}
+// 2. a cadeia "à prova de fuga" (1934) e o preso na janela gradeada
+function sJail(t) {
+  const { L, d, k } = loc(t, 'jail'), [jx, jy] = hand2(t);
+  const pin = easeInOut(range(L, d * .48, d * .9));
+  setCam(lerp(540, 720, pin) + jx, lerp(1000, 900, pin) + jy, lerp(.82, 2.0, pin), 0, [540, 1000, 1]);
+  let s = lay(.05, `<rect x="-900" y="-900" width="2900" height="3700" fill="url(#skyDay)"/>`);
+  s += lay(.1, `<ellipse cx="200" cy="200" rx="220" ry="70" fill="#fff" opacity=".7"/><ellipse cx="900" cy="120" rx="260" ry="60" fill="#fff" opacity=".6"/>`);
+  let b = brick(-300, 300, 1700, 1300);
+  b += `<rect x="-320" y="260" width="1740" height="60" fill="#5A4A3A"/><rect x="-320" y="250" width="1740" height="16" fill="#3A2E24"/>`;
+  b += `<rect x="190" y="360" width="700" height="120" rx="8" fill="#E8DFC8"/><rect x="200" y="370" width="680" height="100" rx="6" fill="none" stroke="#3A2E24" stroke-width="6"/>${txt(540, 436, 'CADEIA DE CROWN POINT', 42, '#2A2018')}`;
+  for (const wx of [160, 720]) b += `<rect x="${wx - 20}" y="560" width="280" height="380" fill="#2A2024"/><rect x="${wx}" y="580" width="240" height="340" fill="#4A3A30"/>`;
+  // preso na janela da direita
+  b += `<g>${sil({ x: 840, y: 1260, s: .5, kind: 'homem', col: NAVY, rim: NAVYRIM, rimK: [1, -.3], shadow: 0 })}</g>`;
+  for (const wx of [160, 720]) for (let i = 0; i < 6; i++) b += `<rect x="${wx + 6 + i * 44}" y="580" width="16" height="340" rx="6" fill="#1A1416"/>`;
+  b += `<rect x="440" y="1080" width="200" height="420" fill="#3A2416"/><rect x="420" y="1060" width="240" height="30" fill="#5A4A3A"/>${txt(540, 1040, '1934', 46, '#E8DFC8')}`;
+  b += `<rect x="-300" y="1500" width="1700" height="400" fill="#8A847A"/>`;
+  s += lay(1, b);
+  // faixa "À PROVA DE FUGA" pendurada
+  const sw = Math.sin(t * 2) * 1.5;
+  s += lay(1, `<g transform="rotate(${f1(sw)} 540 520)"><path d="M150 500 L930 500 L910 560 L930 620 L150 620 L170 560Z" fill="#B8262A"/>${txt(540, 580, 'À PROVA DE FUGA', 56, '#FFF4E0')}</g>`);
+  return s + VIG(.7) + GRAINV(t);
+}
+// 3. madeira + lâmina de barbear + graxa (close na mesa da cela)
+function sCarve(t) {
+  const { L, d, k } = loc(t, 'carve'), [jx, jy] = hand2(t);
+  setCam(540 + jx, lerp(1000, 960, k) + jy, lerp(1.05, 1.25, easeInOut(k)), lerp(1, -1, k), [540, 980, 1]);
+  let s = `<rect width="1080" height="1920" fill="#2A1C14"/>`;
+  s += lay(.3, `<ellipse cx="540" cy="500" rx="900" ry="800" fill="url(#gWarm)" opacity=".75"/><g filter="url(#b12)">${bars(-300, 1400, 0, 900, 9, '#1A1214', '#9A7A60')}</g>`);
+  s += lay(1, `<rect x="-400" y="1100" width="1900" height="1100" fill="#6A4628"/><rect x="-400" y="1100" width="1900" height="18" fill="#8A5E36"/>${Array.from({ length: 7 }, (_, i) => `<line x1="-400" y1="${1180 + i * 110}" x2="1500" y2="${1170 + i * 112}" stroke="#4A3018" stroke-width="5"/>`).join('')}`);
+  const carv = range(L, 0, d * .55), pol = easeInOut(range(L, d * .6, d * .95));
+  s += lay(1, tinGraxa(880, 1520, 1.0, 1));
+  s += lay(1, pistol(470, 1250, 1.15, -4, { pol, bloco: 1 - easeInOut(carv) }));
+  // lascas de madeira voando
+  for (let i = 0; i < 14; i++) { const q = ((L * 1.6 + i / 14) % 1); if (carv > 0 && carv < 1) s += lay(1, `<path d="M0 0 q14 -10 26 0" stroke="${WOOD}" stroke-width="7" fill="none" stroke-linecap="round" transform="translate(${f1(360 + i * 30 + q * 160)},${f1(1150 - Math.sin(q * Math.PI) * 220 + q * 260)}) rotate(${f1(q * 500 + i * 40)})" opacity="${op(1 - q)}"/>`); }
+  // mão com a lâmina (entalhando) e depois com o pincel de graxa
+  const hx = carv < 1 ? 520 + Math.sin(L * 14) * 90 : lerp(150, 760, pol), hy = carv < 1 ? 1140 + Math.cos(L * 14) * 20 : 1120;
+  if (carv < 1) s += lay(1, blade(hx, hy, 1.1, 24 + Math.sin(L * 14) * 14));
+  else s += lay(1, `<g transform="translate(${f1(hx)},${f1(hy)}) rotate(-30)"><rect x="-12" y="-220" width="24" height="200" rx="8" fill="#8A5A30"/><path d="M-30 -20 L30 -20 L24 40 L-24 40Z" fill="${POL}"/></g>`);
+  s += lay(1, fist(hx + 40, hy + 10, .5, carv < 1 ? -50 : -35));
+  return s + VIG(1) + GRAINV(t);
+}
+// 4. aponta pro guarda: ele levanta as mãos
+function sPoint(t) {
+  const { L, d, k } = loc(t, 'point'), [jx, jy] = hand2(t);
+  const up = easeOut(range(L, .7, 1.2)), pi = easeOut(range(L, 1.0, 1.4));
+  setCam(lerp(560, 540, k) + jx + (pi > 0 && pi < 1 ? Math.sin(L * 60) * 6 : 0), 980 + jy, lerp(1.0, 1.0 + .25 * pi, 1), 0, [540, 980, 1]);
+  let s = lay(.25, corredor(t));
+  const tr = up > .9 ? Math.sin(t * 22) * 4 : 0;
+  s += lay(.6, sil({ x: 560 + tr, y: 1380, s: .95, kind: 'soldado', col: GUARD, rim: GUARDRIM, rimK: [-1, -.3], armF: [lerp(10, -165, up), lerp(10, -10, up)], armB: [lerp(-10, 165, up), lerp(-10, 10, up)] }));
+  const ax = lerp(1300, 760, easeOut(range(L, 0, .6)));
+  s += lay(1, `<g transform="translate(${f1(ax)},1430) scale(-1,1) translate(${f1(-ax)},-1430)">${pistolaNaMao(ax, 1430, 1.05, -6)}</g>`);   // espelhada: aponta para a esquerda, para o guarda
+  return s + VIG(1) + GRAINV(t);
+}
+// 5. guardas trancados atrás das grades; a arma de madeira cai no chão, ele leva as metralhadoras
+function sLock(t) {
+  const { L, d, k } = loc(t, 'lock'), [jx, jy] = hand2(t);
+  setCam(lerp(500, 600, k) + jx, 1000 + jy, lerp(1.0, 1.1, k), 0, [540, 1000, 1]);
+  let s = lay(.3, `<rect x="-800" y="-800" width="2700" height="3600" fill="#4A3A2E"/><ellipse cx="540" cy="400" rx="800" ry="600" fill="url(#gWarm)" opacity=".7"/><rect x="-800" y="1250" width="2700" height="1400" fill="#3A2C22"/>`);
+  for (let i = 0; i < 3; i++) s += lay(.55, sil({ x: 300 + i * 240, y: 1260, s: .62, kind: 'soldado', col: GUARD, rim: GUARDRIM, rimK: [-1, -.3], armF: [-150, -20 + 6 * Math.sin(t * 8 + i)], armB: [150, 20], shadow: 0 }));
+  const close = easeOut(range(L, 0, .7));
+  s += lay(.7, `<g transform="translate(${f1(lerp(900, 0, close))},0)">${bars(120, 980, 380, 1300, 10, '#1E1A1C', '#C89A70')}</g>`);
+  // ele passa na frente: larga a arma de madeira e segura duas metralhadoras
+  const wx = lerp(-250, 1300, easeInOut(range(L, 1.0, d)));
+  s += lay(1, sil({ x: wx, y: 1900, s: 1.15, kind: 'homem', col: NAVY, rim: NAVYRIM, rimK: [1, -.3], ph: L * 6, walk: 1, armF: [-70, -40], armB: [-60, -40] }));
+  s += lay(1, tommy(wx + 30, 1900 - 620 * 1.15, .9, -8) + tommy(wx + 50, 1900 - 560 * 1.15, .9, -4));
+  const dr = range(L, 1.3, 1.9), gx = lerp(-250, 1300, easeInOut(range(1.3, 1.0, d)));
+  if (L > 1.3) { const y = dr < 1 ? lerp(1250, 1760, easeIn(dr)) : 1760 - Math.abs(Math.sin((L - 1.9) * 10)) * 30 * Math.max(0, 1 - (L - 1.9) * 2); s += lay(1, pistol(gx + 120, y, .5, dr * 160 + Math.min(1, Math.max(0, L - 1.9)) * 20, { pol: 1 })); }
+  return s + VIG(1) + GRAINV(t);
+}
+// 6. foge no carro da xerife
+function sCar(t) {
+  const { L, d, k } = loc(t, 'car'), [jx, jy] = hand2(t);
+  setCam(lerp(560, 400, k) + jx, 1100 + jy, lerp(1.05, .95, k), 0, [540, 1100, 1]);
+  let s = lay(.1, `<rect x="-900" y="-900" width="2900" height="3700" fill="url(#skyDay)"/>`);
+  s += lay(.35, brick(-700, 450, 2400, 780, '#7A4232', '#6A382A', '#4A2A20') + `<rect x="200" y="760" width="700" height="470" fill="#2A2024"/><rect x="220" y="780" width="660" height="450" fill="#3A302A"/>${txt(550, 720, 'GARAGEM', 54, '#E8DFC8')}`);
+  s += lay(.6, `<rect x="-900" y="1230" width="2900" height="1400" fill="#8A847A"/>`);
+  const go = easeIn(range(L, .4, d)), cx = lerp(560, -900, go);
+  for (let i = 0; i < 10; i++) { const q = (L * 1.4 + i / 10) % 1; if (go > 0) s += lay(1, `<circle cx="${f1(cx + 470 + q * 300)}" cy="${f1(1460 - q * 120)}" r="${f1(30 + q * 80)}" fill="#C8C0B0" opacity="${op((1 - q) * .5)}" filter="url(#b12)"/>`); }
+  s += lay(1, fordXerife(cx, 1400, 1.05, t, go * 3 + .01, -1));
+  return s + VIG(.8) + GRAINV(t);
+}
+// 7. cruza a divisa (placa ILLINOIS) e o caso vai pro FBI
+function sLine(t) {
+  const { L, d, k } = loc(t, 'line'), [jx, jy] = hand2(t);
+  if (L < 2.4) {
+    const q = L / 2.4;
+    setCam(540 + jx, 1000 + jy, lerp(1.0, 1.15, q), 0, [540, 1000, 1]);
+    let s = lay(.05, `<rect x="-900" y="-900" width="2900" height="3700" fill="url(#skyDusk)"/><circle cx="760" cy="760" r="120" fill="#FFB070" opacity=".9"/>`);
+    s += lay(.3, `<path d="M-900 900 L2000 900 L2000 2800 L-900 2800Z" fill="#4A4A3A"/><path d="M490 900 L590 900 L1500 2800 L-420 2800Z" fill="#2A2A30"/><path d="M536 900 L544 900 L600 2800 L480 2800Z" fill="#E8C060" opacity=".6"/>`);
+    const sz = lerp(.6, 1.45, easeIn(q)), sx = lerp(700, 860, easeIn(q)), sy = lerp(980, 1180, easeIn(q));
+    s += lay(1, `<g transform="translate(${f1(sx)},${f1(sy)}) scale(${f1(sz)})"><rect x="-10" y="0" width="20" height="300" fill="#5A4A3A"/><rect x="-170" y="-150" width="340" height="150" rx="10" fill="#F2EAD6" stroke="#2A2A30" stroke-width="8"/>${txt(0, -90, 'ILLINOIS', 54, '#1A2A4A')}${txt(0, -40, 'DIVISA', 30, '#5A5A60')}</g>`);
+    const cs = lerp(1.3, .28, easeOut(q));
+    s += lay(1, `<g transform="translate(540,${f1(lerp(1750, 1050, easeOut(q)))}) scale(${f1(cs)})"><rect x="-260" y="-200" width="520" height="220" rx="40" fill="#101016"/><rect x="-200" y="-300" width="400" height="120" rx="30" fill="#101016"/><circle cx="-180" cy="-40" r="24" fill="#FF4A3A"/><circle cx="180" cy="-40" r="24" fill="#FF4A3A"/><circle cx="-180" cy="-40" r="90" fill="url(#gRed)"/><circle cx="180" cy="-40" r="90" fill="url(#gRed)"/></g>`);
+    return s + VIG(.9) + GRAINV(t);
+  }
+  const L2 = L - 2.4, st = range(L2, .5, .8);
+  setCam(540 + jx + (st > 0 && st < 1 ? Math.sin(L2 * 70) * 10 * (1 - st) : 0), 980 + jy, lerp(1.0, 1.12, L2 / 2.4), lerp(-2, 0, L2 / 2.4), [540, 980, 1]);
+  let s = `<rect width="1080" height="1920" fill="#3A2E26"/>`;
+  s += lay(.4, `<ellipse cx="540" cy="700" rx="800" ry="700" fill="url(#gWarm)" opacity=".6"/>`);
+  s += lay(1, `<rect x="-200" y="1250" width="1500" height="900" fill="#4A3020"/>`);
+  s += lay(1, `<g transform="translate(540,1000) rotate(-4)"><rect x="-380" y="-460" width="760" height="900" rx="10" fill="#D8B878"/><rect x="-380" y="-520" width="300" height="80" rx="10" fill="#D8B878"/>${txt(-230, -470, 'FBI', 56, '#3A2A18')}
+    <rect x="-320" y="-400" width="640" height="780" fill="#F4EEDD"/>${txt(0, -320, 'DIVISÃO DE INVESTIGAÇÃO', 30, '#2A2A30')}
+    <rect x="-140" y="-270" width="280" height="340" fill="#C8C2B4"/><ellipse cx="0" cy="-150" rx="62" ry="74" fill="${NAVY}"/><path d="M-120 70 Q-120 -40 -40 -60 L40 -60 Q120 -40 120 70Z" fill="${NAVY}"/><path d="M-70 -190 Q-20 -250 60 -200 L66 -170 Q0 -200 -64 -170Z" fill="${NAVY}"/>
+    ${Array.from({ length: 6 }, (_, i) => `<rect x="-260" y="${110 + i * 40}" width="${520 - (i % 3) * 90}" height="12" rx="6" fill="#B8B2A4"/>`).join('')}
+    <g transform="translate(0,-100) rotate(-14) scale(${f1(lerp(2.2, 1, easeOut(st)))})" opacity="${op(st * 3)}"><rect x="-280" y="-60" width="560" height="120" rx="12" fill="none" stroke="#C0262A" stroke-width="12"/>${txt(0, 30, 'PROCURADO', 80, '#C0262A')}</g></g>`);
+  return s + VIG(1) + GRAINV(t);
+}
+// 8. saída do cinema (noite): letreiro, flashes e o chapéu que cai
+function sCinema(t) {
+  const { L, d, k } = loc(t, 'cinema'), [jx, jy] = hand2(t);
+  setCam(540 + jx, lerp(1000, 1100, k) + jy, lerp(.95, 1.15, easeInOut(k)), 0, [540, 1000, 1]);
+  let s = lay(.1, `<rect x="-900" y="-900" width="2900" height="3700" fill="url(#skyN)"/>`);
+  s += lay(.5, `<rect x="-300" y="300" width="1680" height="1300" fill="#1E1A22"/><rect x="40" y="420" width="1000" height="260" rx="10" fill="#2A1A10"/>`);
+  let bulbs = '';
+  for (let i = 0; i < 26; i++) { const on = (Math.floor(t * 8) + i) % 3 ? 1 : .35, bx = 60 + (i % 13) * 80, by = i < 13 ? 440 : 660; bulbs += `<circle cx="${bx}" cy="${by}" r="9" fill="#FFE6A0" opacity="${on}"/><circle cx="${bx}" cy="${by}" r="26" fill="url(#gWarm)" opacity="${f1(on * .6)}"/>`; }
+  s += lay(.5, bulbs + txt(540, 600, 'BIOGRAPH', 130, '#FFE6A0', 'letter-spacing="8"') + `<rect x="160" y="700" width="760" height="900" fill="#3A2A20"/><rect x="200" y="740" width="680" height="860" fill="#FFD9A0" opacity=".25"/>`);
+  s += lay(.5, `<ellipse cx="540" cy="1000" rx="800" ry="600" fill="url(#gWarm)" opacity=".45"/><rect x="-900" y="1550" width="2900" height="1200" fill="#141218"/>`);
+  const walk = range(L, 0, 1.4), fall = range(L, 1.4, 2.6);
+  s += lay(.8, sil({ x: lerp(420, 560, walk), y: 1600, s: .8, kind: 'homem', col: NAVY, rim: NAVYRIM, rimK: [1, -.3], ph: L * 6, walk: walk < 1 ? 1 : 0 }));
+  // flashes de câmera vindo da esquerda (sem mostrar violência)
+  for (const ft of [1.25, 1.45, 1.6]) { const f = pulse(L, ft, ft + .12, .04); if (f > 0) s += `<rect width="1080" height="1920" fill="#fff" opacity="${op(f * .6)}"/>`; }
+  if (L > 1.4) s += lay(1, hat(lerp(600, 760, fall), fall < .6 ? lerp(760, 1680, easeIn(fall / .6)) : 1680, .9, fall * 260));
+  s += lay(1, `<rect x="-900" y="1700" width="2900" height="400" fill="#0C0A10" opacity="${op(range(L, 1.6, 2.6) * .6)}"/>`);
+  return s + VIG(1.1) + GRAINV(t);
+}
+// 9. a arma de madeira hoje: no escuro, sob um foco de luz; termina no mesmo enquadramento do começo (loop)
+function sEnd(t) {
+  const { L, d, k } = loc(t, 'end'), [jx, jy] = hand2(t);
+  setCam(540 + jx, 980 + jy, lerp(1.35, 1.0, easeInOut(range(k, .55, 1))), lerp(3, -1.5, k), [540, 980, 1]);
+  let s = `<rect width="1080" height="1920" fill="#0A080C"/>`;
+  s += lay(.3, `<path d="M440 -400 L640 -400 L1200 1500 L-120 1500Z" fill="#FFE6B0" opacity=".12"/><ellipse cx="540" cy="1250" rx="520" ry="110" fill="#FFE6B0" opacity=".18"/>`);
+  const back = easeInOut(range(k, .55, 1));
+  if (back > 0) s += lay(.2, `<g opacity="${op(back)}"><g filter="url(#b4)">${corredor(t)}${sil({ x: 600, y: 1250, s: .8, kind: 'soldado', col: GUARD, rim: GUARDRIM, rimK: [-1, -.3], armF: [-160, -12], armB: [160, 12], shadow: 0 })}</g></g>`);
+  const rot = lerp(14, -8, easeInOut(k)), lasca = 1 - easeIn(range(k, .7, 1));
+  const gy = lerp(1120, 1120, back), gs = lerp(1.2, 1.35, back);
+  s += lay(1, pistol(520, gy, gs, rot, { pol: 1, lasca }));
+  if (back > 0) { const [cx, cy] = caboDe(520, gy, gs, rot); s += lay(1, `<g opacity="${op(back)}">${fist(cx, cy, gs * .82, rot)}</g>`); }
+  return s + VIG(lerp(1.2, .9, back)) + GRAINV(t);
+}
+const FN = { gun: sGun, jail: sJail, carve: sCarve, point: sPoint, lock: sLock, car: sCar, line: sLine, cinema: sCinema, end: sEnd };
+/*RENDER*/
+</script>
+</body>
+</html>
