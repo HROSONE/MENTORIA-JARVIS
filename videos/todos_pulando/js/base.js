@@ -12,6 +12,9 @@ const AMB = {
   espaco: { fundo: 0x000004, nevoa: null, exp: 1.0 },
   celular: { fundo: 0x07070c, nevoa: null, exp: 1.1 },
   cidade: { fundo: 0x9fc4e8, nevoa: [0xb9d3ea, 0.0016], exp: 1.0 },
+  africa: { fundo: 0xf0b070, nevoa: [0xf0c088, 0.0024], exp: 1.0 },
+  brasil: { fundo: 0x74c4f0, nevoa: [0xbfe6f6, 0.0018], exp: 1.0 },
+  china: { fundo: 0xc8c0c8, nevoa: [0xc8c0c8, 0.0034], exp: 1.0 },
   atomo: { fundo: 0x03050c, nevoa: null, exp: 1.1 },
 };
 export function ambiente(nome) {
