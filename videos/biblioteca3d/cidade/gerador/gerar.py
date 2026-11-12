@@ -26,6 +26,7 @@ import casas
 import predios
 import equipamentos
 import esporte
+import transporte
 from malha import Malha
 from paleta import GRAMA
 
@@ -131,6 +132,9 @@ def gerar_novas():
     gerar_grupo('predios', predios.PECAS)
     gerar_grupo('equipamentos', equipamentos.PECAS, equipamentos.EX)
     gerar_grupo('esporte', esporte.PECAS, esporte.EX)
+    gerar_grupo('rodovias', transporte.RODOVIAS)
+    gerar_grupo('aeroporto', transporte.AEROPORTO)
+    gerar_grupo('condominio', transporte.CONDOMINIO)
 
 
 def escrever_lista():
@@ -139,7 +143,8 @@ def escrever_lista():
              'natureza': 'Árvores e arbustos', 'cercas': 'Cercas, muros e portões (trechos de 12 m)', 'energia': 'Rede elétrica',
              'casas': 'Casas', 'predios': 'Prédios', 'equipamentos': 'Hospital, delegacia, supermercado, cinema e estacionamento', 'esporte': 'Esporte (ladrilhos grandes: coloque em y = 0)',
              'moveis': 'Mesas, cadeiras e móveis', 'faixas': 'Faixas pintadas (decalques)', 'placas': 'Placas',
-             'mobiliario': 'Semáforos, postes de luz e hidrantes'}
+             'mobiliario': 'Semáforos, postes de luz e hidrantes', 'rodovias': 'Rodovia (peças de 36 x 12 m, coloque em y = 0)',
+             'aeroporto': 'Aeroporto (pavimentos em y = 0; edifícios em y = 0,15)', 'condominio': 'Condomínio'}
     linhas = ['# Peças do kit cidade', '', 'Arquivo gerado por `gerador/gerar.py`; não edite à mão. Medidas em metros (largura x altura x profundidade).', '']
     tot_tris, tot_kb = 0, 0.0
     for cat in nomes:
