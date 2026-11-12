@@ -10,18 +10,16 @@
 - O perigo real seria a **multidão e a logística** (comida, água), não o pulo (xkcd).
 - Os números de população e área variam por fonte: a locução não crava casas decimais.
 
-## Locução (dono do canal) e plano a plano
+## Locução (dono do canal) e plano a plano — versão 2 (roteiro do dono)
 | Tempo | Locução | Objeto herói | Movimento de câmera |
 |---|---|---|---|
-| 0:00–0:03 | **Será que a Terra tremeria se todo mundo pulasse ao mesmo tempo?** | A Terra no escuro | Push-in no planeta, já com a pergunta na voz |
-| 0:03–0:08 | **Imagina 8 bilhões de pessoas, juntas, no mesmo lugar.** | A multidão (pontinhos) | Pull-out rápido do rosto de um boneco até a multidão cobrindo o mapa |
-| 0:08–0:14 | **Todo mundo pula ao mesmo tempo.** | O boneco em close, no ar | Órbita 360° no pulo, whoosh |
-| 0:14–0:22 | **A gente imagina assim: ondas, rachaduras, o planeta chacoalhando.** (CENA "IMAGINADA": dramática, marcada como suposição) | O chão e o planeta | Pull-out com a Terra tremendo (visual de filme, com selo "SUPOSIÇÃO") |
-| 0:22–0:30 | **Mas na vida real, nada disso.** | O planeta intacto | Corte seco para o planeta parado, depois zoom out lento |
-| 0:30–0:36 | **A Terra pesa mais de dez trilhões de vezes o peso de todos nós. Ela se mexeria menos que a largura de um átomo.** | Um átomo ao lado do planeta | Push-in do planeta até o átomo (escala) |
-| 0:36–0:42 | **O verdadeiro problema seria voltar pra casa. E aí, você pularia? Se inscreve.** | O boneco, de novo no ar | Pull-out voltando ao quadro 0 (loop) |
+| 0:00–0:05 | **Se todo mundo pulasse ao mesmo tempo, o planeta sairia do lugar… ou ficaria amassado?** | A Terra | Push-in no planeta; em seguida o selo "SUPOSIÇÃO 1" |
+| 0:05–0:11 | (duas cenas da suposição) **Ele sairia do lugar?** / **Ou ficaria amassado?** | A Terra: cena A empurrada para fora da órbita; cena B amassada como bola | Duas órbitas curtas, uma em cada cena, com whoosh entre elas |
+| 0:11–0:16 | **Então chega um alerta no celular de todo mundo:** | O celular em close | Pull-out do celular até a tela cheia: "ALERTA GLOBAL: HOJE ÀS 12:00 TODOS DEVEM PULAR. QUEM NÃO PULAR: BANIDO DA SOCIEDADE OU PRISÃO PERPÉTUA." |
+| 0:16–0:22 | **Ninguém quer arriscar. Todo mundo sai de casa e se prepara.** | Gente saindo e se juntando (multidão crescendo) | Pull-out da porta de uma casa até a multidão enorme cobrindo o mapa |
+| 0:22–0:27 | **Chega meio-dia.** | Um relógio digital gigante 11:59 → 12:00 | Push-in no relógio (contador diegético) e corte para a multidão |
+| 0:27–0:31 | **Todo mundo pula.** | Os pés/uma pessoa no ar | Órbita 360° no pulo, whoosh |
+| 0:31–0:38 | **E o que acontece? Quase nada. A Terra pesa mais de dez trilhões de vezes o peso de todos nós: ela se mexeria menos que a largura de um átomo.** | O planeta intacto e depois um átomo ao lado | Zoom out do pulo até a Terra parada; push-in até o átomo (escala) |
+| 0:38–0:42 | **O problema de verdade seria voltar pra casa. E aí, você pularia? Se inscreve.** | O boneco de novo no ar | Pull-out, voltando ao quadro 0 |
 
-## Imagem do quadro 0
-Terra gigante e nítida no escuro, com um pontinho (o boneco) no ar em primeiro plano.
-## Selos diegéticos (texto curto na tela)
-"SUPOSIÇÃO" na cena imaginada e "REAL" no corte seco, para ficar claro o que é fantasia e o que é física.
+Selos diegéticos: "SUPOSIÇÃO" nas cenas imaginadas (planeta empurrado e planeta amassado) e "REAL" no resultado. O alerta é ficção do roteiro e é marcado como tal (descrição: "ficção, ninguém pode obrigar isso").
