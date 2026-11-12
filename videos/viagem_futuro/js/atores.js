@@ -64,10 +64,10 @@ export class Ator {
     const Pq = B.parent.getWorldQuaternion(new THREE.Quaternion());
     let d = alvo.clone().sub(S);
     // escala do grupo: comprimentos em mundo
-    const k = this.grupo.scale.x;
+    const k = this.grupo.scale.y;
     const l1 = L1 * k, l2 = L2 * k;
     let dist = d.length();
-    dist = clamp(dist, Math.abs(l1 - l2) + 1e-3, (l1 + l2) * 0.9995);
+    dist = clamp(dist, Math.abs(l1 - l2) + 1e-3 * k, (l1 + l2) * 0.9995);
     const ed = d.normalize();
     let p = polo.clone().sub(ed.clone().multiplyScalar(polo.dot(ed)));
     if (p.lengthSq() < 1e-6) p.set(0, -1, 0);

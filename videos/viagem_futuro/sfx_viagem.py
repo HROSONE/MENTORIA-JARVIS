@@ -1005,7 +1005,7 @@ def cama(id, fn, g=1.0, pan=0.0, rv=None, w=0.3, fade=0.1):
 
 import math
 CORTES = []
-JANELAS_VOZ = [(0.1, 41.5)]
+JANELAS_VOZ = [(0.1, 56.0)]
 
 def silencio_corte(t, nivel, dur):
     CORTES.append((t, nivel, dur))
@@ -1086,43 +1086,127 @@ def pouso(g=1.0):
     return somar(sub_boom(48, 24, 1.8, 1.0), filtro(ruido(1.8), lo=60, hi=700) * ad(int(1.8 * SR), 0.1, 0.5) * 0.6) * g
 
 
+def tombo(g=1.0):
+    """corpo cansado caindo no chão seco: baque surdo + roupa + poeira"""
+    return somar(batida_grave(85, 38, 0.45, 0.14) * 0.9, filtro(ruido(0.5), lo=120, hi=1400) * ad(int(0.5 * SR), 0.004, 0.12) * 0.35, roupa(0.5, 0.5, 1.0)[:int(0.5 * SR)] * 0.5) * g
+
+
+def golpe_machado(g=1.0):
+    return somar(clack(1.0) * 0.7, madeira_estalo(0.5)[:int(0.5 * SR)] * 0.6, banda(ruido(0.12), 2500, 8000) * ad(int(0.12 * SR), 0.001, 0.03) * 0.4) * g
+
+
 def montar():
-    a, d = seg('seca1')
-    cama('seca1', lambda dd: somar(vento2(dd, 0.6, 260), filtro(ruido(dd), lo=40, hi=160) * 0.3), 0.8, 0, 'campo', 0.3)
-    add(respirar(d, 0.35, 0.5, 0.3), a, 0.12, 0, 'campo', 0.2); add(metal_bate(520, 0.9, 0.5), a + 1.2, 0.25, -0.3, 'campo', 0.4)
-    a, d = seg('seca2')
-    cama('seca2', lambda dd: vento2(dd, 0.5, 260), 0.6, 0, 'campo', 0.3); add(passos_corrida(d - 1.2, 1.0), a + 1.1, 0.4, 0, 'campo', 0.3); add(riser(d, 150, 2200, 0.6, 0.2), a + 0.8, 0.15, 0, 'campo', 0.3)
-    a, d = seg('nave')
-    cama('nave', lambda dd: zumbido2(dd, 0.8, 70.0), 0.5, 0, 'quarto', 0.3); add(clack(1.0), a + 1.35, 0.7, 0, 'quarto', 0.3); add(somar(metal_bate(420, 0.7, 0.6), sub_boom(60, 30, 1.2, 1.0)), a + 1.45, 0.5, 0, 'quarto', 0.3)
-    add(riser(d - 1.6, 120, 4500, 0.8, 0.4), a + 1.6, 0.35, 0, 'quarto', 0.3); add(tictac2(14, 0.12, 0.6, 0.0), a + 1.7, 0.2, 0, 'quarto', 0.2)
-    a, d = seg('tunel')
-    add(whoosh(d + 0.3, 80, 6000, 1.8), a, 0.45, 0, 'campo', 0.3); cama('tunel', lambda dd: somar(zumbido2(dd, 0.5, 110.0), filtro(ruido(dd), lo=200, hi=3000) * 0.18), 0.6, 0, 'campo', 0.3)
-    add(cintilar(d, 1.0), a, 0.3, 0, 'campo', 0.3); add(riser(d, 200, 7000, 0.7, 0.2), a, 0.3, 0, 'campo', 0.2)
-    a, d = seg('futuro')
-    silencio_corte(a - 0.02, 0.1, 0.3); add(sub_boom(40, 22, 2.0, 1.0), a, 0.5, 0, 'campo', 0.4)
-    cama('futuro', lambda dd: somar(zumbido2(dd, 0.4, 85.0), vento2(dd, 0.2, 400)), 0.55, 0, 'campo', 0.3); add(whoosh(1.4, 300, 3500, 1.0), a + 0.3, 0.25, -0.3, 'campo', 0.3); add(whoosh(1.2, 400, 3000, 1.0), a + 1.8, 0.2, 0.4, 'campo', 0.3)
-    a, d = seg('lab')
-    cama('lab', lambda dd: zumbido2(dd, 0.5, 100.0), 0.35, 0, 'sala', 0.3); add(passos_corrida(1.4, 1.0)[:int(1.4 * SR)], a + 0.2, 0.2, 0, 'sala', 0.3)
-    add(somar(metal_bate(2400, 0.6, 0.5), zap(0.4, 1800, 900)), a + 1.6, 0.6, 0, 'sala', 0.3); add(zap(0.8, 3000, 400, 1.0), a + 1.9, 0.4, 0, 'sala', 0.3)
-    add(sirene2(d - 2.0, 0.9, 0.0, 0.6), a + 2.0, 0.35, 0, 'sala', 0.5); add(passos_corrida(1.4, 1.0), a + 2.9, 0.4, 0, 'sala', 0.3)
+    G = {k: P[k]['t0'] for k in P}
+    # ------------------------------------------------ 1) fome: vento seco, passos arrastados, quedas
+    a, d = seg('fome1')
+    cama('fome1', lambda dd: somar(vento2(dd, 0.7, 240), filtro(ruido(dd), lo=40, hi=150) * 0.35), 0.8, 0, 'campo', 0.3)
+    add(zumbido2(9.0, 0.5, 38.0), a, 0.22, 0, 'campo', 0.2)
+    for k in range(7): add(passo2('concreto', 0.4, 'tenis'), a + 0.3 + k * 0.42, 0.22, -0.3 + 0.1 * k, 'campo', 0.25)
+    add(respirar(2.6, 0.45, 0.6, 0.4), a + 0.3, 0.12, 0.2, 'campo', 0.2)
+    for tq in (2.3, 2.8, 3.5, 3.9, 4.5, 4.9, 5.4, 6.6, 7.4, 8.3):
+        add(tombo(1.0), tq, 0.55, np.sin(tq * 3) * 0.5, 'campo', 0.35)
+    a, d = seg('fome2')
+    cama('fome2', lambda dd: somar(vento2(dd, 0.6, 260), filtro(ruido(dd), lo=40, hi=150) * 0.35), 0.7, 0, 'campo', 0.3)
+    add(respirar(d, 0.4, 0.5, 0.4), a, 0.12, 0, 'campo', 0.2); add(murmurio2(d, 0.5, 3), a, 0.12, 0, 'campo', 0.3)
+    a, d = seg('triste')
+    cama('triste', lambda dd: somar(vento2(dd, 0.6, 240), filtro(ruido(dd), lo=40, hi=150) * 0.3), 0.7, 0, 'campo', 0.3)
+    add(choro(2.2, 250.0, 0.9, 'ae', 3), a + 0.1, 0.45, 0, 'campo', 0.3); add(respirar(2.0, 0.6, 0.7, 0.5), a + 0.3, 0.1, 0, 'campo', 0.2)
+    add(riser(d - 0.4, 120, 1800, 0.5, 0.3), a + 2.0, 0.2, 0, 'campo', 0.3)
+    # ------------------------------------------------ 2) máquina do tempo
+    a, d = seg('maq1')
+    add(whoosh(1.2, 400, 1800, 1.0), a, 0.25, 0, 'campo', 0.3)
+    cama('maq1', lambda dd: somar(zumbido2(dd, 0.7, 72.0), filtro(ruido(dd), lo=300, hi=2500) * 0.05, vento2(dd, 0.2, 260)), 0.6, 0, 'campo', 0.3)
+    for k in range(6): add(passo2('concreto', 0.7, 'tenis'), a + 0.1 + k * 0.46, 0.35, -0.2 + 0.1 * k, 'campo', 0.3)
+    add(rattle(d, 0.4, 25, (1500, 5000)), a, 0.14, 0.3, 'campo', 0.3); add(cintilar(d, 1.0), a, 0.14, 0, 'campo', 0.3)
+    add(tictac2(8, 0.4, 0.5), a, 0.18, 0.3, 'campo', 0.2)
+    a, d = seg('maq2')
+    cama('maq2', lambda dd: somar(zumbido2(dd, 0.8, 80.0), filtro(ruido(dd), lo=200, hi=2200) * 0.05), 0.7, 0, 'quarto', 0.3)
+    add(clique2(1.0, 'botao'), a + 0.3, 0.5, 0.2, 'quarto', 0.3); add(clique2(1.0, 'botao'), a + 0.55, 0.45, -0.2, 'quarto', 0.3)
+    add(bipe(1568, 0.1, 1.0), a + 0.7, 0.25, 0.2, 'quarto', 0.2); add(bipe(1976, 0.1, 1.0), a + 0.85, 0.25, 0.2, 'quarto', 0.2)
+    add(somar(clack(1.0), metal_bate(380, 0.8, 0.7)), a + 1.2, 0.7, 0.1, 'quarto', 0.3)
+    add(riser(d - 1.2, 150, 4000, 0.7, 0.4), a + 1.2, 0.35, 0, 'quarto', 0.3)
+    for k in range(10): add(bipe(2000 + 120 * k, 0.05, 1.0), a + 1.5 + k * 0.1, 0.12, 0.2, 'quarto', 0.1)
+    a, d = seg('ativa')
+    add(riser(1.75, 100, 6500, 1.0, 0.5), a, 0.5, 0, 'campo', 0.3); cama('ativa', lambda dd: somar(zumbido2(dd, 1.0, 95.0), filtro(ruido(dd), lo=100, hi=1500) * 0.1), 0.6, 0, 'campo', 0.3)
+    for k in range(18): add(zap(0.22, 3200, 600, 1.0), a + 0.1 + k * 0.095 + (k % 3) * 0.02, 0.3, np.sin(k * 1.7) * 0.7, 'campo', 0.3)
+    add(sino2(130.0, 3.0, 0.4), a + 0.4, 0.15, 0, 'campo', 0.5); add(somar(sub_boom(42, 22, 2.0, 1.0), batida_grave(60, 28, 0.7, 0.3)), a + 1.72, 0.9, 0, 'campo', 0.5)
+    silencio_corte(a + 1.74, 0.12, 0.35)
+    a, d = seg('viag1')
+    add(whoosh(d + 0.4, 60, 7000, 2.0), a, 0.5, 0, 'campo', 0.3); cama('viag1', lambda dd: somar(zumbido2(dd, 0.8, 120.0), filtro(ruido(dd), lo=150, hi=4000) * 0.2), 0.6, 0, 'campo', 0.3)
+    add(tictac2(24, 0.2, 0.7, 0.06), a, 0.25, 0, 'campo', 0.3); add(cintilar(d, 1.2), a, 0.35, 0, 'campo', 0.3)
+    for k, tt in enumerate((0.3, 1.0, 1.7, 2.4)): add(sino2(165.0 * (1 + 0.25 * k), 2.0, 0.5), a + tt, 0.1, np.sin(k * 2) * 0.7, 'campo', 0.5)
+    add(riser(d, 200, 8000, 0.8, 0.3), a, 0.3, 0, 'campo', 0.2)
+    a, d = seg('viag2')
+    cama('viag2', lambda dd: somar(zumbido2(dd, 0.9, 130.0), filtro(ruido(dd), lo=200, hi=5000) * 0.25), 0.7, 0, 'quarto', 0.3)
+    add(tictac2(30, 0.1, 0.7, 0.03), a, 0.25, 0, 'quarto', 0.3); add(riser(d, 250, 9000, 1.0, 0.4), a, 0.4, 0, 'quarto', 0.2); add(respirar(d, 1.6, 0.8, 0.7), a, 0.1, 0, 'quarto', 0.2)
+    a, d = seg('chega')
+    silencio_corte(a - 0.02, 0.1, 0.4); add(somar(sub_boom(40, 22, 2.2, 1.0), batida_grave(55, 28, 0.8, 0.3)), a, 0.8, 0, 'campo', 0.5)
+    cama('chega', lambda dd: somar(zumbido2(dd, 0.35, 85.0), vento2(dd, 0.25, 420), cidade(dd, 0.3, True, 0.6)), 0.7, 0, 'campo', 0.3)
+    add(whoosh(1.6, 300, 3500, 1.0), a + 0.2, 0.3, -0.4, 'campo', 0.3); add(whoosh(1.2, 400, 3000, 1.0), a + 1.2, 0.25, 0.5, 'campo', 0.3); add(riser(1.5, 150, 1200, 0.5, 0.2), a + 0.3, 0.1, 0, 'campo', 0.3)
+    # ------------------------------------------------ 3) laboratório
+    a, d = seg('lab1')
+    cama('lab1', lambda dd: somar(zumbido2(dd, 0.6, 100.0), filtro(ruido(dd), lo=3000, hi=9000) * 0.03), 0.6, 0, 'sala', 0.3)
+    add(cintilar(d, 0.8), a, 0.25, 0, 'sala', 0.3); add(vidro(0.9) * 0.4, a + 1.1, 0.4, 0, 'sala', 0.3); add(riser(1.2, 300, 3000, 0.6, 0.4), a + 0.2, 0.25, 0, 'sala', 0.3)
+    a, d = seg('lab2')
+    cama('lab2', lambda dd: zumbido2(dd, 0.5, 100.0), 0.35, 0, 'sala', 0.3)
+    add(somar(metal_bate(2400, 0.5, 0.5), zap(0.4, 1800, 900)), a + 0.5, 0.55, 0, 'sala', 0.3)
+    add(sirene2(d - 0.7, 0.9, 0.0, 0.6), a + 0.7, 0.35, 0, 'sala', 0.5); add(passos_corrida(1.4, 1.0), a + 0.9, 0.45, 0, 'sala', 0.3)
+    # ------------------------------------------------ 4) volta e encolhimento
     a, d = seg('volta')
-    add(pouso(1.0), a + 1.3, 0.8, 0, 'campo', 0.4); add(whoosh(1.4, 100, 2500, 1.4), a, 0.35, 0, 'campo', 0.3); add(rattle(1.2, 0.5, 70, (500, 3500)), a + 1.35, 0.3, 0, 'campo', 0.3)
+    add(whoosh(1.1, 90, 2500, 1.4), a, 0.4, 0, 'campo', 0.3); add(pouso(1.0), a + 1.05, 0.9, 0, 'campo', 0.4); add(rattle(1.0, 0.5, 70, (500, 3500)), a + 1.1, 0.3, 0, 'campo', 0.3)
+    cama('volta', lambda dd: vento2(dd, 0.35, 260), 0.45, 0, 'campo', 0.3); add(murmurio2(2.0, 0.8, 6), a + 0.4, 0.2, 0, 'campo', 0.3)
+    for k in range(3): add(arfada(1.0), a + 0.5 + 0.2 * k, 0.15, -0.5 + k * 0.5, 'campo', 0.3)
     add(passos_corrida(1.0, 1.0), a + 1.5, 0.3, 0, 'campo', 0.3)
-    a, d = seg('atira')
-    cama('atira', lambda dd: vento2(dd, 0.4, 260), 0.5, 0, 'campo', 0.3)
-    for k in range(22): add(zap(0.28, 2600, 500, 1.0), a + 0.9 + k * 0.19, 0.4, -0.4 + 0.04 * k, 'campo', 0.3); add(pop(1.0), a + 1.0 + k * 0.19, 0.3, 0.3, 'campo', 0.2)
-    add(zumbido2(4.2, 0.6, 180.0), a + 0.9, 0.2, 0, 'campo', 0.2)
+    a, d = seg('atira1')
+    add(zumbido2(1.2, 0.8, 120.0) * np.linspace(0.2, 1, int(1.2 * SR)), a, 0.3, 0, 'campo', 0.2); add(riser(1.15, 300, 5000, 0.8, 0.5), a, 0.3, 0, 'campo', 0.2)
+    add(somar(zap(0.7, 3500, 300, 1.0), sub_boom(70, 40, 0.6, 0.7)), a + 1.15, 0.7, 0, 'campo', 0.3); add(zumbido2(0.8, 0.6, 180.0), a + 1.2, 0.25, 0, 'campo', 0.2)
+    a, d = seg('atira2')
+    cama('atira2', lambda dd: vento2(dd, 0.35, 260), 0.4, 0, 'campo', 0.3)
+    add(zap(1.0, 3000, 400, 1.0), a + 0.4, 0.5, 0, 'campo', 0.3); add(zumbido2(1.4, 0.6, 200.0), a + 0.5, 0.2, 0, 'campo', 0.2)
+    add(whoosh(0.7, 200, 4500, 1.0)[::-1], a + 0.95, 0.4, 0, 'campo', 0.3); add(pop(1.0), a + 1.5, 0.5, 0, 'campo', 0.2); add(cintilar(1.0, 1.0), a + 1.0, 0.25, 0, 'campo', 0.3)
+    a, d = seg('atira3')
+    add(zumbido2(d, 0.7, 190.0), a, 0.22, 0, 'campo', 0.2)
+    for k in range(16): add(zap(0.28, 2800, 500, 1.0), 35.75 + k * 0.095 - 0.3, 0.3, -0.7 + 0.09 * k, 'campo', 0.3); add(pop(1.0), 35.75 + k * 0.095 + 0.4, 0.3, 0.7 - 0.09 * k, 'campo', 0.2)
+    add(cintilar(2.0, 1.0), a + 0.2, 0.3, 0, 'campo', 0.3); add(murmurio2(2.0, 0.7, 5), a, 0.15, 0, 'campo', 0.3)
+    # ------------------------------------------------ 5) cidade miniatura, banana, corte
     a, d = seg('constroi')
-    for k in range(34): add(pop(1.0), a + 0.1 + k * 0.1, 0.35, np.sin(k) * 0.6, 'campo', 0.2)
-    add(riser(d - 1, 200, 3500, 0.6, 0.2), a, 0.2, 0, 'campo', 0.2); add(cintilar(2.5, 1.0), a + 0.2, 0.3, 0, 'campo', 0.3)
-    cama('constroi', lambda dd: vento2(dd, 0.3, 300), 0.4, 0, 'campo', 0.3); add(murmurio2(2.0, 0.6, 4), a + 2.4, 0.15, 0, 'campo', 0.3)
+    for k in range(40): add(pop(1.0), a + 0.1 + k * 0.07, 0.3, np.sin(k) * 0.6, 'campo', 0.2)
+    add(riser(d - 0.5, 200, 3500, 0.6, 0.2), a, 0.2, 0, 'campo', 0.2); add(cintilar(2.8, 1.0), a + 0.2, 0.3, 0, 'campo', 0.3)
+    cama('constroi', lambda dd: vento2(dd, 0.3, 300), 0.35, 0, 'campo', 0.3); add(murmurio2(2.2, 0.6, 5), a + 1.2, 0.18, 0, 'campo', 0.3)
     a, d = seg('banana')
-    add(whoosh(0.9, 800, 150, 1.0), a + 0.3, 0.5, 0, 'campo', 0.3); add(somar(sub_boom(52, 28, 1.6, 1.0), batida_grave(60, 34, 0.5, 0.2)), a + 1.05, 0.9, 0, 'campo', 0.4); add(rattle(1.0, 0.5, 60, (300, 2500)), a + 1.1, 0.3, 0, 'campo', 0.3)
-    add(murmurio2(2.0, 0.8, 5), a + 1.5, 0.2, 0, 'campo', 0.3)
-    a, d = seg('final')
-    cama('final', lambda dd: vento2(dd, 0.3, 300), 0.35, 0, 'campo', 0.3); add(passos_corrida(1.0, 1.0)[:int(0.7 * SR)], a + 0.2, 0.25, 0, 'campo', 0.3)
-    add(somar(sub_boom(46, 24, 1.8, 1.0), batida_grave(56, 32, 0.6, 0.25)), a + 3.5, 1.0, 0, 'campo', 0.5); add(ding(1318, 1.0), a + 3.55, 0.25, 0, 'campo', 0.4)
-    add(sub_boom(50, 30, 1.6, 1.0), a + 3.9, 0.25, 0, 'campo', 0.4); add(toc(0.7), a + 4.0, 0.25, 0, 'campo', 0.2)
+    add(whoosh(0.9, 800, 150, 1.0), a + 0.2, 0.5, 0, 'campo', 0.3); add(somar(sub_boom(52, 28, 1.6, 1.0), batida_grave(60, 34, 0.5, 0.2)), a + 1.0, 0.9, 0, 'campo', 0.4); add(rattle(1.0, 0.5, 60, (300, 2500)), a + 1.05, 0.3, 0, 'campo', 0.3)
+    for k in range(5): add(arfada(1.0), a + 1.3 + 0.15 * k, 0.15, -0.6 + 0.3 * k, 'campo', 0.3)
+    add(murmurio2(1.4, 0.8, 6), a + 1.2, 0.2, 0, 'campo', 0.3)
+    a, d = seg('corta1')
+    cama('corta1', lambda dd: vento2(dd, 0.25, 300), 0.3, 0, 'campo', 0.3)
+    for i in range(3):
+        tt = (np.pi / 2 - i * 2.1) / 6.5
+        while tt < 45.7 + 0.01:
+            if tt > a + 0.2: add(golpe_machado(1.0), tt, 0.38, -0.3 + 0.3 * i, 'campo', 0.25)
+            tt += 2 * np.pi / 6.5
+    add(somar(sub_boom(60, 32, 1.0, 0.8), tombo(1.0)), 45.7 + 0.3, 0.55, 0, 'campo', 0.3); add(murmurio2(2.0, 0.7, 5), a + 1.5, 0.2, 0, 'campo', 0.3)
+    a, d = seg('corta2')
+    cama('corta2', lambda dd: vento2(dd, 0.25, 300), 0.3, 0, 'campo', 0.3)
+    for i in range(3):
+        tt = (np.pi / 2 - i * 2.1) / 6.5
+        while tt < 49.4:
+            if tt > a - 0.5 and tt < 49.0: add(golpe_machado(1.0), tt, 0.3, -0.3 + 0.3 * i, 'campo', 0.25)
+            tt += 2 * np.pi / 6.5
+    for tq in (47.9 + 0.3, 49.0 + 0.3): add(somar(sub_boom(60, 32, 1.0, 0.8), tombo(1.0)), tq, 0.45, 0, 'campo', 0.3)
+    for k in range(14): add(passo2('concreto', 0.3, 'tenis'), a + 0.8 + k * 0.14, 0.12, -0.3 + 0.05 * k, 'campo', 0.2)
+    add(murmurio2(d, 0.9, 7), a, 0.25, 0, 'campo', 0.3)
+    # ------------------------------------------------ 6) final
+    a, d = seg('final1')
+    cama('final1', lambda dd: vento2(dd, 0.3, 300), 0.3, 0, 'campo', 0.3)
+    add(somar(sub_boom(46, 24, 1.8, 1.0), batida_grave(56, 32, 0.6, 0.25)), a, 0.7, 0, 'campo', 0.5); add(zumbido2(d, 0.5, 130.0), a, 0.15, 0, 'campo', 0.2)
+    for k in range(6): add(arfada(1.0), a + 0.3 + 0.2 * k, 0.15, -0.6 + 0.25 * k, 'campo', 0.3)
+    add(murmurio2(d, 0.7, 6), a, 0.2, 0, 'campo', 0.3); add(riser(d, 200, 2500, 0.6, 0.3), a, 0.2, 0, 'campo', 0.3)
+    a, d = seg('final2')
+    add(whoosh(1.6, 600, 150, 1.0), a + 0.2, 0.4, 0, 'campo', 0.3)
+    add(somar(sub_boom(46, 24, 1.8, 1.0), batida_grave(56, 32, 0.6, 0.25)), a + 1.7, 1.0, 0, 'campo', 0.5); add(ding(1318, 1.0), a + 1.75, 0.25, 0, 'campo', 0.4)
+    add(rattle(0.8, 0.5, 50, (400, 2500)), a + 1.75, 0.25, 0, 'campo', 0.3); add(murmurio2(2.2, 0.9, 7), a + 1.8, 0.25, 0, 'campo', 0.3)
+    add(sub_boom(50, 30, 1.6, 1.0), a + 2.6, 0.25, 0, 'campo', 0.4); add(toc(0.7), a + 2.7, 0.2, 0, 'campo', 0.2)
+    cama('final2', lambda dd: vento2(dd, 0.3, 300), 0.3, 0, 'campo', 0.3)
 
 
 def finalizar(saida, para_voz=False):

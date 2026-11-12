@@ -33,7 +33,9 @@ Regra do canal: **antes de modelar qualquer coisa, procure aqui.** Se já existe
 - **Ondas de choque e multidão instanciada:** `todos_pulando/js/mundo.js` (anéis, parede de ar, cúpula; multidões da África, Brasil e China).
 - **Espaço e escala:** Terra (inteira, empurrada, amassada), átomo, estrelas — `todos_pulando/js/mundo.js`.
 - **Celular com tela de alerta**, relógio digital gigante — `todos_pulando/js/mundo.js`.
-- **Cidade seca, nave, túnel do tempo, cidade neon, laboratório, arma de encolhimento, cidade miniatura, banana e maçã** — `viagem_futuro/js/mundo.js`.
+- **Máquina do tempo (3 anéis de giroscópio, reator, console com tela do ano, alavanca, descargas)** — `biblioteca3d/veiculos/maquina_tempo.js` (visualizador `maquina_tempo.html`).
+- **Cidade seca, vórtice de relógios, cidade neon, laboratório, arma de encolhimento, cidade miniatura (kit a 1:83), banana em 12 fatias cortáveis, maçã torneada, machados de miniatura** — `viagem_futuro/js/mundo.js`.
+- **Gente de verdade (elenco) em cena dramática:** andar fraco, desabar, ficar deitado, de pé fraco, magros por escala (`FINO`) — `viagem_futuro/js/gente.js`. Câmera só desenha quem está no quadro (corte por frustum em `planos.js`).
 - **Guarita de sacos de areia, ninho de atirador, sala de aula de 1942, quarto, lago com canoa, luneta, olhos fechados com cílios** — `sono_militar/js/`.
 - **Casa em corte, cabine de elevador, rua nevada** — `elevador/js/`.
 - **Som:** toolkit em `sono_militar/sfx_sono.py` e `elevador/sfx_elevador.py` (explosões, passos, respiração, reverbs por espaço).
