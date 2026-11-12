@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kit Egito</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #e9d3a8; font: 14px system-ui, sans-serif; }
+  #barra { position: fixed; top: 10px; left: 10px; display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(100% - 20px); }
+  #barra button { border: 0; border-radius: 6px; padding: 7px 11px; background: #fff8e8cc; color: #4a3520; cursor: pointer; }
+  #barra button.on { background: #4a3520; color: #fff8e8; }
+  #info { position: fixed; bottom: 8px; left: 10px; color: #4a3520; opacity: .75; }
+  body.still #barra, body.still #info { display: none; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="barra"></div>
+<div id="info">Kit Egito — arraste para girar, roda para zoom · ?modelo=nome · ?cam=frente|lado|alto|chao · ?still</div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const q = new URLSearchParams(location.search);
+if (q.has('still')) document.body.classList.add('still');
+const MODELOS = ['planalto-gize', 'piramide-queops', 'piramide-queops-original', 'piramide-quefren', 'piramide-miquerinos', 'piramide-rainha', 'esfinge'];
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+// céu: degradê do horizonte arenoso ao azul
+const ceu = document.createElement('canvas'); ceu.width = 2; ceu.height = 256;
+const g = ceu.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256);
+gr.addColorStop(0, '#5f9fd8'); gr.addColorStop(0.62, '#a9cbe6'); gr.addColorStop(1, '#ecdcba');
+g.fillStyle = gr; g.fillRect(0, 0, 2, 256);
+const tceu = new THREE.CanvasTexture(ceu); tceu.colorSpace = THREE.SRGBColorSpace;
+scene.background = tceu;
+
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.5, 20000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+scene.add(new THREE.HemisphereLight('#cfe4ff', '#b8925e', 1.1));
+const sol = new THREE.DirectionalLight('#fff1d6', 2.6);
+sol.castShadow = true;
+sol.shadow.mapSize.set(4096, 4096);
+sol.shadow.bias = -0.0004;
+sol.shadow.normalBias = 0.6;
+scene.add(sol, sol.target);
+
+const loader = new GLTFLoader();
+let atual = null;
+const barra = document.getElementById('barra');
+for (const n of MODELOS) {
+  const b = document.createElement('button'); b.textContent = n; b.onclick = () => carregar(n); b.dataset.n = n; barra.appendChild(b);
+}
+
+async function carregar(nome) {
+  [...barra.children].forEach(b => b.classList.toggle('on', b.dataset.n === nome));
+  window.__ready = false;
+  if (atual) scene.remove(atual);
+  const gltf = await loader.loadAsync(nome + '.glb');
+  atual = gltf.scene;
+  atual.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  scene.add(atual);
+  enquadrar(nome);
+  window.__ready = true;
+}
+
+function enquadrar(nome) {
+  const cam = q.get('cam') || 'frente';
+  let alvo, pos, r;
+  if (nome === 'planalto-gize') {
+    r = 900;
+    const V = {
+      frente: [[ 900, 160, 1150], [-250, 30, 330]],     // de sudeste, a Esfinge na frente das pirâmides
+      lado:   [[ 470,   6,  445], [ 328, 6, 432]],       // do vale, de frente para a Esfinge, por cima dos templos
+      alto:   [[ 700, 1500, 1500], [-250, 0, 330]],
+      chao:   [[ 440,   0,  560], [  0, 60, 160]],
+    }[cam] || [[900, 160, 1150], [-250, 30, 330]];
+    [pos, alvo] = V;
+  } else {
+    const box = new THREE.Box3().setFromObject(atual), s = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+    r = Math.max(s.x, s.y, s.z);
+    const D = { frente: [0.55, 0.28, 1.05], lado: [1.15, 0.22, 0.25], alto: [0.7, 0.9, 0.9], chao: [0.35, 0.04, 0.75] }[cam] || [0.55, 0.28, 1.05];
+    if (nome === 'esfinge') D[0] *= 1.4;
+    alvo = [c.x, c.y * (cam === 'chao' ? 1.2 : 0.75), c.z];
+    pos = [c.x + D[0] * r * 1.25, D[1] * r * 1.25 + (cam === 'chao' ? 1.7 : 0), c.z + D[2] * r * 1.25];
+  }
+  camera.position.set(...pos);
+  controls.target.set(...alvo);
+  controls.update();
+  // sol da tarde, de sudoeste, para as faces do leste/sul ganharem relevo
+  sol.position.set(alvo[0] - 0.55 * r * 3, r * 2.2, alvo[2] + 0.9 * r * 3);
+  sol.target.position.set(...alvo);
+  const sc = sol.shadow.camera, e = r * 1.4;
+  sc.left = -e; sc.right = e; sc.top = e; sc.bottom = -e; sc.near = 1; sc.far = r * 10;
+  sc.updateProjectionMatrix();
+  scene.fog = nome === 'planalto-gize' ? new THREE.Fog('#e6d6b6', 2500, 9000) : null;
+}
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight);
+});
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+carregar(MODELOS.includes(q.get('modelo')) ? q.get('modelo') : 'planalto-gize');
+</script>
+</body>
+</html>

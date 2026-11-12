@@ -47,6 +47,51 @@ Usados nos Shorts "O elevador" (`videos/elevador/`) e "Dormir em dois minutos" (
 | `soldado.glb` | Soldado | 1,83 m | 88.520 | rapaz de 24 anos, farda verde-oliva, capacete de aço com jugular, cinto com fivela, suspensórios de carga, mochila e botas |
 | `aviador.glb` | Aviador | 1,79 m | 85.620 | cadete de 22 anos, gorro de couro com abas e forro, óculos de voo na testa, jaqueta de couro marrom com gola de pelego, calça cáqui e botas |
 
+## Elenco 4 — Astronauta (`gerador/personagens5.py`)
+
+Astronauta com o **traje de caminhada espacial da Estação Espacial** (o EMU, *Extravehicular Mobility Unit*), modelado peça por peça a partir de descrições do traje real.
+É **genérico**: sem bandeira, sem nome e sem sigla de agência. Tem o mesmo esqueleto, o mesmo rosto que mexe e os mesmos clipes (`Parado`, `Andar`, `Correr`, `Pular`, `Assustado`).
+
+![astronauta de frente](previews/astronauta-frente.webp)
+![capacete e painel do peito](previews/astronauta-capacete.webp)
+
+| Arquivo | Altura | Triângulos | Diferença |
+|---|---|---|---|
+| `astronauta.glb` | 1,80 m | 142.044 | bolha transparente, viseira dourada **recolhida**: o rosto aparece e as expressões funcionam; faixas vermelhas nas coxas |
+| `astronauta_viseira.glb` | 1,80 m | 149.033 | viseira dourada **abaixada** (rosto escondido, silhueta) e sem faixas: o outro astronauta da dupla |
+
+Na caminhada espacial de verdade, as faixas vermelhas nas pernas servem para diferenciar os dois astronautas nas imagens.
+
+| Peça (nome real) | No modelo |
+|---|---|
+| Touca de comunicação ("Snoopy cap") | branca nas laterais e marrom no topo, com fones e duas hastes de microfone |
+| Capacete: bolha de policarbonato | vidro transparente (16 % opaco) preso ao traje; **a cabeça mexe dentro dele** |
+| Capa do capacete com viseiras (EVVA) | casca branca com a abertura do rosto e a viseira dourada (recolhida no alto ou abaixada) |
+| Luzes e câmera do capacete | uma caixa de cada lado com duas lâmpadas acesas; a do lado esquerdo tem a câmera |
+| Tronco rígido (HUT) | tronco mais quadrado, anel do pescoço com travas, rolamentos dos ombros |
+| Painel do peito (DCM) | tela de cima, válvula de purga vermelha, chave do ventilador, seletor de energia, volume do rádio, mostrador e luzes, válvula de temperatura azul (lado direito), atuador de oxigênio (lado esquerdo) |
+| Barra de ferramentas (mini-workstation) | barra embaixo do painel com dois ganchos dourados |
+| Mangueiras | duas mangueiras corrugadas do painel até a mochila |
+| Espelho de pulso / caderno de instruções | espelho no punho direito; caderno com argolas no punho esquerdo |
+| Braços | rolamento do braço, **cotovelo sanfonado** (dobras na geometria), conector do pulso, luva de cano largo |
+| Cintura | anel de vedação (que une a parte de cima e a de baixo) e rolamento da cintura |
+| Pernas | rolamento da coxa, **joelho sanfonado**, anel do tornozelo, botas com sola escura |
+| Cabo de segurança | carretel com mosquetão no quadril direito |
+| Mochila de suporte de vida (PLSS) | caixa branca grande, tampa, rádio e antena |
+| Oxigênio reserva (SOP) | módulo embaixo da mochila |
+| Mochila de resgate a jato (SAFER) | último módulo, com 10 bicos (para trás, para os lados e para baixo) e o controle de mão guardado do lado esquerdo |
+| Emblema | redondo no braço esquerdo, azul com aro dourado |
+
+![costas: mochila, oxigênio reserva e SAFER](previews/astronauta-costas.webp)
+![andando](previews/astronauta-andar.webp)
+![pulando](previews/astronauta-pular.webp)
+
+O vidro do capacete usa transparência (`alphaMode: BLEND`); a casca branca do capacete tem as duas faces. Dados do traje real, para a narração: cerca de 145 kg com a mochila e
+os equipamentos, pressão de 4,3 psi (29,6 kPa), 8 horas de suporte de vida mais 30 minutos de reserva; camada de fora branca (para refletir o calor do Sol)
+de tecido Ortho-Fabric (mistura de Gore-Tex, Kevlar e Nomex); viseira dourada para filtrar o infravermelho e o ultravioleta do Sol.
+Fontes: [Extravehicular Mobility Unit](https://en.wikipedia.org/wiki/Extravehicular_Mobility_Unit), [Thermal Micrometeoroid Garment](https://en.wikipedia.org/wiki/Thermal_Micrometeoroid_Garment),
+[HowStuffWorks: Hard Upper Torso](https://science.howstuffworks.com/space-suit5.htm), [NASA: Spacewalk Spacesuit Basics](https://www.nasa.gov/centers-and-facilities/johnson/spacewalk-spacesuit-basics/).
+
 ## Uso rápido (Three.js r160)
 
 ```js

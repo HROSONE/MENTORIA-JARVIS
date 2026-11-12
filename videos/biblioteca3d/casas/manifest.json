@@ -1,0 +1,83 @@
+{
+ "escala": 3.0,
+ "casas": [
+  {
+   "casa": 1,
+   "arquivos": [
+    "casa1-a.glb",
+    "casa1-b.glb",
+    "casa1-c.glb"
+   ],
+   "tamanho_m": [
+    12.32,
+    5.6,
+    8.19
+   ]
+  },
+  {
+   "casa": 2,
+   "arquivos": [
+    "casa2-a.glb",
+    "casa2-b.glb",
+    "casa2-c.glb"
+   ],
+   "tamanho_m": [
+    8.84,
+    6.38,
+    8.48
+   ]
+  },
+  {
+   "casa": 3,
+   "arquivos": [
+    "casa3-a.glb",
+    "casa3-b.glb",
+    "casa3-c.glb"
+   ],
+   "tamanho_m": [
+    8.88,
+    5.16,
+    6.45
+   ]
+  },
+  {
+   "casa": 4,
+   "arquivos": [
+    "casa4-a.glb",
+    "casa4-b.glb",
+    "casa4-c.glb"
+   ],
+   "tamanho_m": [
+    7.04,
+    5.35,
+    7.66
+   ]
+  },
+  {
+   "casa": 5,
+   "arquivos": [
+    "casa5-a.glb",
+    "casa5-b.glb",
+    "casa5-c.glb"
+   ],
+   "tamanho_m": [
+    6.4,
+    5.03,
+    7.25
+   ]
+  },
+  {
+   "casa": 6,
+   "arquivos": [
+    "casa6-a.glb",
+    "casa6-b.glb",
+    "casa6-c.glb"
+   ],
+   "tamanho_m": [
+    6.05,
+    4.74,
+    6.7
+   ]
+  }
+ ]
+}

@@ -1,0 +1,155 @@
+{
+ "convencoes": {
+  "unidade": "metro",
+  "cima": "+Y",
+  "norte_no_planalto": "-Z",
+  "leste_no_planalto": "+X",
+  "origem": "centro da base, pé em y = 0",
+  "frente_da_esfinge": "+Z (no planalto, girada para +X)",
+  "fosso_da_esfinge_m": -8.0
+ },
+ "posicoes_no_planalto": {
+  "queops": [
+   0.0,
+   0.0
+  ],
+  "quefren": [
+   -328.0,
+   344.0
+  ],
+  "miquerinos": [
+   -588.0,
+   743.0
+  ],
+  "esfinge": [
+   328.0,
+   432.0
+  ],
+  "rainhas-queops": [
+   [
+    180.0,
+    32.0
+   ],
+   [
+    182.0,
+    88.0
+   ],
+   [
+    184.0,
+    144.0
+   ]
+  ],
+  "rainhas-miquerinos": [
+   [
+    -505.0,
+    860.0
+   ],
+   [
+    -570.0,
+    860.0
+   ],
+   [
+    -632.0,
+    860.0
+   ]
+  ]
+ },
+ "pecas": [
+  {
+   "nome": "piramide-queops",
+   "arquivo": "piramide-queops.glb",
+   "descricao": "Grande Pirâmide de Gizé (Quéops/Khufu) como está hoje",
+   "triangulos": 30720,
+   "kb": 2348,
+   "tamanho_m": [
+    228.4,
+    148.6,
+    228.4
+   ],
+   "base_m": 230.3,
+   "altura_m": 138.5,
+   "altura_original_m": 146.6
+  },
+  {
+   "nome": "piramide-queops-original",
+   "arquivo": "piramide-queops-original.glb",
+   "descricao": "Grande Pirâmide recém-terminada: revestimento liso de calcário branco e ponta dourada",
+   "triangulos": 14,
+   "kb": 4,
+   "tamanho_m": [
+    231.9,
+    147.6,
+    231.9
+   ],
+   "base_m": 230.3,
+   "altura_m": 146.6
+  },
+  {
+   "nome": "piramide-quefren",
+   "arquivo": "piramide-quefren.glb",
+   "descricao": "Pirâmide de Quéfren (Khafre), com o revestimento que sobrou no topo",
+   "triangulos": 28690,
+   "kb": 2192,
+   "tamanho_m": [
+    212.8,
+    138.4,
+    212.8
+   ],
+   "base_m": 215.3,
+   "altura_m": 136.4,
+   "altura_original_m": 143.5
+  },
+  {
+   "nome": "piramide-miquerinos",
+   "arquivo": "piramide-miquerinos.glb",
+   "descricao": "Pirâmide de Miquerinos (Menkaure), com a base de granito vermelho",
+   "triangulos": 11828,
+   "kb": 907,
+   "tamanho_m": [
+    107.6,
+    63.0,
+    107.6
+   ],
+   "base_m": 103.4,
+   "altura_m": 61.0,
+   "altura_original_m": 65.5
+  },
+  {
+   "nome": "piramide-rainha",
+   "arquivo": "piramide-rainha.glb",
+   "descricao": "Pirâmide de rainha (satélite), arruinada",
+   "triangulos": 2700,
+   "kb": 212,
+   "tamanho_m": [
+    44.3,
+    23.2,
+    44.3
+   ],
+   "base_m": 46.0,
+   "altura_m": 20.0,
+   "altura_original_m": 30.0
+  },
+  {
+   "nome": "esfinge",
+   "arquivo": "esfinge.glb",
+   "descricao": "Grande Esfinge de Gizé, com a Estela do Sonho entre as patas",
+   "triangulos": 1230,
+   "kb": 103,
+   "tamanho_m": [
+    21.6,
+    20.6,
+    73.1
+   ],
+   "comprimento_m": 73,
+   "altura_m": 20,
+   "largura_m": 19,
+   "frente": "+Z"
+  },
+  {
+   "nome": "planalto-gize",
+   "arquivo": "planalto-gize.glb",
+   "kb": 9298,
+   "descricao": "Planalto de Gizé: as três pirâmides, seis pirâmides de rainhas, a Esfinge no fosso, templos, calçada, mastabas e dunas"
+  }
+ ]
+}

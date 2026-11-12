@@ -13,8 +13,12 @@ def material(chave, d):
     """d: (cor, rugosidade, metal) ou dict(cor, rug, metal, emissivo, textura, repete, dupla)"""
     if isinstance(d, tuple):
         d = dict(cor=d[0], rug=d[1], metal=d[2] if len(d) > 2 else 0.0)
-    return Material(d.get('nome', 'M_' + chave), d['cor'], rough=d.get('rug', 0.8), metal=d.get('metal', 0.0), emissive=d.get('emissivo'),
+    m = Material(d.get('nome', 'M_' + chave), d['cor'], rough=d.get('rug', 0.8), metal=d.get('metal', 0.0), emissive=d.get('emissivo'),
                     texture=d.get('textura'), double_sided=d.get('dupla', False), repeat=d.get('repete', False))
+    if d.get('opacidade') is not None:                                   # vidro (viseira do astronauta): mistura com o fundo
+        m.opacidade = d['opacidade']
+        m.alpha = 'BLEND'
+    return m
 
 
 def animacoes_nos(nos, esq, clipes):
