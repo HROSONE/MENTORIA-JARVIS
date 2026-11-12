@@ -108,7 +108,7 @@ export async function construirMundo(mundo) {
   const im = new THREE.InstancedMesh(merged, new THREE.MeshStandardMaterial({ roughness: 0.8 }), N); im.castShadow = true; im.frustumCulled = false; Ci.add(im);
   const pos0 = [], pos1 = [], dly = [], fase = []; const rp = mulberry32(33); const col = new THREE.Color();
   for (let i = 0; i < N; i++) {
-    let a, ra, px, pz; do { a = rp() * 6.28; ra = Math.sqrt(rp()) * 75 + 4; px = Math.cos(a) * ra; pz = 2 + Math.abs(Math.sin(a)) * ra * 0.9 + 4; } while (Math.hypot(px, pz - 18) < 9); pos1.push([px, pz]);
+    let a, ra, px, pz; do { a = rp() * 6.28; ra = Math.sqrt(rp()) * 75 + 4; px = Math.cos(a) * ra; pz = 2 + Math.abs(Math.sin(a)) * ra * 0.9 + 4; } while (Math.hypot(px, pz - 18) < 12); pos1.push([px, pz]);
     pos0.push([(rp() - 0.5) * 2.4, 1.5]); dly.push(rp() * 0.6); fase.push(rp() * 6.28);
     col.setHSL(rp(), 0.55, 0.45 + rp() * 0.2); im.setColorAt(i, col);
   }
@@ -118,7 +118,7 @@ export async function construirMundo(mundo) {
       const k = suave((cheia - dly[i] * 0.6) / 0.4);
       const x = lerp(pos0[i][0], pos1[i][0], k), z = lerp(pos0[i][1], pos1[i][1], k);
       let y = 0;
-      if (tp >= 0) { const u = tp - (fase[i] % 0.18) * 0.1; if (u > 0 && u < 0.7) y = 0.9 * 4 * u / 0.7 * (1 - u / 0.7) * 1.8; }
+      if (tp >= 0) { const u = tp - (fase[i] % 0.18) * 0.1; if (u > 0 && u < 0.7) y = 3.4 * 4 * u / 0.7 * (1 - u / 0.7); }
       else y = 0.04 * Math.abs(Math.sin(cheia * 40 + fase[i])) * (k > 0.05 && k < 0.95 ? 1 : 0);
       ee.set(0, Math.PI + Math.atan2(x, z) * 0.0, 0); qq.setFromEuler(ee);
       mm.compose(V(x, y, z), qq, V(1, 1, 1)); im.setMatrixAt(i, mm);
@@ -126,6 +126,15 @@ export async function construirMundo(mundo) {
     im.instanceMatrix.needsUpdate = true;
   };
   d.multidao(0, -1);
+  // ondas de choque no chão (anéis que se expandem) + cúpula translúcida
+  d.aneis = []; const mat = () => new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  for (let i = 0; i < 4; i++) { const r = new THREE.Mesh(new THREE.RingGeometry(0.84, 1, 128), mat()); r.rotation.x = -Math.PI / 2; r.position.set(0, 0.2 + i * 0.01, 18); r.visible = false; r.frustumCulled = false; Ci.add(r); d.aneis.push(r); }
+  d.cupula = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2), mat()); d.cupula.position.set(0, 0, 18); d.cupula.visible = false; d.cupula.frustumCulled = false; Ci.add(d.cupula);
+  d.ondas = tp => {                                                // tp = segundos desde o pulo; anéis a ~70 m/s, a cada 0,22 s
+    d.aneis.forEach((r, i) => { const u = tp - i * 0.22; r.visible = u > 0 && u < 2.6; if (!r.visible) return; const R = 3 + u * 75; r.scale.set(R, R, R); r.material.opacity = Math.min(1, 1.6 * Math.exp(-u * 1.3)); });
+    const u = tp; d.cupula.visible = u > 0 && u < 1.6; if (d.cupula.visible) { const R = 3 + u * 90; d.cupula.scale.set(R, R * 0.28, R); d.cupula.material.opacity = 0.5 * Math.exp(-u * 2.2); }
+  };
+  d.ondas(-1);
   // personagens de verdade (herói do pulo e quem sai de casa)
   d.heroi = await Ator.criar('jovem_b'); Ci.add(d.heroi.grupo);
   d.saindo = [await Ator.criar('homem'), await Ator.criar('mae'), await Ator.criar('jovem_a')]; for (const a of d.saindo) Ci.add(a.grupo);

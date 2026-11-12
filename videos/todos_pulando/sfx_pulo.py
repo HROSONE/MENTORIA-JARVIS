@@ -1074,6 +1074,13 @@ def zumbido_ouvido(d, f=4300.0, g=1.0):
 
 
 def montar():
+    a, d = seg('abertura')
+    add(multidao_som(d, 1.0), a, 0.35, 0, 'campo', 0.4); add(batida_grave(70, 36, 0.8, 0.3) * 1.0, a + 0.95, 1.0, 0, 'campo', 0.5)
+    add(sub_boom(40, 22, 3.0, 1.0), a + 1.4, 0.9, 0, 'campo', 0.5); add(rattle(2.0, 0.6, 80, (400, 3000)), a + 1.5, 0.4, 0, 'campo', 0.4)
+    add(whoosh(d, 200, 2500), a, 0.2, 0, 'campo', 0.2)
+    a, d = seg('reinicia')
+    add(whoosh(d, 4000, 150, 1.2), a, 0.5, 0, 'campo', 0.3); add(riser(d, 6000, 200, 0.6, 0.3), a, 0.25, 0, 'campo', 0.2); add(multidao_som(d, 1.0)[::-1], a, 0.3, 0, 'campo', 0.3)
+    add(sub_boom(55, 28, 1.6, 1.0), a, 0.4, 0, 'campo', 0.3)
     a, d = seg('terra')
     cama('terra', lambda dd: espaco_ar(dd, 1.0), 0.9, 0, None); add(riser(d, 150, 2500, 0.6, 0.2), a, 0.18, 0, 'campo', 0.3)
     add(whoosh(1.4, 200, 2500), a + d - 0.4, 0.2, 0, 'campo', 0.2)
@@ -1097,8 +1104,8 @@ def montar():
     add(ding(1318, 1.0), a + 3.6, 0.5, 0, 'campo', 0.4); add(sub_boom(48, 30, 1.6, 1.0), a + 3.6, 0.4, 0, 'campo', 0.3)
     silencio_corte(a + 3.6, 0.05, 0.35)
     a, d = seg('pulo')
-    add(batida_grave(70, 36, 0.8, 0.3) * 1.0, a + 0.95, 1.0, 0, 'campo', 0.5); add(sub_boom(40, 22, 3.0, 1.0), a + 1.7, 0.9, 0, 'campo', 0.5)
-    add(rattle(2.0, 0.6, 80, (400, 3000)), a + 1.8, 0.4, 0, 'campo', 0.4); add(whoosh(d, 200, 2500), a, 0.2, 0.2, 'campo', 0.2)
+    add(batida_grave(70, 36, 0.8, 0.3) * 1.0, a + 1.45, 1.0, 0, 'campo', 0.5); add(sub_boom(36, 20, 3.4, 1.0), a + 1.5, 1.0, 0, 'campo', 0.5)
+    add(rattle(2.4, 0.6, 80, (400, 3000)), a + 1.6, 0.4, 0, 'campo', 0.4); add(whoosh(d, 200, 2500), a, 0.2, 0.2, 'campo', 0.2)
     add(multidao_som(d, 1.0), a, 0.3, 0, 'campo', 0.4)
     a, d = seg('real')
     silencio_corte(a, 0.2, 0.9)
