@@ -1,0 +1,55 @@
+{
+ "total": 42,
+ "planos": [
+  {
+   "id": "terra",
+   "t0": 0,
+   "dur": 5
+  },
+  {
+   "id": "empurrada",
+   "t0": 5,
+   "dur": 3
+  },
+  {
+   "id": "amassada",
+   "t0": 8,
+   "dur": 3
+  },
+  {
+   "id": "alerta",
+   "t0": 11,
+   "dur": 5
+  },
+  {
+   "id": "saem",
+   "t0": 16,
+   "dur": 6
+  },
+  {
+   "id": "meiodia",
+   "t0": 22,
+   "dur": 5
+  },
+  {
+   "id": "pulo",
+   "t0": 27,
+   "dur": 4
+  },
+  {
+   "id": "real",
+   "t0": 31,
+   "dur": 3.4
+  },
+  {
+   "id": "atomo",
+   "t0": 34.4,
+   "dur": 3.6
+  },
+  {
+   "id": "fim",
+   "t0": 38,
+   "dur": 4
+  }
+ ]
+}
