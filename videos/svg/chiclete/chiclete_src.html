@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Se você engolir um chiclete</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s,1));background:#000}
+  svg{display:block}
+  text{font-family:'DejaVu Sans Mono','DejaVu Sans',monospace;font-weight:800}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font:800 54px sans-serif;background:rgba(0,0,0,.55);cursor:pointer}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+<svg id="s" width="1080" height="1920" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
+<defs id="defs"></defs>
+<g id="root"></g>
+</svg>
+<div id="start">▶ CLIQUE (com som)</div>
+</div>
+<!--AUDIO-->
+<!--NARR-->
+<script>
+/*LIB*/
+const W = 1080, H = 1920;
+const N = window.NARR, S = Object.fromEntries(N.s.map(x => [x.k, x]));
+const T = k => S[k].t0, E = k => S[k].t1, TOTAL = N.total;
+const R = (() => { let s = 41; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+/*SHARED*/
+/*CENAS*/
+/*RENDER*/
+</script>
+</body>
+</html>

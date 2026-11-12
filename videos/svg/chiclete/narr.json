@@ -1,0 +1,41 @@
+{
+ "total": 33.0,
+ "s": [
+  {
+   "k": "b1",
+   "t0": 0.1,
+   "t1": 5.2,
+   "txt": "Quando você engole um chiclete, a sua garganta aperta em onda e empurra ele pra baixo."
+  },
+  {
+   "k": "b2",
+   "t0": 5.3,
+   "t1": 10.4,
+   "txt": "No estômago, o ácido dissolve o açúcar e o sabor… mas a goma não se desfaz."
+  },
+  {
+   "k": "b3",
+   "t0": 10.5,
+   "t1": 15.0,
+   "txt": "Ela é amassada junto com a comida, horas e horas, e continua inteira."
+  },
+  {
+   "k": "b4",
+   "t0": 15.1,
+   "t1": 21.0,
+   "txt": "Aí desce pelo intestino, uns seis metros de tubo, empurrada pelas mesmas ondas."
+  },
+  {
+   "k": "b5",
+   "t0": 21.1,
+   "t1": 26.9,
+   "txt": "No intestino grosso, ela segue junto com o que sobrou da comida."
+  },
+  {
+   "k": "b6",
+   "t0": 27.0,
+   "t1": 32.6,
+   "txt": "Uns dois dias depois, ela sai do seu corpo… quase do jeito que entrou."
+  }
+ ]
+}
