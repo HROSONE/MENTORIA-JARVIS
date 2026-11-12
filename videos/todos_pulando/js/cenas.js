@@ -24,7 +24,7 @@ export function montarPlanos() {
     m().mostrar('cidade'); const h = m().heroi; h.grupo.visible = true; const tp = u - 0.5; m().multidao(1, tp); m().ondas(u - 1.2);
     const d = h.duracao('Pular'); h.colocar(0, 0, CZ, 0); h.anim('Pular', clamp(tp / 1.2, 0, 1) * d * 0.98, { laco: false });
     const k = suave(u / 3.5), pouso = u - 1.2;
-    camara({ pos: [lerp(-1.2, 0, k), lerp(1.3, 14, k), lerp(2, -8, k)], alvo: [0, lerp(3.2, 2, k), lerp(30, 42, k)], fov: lerp(50, 56, k), t, tr: pouso > 0 && pouso < 0.6 ? 2.0 * Math.exp(-pouso * 4) : 0.2 });
+    camara({ pos: [lerp(-1.2, 0, k), lerp(1.4, 14, k), lerp(6.5, -8, k)], alvo: [0, lerp(3.2, 2, k), lerp(30, 42, k)], fov: lerp(50, 56, k), t, tr: pouso > 0 && pouso < 0.6 ? 2.0 * Math.exp(-pouso * 4) : 0.2 });
   }, { efeito: (u) => ({ subs: 3, obturador: 0.4, flash: u > 1.2 && u < 1.4 ? 0.45 * (1 - (u - 1.2) / 0.2) : 0 }) });
 
   // 1) a pergunta: push-in na Terra com a pessoa no ar em primeiro plano
@@ -100,7 +100,7 @@ export function montarPlanos() {
     m().mostrar('cidade'); const h = m().heroi; h.grupo.visible = true; m().multidao(1, u - 0.5); m().ondas(u - T_POUSO);
     const d = h.duracao('Pular'); h.colocar(0, 0, CZ, 0); h.anim('Pular', clamp((u - 0.5) / 1.2, 0, 1) * d * 0.98, { laco: false });
     const k = suave(u / 3.2), hit = u - T_ATINGE;
-    camara({ pos: [lerp(-1.5, 1.2, k), 0.45 + (hit > 0 ? 0.15 * Math.exp(-hit * 6) * Math.sin(hit * 40) : 0), CZ + DB - k * 4], alvo: [0, lerp(3.2, 7, k), CZ - 4], fov: 62 - (hit > 0 && hit < 0.25 ? 10 * (1 - hit / 0.25) : 0), t, tr: hit > 0 && hit < 0.7 ? 3.2 * Math.exp(-hit * 4) : 0.15 });
+    camara({ pos: [lerp(-1.2, 1.0, k), 0.5 + (hit > 0 ? 0.15 * Math.exp(-hit * 6) * Math.sin(hit * 40) : 0), CZ + DB - 3 * k], alvo: [0, lerp(3.4, 7, k), CZ - 4], fov: 62 - (hit > 0 && hit < 0.25 ? 10 * (1 - hit / 0.25) : 0), t, tr: hit > 0 && hit < 0.7 ? 3.2 * Math.exp(-hit * 4) : 0.15 });
   }, { efeito: (u) => ({ subs: 3, obturador: 0.45, flash: (u > T_POUSO && u < T_POUSO + 0.12) ? 0.35 : (u > T_ATINGE && u < T_ATINGE + 0.2 ? 0.55 * (1 - (u - T_ATINGE) / 0.2) : 0), tintas: selo('E SE…') }) });
 
   // 7c) o pulo, ângulo 2 — DE CIMA PARA BAIXO: câmera alta olhando para o chão; os anéis se abrem a partir do herói e a multidão ondula
