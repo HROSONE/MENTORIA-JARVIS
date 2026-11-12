@@ -90,7 +90,7 @@ def write_glb(path, roots, generator='Hryz Animation - kit cidade', animations=N
     def material(m):
         if id(m) in mat_index:
             return mat_index[id(m)]
-        pbr = {'baseColorFactor': [*[float(x) for x in srgb_to_linear(m.color)], 1.0], 'metallicFactor': float(m.metal), 'roughnessFactor': float(m.rough)}
+        pbr = {'baseColorFactor': [*[float(x) for x in srgb_to_linear(m.color)], float(getattr(m, 'opacidade', 1.0))], 'metallicFactor': float(m.metal), 'roughnessFactor': float(m.rough)}
         jm = {'name': m.name, 'pbrMetallicRoughness': pbr}
         if m.texture is not None:
             if id(m.texture) not in tex_index:
