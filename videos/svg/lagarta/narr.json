@@ -1,0 +1,41 @@
+{
+ "total": 25.8,
+ "s": [
+  {
+   "k": "b1",
+   "t0": 0.1,
+   "t1": 4.6,
+   "txt": "Essa lagarta se pendura, troca de pele pela última vez e vira uma crisálida."
+  },
+  {
+   "k": "b2",
+   "t0": 4.8,
+   "t1": 9.1,
+   "txt": "Lá dentro, enzimas dissolvem quase todo o corpo dela, até virar uma sopa."
+  },
+  {
+   "k": "b3",
+   "t0": 9.3,
+   "t1": 12.6,
+   "txt": "Mas ela guarda grupos de células especiais: os discos imaginais."
+  },
+  {
+   "k": "b4",
+   "t0": 12.8,
+   "t1": 16.5,
+   "txt": "Eles se alimentam da sopa e crescem: asas, pernas, olhos, antenas."
+  },
+  {
+   "k": "b5",
+   "t0": 16.7,
+   "t1": 20.9,
+   "txt": "Em uns dez dias, a crisálida fica transparente: dá pra ver as asas."
+  },
+  {
+   "k": "b6",
+   "t0": 21.1,
+   "t1": 25.2,
+   "txt": "Aí ela racha, e a borboleta sai, abre as asas e voa."
+  }
+ ]
+}
