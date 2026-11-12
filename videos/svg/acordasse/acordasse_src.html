@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>E se você acordasse com 2 cm</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s,1));background:#000}
+  svg{display:block}
+  text{font-family:'DejaVu Sans Mono','DejaVu Sans',monospace;font-weight:800}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font:800 54px sans-serif;background:rgba(0,0,0,.55);cursor:pointer}
+  #start.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+<svg id="s" width="1080" height="1920" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
+<defs id="defs"></defs>
+<g id="root"></g>
+</svg>
+<div id="start">▶ CLIQUE (com som)</div>
+</div>
+<!--AUDIO-->
+<!--NARR-->
+<script>
+/*LIB*/
+const W = 1080, H = 1920;
+const N = window.NARR, S = Object.fromEntries(N.s.map(x => [x.k, x]));
+const T = k => S[k].t0, E = k => S[k].t1, TOTAL = N.total;
+const R = (() => { let s = 41; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+/*SHARED*/
+/*GATO*/
+
+/* =====================================================================================
+   E se você acordasse com 2 cm de altura?  Você: silhueta azul-marinho sem rosto, borda de luz quente.
+   O gato (cinza rajado, olhos verdes) vem do Short da CIA (svg/gato).  Mundo gigante, luz de manhã.
+   ===================================================================================== */
+const NAVY = '#141A2C', RIM = '#FFC07A', RIMC = '#BFD8FF';
+const eu = o => sil(Object.assign({ kind: 'homem', col: NAVY, rim: RIM, rimK: [1, -.35], shadow: .3 }, o));
+const hand2 = t => [Math.sin(t * 1.3) * 3 + Math.sin(t * 3.1) * 1.5, Math.cos(t * 1.1) * 3];
+const shotAt = t => SH.find(s => t >= s[1] && t < s[2]) || SH[SH.length - 1];
+const loc = (t, id) => { const s = SH.find(x => x[0] === id); return { L: t - s[1], d: s[2] - s[1], k: (t - s[1]) / (s[2] - s[1]) }; };
+const GRAINV = t => { const j = Math.floor(t * 24); return `<rect x="-200" y="-200" width="1480" height="2320" fill="url(#noiseP)" opacity=".045" transform="translate(${(j * 37) % 200 - 100},${(j * 53) % 200 - 100})"/>`; };
+const blur = (px, c) => { const id = 'bl' + px; if (!D.some(d => d.includes(`id="${id}"`))) def(`<filter id="${id}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="${px}"/></filter>`); return `<g filter="url(#${id})">${c}</g>`; };
+
+/* ---------------- mundo gigante ---------------- */
+// raios de sol entrando pela janela + poeira brilhando
+function raios(t, k = 1, x0 = 1180, y0 = -300) {
+  let s = '';
+  for (let i = 0; i < 5; i++) { const a = -2.35 + i * .09, w = 70 + i * 30; s += `<path d="M${x0} ${y0} L${f1(x0 + Math.cos(a) * 3200 - w)} ${f1(y0 - Math.sin(a) * -3200)} L${f1(x0 + Math.cos(a) * 3200 + w)} ${f1(y0 - Math.sin(a) * -3200)}Z" fill="#FFF1C8" opacity="${op((.07 + .03 * Math.sin(t * .8 + i)) * k)}"/>`; }
+  for (let i = 0; i < 60; i++) { const ph = i * 1.7, x = (i * 173.3 + t * (8 + i % 5) + Math.sin(t * .6 + ph) * 30) % 1300 - 110, y = (i * 311.7 - t * (12 + i % 7) * 2 + 4000) % 2100 - 90, r = 1.5 + (i % 4); s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${r}" fill="#FFF6DA" opacity="${op((.35 + .35 * Math.sin(t * 2 + ph)) * k)}"/>`; }
+  return s;
+}
+// travesseiro visto de perto (tecido com costura acolchoada e dobras)
+function travesseiro(y0, t, o = {}) {
+  const c1 = o.c1 || '#F1F3F8', c2 = o.c2 || '#D6DCE8', id = nid('tv');
+  def(`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>`);
+  let s = `<path d="M-500 ${y0 + 40} Q-200 ${y0 - 30} 200 ${y0 + 10} Q620 ${y0 + 50} 1000 ${y0 - 10} Q1300 ${y0 - 40} 1600 ${y0 + 30} L1600 3000 L-500 3000Z" fill="url(#${id})"/>`;
+  for (let i = 0; i < 9; i++) { const yy = y0 + 70 + i * 120 + i * i * 8; s += `<path d="M-500 ${yy} Q300 ${yy - 30 + i * 4} 1600 ${yy + 10}" stroke="#C4CCDA" stroke-width="${3 + i}" stroke-dasharray="${14 + i * 3} ${10 + i * 2}" fill="none" opacity=".8"/>`; }
+  for (let i = 0; i < 7; i++) { const xx = -300 + i * 260; s += `<path d="M${xx} ${y0 + 20} Q${xx + 60} ${y0 + 500} ${xx - 40} 3000" stroke="#C4CCDA" stroke-width="5" stroke-dasharray="16 12" fill="none" opacity=".55"/>`; }
+  s += `<path d="M-500 ${y0 + 60} Q200 ${y0 + 10} 1600 ${y0 + 60}" stroke="#FFFFFF" stroke-width="16" fill="none" opacity=".7"/>`;
+  for (let i = 0; i < 6; i++) { const x = -200 + i * 300, y = y0 + 220 + (i % 3) * 140; s += `<path d="M${x} ${y} q120 -60 240 0" stroke="#B8C0D0" stroke-width="14" fill="none" opacity=".35"/>`; }   // dobras
+  return s;
+}
+// tapete felpudo (fios grossos em close)
+function tapete(y0, t, k = 1) {
+  let s = `<rect x="-600" y="${y0}" width="2300" height="2400" fill="#B8524A"/>`;
+  for (let r = 0; r < 9; r++) for (let i = 0; i < 46; i++) {
+    const x = -600 + i * 50 + (r % 2) * 25, y = y0 + r * 70 + 30, h = 90 + ((i * 7 + r * 13) % 5) * 14, sw = Math.sin(t * 1.5 + i * .7 + r) * 6 * k;
+    s += `<path d="M${x} ${y + 60} Q${f1(x + sw * .5)} ${y} ${f1(x + sw)} ${y - h * .5}" stroke="${['#C8635A', '#A8443E', '#D8786C', '#9A3A36'][(i + r) % 4]}" stroke-width="${22 - r * 1.2}" fill="none" stroke-linecap="round"/>`;
+  }
+  return s;
+}
+// piso de cerâmica do banheiro (rejunte em perspectiva)
+function piso(y0, t, cor = '#E6EEF2', rej = '#B8C6CE') {
+  let s = `<rect x="-600" y="${y0}" width="2300" height="2600" fill="${cor}"/>`;
+  for (let i = 0; i < 8; i++) { const y = y0 + Math.pow(i / 7, 1.6) * 1200; s += `<rect x="-600" y="${f1(y)}" width="2300" height="${4 + i * 1.5}" fill="${rej}"/>`; }
+  for (let i = -8; i < 9; i++) s += `<path d="M${540 + i * 90} ${y0} L${540 + i * 420} ${y0 + 1400}" stroke="${rej}" stroke-width="5"/>`;
+  return s;
+}
+// tábuas de madeira da cozinha
+function assoalho(y0, t, x0 = 0) {
+  let s = `<rect x="-800" y="${y0}" width="2700" height="2600" fill="#B07A48"/>`;
+  for (let i = 0; i < 9; i++) { const y = y0 + Math.pow(i / 8, 1.5) * 1300; s += `<rect x="-800" y="${f1(y)}" width="2700" height="${3 + i}" fill="#7A4E2A"/>`; for (let g = 0; g < 4; g++) s += `<path d="M${f1(-800 + ((g * 643 + i * 211 + x0) % 2700))} ${f1(y + 20 + g * 8 + i * 4)} q300 -8 600 0" stroke="#946236" stroke-width="${2 + i * .4}" fill="none" opacity=".7"/>`; }
+  return s;
+}
+// gota d'água gigante (esfera com refração, brilho e a janela refletida)
+function gota(x, y, r, t, o = {}) {
+  const id = nid('gt'), sq = 1 + Math.sin(t * 3) * .015;
+  def(`<radialGradient id="${id}" cx=".38" cy=".3" r=".8"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".95"/><stop offset=".25" stop-color="#C8ECFF" stop-opacity=".55"/><stop offset=".75" stop-color="#6AB8E8" stop-opacity=".45"/><stop offset="1" stop-color="#2A6AA8" stop-opacity=".7"/></radialGradient>`);
+  let s = `<ellipse cx="${x}" cy="${f1(y + r * .92)}" rx="${f1(r * 1.15)}" ry="${f1(r * .16)}" fill="#3A7AB0" opacity=".25" filter="url(#b12)"/>`;
+  s += `<ellipse cx="${x}" cy="${f1(y + r * .1)}" rx="${f1(r * 1.08 * sq)}" ry="${f1(r * .9 / sq)}" fill="url(#${id})" stroke="#2A6AA8" stroke-width="4" opacity=".95"/>`;
+  s += `<path d="M${f1(x - r * .55)} ${f1(y - r * .35)} q${f1(r * .25)} ${f1(-r * .3)} ${f1(r * .6)} ${f1(-r * .32)}" stroke="#fff" stroke-width="${f1(r * .07)}" fill="none" stroke-linecap="round" opacity=".9"/>`;
+  s += `<rect x="${f1(x + r * .15)}" y="${f1(y - r * .55)}" width="${f1(r * .3)}" height="${f1(r * .22)}" rx="6" fill="#fff" opacity=".55"/><path d="M${f1(x + r * .3)} ${f1(y - r * .55)} l0 ${f1(r * .22)} M${f1(x + r * .15)} ${f1(y - r * .44)} l${f1(r * .3)} 0" stroke="#6AB8E8" stroke-width="4"/>`;
+  s += `<path d="M${f1(x - r * .9)} ${f1(y + r * .5)} Q${x} ${f1(y + r * .95)} ${f1(x + r * .9)} ${f1(y + r * .5)}" stroke="#E8F8FF" stroke-width="${f1(r * .05)}" fill="none" opacity=".6"/>`;
+  return s;
+}
+// balança digital de cozinha com o visor
+function balanca(x, y, s, texto, t) {
+  const pisca = Math.floor(t * 2) % 2;
+  return `<g transform="translate(${x},${y}) scale(${s})"><ellipse cx="0" cy="250" rx="900" ry="70" fill="#000" opacity=".3" filter="url(#b12)"/>
+    <path d="M-820 0 L820 0 L860 200 Q860 240 820 240 L-820 240 Q-860 240 -860 200Z" fill="#E8ECF0" stroke="${OL}" stroke-width="10"/><path d="M-800 0 L800 0 L790 40 L-790 40Z" fill="#FFFFFF"/>
+    <rect x="-300" y="80" width="600" height="130" rx="18" fill="#1E2A22" stroke="${OL}" stroke-width="8"/><rect x="-280" y="96" width="560" height="98" rx="10" fill="#9ED89A"/>
+    <text x="0" y="178" font-size="92" fill="#1E3A20" text-anchor="middle">${texto}</text><circle cx="380" cy="146" r="26" fill="${pisca ? '#FF5A4A' : '#8A2A22'}" stroke="${OL}" stroke-width="6"/></g>`;
+}
+// migalha de pão gigante (porosa, dourada)
+function migalha(x, y, r, rot) {
+  let s = `<g transform="translate(${f1(x)},${f1(y)}) rotate(${f1(rot)})"><path d="M${-r} ${-r * .2} Q${-r * .9} ${-r * .95} ${-r * .1} ${-r} Q${r * .8} ${-r * 1.05} ${r} ${-r * .25} Q${r * 1.05} ${r * .7} ${r * .1} ${r * .85} Q${-r * .9} ${r} ${-r} ${-r * .2}Z" fill="#E8B866" stroke="${OL}" stroke-width="8"/>`;
+  s += `<path d="M${-r * .9} ${-r * .3} Q${-r * .7} ${-r * .9} ${-r * .05} ${-r * .95} Q${r * .7} ${-r} ${r * .9} ${-r * .3}" stroke="#A86A2A" stroke-width="${f1(r * .16)}" fill="none" stroke-linecap="round"/>`;
+  for (let i = 0; i < 16; i++) { const a = i * 2.39, rr = r * (.2 + .55 * ((i * 37) % 10) / 10); s += `<ellipse cx="${f1(Math.cos(a) * rr)}" cy="${f1(Math.sin(a) * rr * .8 + r * .1)}" rx="${f1(r * (.05 + (i % 3) * .03))}" ry="${f1(r * (.04 + (i % 2) * .03))}" fill="#C8904A"/>`; }
+  return s + `<path d="M${-r * .4} ${r * .2} q${r * .3} ${-r * .2} ${r * .6} 0" stroke="#FFE2A0" stroke-width="10" fill="none" opacity=".7" stroke-linecap="round"/></g>`;
+}
+// ratinho (lado, virado para a direita)
+function rato(x, y, s, t, o = {}) {
+  const ph = o.ph || 0, walk = o.walk || 0, b = Math.abs(Math.sin(t * 12 + ph)) * 8 * walk;
+  return `<g transform="translate(${f1(x)},${f1(y - b)}) scale(${f1(s * (o.flip || 1) * 1000) / 1000},${s}) rotate(${f1(o.rot || 0)})">
+    <path d="M-150 -60 Q-260 -40 -300 -120 Q-330 -180 -280 -200" stroke="#E8A0A8" stroke-width="14" fill="none" stroke-linecap="round"/>
+    <path d="M-170 -10 Q-190 -160 -20 -170 Q120 -170 160 -80 L210 -50 Q190 -10 120 -6Z" fill="#9AA0AE" stroke="${OL}" stroke-width="9" stroke-linejoin="round"/>
+    <path d="M-120 -30 Q-40 -60 60 -40" stroke="#C8CCD8" stroke-width="16" fill="none" opacity=".6" stroke-linecap="round"/>
+    <circle cx="70" cy="-160" r="54" fill="#B8BCC8" stroke="${OL}" stroke-width="9"/><circle cx="70" cy="-160" r="30" fill="#F2A8B4"/>
+    <circle cx="140" cy="-96" r="11" fill="${OL}"/><circle cx="144" cy="-100" r="4" fill="#fff"/><circle cx="214" cy="-52" r="12" fill="#E87A8E" stroke="${OL}" stroke-width="5"/>
+    <path d="M200 -56 l70 -14 M200 -48 l72 4" stroke="#F4F4F8" stroke-width="3"/>
+    <rect x="-110" y="-16" width="30" height="${f1(22 + 10 * Math.sin(t * 12 + ph) * walk)}" rx="12" fill="#8A909E" stroke="${OL}" stroke-width="5"/><rect x="60" y="-16" width="30" height="${f1(22 - 10 * Math.sin(t * 12 + ph) * walk)}" rx="12" fill="#8A909E" stroke="${OL}" stroke-width="5"/></g>`;
+}
+// pata do gato vista de baixo (almofadinhas rosa)
+function pata(x, y, s, t) {
+  return `<g transform="translate(${f1(x)},${f1(y)}) scale(${s})">
+    <path d="M-170 -900 L170 -900 L190 -60 Q190 120 0 130 Q-190 120 -190 -60Z" fill="${CAT.fur}" stroke="${OL}" stroke-width="12"/>
+    <path d="M-120 -900 Q-100 -500 -140 -140 M60 -900 Q80 -500 40 -160" stroke="${CAT.stripe}" stroke-width="30" fill="none" opacity=".5" stroke-linecap="round"/>
+    <path d="M-110 10 Q0 -60 110 10 Q120 90 0 100 Q-120 90 -110 10Z" fill="${CAT.pink}" stroke="${OL}" stroke-width="8"/>
+    ${[-120, -42, 42, 120].map((dx, i) => `<ellipse cx="${dx}" cy="${-70 - (i === 1 || i === 2 ? 26 : 0)}" rx="42" ry="48" fill="${CAT.pink}" stroke="${OL}" stroke-width="8"/>`).join('')}</g>`;
+}
+// sopro de frio
+const bafo = (x, y, t, k = 1) => { let s = ''; for (let i = 0; i < 3; i++) { const q = (t * .9 + i / 3) % 1; s += `<ellipse cx="${f1(x + q * 60)}" cy="${f1(y - q * 50)}" rx="${f1(14 + q * 40)}" ry="${f1(10 + q * 26)}" fill="#EAF4FF" opacity="${op((1 - q) * .6 * k)}" filter="url(#b4)"/>`; } return s; };
+
+/*CENAS*/
+/*RENDER*/
+</script>
+</body>
+</html>

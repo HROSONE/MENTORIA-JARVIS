@@ -38,6 +38,7 @@ Regra do canal: **antes de modelar qualquer coisa, procure aqui.** Se já existe
 - **Gente de verdade (elenco) em cena dramática:** andar fraco, desabar, ficar deitado, de pé fraco, magros por escala (`FINO`) — `viagem_futuro/js/gente.js`. Câmera só desenha quem está no quadro (corte por frustum em `planos.js`).
 - **Guarita de sacos de areia, ninho de atirador, sala de aula de 1942, quarto, lago com canoa, luneta, olhos fechados com cílios** — `sono_militar/js/`.
 - **Casa em corte, cabine de elevador, rua nevada** — `elevador/js/`.
+- **SVG 2D, natureza e criaturas (Short "A lagarta vira sopa")** — `svg/lagarta/_arte.js`: céu com hora do dia (`ceu(k)`), galho com almofada de seda, folhas de erva-leiteira (`folha`), folhagem desfocada em camadas com paralaxe (`ext`), **lagarta-monarca** em J com pele que sobe e cai (`lagarta`), **crisálida** jade com pontinhos dourados que fica transparente e racha (`crisalida`), interior em corte com sopa, enzimas, discos imaginais e borboleta dobrada (`barril`, `interior`), **borboleta-monarca** de cima com asas que inflam, abrem e batem (`borboleta`), etiqueta de dias pendurada (`etiquetaDia`). Som: `svg/lagarta/sfx_lagarta.py`.
 - **Som:** toolkit em `sono_militar/sfx_sono.py` e `elevador/sfx_elevador.py` (explosões, passos, respiração, reverbs por espaço).
 
 ## Como registrar algo novo
