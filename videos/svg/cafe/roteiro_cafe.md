@@ -22,7 +22,7 @@ Short 2D (SVG), 1080×1920, 26 s, 8 planos. Quinto teste do formato dos virais (
 | 5 | bloqueio | 12,4–16,3 | macro | deriva lateral | o neurônio se acende; anéis brancos a cada batida da adenosina |
 | 6 | tapa | 16,3–20,4 | plano geral | recuo e leve inclinação | barras grandes em primeiro plano; o fundo escurece |
 | 7 | baque | 20,4–24,0 | macro | tremor curto no encaixe | ondas rosa; o neurônio apaga |
-| 8 | bocejo | 24,0–26,0 | zoom-out até a silhueta | do cérebro à cabeça inteira | silhueta com borda de luz quente; lua pela janela; caneca vazia |
+| 8 | bocejo | 24,0–26,0 | zoom-out até o busto em raio X | do cérebro (macro) à cabeça inteira | raio X (pele translúcida com contorno azul, crânio, coluna e cérebro colorido); a mandíbula abre no bocejo; lua pela janela; relógio com a marca; caneca vazia; "Z" subindo |
 
 ## Som (sfx_cafe.py, tudo sintetizado, sem música)
 Zumbido grave da célula, borbulhas e brilhos suaves; o "clack" de cada chave entrando na fechadura (mais agudo para a adenosina, mais grave e seco para a cafeína); bipes do relógio a cada hora; subida de tensão antes do encaixe; "pong" de sonar para o aviso entrando na célula; o clink da caneca, o vapor e uma escada de brilhos quando a cafeína sobe; "bonk" de borracha quando a adenosina bate e volta; multidão de estalinhos quando as peças se acumulam; o estrondo grave do encaixe em massa com o neurônio apagando; e, no fim, um bocejo sintetizado (sopro com formantes) com três "zzz" suaves.

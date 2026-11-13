@@ -1,7 +1,7 @@
 /* =====================================================================================
    POR QUE O CAFÉ TE ACORDA? ☕ — arte em SVG
    Membrana do neurônio com receptores (fechaduras), adenosina (chave laranja com haste) e cafeína (chave marrom com
-   bolinhas), caneca com a marca HRYZ Animation, silhueta da cabeça com o cérebro e instrumentos (relógio e barras de sono).
+   bolinhas), caneca com a marca HRYZ Animation, instrumentos (relógio e barras de sono).
    Mundo (micro): a membrana corre em y ~ 1180; acima dela fica o espaço fora da célula, abaixo o citoplasma.
    Tudo é determinístico (nada de R() dentro de quadro).
    ===================================================================================== */
@@ -88,35 +88,17 @@ function zeta(x, y, s, o) {           // pequeno "Z" de sono
 }
 
 /* ===================== caneca com a marca ===================== */
-function caneca(t, vapor = 1) {
+function caneca(t, vapor = 1, cheia = true) {
   let s = `<rect x="-300" y="1330" width="1700" height="800" fill="#5A3416"/><rect x="-300" y="1330" width="1700" height="10" fill="#8A5A2E"/>`;
   for (let i = 0; i < 8; i++) s += `<path d="M-300 ${1370 + i * 70} Q400 ${1360 + i * 70} 1400 ${1376 + i * 70}" stroke="#3E2410" stroke-width="3" fill="none" opacity=".5"/>`;
   s += `<ellipse cx="560" cy="1350" rx="320" ry="40" fill="#000" opacity=".3"/>`;
   s += `<path d="M810 880 C960 870 970 1130 770 1150" stroke="#E6E8F2" stroke-width="54" fill="none" stroke-linecap="round"/><path d="M810 880 C960 870 970 1130 770 1150" stroke="#fff" stroke-width="14" fill="none" stroke-linecap="round" opacity=".6" transform="translate(-6,-8)"/>`;
   s += `<path d="M280 760 L312 1240 Q336 1330 540 1340 Q744 1330 768 1240 L800 760Z" fill="url(#gCeram)"/>`;
-  s += `<ellipse cx="540" cy="760" rx="260" ry="68" fill="#F4F5FB" stroke="#C6C9DA" stroke-width="4"/><ellipse cx="540" cy="768" rx="236" ry="54" fill="#3A2012"/><ellipse cx="540" cy="774" rx="200" ry="36" fill="#5A3318"/>`;
-  s += `<ellipse cx="470" cy="760" rx="70" ry="10" fill="#D9A36A" opacity=".6"/><path d="M420 770 Q540 800 660 770" stroke="#8A5A32" stroke-width="5" fill="none" opacity=".6"/>`;
+  s += `<ellipse cx="540" cy="760" rx="260" ry="68" fill="#F4F5FB" stroke="#C6C9DA" stroke-width="4"/>${cheia ? `<ellipse cx="540" cy="768" rx="236" ry="54" fill="#3A2012"/><ellipse cx="540" cy="774" rx="200" ry="36" fill="#5A3318"/>` : `<ellipse cx="540" cy="768" rx="236" ry="54" fill="#B9BDD0"/><ellipse cx="540" cy="776" rx="200" ry="34" fill="#D9DCE8"/><ellipse cx="540" cy="782" rx="140" ry="18" fill="none" stroke="#9A6A3E" stroke-width="5" opacity=".4"/>`}`;
+  s += cheia ? `<ellipse cx="470" cy="760" rx="70" ry="10" fill="#D9A36A" opacity=".6"/><path d="M420 770 Q540 800 660 770" stroke="#8A5A32" stroke-width="5" fill="none" opacity=".6"/>` : '';
   s += `<text x="546" y="1010" font-size="112" fill="#F07A1A" text-anchor="middle">HRYZ</text><text x="546" y="1086" font-size="58" fill="#1B2A5A" text-anchor="middle">Animation</text><path d="M388 1112 L704 1112" stroke="#1B2A5A" stroke-width="5" opacity=".6"/>`;
   s += `<path d="M300 820 L330 1200" stroke="#fff" stroke-width="18" opacity=".5" stroke-linecap="round"/>`;
   for (let i = 0; i < (vapor > 0 ? 5 : 0); i++) { const ph = (t * (.28 + .06 * i) + i * .2) % 1, x = 450 + i * 40 + Math.sin(t * 1.4 + i * 2) * 26; s += `<path d="M${f1(x)} ${f1(740 - ph * 420)} q${f1(40 * Math.sin(t + i))} -70 0 -140" stroke="#fff" stroke-width="${f1(26 - ph * 10)}" fill="none" opacity="${f1(.55 * (1 - ph) * Math.min(1, ph * 6))}" stroke-linecap="round"/>`; }
-  return s;
-}
-
-/* ===================== cabeça (silhueta) com o cérebro ===================== */
-const NAVY = '#141A2C', RIM = '#FFC07A';
-const CABECA = 'M-240 -80 C-250 -300 -90 -420 100 -400 C260 -385 330 -280 320 -160 C318 -120 340 -90 352 -62 Q362 -44 340 -38 L322 -30 Q330 -10 316 4 L318 24 Q326 44 300 50 L286 52 Q292 110 240 128 L200 134 Q190 190 150 230 L150 420 L-120 420 L-110 190 C-210 140 -250 60 -240 -80 Z';
-function cabeca(t, act, yawn, zk) {
-  let s = `<path d="${CABECA}" fill="${NAVY}"/><path d="${CABECA}" fill="none" stroke="${RIM}" stroke-width="9" opacity=".8"/>`;
-  // cérebro (corte) com neurônios e brilho (apaga quando está com sono)
-  const id = nid('br'), cor = mix('#5A64D8', '#FFF08A', act);
-  def(`<radialGradient id="${id}" cx=".5" cy=".5" r=".6"><stop offset="0" stop-color="${mix('#5C4EB0', '#FFE8B0', act)}"/><stop offset="1" stop-color="${mix('#2A2266', '#E8A870', act)}"/></radialGradient>`);
-  s += `<g transform="translate(-14,-176)"><ellipse rx="206" ry="156" fill="url(#${id})"/><ellipse cx="-46" cy="-26" rx="120" ry="84" fill="#fff" opacity=".08"/>`;
-  for (let i = 0; i < 9; i++) s += `<path d="M${f1(-190 + i * 44)} ${f1(-70 + 40 * Math.sin(i * 1.7))} q30 -40 60 0 t60 20" stroke="#fff" stroke-width="6" fill="none" opacity=".25" stroke-linecap="round"/>`;
-  for (let i = 0; i < 40; i++) { const a = hh(i, 1) * 6.28, d = Math.sqrt(hh(i, 2)) * .9; s += `<circle cx="${f1(Math.cos(a) * 190 * d)}" cy="${f1(Math.sin(a) * 140 * d)}" r="${f1(5 + 5 * hh(i, 3))}" fill="${cor}" opacity="${f1(.4 + .5 * act)}"/>`; }
-  s += `<ellipse rx="230" ry="180" fill="${cor}" opacity="${f1(.12 + .25 * act)}" filter="url(#b30)"/></g>`;
-  // boca (o bocejo abre uma cavidade escura e rosada)
-  if (yawn > 0) s += `<ellipse cx="306" cy="12" rx="${f1(8 + 40 * yawn)}" ry="${f1(6 + 74 * yawn)}" fill="#7A1E34"/><ellipse cx="306" cy="${f1(30 + 40 * yawn)}" rx="${f1(5 + 26 * yawn)}" ry="${f1(4 + 28 * yawn)}" fill="#D86A84"/>`;
-  for (let i = 0; i < 3; i++) s += zeta(-70 + i * 50, -430 - i * 60 - 100 * zk, 1 + .4 * i + zk, Math.sin(clamp(zk * 1.2 - i * .2) * Math.PI) * .9);
   return s;
 }
 
