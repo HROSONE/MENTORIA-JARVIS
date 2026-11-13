@@ -88,7 +88,7 @@ function zeta(x, y, s, o) {           // pequeno "Z" de sono
 }
 
 /* ===================== caneca com a marca ===================== */
-function caneca(t) {
+function caneca(t, vapor = 1) {
   let s = `<rect x="-300" y="1330" width="1700" height="800" fill="#5A3416"/><rect x="-300" y="1330" width="1700" height="10" fill="#8A5A2E"/>`;
   for (let i = 0; i < 8; i++) s += `<path d="M-300 ${1370 + i * 70} Q400 ${1360 + i * 70} 1400 ${1376 + i * 70}" stroke="#3E2410" stroke-width="3" fill="none" opacity=".5"/>`;
   s += `<ellipse cx="560" cy="1350" rx="320" ry="40" fill="#000" opacity=".3"/>`;
@@ -98,7 +98,7 @@ function caneca(t) {
   s += `<ellipse cx="470" cy="760" rx="70" ry="10" fill="#D9A36A" opacity=".6"/><path d="M420 770 Q540 800 660 770" stroke="#8A5A32" stroke-width="5" fill="none" opacity=".6"/>`;
   s += `<text x="546" y="1010" font-size="112" fill="#F07A1A" text-anchor="middle">HRYZ</text><text x="546" y="1086" font-size="58" fill="#1B2A5A" text-anchor="middle">Animation</text><path d="M388 1112 L704 1112" stroke="#1B2A5A" stroke-width="5" opacity=".6"/>`;
   s += `<path d="M300 820 L330 1200" stroke="#fff" stroke-width="18" opacity=".5" stroke-linecap="round"/>`;
-  for (let i = 0; i < 5; i++) { const ph = (t * (.28 + .06 * i) + i * .2) % 1, x = 450 + i * 40 + Math.sin(t * 1.4 + i * 2) * 26; s += `<path d="M${f1(x)} ${f1(740 - ph * 420)} q${f1(40 * Math.sin(t + i))} -70 0 -140" stroke="#fff" stroke-width="${f1(26 - ph * 10)}" fill="none" opacity="${f1(.55 * (1 - ph) * Math.min(1, ph * 6))}" stroke-linecap="round"/>`; }
+  for (let i = 0; i < (vapor > 0 ? 5 : 0); i++) { const ph = (t * (.28 + .06 * i) + i * .2) % 1, x = 450 + i * 40 + Math.sin(t * 1.4 + i * 2) * 26; s += `<path d="M${f1(x)} ${f1(740 - ph * 420)} q${f1(40 * Math.sin(t + i))} -70 0 -140" stroke="#fff" stroke-width="${f1(26 - ph * 10)}" fill="none" opacity="${f1(.55 * (1 - ph) * Math.min(1, ph * 6))}" stroke-linecap="round"/>`; }
   return s;
 }
 
@@ -116,7 +116,7 @@ function cabeca(t, act, yawn, zk) {
   s += `<ellipse rx="230" ry="180" fill="${cor}" opacity="${f1(.12 + .25 * act)}" filter="url(#b30)"/></g>`;
   // boca (o bocejo abre uma cavidade escura e rosada)
   if (yawn > 0) s += `<ellipse cx="306" cy="12" rx="${f1(8 + 40 * yawn)}" ry="${f1(6 + 74 * yawn)}" fill="#7A1E34"/><ellipse cx="306" cy="${f1(30 + 40 * yawn)}" rx="${f1(5 + 26 * yawn)}" ry="${f1(4 + 28 * yawn)}" fill="#D86A84"/>`;
-  for (let i = 0; i < 3; i++) s += zeta(380 + i * 54, -250 - i * 70 - 100 * zk, 1 + .4 * i + zk, Math.sin(clamp(zk * 1.2 - i * .2) * Math.PI) * .9);
+  for (let i = 0; i < 3; i++) s += zeta(-70 + i * 50, -430 - i * 60 - 100 * zk, 1 + .4 * i + zk, Math.sin(clamp(zk * 1.2 - i * .2) * Math.PI) * .9);
   return s;
 }
 

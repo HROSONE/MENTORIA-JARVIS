@@ -143,7 +143,7 @@ function sBocejo(t) {
   const id = nid('nt'); def(`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="-300" x2="0" y2="1900"><stop offset="0" stop-color="#0A1030"/><stop offset=".7" stop-color="#16204A"/><stop offset="1" stop-color="#241E40"/></linearGradient>`);
   let s = lay(.2, `<rect x="-900" y="-1800" width="2900" height="4600" fill="url(#${id})"/><circle cx="880" cy="260" r="60" fill="#DDE6FF" opacity=".5"/>` + blur(20, `<circle cx="880" cy="260" r="220" fill="#8AA0E8" opacity=".25"/>`));
   const yawn = easeInOut(range(L, 1.2, 1.7)), zk = range(L, 1.5, 2.0);
-  s += lay(1, `<rect x="-300" y="1430" width="1700" height="800" fill="#1B1830"/><rect x="-300" y="1430" width="1700" height="8" fill="#4A3F6A"/><g transform="translate(540,1000)">${cabeca(t, .1, yawn, zk)}</g><g transform="translate(760,1425) scale(.3)">${caneca(t * 0).replace(/<rect x="-300" y="1330"[^>]*\/>/, '')}</g>`);
+  s += lay(1, `<rect x="-300" y="1430" width="1700" height="800" fill="#1B1830"/><rect x="-300" y="1430" width="1700" height="8" fill="#4A3F6A"/><g transform="translate(540,1000)">${cabeca(t, .1, yawn, zk)}</g><g transform="translate(760,1425) scale(.3)">${caneca(0, 0).replace(/<rect x="-300" y="1330"[^>]*\/>/, '')}</g>`);
   return s + `<rect width="1080" height="1920" fill="#0A1030" opacity="${f1(.55 * (1 - range(L, 0, .5)))}"/>` + painelHora(horaAt(t), range(L, .6, 1.0)) + VIG(.55) + GRAINV(t);
 }
 const FN = { sono: sSono, acumula: sAcumula, encaixe: sEncaixe, cafe: sCafe, bloqueio: sBloqueio, tapa: sTapa, baque: sBaque, bocejo: sBocejo };
