@@ -36,6 +36,7 @@ Os mais fracos: "ELES SÃO GÊMEOS" (2,7 mil), "Gota de melado" (3,1 mil), Caval
 - Uma pergunta que só se responde no fim segura a retenção; final que conecta com o começo ajuda a repetição.
 - História real do tipo "como isso é possível?" vence curiosidade explicativa.
 - Vídeos longos (aba Vídeos/busca) aí sim dependem de miniatura e título.
+- **Regra do dono (14/11): o primeiro segundo é o ponto principal.** Nunca abrir com coisa aleatória, preparação ou contexto: o quadro 0 já mostra o fenômeno ou o resultado, e só depois a história rebobina e desenrola (passo a passo). Exemplo "Como nasce um terremoto": o quadro 0 é a estrada esticada em "S" e, em 0,12 s, ela arrebenta e desliza 6 m; depois o vídeo rebobina e explica, e o último plano volta ao "S" do começo (loop). Primeira fala em até 0,1 s descrevendo exatamente o que se vê.
 - Caso "Bananeira até a Ferrari" (27 s): ~60% arrastaram, mas quem ficou viu 23 de 27 s. O meio prende; quem perdeu foi a abertura (por cima do ombro, escura, calma, frase de contexto). Regra: o quadro 0 é a imagem mais absurda do vídeo (o momento-recompensa), clara e colorida, e a história volta para explicar.
 
 ## Gramática de câmera (referência: Zack D. Films; lição dos Shorts do elevador e do sono)
