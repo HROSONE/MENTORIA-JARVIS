@@ -14,5 +14,6 @@ window.__pose = (cfg, cx = 0, cy = 1.0, cz = 3.2, fov = 40, ty = null) => {
   if (cfg.ajuste) { const f = new Function('a', 'THREE', cfg.ajuste); f(m, THREE); }
   m.grupo.updateMatrixWorld(true); cam.fov = fov; cam.updateProjectionMatrix(); cam.position.set(cx, cy, cz); cam.lookAt(0, ty ?? cy, 0); renderer.render(scene, cam);
 };
+window.__pes = (clip, c) => { m.anim(clip, c, {}); m.grupo.updateMatrixWorld(true); const f = n => m.pos(n); return [f('PeE').y, f('PeD').y, f('PeE').z, f('PeD').z]; };
 window.__ready = true;
 </script></body></html>

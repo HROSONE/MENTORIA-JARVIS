@@ -25,12 +25,11 @@ Contagem: 93 palavras em 44,6 s (≈ 2,1 por segundo, com pausas para as imagens
 | 4b | rio subterrâneo | 32,1–38,6 | corte lateral do chão, plano aberto | travelling lateral seguindo os peixes na galeria e **tilt up pelo poço** até a rua (motivo: a água sobe e empurra) | luz de tempestade fria + brilho azul da água; corte seco |
 | 5 | fecho | 38,6–44,6 | plano geral → mesmo enquadramento do quadro 0 | aproximação até o enquadramento do quadro 0 com rampa para a câmera lenta; **o último quadro é igual ao primeiro** | mesma luz da abertura; emenda direto no loop (sem fade para preto) |
 
-## Som (plano; ainda não gerado, aguardando sua aprovação do visual)
-Regras do canal depois do "Mestres da Gravidade": **sem cama de ruído sintetizada, sem música**, síntese só para impactos curtos, um som por ação visível, volume contido. Eu não consigo ouvir o resultado, então vou conferir por espectro e por um teste curto de áudio que você aprova antes do vídeo inteiro.
-- **Ambiente:** chuva só de gravação real de biblioteca livre (BigSoundBank/Kenney), bem baixa e com agudos cortados; na manhã de Yoro, sem chuva (física coerente); na galeria subterrânea, água corrente real, baixa.
-- **Impactos curtos (síntese):** rasgo curto do tecido (0 s), peixe molhado batendo no asfalto (≈ 2,7 s) e cada quique/batida de cauda (3,0–4,4 s), respingos pequenos, peixes caindo e batendo na lage da praça (20–25 s, um por peixe visível), peixes jogados na rua (≈ 36–38 s), o último rasgo do tecido no fim (loop).
-- **Trovão** distante, uma vez por relâmpago (17,5 s e 22,7 s), de gravação real.
-- Narração: gravação sua.
+## Som (`sfx_chuva.py` → `chuva_sfx.mp3`; a narração é sua, o arquivo não tem voz)
+Regras do canal depois do "Mestres da Gravidade": **sem cama de ruído sintetizada, sem música**, síntese só para impactos curtos, um por ação visível, volume contido. **Eu não consigo ouvir o resultado**, então conferi por análise: média de -34 dBFS (o limite do canal é -18), pico de -10 dBFS, só 0,3% da energia acima de 9 kHz (sem chiado) e os 104 eventos caem nos quadros certos (os tempos saem da mesma linha do tempo do vídeo, em `eventos_som.json`).
+- **Ambiente (gravação real):** chuva de [OpenGameArt, "Rain (loopable)", de Ylmir, licença CC0](https://opengameart.org/content/rain-loopable) (arquivo 3, 45 s), filtrada (sem graves abaixo de 150 Hz e sem agudos acima de 4,8 kHz), com as gotas mais altas seguradas e média de -36 dBFS, **só nas cenas em que chove na imagem** (abertura, lenda, corte do chão e fecho); na manhã de Yoro e no mar não há chuva, então não há som de chuva.
+- **Impactos curtos (síntese):** rasgo do tecido no quadro 0 (é ele que abre o loop); o peixe batendo no asfalto molhado em 2,69 s e os seis quiques que diminuem (3,2 a 4,1 s); peixes se debatendo na rua de Yoro (poucos por segundo, bem baixos); dois trovões graves e curtos 0,35 s depois de cada relâmpago (19,3 s e 23,05 s); peixes batendo na laje molhada da praça (22 a 25,6 s); peixes cuspidos pelo poço e batendo na rua (35,8 a 38,5 s); cinco passos da mulher na rua molhada (39,3 a 43,4 s).
+- **Fora de propósito:** sem sino (o sino balança na imagem, mas um sino sintetizado seria arriscado sem eu poder ouvir), sem vento, sem música, sem voz.
 
 ## Detalhes (segunda rodada, pedido do dono: "um pouco liso, quero mais detalhes")
 - **Superfícies:** sujeira de chuva, manchas e relevo nas paredes, telhas e calçadas (`js/detalhe.js`, sem precisar de UV); asfalto com grão, rachaduras, remendos e poças; faixas desgastadas.
@@ -56,12 +55,14 @@ Regras do canal depois do "Mestres da Gravidade": **sem cama de ruído sintetiza
 - **Encenação, não registro:** a mulher com o peixe atravessando o guarda-chuva é **a sua piada de abertura**, não um fato registrado; a Yoro do vídeo é uma cidade inventada (casas do kit), as pessoas e o padre são genéricos (sem semelhança com ninguém real); a cena do padre é dramatização da lenda; o funil e o corte do chão são **ilustrações de hipóteses**; o placar de peixes é ilustrativo (não há contagem real); os peixes são desenhados com dorso azul e barbatanas laranja, **maiores que sardinhas** (33 cm na rua, 4 a 9 vezes maiores nas ilustrações) para dar para ler na tela vertical.
 
 ## Arquivos e como gerar
-`index.html` (a página do vídeo: `window.__setTime(t)` e `window.__frame(t)`), `js/planos.js` (linha do tempo, câmeras, física e relógio em câmera lenta), `js/guardachuva.js`, `js/peixe.js`, `js/cardume.js`, `js/chuva.js`, `js/ceu.js`, `js/rua.js`, `js/yoro.js`, `js/igreja.js`, `js/ciencia.js`, `js/detalhe.js` (detalhe procedural e reflexo nas poças), `js/props.js` (fios, bandeirolas, gaivotas, vapor, flores, boné, celular, feixes de luz), `js/base.js`, `js/motor.js`, `js/atores.js`, `js/util.js`, `harness.js` (servidor + navegador sem GPU), `quadros.js` (quadros soltos), `render.js`, `montar.sh`, `acabamento.sh`, `dev*.html` e `tiro.js` (testes).
+`index.html` (a página do vídeo: `window.__setTime(t)` e `window.__frame(t)`), `js/planos.js` (linha do tempo, câmeras, física e relógio em câmera lenta), `js/guardachuva.js`, `js/peixe.js`, `js/cardume.js`, `js/chuva.js`, `js/ceu.js`, `js/rua.js`, `js/yoro.js`, `js/igreja.js`, `js/ciencia.js`, `js/detalhe.js` (detalhe procedural e reflexo nas poças), `js/props.js` (fios, bandeirolas, gaivotas, vapor, flores, boné, celular, feixes de luz), `js/base.js`, `js/motor.js`, `js/atores.js`, `js/util.js`, `harness.js` (servidor + navegador sem GPU), `quadros.js` (quadros soltos), `render.js`, `montar.sh`, `acabamento.sh`, `sfx_chuva.py`, `eventos_som.js` (+ `eventos_som.json`), `dev*.html` e `tiro.js` (testes).
 ```
 cd videos/chuva_peixes
 node quadros.js <prefixo> t1 t2 …                                 # quadros soltos (W=540 H=960 para miniaturas)
-node render.js --trabalhadores 4 --saida <pasta>                  # 1338 quadros (a rodar só depois da sua aprovação)
-bash montar.sh <pasta> <som.mp3> chuva_de_peixes.mp4              # acabamento de cor, vinheta e grão
+node eventos_som.js                                               # eventos_som.json (instantes de pouso dos peixes etc.)
+python3 sfx_chuva.py <pasta com 3.mp3 da chuva CC0>               # chuva_sfx.mp3
+node render.js --trabalhadores 4 --saida <pasta>                  # 1338 quadros (~40 min em 4 núcleos)
+bash montar.sh <pasta> chuva_sfx.mp3 chuva_de_peixes.mp4          # bloom, cor, vinheta e grão + som
 ```
 
 ## Título e descrição (sugestão)

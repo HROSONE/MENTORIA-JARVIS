@@ -40,7 +40,7 @@ export function chuvaDePeixes(cardume, { t0 = 0, dur = 3, area = [-4, 4, -4, 4],
     const v0 = -r() * ladoQuedaV, T = (-v0 + Math.sqrt(v0 * v0 + 2 * grav * (H - chao))) / grav;
     F.push({ H, tN, x1, z1, T, v0, vx: vento[0] * (0.6 + 0.8 * r()), vz: vento[1] * (0.6 + 0.8 * r()), wx: (r() - 0.5) * 14, wz: (r() - 0.5) * 10, yaw: r() * 6.283, yaw2: r() * 6.283, e: lerp(esc[0], esc[1], r()), fase: r() * 6.28, pit: (r() - 0.5) * 1.2 });
   }
-  return t => {
+  const atualiza = t => {
     for (let i = 0; i < F.length; i++) {
       const f = F[i], tau = t - f.tN;
       if (tau < 0) { cardume.esconder(i); continue; }
@@ -54,4 +54,6 @@ export function chuvaDePeixes(cardume, { t0 = 0, dur = 3, area = [-4, 4, -4, 4],
     }
     cardume.fim();
   };
+  atualiza.pousos = F.map(f => f.tN + f.T);                       // instantes em que cada peixe toca o chão (para o som)
+  return atualiza;
 }
