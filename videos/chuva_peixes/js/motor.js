@@ -22,7 +22,7 @@ export const cam = new THREE.PerspectiveCamera(40, larg / alt, 0.05, 700);
 scene.add(cam);
 
 // um grupo por cenário; só o cenário do plano atual fica visível
-export const mundos = { R: new THREE.Group(), D: new THREE.Group(), C: new THREE.Group() };
+export const mundos = { R: new THREE.Group(), D: new THREE.Group(), L: new THREE.Group(), C: new THREE.Group() };
 for (const k in mundos) { mundos[k].name = 'mundo' + k; scene.add(mundos[k]); mundos[k].visible = false; }
 
 // ---------------------------------------------------------------------------------------------------- carregamento

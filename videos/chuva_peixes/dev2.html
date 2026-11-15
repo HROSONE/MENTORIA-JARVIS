@@ -3,13 +3,16 @@
 import * as THREE from 'three';
 import { renderer, scene, cam, mundos } from './js/motor.js';
 import { Ator } from './js/atores.js';
-const m = await Ator.criar('mae'); m.pintar({ M_vestido: '#ffc414', M_sapato: '#d4202c' });
+const nome = new URLSearchParams(location.search).get('n') || 'mae';
+const m = await Ator.criar(nome);
 mundos.R.add(m.grupo); mundos.R.visible = true; scene.background = new THREE.Color(0x203060);
 scene.add(new THREE.HemisphereLight(0xffffff, 0x445577, 1.6)); const d = new THREE.DirectionalLight(0xffffff, 2); d.position.set(2, 4, 5); scene.add(d);
-window.__info = { vel: { Andar: m.p.info('Andar'), Correr: m.p.info('Correr') }, dur: m.p.clipes.map(c => [c.name, c.duration]) };
-window.__pose = (clip, t, expr = 'neutro', k = 1, cx = 0, cy = 1.0, cz = 3.2, fov = 40) => {
-  m.anim(clip, t, {}); m.rosto({ expressao: expr, forca: k }); m.grupo.updateMatrixWorld(true);
-  cam.fov = fov; cam.updateProjectionMatrix(); cam.position.set(cx, cy, cz); cam.lookAt(0, cy, 0); renderer.render(scene, cam);
+const mats = []; m.obj.traverse(o => { if (o.isMesh) (Array.isArray(o.material) ? o.material : [o.material]).forEach(k => mats.push([k.name, '#' + k.color.getHexString()])); });
+window.__info = { altura: m.altura, mats, clipes: m.p.clipes.map(c => [c.name, +c.duration.toFixed(2)]) };
+window.__pose = (cfg, cx = 0, cy = 1.0, cz = 3.2, fov = 40, ty = null) => {
+  m.anim(cfg.clip || 'Parado', cfg.t || 0, {}); m.rosto({ expressao: cfg.expr || 'neutro', forca: cfg.f ?? 0.8 }); m.grupo.updateMatrixWorld(true);
+  if (cfg.ajuste) { const f = new Function('a', 'THREE', cfg.ajuste); f(m, THREE); }
+  m.grupo.updateMatrixWorld(true); cam.fov = fov; cam.updateProjectionMatrix(); cam.position.set(cx, cy, cz); cam.lookAt(0, ty ?? cy, 0); renderer.render(scene, cam);
 };
 window.__ready = true;
 </script></body></html>

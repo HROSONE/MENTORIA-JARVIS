@@ -14,9 +14,11 @@ export const sol = new THREE.DirectionalLight(0xbcd4ff, 1.2); scene.add(sol); sc
 export const spot = new THREE.SpotLight(0xffd29a, 0, 30, 0.6, 0.6, 1.2); spot.castShadow = true; scene.add(spot); scene.add(spot.target);
 spot.shadow.mapSize.set(2048, 2048); spot.shadow.bias = -0.0003; spot.shadow.normalBias = 0.02;
 export const ponto = new THREE.PointLight(0xffd29a, 0, 12, 2); scene.add(ponto);
-export function luzes({ hemiK = 0.9, ceu = 0x7aa0ff, chao = 0x2a2a4a, solK = 1.2, solCor = 0xbcd4ff, solPos = [-6, 10, 8], spotK = 0, spotPos = [0, 6, 0], spotAlvo = [0, 1, 0], spotCor = 0xffd29a, spotAng = 0.6, pontoK = 0, pontoPos = [0, 2, 0], pontoCor = 0xffd29a } = {}) {
+export function luzes({ solSombra = false, solCaixa = 14, hemiK = 0.9, ceu = 0x7aa0ff, chao = 0x2a2a4a, solK = 1.2, solCor = 0xbcd4ff, solPos = [-6, 10, 8], spotK = 0, spotPos = [0, 6, 0], spotAlvo = [0, 1, 0], spotCor = 0xffd29a, spotAng = 0.6, pontoK = 0, pontoPos = [0, 2, 0], pontoCor = 0xffd29a } = {}) {
   hemi.intensity = hemiK; hemi.color.set(ceu); hemi.groundColor.set(chao);
   sol.intensity = solK; sol.color.set(solCor); sol.position.set(...solPos);
+  sol.castShadow = solSombra; if (solSombra) { const c = sol.shadow.camera; c.left = -solCaixa; c.right = solCaixa; c.top = solCaixa; c.bottom = -solCaixa; c.near = 1; c.far = 80; c.updateProjectionMatrix(); sol.shadow.mapSize.set(2048, 2048); sol.shadow.bias = -0.0004; sol.shadow.normalBias = 0.03; }
+  spot.castShadow = spotK > 0;
   spot.intensity = spotK; spot.position.set(...spotPos); spot.target.position.set(...spotAlvo); spot.color.set(spotCor); spot.angle = spotAng; spot.target.updateMatrixWorld();
   ponto.intensity = pontoK; ponto.position.set(...pontoPos); ponto.color.set(pontoCor);
 }

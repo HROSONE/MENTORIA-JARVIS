@@ -5,7 +5,7 @@ import { clamp } from './util.js';
 
 // casca por seções elípticas (x ao longo do corpo); N+1 colunas para a costura da textura (u: cauda 0 -> nariz 1; v: volta ao redor).
 // Normais analíticas (as emendas entre os três segmentos ficam sem linha escura); tampas só nas pontas do peixe.
-function loft(secs, { N = 18, capIni = false, capFim = false, dAlt = null } = {}) {
+export function loft(secs, { N = 18, capIni = false, capFim = false, dAlt = null } = {}) {
   const NC = N + 1, pos = [], nor = [], uvs = [], idx = [];
   secs.forEach(s => {
     const dr = dAlt ? dAlt(s.x) : 0;
@@ -24,7 +24,7 @@ function loft(secs, { N = 18, capIni = false, capFim = false, dAlt = null } = {}
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); g.setIndex(idx); return g;
 }
 // pele do peixe: dorso azul-marinho, flancos prateados com faixa lateral laranja, barriga clara, escamas em arcos, opérculo (guelra) e manchas escuras
-function texturaPele() {
+export function texturaPele() {
   const W = 1024, H = 256, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
   // v (linhas): 0 = flanco +z, 0.25 = dorso, 0.5 = flanco -z, 0.75 = barriga
   const sv = v => Math.sin(v * Math.PI * 2);                                       // +1 dorso, -1 barriga
@@ -48,7 +48,7 @@ function texturaPele() {
 const PERFIL = [[-0.137, 0.004], [-0.125, 0.008], [-0.11, 0.013], [-0.085, 0.022], [-0.06, 0.032], [-0.03, 0.044], [0, 0.052], [0.03, 0.054], [0.06, 0.05], [0.09, 0.041], [0.113, 0.028], [0.13, 0.014], [0.139, 0.004]];
 const alt = x => { for (let i = 1; i < PERFIL.length; i++) if (x <= PERFIL[i][0]) { const a = PERFIL[i - 1], b = PERFIL[i], u = (x - a[0]) / (b[0] - a[0]); return a[1] + (b[1] - a[1]) * u; } return 0.004; };
 const secs = (x0, x1, n) => Array.from({ length: n + 1 }, (_, i) => { const x = x0 + (x1 - x0) * i / n, ry = alt(x); return { x, ry, rx: ry * 0.56 }; });
-function barbatana(pts, cor, dupla = true) {
+export function barbatana(pts, cor, dupla = true) {
   const sh = new THREE.Shape(); sh.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) sh.lineTo(pts[i][0], pts[i][1]);
   const g = new THREE.ShapeGeometry(sh);
   return new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: cor, side: THREE.DoubleSide, roughness: 0.5, transparent: true, opacity: 0.93 }));

@@ -3,12 +3,18 @@
 import * as THREE from 'three';
 import { scene, cam, mundos, Rajada } from './motor.js';
 import { clamp, lerp, suave, inv, ruido, mulberry32, chaves } from './util.js';
-import { S, V, plano, acharPlano, mostrar, luzes, camara, mapaAmbiente, spot, ponto, hemi, sol } from './base.js';
+import { S, V, plano, acharPlano, mostrar, luzes, camara, mapaAmbiente, spot, ponto, hemi, sol, lerpV } from './base.js';
 import { construirRua } from './rua.js';
 import { Ator } from './atores.js';
 import { criarPeixe } from './peixe.js';
 import { criarGuardaChuva } from './guardachuva.js';
 import { criarChuva, criarOndas } from './chuva.js';
+import { criarCeu } from './ceu.js';
+import { construirYoro, criarCesta } from './yoro.js';
+import { criarCardume, chuvaDePeixes } from './cardume.js';
+import { criarIgreja, criarPraca } from './igreja.js';
+import { brilho } from './motor.js';
+import { construirMar, construirCorte } from './ciencia.js';
 
 export const X = {};
 if (typeof window !== 'undefined') window.__X = X;
@@ -47,8 +53,86 @@ export async function construirTudo() {
   mundos.R.add(X.peixe.grupo);
   X.chuva = criarChuva(mundos.R, { n: 9000, caixa: [11, 7.5, 11] });
   X.ondas = criarOndas(mundos.R, { n: 160, area: [9, 9], centro: [0, 1] });
+  X.ceuR = criarCeu({ topo: '#0b1540', meio: '#1c2a6a', horiz: '#3a3f86', nuvens: 0.5, nuvemCor: '#1a2150', nuvemLuz: '#4a4f9a', luzK: 0.25, sol: [0.2, 0.2, -1] }); scene.add(X.ceuR.mesh);
+  await construirManha();
+  await construirLenda();
+  await construirCiencia();
   montarPlanos();
   return S;
+}
+
+// ---------------------------------------------------------------- Yoro de manhã (mundo D): rua com peixes, gente do elenco, placar de peixes
+async function construirManha() {
+  const g = mundos.D, envD = mapaAmbiente('#7fa0e8', '#f0b8c8', '#ffc890');
+  X.envD = envD;
+  X.yoro = await construirYoro(g, { env: envD, nPeixes: 420 });
+  X.ceuD = criarCeu({ topo: '#3d6ad8', meio: '#f2a6c8', horiz: '#ffd098', sol: [-0.5, 0.18, -1], solCor: '#ffd9a8', nuvens: 0.8, nuvemCor: '#7a5fb0', nuvemLuz: '#ffc48e', luzK: 0.5 }); scene.add(X.ceuD.mesh);
+  const cria = async (nome, cor) => { const a = await Ator.criar(nome); if (cor) a.pintar(cor); g.add(a.grupo); return a; };
+  X.povo = {
+    teo: await cria('teo'), davi: await cria('davi'), lia: await cria('lia'), nina: await cria('nina'),
+    velha: await cria('velha'), homem: await cria('homem', { M_camisa: '#e8553b', M_camisa_manga: '#e8553b', M_camisa_gola: '#c8402a' }), jovem: await cria('jovem_b'), faxi: await cria('faxineira'),
+  };
+  X.cestas = [[-0.2, 3.7], [-3.0, 7.4], [3.4, 6.6], [2.4, 1.8], [-2.2, 10.6]].map(([x, z]) => { const c = criarCesta(); c.position.set(x, 0.0, z); c.rotation.y = x; g.add(c); return c; });
+  // peixes nas cestas
+  X.cestaPeixes = criarCardume(g, 30, { env: envD });
+  const rr = mulberry32(8);
+  X.cestaPeixes.pos = [];
+  for (let i = 0; i < 30; i++) { const c = X.cestas[i % 5]; X.cestaPeixes.pos.push([c.position.x + (rr() - 0.5) * 0.3, 0.24 + 0.03 * Math.floor(i / 5) * rr(), c.position.z + (rr() - 0.5) * 0.3, rr() * 6.28, (rr() - 0.5) * 0.8]); }
+  // peixe vivo na mão do Théo
+  X.peixeTeo = criarPeixe(1.15, { env: envD }); g.add(X.peixeTeo.grupo);
+  // placar de peixes (diegético): quadro-negro num cavalete
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 384; X.placarCv = cv; X.placarTex = new THREE.CanvasTexture(cv); X.placarTex.colorSpace = THREE.SRGBColorSpace; X.placarTex.anisotropy = 8;
+  const placa = new THREE.Group(), quadro = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.68, 0.04), [0x6a4320, 0x6a4320, 0x6a4320, 0x6a4320, 0x6a4320, 0x6a4320].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.8 })));
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.6), new THREE.MeshStandardMaterial({ map: X.placarTex, roughness: 0.8, emissive: 0x222222, emissiveMap: X.placarTex, emissiveIntensity: 0.5 })); face.position.z = 0.025; quadro.position.y = 1.0; face.position.y = 1.0;
+  placa.add(quadro, face); for (const sx of [-0.35, 0.35]) { const perna = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.05, 0.05), new THREE.MeshStandardMaterial({ color: 0x6a4320 })); perna.position.set(sx, 0.52, -0.1); perna.rotation.x = 0.12; placa.add(perna); }
+  placa.position.set(1.5, 0, 1.2); placa.rotation.y = Math.PI + 0.25; g.add(placa); X.placar = placa;
+}
+function desenharPlacar(n) {
+  const c = X.placarCv.getContext('2d'); c.fillStyle = '#1d3a30'; c.fillRect(0, 0, 512, 384); c.strokeStyle = '#e8e2cc'; c.lineWidth = 8; c.strokeRect(10, 10, 492, 364);
+  c.fillStyle = '#f4f0dc'; c.font = 'bold 74px Arial, sans-serif'; c.textAlign = 'center'; c.fillText('PEIXES', 256, 112);
+  c.fillStyle = '#ffd24a'; c.font = 'bold 190px Arial, sans-serif'; c.fillText(String(n), 256, 300); X.placarTex.needsUpdate = true;
+}
+
+// ---------------------------------------------------------------- hipóteses (mundo C): tromba-d'água no mar; rio subterrâneo
+async function construirCiencia() {
+  const g = mundos.C; X.envC = mapaAmbiente('#14205a', '#5a3a8a', '#ff9060');
+  X.mar = construirMar(g, { env: X.envC });
+  X.corte = await construirCorte(g, { env: X.envC, kit: X.yoro.kit }); X.corte.grupo.position.x = 600;
+  X.ceuM = criarCeu({ topo: '#12184e', meio: '#6a3f8a', horiz: '#ff8a5a', sol: [-0.6, 0.1, -1], solCor: '#ffb070', nuvens: 0.85, nuvemCor: '#2a2060', nuvemLuz: '#ff9a70', luzK: 0.9 }); scene.add(X.ceuM.mesh);
+  X.ceuC = criarCeu({ topo: '#5a74b8', meio: '#9aa4cc', horiz: '#e8c8b0', sol: [-0.4, 0.3, -1], solCor: '#ffe0b0', nuvens: 0.9, nuvemCor: '#7a7a9a', nuvemLuz: '#d8c8c0', luzK: 0.4 }); scene.add(X.ceuC.mesh);
+}
+
+// ---------------------------------------------------------------- A lenda do padre (mundo L): noite de tempestade, igrejinha, padre ajoelhado, peixes caindo
+async function construirLenda() {
+  const g = mundos.L, env = mapaAmbiente('#16206a', '#33398f', '#ff9a50'); X.envL = env;
+  const praca = criarPraca(); praca.children[0].material.envMap = env; praca.children[0].material.envMapIntensity = 0.9; g.add(praca);
+  X.igreja = criarIgreja(); X.igreja.position.set(0, 0, -12); g.add(X.igreja);
+  X.ceuL = criarCeu({ topo: '#050a22', meio: '#141c58', horiz: '#3a3a86', sol: [0, 0.3, -1], nuvens: 0.9, nuvemCor: '#10163e', nuvemLuz: '#3a4a9a', luzK: 0.2 }); scene.add(X.ceuL.mesh);
+  X.padre = await Ator.criar('homem'); X.padre.pintar({ M_camisa: '#15151a', M_camisa_gola: '#f6f4ee', M_camisa_manga: '#15151a', M_jeans_plano: '#111116', M_jeans: '#15151a', M_jeans_punho: '#111116', M_tenis: '#0e0e10', M_tenis_det: '#222226' });
+  g.add(X.padre.grupo);
+  // cruz peitoral dourada
+  const cruz = new THREE.Group(), ouro = new THREE.MeshStandardMaterial({ color: 0xe0b040, roughness: 0.3, metalness: 0.8 }); const braco = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.012, 0.008), ouro); braco.position.set(0, 0.02, 0); cruz.add(new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.09, 0.008), ouro), braco);
+  X.cruzPadre = cruz; g.add(cruz);
+  // lampião no chão (brilho + luz pontual compartilhada)
+  X.lampiao = new THREE.Group(); const vidro = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.2, 12), new THREE.MeshStandardMaterial({ color: 0xffd58a, emissive: 0xffa030, emissiveIntensity: 2.2, transparent: true, opacity: 0.95 })); vidro.position.y = 0.2;
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.09, 0.05, 12), new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: 0.6 })); const topo = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.07, 12), new THREE.MeshStandardMaterial({ color: 0x2a2018 })); topo.position.y = 0.34;
+  const bri = brilho('255,190,110', 1.6, 0.9); bri.position.y = 0.22; X.lampiao.add(vidro, base, topo, bri); X.lampiao.position.set(0.7, 0.025, 0.55); g.add(X.lampiao);
+  X.cardumeL = criarCardume(g, 230, { env });
+  X.cairL = chuvaDePeixes(X.cardumeL, { t0: 3.4, dur: 5.2, area: [-4.2, 4.2, -2.6, 5.4], alturas: [14, 28], chao: 0.04, semente: 5, vento: [0.5, 0.15], esc: [1.0, 1.45] });
+  X.chuvaL = criarChuva(g, { n: 8000, caixa: [12, 9, 12] });
+  X.ondasL = criarOndas(g, { n: 150, area: [10, 10], centro: [0, 1] });
+}
+function poseReza(a, t, olharPara) {
+  a.colocar(0, 0, 0.3, Math.PI * 0.04); a.anim('Parado', t, {});
+  const q = a.ossos['Quadril']; q.position.y = 0.5 / a.escala;
+  for (const l of 'ED') { a.osso('Coxa' + l, -0.1, 0, 0); a.osso('Canela' + l, 1.6, 0, 0); a.osso('Pe' + l, 0.9, 0, 0); a.osso('Ponteira' + l, 0, 0, 0); }
+  a.somar('Coluna', -0.04 + 0.012 * Math.sin(t * 1.3), 0, 0);
+  a.grupo.updateMatrixWorld(true);
+  a.ikBraco('E', loc2w(a, 0.035, 0.98, 0.26), V(0.6, -1, 0)); a.ikBraco('D', loc2w(a, -0.035, 0.98, 0.26), V(-0.6, -1, 0));
+  a.grupo.updateMatrixWorld(true);
+  a.rosto({ expressao: 'triste', forca: 0.55, piscar: 0 }); a.olhar(olharPara, { forca: 1.0, max: 1.2 }); a.grupo.updateMatrixWorld(true);
+  // cruz no peito
+  const pt = a.pos('Peito'), fw = V(0, 0, 1).applyQuaternion(a.grupo.getWorldQuaternion(new THREE.Quaternion())); X.cruzPadre.position.copy(pt).add(fw.multiplyScalar(0.17)).add(V(0, -0.05, 0)); X.cruzPadre.quaternion.copy(a.grupo.getWorldQuaternion(new THREE.Quaternion()));
 }
 
 // ---------------------------------------------------------------- a mulher (caminhando com guarda-chuva) e o guarda-chuva
@@ -184,6 +268,65 @@ function luzRua(foco, { fill = [-1.5, 2.2, 2.4] } = {}) {
     pontoK: 9, pontoPos: fill, pontoCor: 0xffc08a });
 }
 
+// ---------------------------------------------------------------- poses do povo de Yoro
+function dobrar(a, k) {                       // inclina o tronco para a frente em k rad com as pernas retas (as coxas contra-giram)
+  a.somar('Quadril', k * 0.62, 0, 0); a.somar('Coluna', k * 0.22, 0, 0); a.somar('Coluna2', k * 0.1, 0, 0);
+  for (const l of 'ED') a.somar('Coxa' + l, -k * 0.62, 0, 0);
+}
+const loc2w = (a, x, y, z) => V(x, y, z).applyMatrix4(a.grupo.matrixWorld);
+function ficar(a, x, z, yaw, clip, t, { rit = 1, expr = 'neutro', f = 0.8 } = {}) {
+  a.colocar(x, 0.0, z, yaw); a.anim(clip, t * rit, {}); a.rosto({ expressao: expr, forca: f, piscar: 0 }); a.grupo.updateMatrixWorld(true);
+}
+function posePovo(t) {
+  const P = X.povo, cam3 = cam.position;
+  // Théo: mostra o peixe vivo para a câmera
+  { const a = P.teo; ficar(a, -0.6, 4.5, Math.PI + 0.12, 'Parado', t, { expr: 'sorriso', f: 1 });
+    a.somar('Coluna', -0.05 + 0.02 * Math.sin(t * 2.2), 0, 0);
+    a.grupo.updateMatrixWorld(true);
+    const mao = loc2w(a, -0.17 + 0.012 * Math.sin(t * 5), 0.86 + 0.02 * Math.sin(t * 4.1), 0.40); a.ikBraco('D', mao, V(-0.2, -1, -0.3)); a.grupo.updateMatrixWorld(true);
+    a.olhar(cam3, { forca: 0.8 }); a.grupo.updateMatrixWorld(true);
+    const m = a.pos('MaoD'), pg = X.peixeTeo.grupo, dirL = V(0.25, 0.55, 0.8).normalize().applyQuaternion(a.grupo.getWorldQuaternion(new THREE.Quaternion()));
+    pg.position.copy(m).add(V(0, 0.03, 0.0)); orientar(pg, dirL, 0.3 * Math.sin(t * 7)); X.peixeTeo.ondular(t * 17, 0.55, 0.1 * Math.sin(t * 4)); }
+  // Davi: abaixado catando peixe
+  { const a = P.davi; ficar(a, -3.4, 8.6, 2.7, 'Parado', t, { expr: 'sorriso', f: 0.7 }); const k = 1.0 + 0.12 * Math.sin(t * 1.7); dobrar(a, k); a.grupo.updateMatrixWorld(true);
+    a.ikBraco('E', loc2w(a, 0.1, 0.1, 0.5), V(0.3, -1, 0)); a.ikBraco('D', loc2w(a, -0.12, 0.12, 0.42), V(-0.3, -1, 0)); }
+  // Lia e Nina pulando de alegria
+  { const a = P.lia; ficar(a, 2.2, 3.5, Math.PI - 0.3, 'Pular', t, { rit: 0.9, expr: 'sorriso', f: 1 }); a.olhar(cam3, { forca: 0.6 }); }
+  { const a = P.nina; ficar(a, 3.3, 4.6, Math.PI + 0.35, 'Pular', t + 0.5, { rit: 0.9, expr: 'sorriso', f: 1 }); a.olhar(cam3, { forca: 0.6 }); }
+  // Dona Lurdes: abaixa devagar para pegar um peixe
+  { const a = P.velha; ficar(a, 3.5, 8.3, 3.6, 'Parado', t, { expr: 'sorriso', f: 0.6 }); dobrar(a, 0.5 + 0.1 * Math.sin(t * 1.3)); a.grupo.updateMatrixWorld(true);
+    a.ikBraco('E', loc2w(a, 0.14, 0.2, 0.42), V(0.3, -1, 0)); }
+  // Homem: vem pela rua carregando a cesta
+  { const a = P.homem, z = 13 - 0.62 * t; ficar(a, -1.8 + 0.1 * Math.sin(t), z, Math.PI, 'Andar', t, { rit: 0.55, expr: 'sorriso', f: 0.8 }); a.grupo.updateMatrixWorld(true);
+    a.ikBraco('E', loc2w(a, 0.2, 0.92, 0.36), V(0.4, -1, 0)); a.ikBraco('D', loc2w(a, -0.2, 0.92, 0.36), V(-0.4, -1, 0)); a.grupo.updateMatrixWorld(true);
+    const c = X.cestas[4]; c.position.copy(loc2w(a, 0, 0.74, 0.4)); c.rotation.set(0, Math.PI, 0); }
+  // jovem: olha para o céu, surpreso
+  { const a = P.jovem; ficar(a, 1.4, 10.4, Math.PI + 0.2, 'Parado', t, { expr: 'surpresa', f: 0.6 }); a.olhar(V(0, 14, 10), { forca: 0.9 }); }
+  { const a = P.faxi; ficar(a, -4.7, 5.6, 1.9, 'Parado', t, { expr: 'sorriso', f: 0.7 }); dobrar(a, 0.9 + 0.1 * Math.sin(t * 1.5 + 1)); a.grupo.updateMatrixWorld(true);
+    a.ikBraco('E', loc2w(a, 0.1, 0.1, 0.46), V(0.3, -1, 0)); a.ikBraco('D', loc2w(a, -0.12, 0.12, 0.4), V(-0.3, -1, 0)); }
+  // peixes nas cestas
+  X.cestaPeixes.pos.forEach((q, i) => { if (i < 25) X.cestaPeixes.set(i, q[0], q[1], q[2], q[3], -Math.PI / 2 + q[4], 0, 1); else X.cestaPeixes.esconder(i); }); X.cestaPeixes.fim();
+}
+
+// cena da rua à noite (mulher, guarda-chuva, peixe, chuva): a câmera já está posicionada
+function cenaRua(tau, rateV) {
+  const tg = X.chao.tauPouso;
+  mostrar('R', 0x0f1a40, [0x1c2b66, 0.014]); X.ceuR.mesh.visible = true; X.ceuD.mesh.visible = false; X.ceuL.mesh.visible = false; X.ceuM.mesh.visible = false; X.ceuC.mesh.visible = false; X.ceuR.seguir(cam);
+  const tec = tecidoEm(tau); X.balanco = tec.balanco;
+  const pe = peixeEm(tau);
+  const kb = suave(inv(tg + 1.7, tg + 2.4, tau)), alvoOlhar = pe.c.clone().lerp(X.furo.Pw, kb);
+  const ko = suave(inv(0.05, 0.38, tau)), ks = 0.7 * suave(inv(tg + 0.05, tg + 0.45, tau));
+  poseMae(tau, { olhar: alvoOlhar, kolhar: ko * 0.9, ksusto: ks });
+  X.guarda.atualizar({ dent: tec.dent, hole: tec.hole, flap: tec.flap, balanco: tec.balanco });
+  X.spray.atualizar(tau, cam); X.respingo.atualizar(tau, cam);
+  const gm = X.guarda.grupo.matrixWorld.clone().invert(), gp = V(), R = X.guarda.R;
+  const ocultar = (x, y, z) => { gp.set(x, y, z).applyMatrix4(gm); return gp.y < X.guarda.alturaCopa(gp.x, gp.z) + 0.02 && Math.hypot(gp.x, gp.z) < R * 1.02 && gp.y > -1.05; };
+  const mz = X.mae.grupo.position.z;
+  X.chuva.atualizar(tau, [MAE.x, 0, mz + 0.8], { v: 9, vento: 0.1, comp: 0.36 * clamp(rateV, 0.07, 1), ocultar, camPos: cam.position });
+  X.ondas.atualizar(tau, 0.0, { taxa: 2.4, raio: 0.17 * clamp(rateV + 0.15, 0.2, 1) });
+  luzRua([MAE.x - 0.1, 1.5, mz + 0.3], { fill: [cam.position.x + 0.5, Math.max(1.4, cam.position.y), cam.position.z + 0.6] });
+}
+
 // ---------------------------------------------------------------- planos
 function montarPlanos() {
   const furo = iniciarPeixe();
@@ -195,34 +338,107 @@ function montarPlanos() {
   X.respingo = new Rajada(mundos.R, { n: 80, geo: new THREE.SphereGeometry(1, 8, 6), mat: gota,
     t0: X.chao.tauPouso, vida: 0.9, semente: 11, origem: [X.chao.x, 0.03, X.chao.z], raio: 0.06, vel: [0.5, 2.4], dir: [0, 1, 0], abre: 1.1, grav: 9.8, arrasto: 0.3, tam: [0.004, 0.011], gira: 2, chao: 0.0, fim: 'some' });
 
+  const K1 = [
+    [0.0, [CAM0.x, CAM0.y, CAM0.z], [-0.62, 1.95, -0.22], 31],
+    [1.8, [-1.55, 1.78, 1.70], [-0.60, 1.70, -0.15], 30],
+    [3.1, [-1.25, 0.80, 1.70], [-0.72, 0.20, -0.02], 38],
+    [4.4, [-1.45, 0.50, 1.55], [-0.74, 0.62, -0.20], 50],
+    [5.6, [-0.25, 1.20, 1.75], [-0.55, 1.42, -0.25], 30],
+    [7.6, [-0.45, 0.95, 0.85], [-0.64, 2.00, -0.33], 42],
+  ];
   plano('abertura', 7.6, 'R', (u, t) => {
-    const tau = tauDe(t), tg = X.chao.tauPouso;
-    mostrar('R', 0x0f1a40, [0x1c2b66, 0.014]);
-    const tec = tecidoEm(tau); X.balanco = tec.balanco;
-    const pe = peixeEm(tau);
-    // olhar: acompanha o peixe depois que ele fura o tecido; mais tarde olha para o buraco na copa
-    const buraco = V().copy(X.furo.Pw).add(V(0, 0.0, 0));
-    const kb = suave(inv(tg + 1.7, tg + 2.4, tau)), alvoOlhar = pe.c.clone().lerp(buraco, kb);
-    const ko = suave(inv(0.05, 0.38, tau)), ks = 0.7 * suave(inv(tg + 0.05, tg + 0.45, tau));
-    const mao = poseMae(tau, { olhar: alvoOlhar, kolhar: ko * 0.9, ksusto: ks });
-    X.guarda.atualizar({ dent: tec.dent, hole: tec.hole, flap: tec.flap, balanco: tec.balanco });
-    X.spray.atualizar(tau, cam); X.respingo.atualizar(tau, cam);
-    // chuva (a mesma câmera lenta); não passa pelo guarda-chuva
-    const gm = X.guarda.grupo.matrixWorld.clone().invert(), gp = V(), R = X.guarda.R;
-    const ocultar = (x, y, z) => { gp.set(x, y, z).applyMatrix4(gm); return gp.y < X.guarda.alturaCopa(gp.x, gp.z) + 0.02 && Math.hypot(gp.x, gp.z) < R * 1.02 && gp.y > -1.05; };
-    const mz = X.mae.grupo.position.z;
-    X.chuva.atualizar(tau, [MAE.x, 0, mz + 0.8], { v: 9, vento: 0.1, comp: 0.36 * clamp(rate(t), 0.07, 1), ocultar, camPos: cam.position });
-    X.ondas.atualizar(tau, 0.0, { taxa: 2.4, raio: 0.17 * clamp(rate(t) + 0.15, 0.2, 1) });
-    camChaves(t, [
-      [0.0, [CAM0.x, CAM0.y, CAM0.z], [-0.62, 1.95, -0.22], 31],
-      [1.8, [-1.55, 1.78, 1.70], [-0.60, 1.70, -0.15], 30],
-      [3.1, [-1.25, 0.80, 1.70], [-0.72, 0.20, -0.02], 38],
-      [4.4, [-1.45, 0.50, 1.55], [-0.74, 0.62, -0.20], 50],
-      [5.6, [-0.25, 1.20, 1.75], [-0.55, 1.42, -0.25], 30],
-      [7.6, [-0.45, 0.95, 0.85], [-0.64, 2.00, -0.33], 42],
+    camChaves(t, K1, { tr: 0.5 });
+    if (window.__camDbg) camara({ ...window.__camDbg, t });
+    cenaRua(tauDe(t), rate(t));
+  });
+
+  // ======================================================= 2. Yoro de manhã (rua cheia de peixes)
+  plano('manha', 9.0, 'D', (u, t, pl) => {
+    const tl = t - pl.t0;
+    camChaves(tl, [
+      [0.0, [2.4, 7.4, -9.5], [0.2, 0.9, 6.5], 42],
+      [3.0, [1.6, 2.7, -3.2], [-0.4, 0.95, 5.0], 38],
+      [6.0, [0.9, 1.35, 0.7], [-0.7, 0.95, 4.5], 34],
+      [9.0, [-0.1, 1.05, 2.5], [-0.62, 1.0, 4.5], 27],
     ], { tr: 0.5 });
-    if (typeof window !== 'undefined' && window.__camDbg) camara({ ...window.__camDbg, t });
-    luzRua([MAE.x - 0.1, 1.5, mz + 0.3], { fill: [cam.position.x + 0.5, Math.max(1.4, cam.position.y), cam.position.z + 0.6] });
+    mostrar('D', 0xffc8a0, [0xf6c8a8, 0.006]);
+    X.ceuR.mesh.visible = false; X.ceuL.mesh.visible = false; X.ceuM.mesh.visible = false; X.ceuC.mesh.visible = false; X.ceuD.mesh.visible = true; X.ceuD.mat.uniforms.tempo.value = tl;
+    X.yoro.atualizar(tl);
+    posePovo(tl);
+    desenharPlacar(Math.floor(lerp(14, 183, suave(inv(0.3, 8.7, tl)))));
+    X.ceuD.seguir(cam);
+    sol.target.position.set(0, 0, 5); sol.target.updateMatrixWorld();
+    luzes({ solSombra: true, solCaixa: 16, hemiK: 1.0, ceu: 0xd2d8ff, chao: 0xb89270, solK: 3.0, solCor: 0xffc690, solPos: [-12, 8, -16], spotK: 0, pontoK: 14, pontoPos: [cam.position.x + 0.4, cam.position.y + 0.3, cam.position.z - 0.5], pontoCor: 0xffe6cc });
+    if (window.__camDbg) camara({ ...window.__camDbg, t });
+  });
+
+  // ======================================================= 3. A lenda do padre (noite, tempestade, peixes do céu)
+  plano('lenda', 9.0, 'L', (u, t, pl) => {
+    const tl = t - pl.t0;
+    camChaves(tl, [
+      [0.0, [0.3, 1.30, 1.55], [0.0, 1.22, 0.3], 30],
+      [3.2, [1.3, 1.25, 4.2], [0.0, 1.75, -1.5], 34],
+      [6.0, [3.0, 3.1, 8.2], [0.0, 3.4, -5.5], 42],
+      [9.0, [1.4, 9.5, 3.4], [0.0, 0.0, 0.4], 40],
+    ], { tr: 0.5 });
+    mostrar('L', 0x050a22, [0x141c58, 0.012]); X.ceuR.mesh.visible = false; X.ceuD.mesh.visible = false; X.ceuM.mesh.visible = false; X.ceuC.mesh.visible = false; X.ceuL.mesh.visible = true; X.ceuL.mat.uniforms.tempo.value = tl;
+    const rel = (a, d) => Math.exp(-Math.pow((tl - a) / d, 2));                                   // relâmpago suave
+    const fl = 0.9 * rel(2.35, 0.07) + 0.6 * rel(2.5, 0.12) + 0.9 * rel(6.1, 0.07) + 0.5 * rel(6.25, 0.14);
+    X.ceuL.mat.uniforms.flash.value = fl;
+    poseReza(X.padre, tl, V(0.4, 9, -4));
+    X.cairL(tl);
+    X.chuvaL.atualizar(tl, [0, 0, 1], { v: 9, vento: 0.14, comp: 0.4, camPos: cam.position });
+    X.ondasL.atualizar(tl, 0.0, { taxa: 2.4, raio: 0.17 });
+    X.ceuL.seguir(cam);
+    sol.target.position.set(0, 0, 0); sol.target.updateMatrixWorld();
+    luzes({ hemiK: 0.45, ceu: 0x4a5fd0, chao: 0x1a1a3a, solK: 0.7 + 3.5 * fl, solCor: 0x9fb4ff, solPos: [-6, 12, 5], spotK: 260, spotPos: [-1.5, 4.2, -6.0], spotAlvo: [0, 1.0, 0.3], spotCor: 0xffb060, spotAng: 0.5,
+      pontoK: 9 + 1.2 * Math.sin(tl * 7.3) , pontoPos: [0.7, 0.4, 0.6], pontoCor: 0xffb468 });
+    if (window.__camDbg) camara({ ...window.__camDbg, t });
+  });
+
+  // ======================================================= 4a. Hipótese 1: tromba-d'água (e o mar a 72 km)
+  plano('mar', 6.5, 'C', (u, t, pl) => {
+    const tl = t - pl.t0;
+    camChaves(tl, [
+      [0.0, [13.0, 2.8, 32.0], [-14.0, 17.0, -12.0], 54],
+      [3.2, [8.5, 2.6, 27.0], [-10.0, 12.0, -6.0], 46],
+      [6.5, [3.8, 2.3, 21.5], [-0.2, 4.0, 12.0], 38],
+    ], { tr: 0.6 });
+    mostrar('C', 0x12184e, [0x7a4a7a, 0.0035]); X.mar.grupo.visible = true; X.corte.grupo.visible = false;
+    X.ceuR.mesh.visible = false; X.ceuD.mesh.visible = false; X.ceuL.mesh.visible = false; X.ceuC.mesh.visible = false; X.ceuM.mesh.visible = true; X.ceuM.mat.uniforms.tempo.value = tl; X.ceuM.seguir(cam);
+    X.mar.atualizar(tl);
+    sol.target.position.set(-10, 5, 0); sol.target.updateMatrixWorld();
+    luzes({ solSombra: false, hemiK: 0.8, ceu: 0x8a82e8, chao: 0x2a2a60, solK: 2.6, solCor: 0xff9e60, solPos: [-70, 14, -90], spotK: 0, pontoK: 0 });
+    if (window.__camDbg) camara({ ...window.__camDbg, t });
+  });
+
+  // ======================================================= 4b. Hipótese 2: rio subterrâneo
+  plano('corte', 6.5, 'C', (u, t, pl) => {
+    const tl = t - pl.t0, X0 = 600;
+    camChaves(tl, [
+      [0.0, [X0 - 5.5, -3.0, 20.0], [X0 - 4.5, -3.6, 0.0], 50],
+      [2.6, [X0 - 0.5, -2.4, 20.0], [X0 + 0.8, -3.0, 0.0], 50],
+      [4.4, [X0 + 2.0, 0.0, 19.0], [X0 + 2.8, -1.5, 0.0], 50],
+      [6.5, [X0 + 3.4, 2.4, 16.0], [X0 + 3.0, 0.8, -3.0], 48],
+    ], { tr: 0.5 });
+    mostrar('C', 0x9aa4cc, [0xb8b8d0, 0.003]); X.mar.grupo.visible = false; X.corte.grupo.visible = true;
+    X.ceuR.mesh.visible = false; X.ceuD.mesh.visible = false; X.ceuL.mesh.visible = false; X.ceuM.mesh.visible = false; X.ceuC.mesh.visible = true; X.ceuC.mat.uniforms.tempo.value = tl; X.ceuC.seguir(cam);
+    X.corte.atualizar(tl, cam.position.clone().sub(V(X0, 0, 0)));
+    sol.target.position.set(X0, -2, -3); sol.target.updateMatrixWorld();
+    luzes({ solSombra: false, hemiK: 1.1, ceu: 0xc0ccf0, chao: 0x7a6a5a, solK: 2.2, solCor: 0xfff0d8, solPos: [X0 - 10, 12, 14], spotK: 0, pontoK: 26, pontoPos: [X0 + 1.5, -5.0, 3], pontoCor: 0x6ab4ff });
+    if (window.__camDbg) camara({ ...window.__camDbg, t });
+  });
+
+  // ======================================================= 5. Fecho em loop: a mulher volta à cena e o peixe fura o guarda-chuva de novo (último quadro = quadro 0)
+  const FE = { dur: 6.0, lento: 0.025, t1: 3.2, t2: 5.2 };
+  const rateF = tf => tf < FE.t1 ? 1 : tf < FE.t2 ? lerp(1, FE.lento, suave((tf - FE.t1) / (FE.t2 - FE.t1))) : FE.lento;
+  const TF = []; { const n = 600 * 6, dt = 1 / 600, I = new Float64Array(n + 2); for (let i = n; i >= 0; i--) I[i] = I[i + 1] + rateF(i * dt) * dt; for (let i = 0; i <= n; i++) TF.push(T_PULO - I[i] + I[n]); }
+  const tauF = tf => { const x = clamp(tf, 0, 6) * 600, i = Math.min(TF.length - 2, Math.floor(x)); return lerp(TF[i], TF[i + 1], x - i); };
+  plano('fecho', FE.dur, 'R', (u, t, pl) => {
+    const tf = t - pl.t0, e = suave(clamp(tf / FE.dur));
+    const A = [CAM0.x + 0.9, CAM0.y + 0.55, CAM0.z + 2.4], B = [CAM0.x, CAM0.y, CAM0.z], Ta = [-0.45, 1.65, -0.75], Tb = [-0.62, 1.95, -0.22];
+    camara({ pos: lerpV(A, B, e), alvo: lerpV(Ta, Tb, e), fov: lerp(38, 31, e), tr: 0.5, t: -(FE.dur - tf) * 1.0 });
+    cenaRua(tauF(tf), rateF(tf));
   });
 }
 
@@ -233,6 +449,6 @@ export function atualizar(t) {
 }
 export function efeitos(t) {
   const e = { subs: 1, obturador: 0.5, fade: 0, flash: 0, flashCor: '255,255,255', tintas: null };
-  if (t > S.total - 0.25) e.fade = clamp((t - (S.total - 0.25)) / 0.25);
+  if ((t > 1.7 && t < 3.3) || (t > 20 && t < 25.5)) { e.subs = 3; e.obturador = 0.6; }                    // queda rápida do peixe: borrão de movimento
   return e;
 }
