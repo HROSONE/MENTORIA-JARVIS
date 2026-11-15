@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"><title>dev2</title><style>html,body{margin:0;height:100%;overflow:hidden;background:#000}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script></head><body><script type="module">
+import * as THREE from 'three';
+import { renderer, scene, cam, mundos } from './js/motor.js';
+import { Ator } from './js/atores.js';
+const m = await Ator.criar('mae'); m.pintar({ M_vestido: '#ffc414', M_sapato: '#d4202c' });
+mundos.R.add(m.grupo); mundos.R.visible = true; scene.background = new THREE.Color(0x203060);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x445577, 1.6)); const d = new THREE.DirectionalLight(0xffffff, 2); d.position.set(2, 4, 5); scene.add(d);
+window.__info = { vel: { Andar: m.p.info('Andar'), Correr: m.p.info('Correr') }, dur: m.p.clipes.map(c => [c.name, c.duration]) };
+window.__pose = (clip, t, expr = 'neutro', k = 1, cx = 0, cy = 1.0, cz = 3.2, fov = 40) => {
+  m.anim(clip, t, {}); m.rosto({ expressao: expr, forca: k }); m.grupo.updateMatrixWorld(true);
+  cam.fov = fov; cam.updateProjectionMatrix(); cam.position.set(cx, cy, cz); cam.lookAt(0, cy, 0); renderer.render(scene, cam);
+};
+window.__ready = true;
+</script></body></html>
