@@ -60,6 +60,11 @@ Complementa o `ESTILO.md`. Ler antes de começar qualquer vídeo novo.
 - **Sem música.** Só efeitos sonoros reais de bibliotecas livres: BigSoundBank (licença livre) e Kenney (CC0), mais síntese em Python.
 - **Todo movimento importante tem som** (golpe, passo, respingo, porta, motor, mordida).
 - Ambiente coerente com a cena (sem chuva se não chove).
+- **Lição do "Mestres da Gravidade" (15/11, o dono reprovou o som):** o vento sintetizado (ruído filtrado contínuo) e a trilha que o dono pediu e eu sintetizei (pizzicato e violoncelo) irritaram e estragaram o vídeo. Regras novas:
+  - **Nada de cama de ruído contínuo sintetizada** (vento, chiado, "ambiente"). Ambiente só de gravação real de biblioteca livre, bem baixo e com agudos cortados, ou nenhum: silêncio limpo é melhor que ruído chato.
+  - **Síntese só para impactos curtos** (estalo, batida, pedrinha, mordida), um por ação visível, com volume contido. Sem zumbido, drone ou tom sustentado.
+  - **Música:** mesmo quando o dono pede, não entregar trilha sintetizada às cegas. Preferir faixa livre de biblioteca, bem baixa, ou avisar que não consigo ouvir e mandar primeiro um teste de áudio de 5 a 10 s para aprovação.
+  - **Antes de entregar:** conferir no espectro que não há energia constante em frequências agudas (chiado), que o som não passa de ~-18 dB de média e que cada efeito cai no quadro da ação; se houver dúvida, tirar o som em vez de enfeitar. Não consigo ouvir o resultado, então a checagem é por análise e por teste aprovado pelo dono.
 
 ## 5. Texto e narração
 
