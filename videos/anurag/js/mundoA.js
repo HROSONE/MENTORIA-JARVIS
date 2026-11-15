@@ -40,7 +40,7 @@ function texturaJanela() {
 
 export async function construirA() {
   const A = mundos.A;
-  const kit = await Kit.carregar('../biblioteca3d/cidade/');
+  const kit = await Kit.carregar('../biblioteca3d/cidade/', { detalhe: false });
   const dados = { kit, luzes: {}, portaPivo: null, lampadaVaranda: null, janelas: [] };
 
   // ---- ruas e gramados do kit

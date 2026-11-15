@@ -64,7 +64,7 @@ function texVidroPorta() {
 
 export async function construirR(mundo) {
   const R = mundo;
-  const kit = await Kit.carregar('../biblioteca3d/cidade/');
+  const kit = await Kit.carregar('../biblioteca3d/cidade/', { detalhe: false });
   const d = { kit, luzes: [], janHeroi: [] };
   const raiz = new THREE.Group(); R.add(raiz); d.raiz = raiz;
 

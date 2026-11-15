@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<title>Kit cidade — bancada do detalhe (ruas, água, chão, paredes)</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#bfe3f5}
+  body.noite{background:#0a1226}
+  canvas{display:block}
+  #info{position:absolute;left:12px;top:10px;color:#fff;font:600 14px system-ui,sans-serif;text-shadow:0 1px 3px #000;max-width:calc(100% - 24px)}
+  body.still #info{display:none}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="info">Bancada do detalhe · ?cam=rua|asfalto|calcada|casa|predio|grama|piscina|lago|aereo · ?detalhe=0 (sem detalhe) · ?molhado=0.8 · ?chuva=1 · ?sujeira=0..1 · ?noite · ?t=segundos · ?still</div>
+<script type="module">
+// Rua de teste com tudo o que o detalhe cobre: asfalto, faixas, meio-fio, calçada, grama, casas, prédios, praça, piscina e um lago.
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Kit, TILE, criarAgua } from './kit.js';
+
+const Q = new URLSearchParams(location.search);
+const NOITE = Q.has('noite'), CAM = Q.get('cam') || 'rua', DET = Q.get('detalhe') !== '0';
+if (Q.has('still')) document.body.classList.add('still');
+if (NOITE) document.body.classList.add('noite');
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = NOITE ? 1.1 : 1.0;
+document.body.prepend(renderer.domElement);
+
+const FUNDO = NOITE ? 0x0a1226 : 0xbfe3f5;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(FUNDO);
+scene.fog = NOITE ? new THREE.Fog(FUNDO, 60, 200) : new THREE.Fog(FUNDO, 120, 320);
+scene.add(NOITE ? new THREE.HemisphereLight(0x6a82b8, 0x1b2438, 1.0) : new THREE.HemisphereLight(0xffffff, 0x8fa3b5, 1.5));
+const sun = new THREE.DirectionalLight(NOITE ? 0x9db4ea : 0xfff4e0, NOITE ? 1.0 : 2.8);
+sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
+scene.add(sun, sun.target);
+
+const kit = await Kit.carregar(undefined, { detalhe: DET });
+kit.ambiente({ molhado: +(Q.get('molhado') || 0), chuva: +(Q.get('chuva') || 0), sujeira: Q.has('sujeira') ? +Q.get('sujeira') : 1,
+  ceuTopo: NOITE ? '#0c1636' : '#4f86d8', ceuHorizonte: NOITE ? '#26356a' : '#c8def2', solCor: NOITE ? '#9db4ea' : '#fff1d8' });
+kit.tempo(+(Q.get('t') || 0));
+const mundo = new THREE.Group(); scene.add(mundo);
+const L = [];                                                                       // promessas de carga
+const ladrilho = (nome, gx, gz, rot = 0) => L.push(kit.ladrilho(nome, gx, gz, rot).then(o => mundo.add(o)));
+const prop = (nome, gx, gz, x, z, rotY = 0, opc = {}) => L.push(kit.prop(nome, gx, gz, x, z, { rotY, ...opc }).then(o => { if (NOITE) kit.luzEstado(o, true); mundo.add(o); }));
+
+// rua ao longo de Z em gx = 0 (gz de -4 a 5); lotes de grama dos dois lados (gx = -1 e 1) com casas à esquerda e prédios à direita
+for (let gz = -4; gz <= 5; gz++) { ladrilho('rua-reta', 0, gz); ladrilho('chao-grama', -1, gz); ladrilho('chao-grama', 1, gz); ladrilho('chao-grama', -2, gz); ladrilho('chao-grama', 2, gz); }
+const casas = ['casa-simples', 'casa-sobrado', 'casa-moderna', 'casa-colonial', 'casa-simples', 'casa-sobrado'];
+casas.forEach((c, i) => prop(c, -1, -4 + i, -1.2, 0, Math.PI / 2, { calcada: true }));                      // frente para a rua (+X)
+prop('predio-loja-3', 1, -4, 1.2, 0, -Math.PI / 2); prop('predio-residencial-6', 1, -3, 1.2, 0, -Math.PI / 2); prop('predio-comercial-10', 1, -1, 1.2, 0, -Math.PI / 2, { calcada: true });
+prop('predio-residencial-12', 1, 0, 1.2, 0, -Math.PI / 2); prop('hospital', 1, 2, 1.2, 0, -Math.PI / 2);
+for (const gz of [-3, -1, 1, 3]) { prop('poste-luz', 0, gz, 5.2, 0, -Math.PI / 2); prop('poste-luz', 0, gz, -5.2, 6, Math.PI / 2); }
+prop('hidrante', 0, 0, 5.0, 3); prop('placa-pare', 0, 4, 5.1, 4.5, -Math.PI / 2); prop('arvore-redonda', 0, 1, -5.3, 2); prop('arvore-frondosa', 0, -2, 5.4, -4);
+// praça de lajes com piscina e lago ao fundo (gz 6 a 9)
+for (let gx = -2; gx <= 2; gx++) for (let gz = 6; gz <= 7; gz++) ladrilho('calcada-lisa', gx, gz);
+prop('piscina', -1, 6, 0, 0, 0, { calcada: false }); prop('banco-praca', 1, 6, 0, 3); prop('arvore-palmeira', 2, 7, 0, 0);
+for (let gx = -3; gx <= 3; gx++) for (let gz = 8; gz <= 9; gz++) ladrilho('chao-grama', gx, gz);
+const lago = criarAgua({ largura: 70, comprimento: 40, centro: [0, 8.5 * TILE + 2], y: 0.2, onda: 0.5 }); scene.add(lago);
+await Promise.all(L);
+
+const CAMS = {
+  rua:     { pos: [1.6, 1.7, 52], alvo: [0, 6, 0], fov: 58, raio: 90 },
+  asfalto: { pos: [1.4, 0.9, 20], alvo: [0.2, 0, 8], fov: 55, raio: 40 },
+  calcada: { pos: [4.4, 1.3, 26], alvo: [5.6, 0.1, 18], fov: 55, raio: 40 },
+  casa:    { pos: [3.2, 1.8, -12], alvo: [-12, 3.6, -8], fov: 55, raio: 40 },
+  predio:  { pos: [-3.6, 2.2, 14], alvo: [9, 7, 2], fov: 55, raio: 60 },
+  grama:   { pos: [-9.5, 1.0, 30], alvo: [-14, 0.2, 22], fov: 55, raio: 40 },
+  piscina: { pos: [-8, 2.6, 66], alvo: [-12, 0.3, 74], fov: 55, raio: 40 },
+  lago:    { pos: [0, 2.2, 90], alvo: [0, 0, 112], fov: 50, raio: 70 },
+  aereo:   { pos: [40, 55, 90], alvo: [0, 0, 40], fov: 45, raio: 120 },
+};
+const num = s => s.split(',').map(Number);
+const cfg = Q.get('pos') ? { pos: num(Q.get('pos')), alvo: num(Q.get('alvo') || '0,0,0'), fov: +(Q.get('fov') || 55), raio: +(Q.get('raio') || 60) } : (CAMS[CAM] || CAMS.rua);
+const camera = new THREE.PerspectiveCamera(cfg.fov, innerWidth / innerHeight, 0.1, 2000);
+camera.position.set(...cfg.pos); const alvo = new THREE.Vector3(...cfg.alvo); camera.lookAt(alvo);
+const ctl = new OrbitControls(camera, renderer.domElement); ctl.target.copy(alvo); ctl.update();
+const solDir = NOITE ? new THREE.Vector3(0.45, 1, -0.55) : new THREE.Vector3(-0.55, 1, 0.45);
+function sombra(c, raio) {
+  sun.target.position.copy(c); sun.position.copy(c).add(solDir.clone().multiplyScalar(raio * 2));
+  Object.assign(sun.shadow.camera, { left: -raio, right: raio, top: raio, bottom: -raio, near: 1, far: raio * 5 }); sun.shadow.camera.updateProjectionMatrix();
+  kit.ambiente({ solDir: solDir.toArray() });
+}
+sombra(alvo, cfg.raio);
+const frame = () => renderer.render(scene, camera);
+ctl.addEventListener('change', frame);
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); frame(); });
+if (!Q.has('still')) (function anim(t) { kit.tempo(t / 1000); frame(); requestAnimationFrame(anim); })(0);   // em página aberta a água e a chuva andam
+frame();
+window.__ready = true;
+</script>
+</body>
+</html>

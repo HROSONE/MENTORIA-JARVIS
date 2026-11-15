@@ -6,7 +6,7 @@ import { feixeLuz, linhaDeFios, criarVapor } from './props.js';
 import { clonarGLB, brilho } from './motor.js';
 
 export async function construirRua(g, { comPoste = true, env = null } = {}) {
-  const kit = await Kit.carregar(new URL('../../biblioteca3d/cidade/', import.meta.url).href);
+  const kit = await Kit.carregar(new URL('../../biblioteca3d/cidade/', import.meta.url).href, { detalhe: false });
   const L = [];
   for (const gz of [-2, -1, 0, 1, 2]) L.push(await kit.ladrilho('rua-reta', 0, gz, 0));
   // prédios dos dois lados, de frente para a rua (a porta do kit aponta para +Z; girar 90 graus leva a porta para +X)
