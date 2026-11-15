@@ -22,7 +22,7 @@ export async function construirMundo(mundo) {
   for (const k of Object.keys(OFF)) { const g = new THREE.Group(); g.name = k; g.position.set(...OFF[k]); mundo.add(g); grupos[k] = g; }
   d.grupos = grupos; d.esconderTudo = () => { for (const k in grupos) grupos[k].visible = false; };
   d.mostrar = k => { grupos[k].visible = true; };
-  const kit = await Kit.carregar('../biblioteca3d/cidade/'); d.kit = kit;
+  const kit = await Kit.carregar('../biblioteca3d/cidade/', { detalhe: false }); d.kit = kit;
   const peca = async (G, nome, x, z, ry = 0, esc = 1, y = 0) => { const o = await kit.peca(nome); o.position.set(x, y, z); o.rotation.y = ry; o.scale.setScalar(esc); G.add(o); return o; };
   const luzes = (G, c1, c2, sol, inten) => { G.add(new THREE.HemisphereLight(c1, c2, 1.1)); const s = new THREE.DirectionalLight(sol, inten); s.position.set(60, 120, 40); G.add(s, s.target); return s; };
   const pm = new THREE.PMREMGenerator(renderer); const env = pm.fromScene(new RoomEnvironment(), 0.04).texture; d.env = env;

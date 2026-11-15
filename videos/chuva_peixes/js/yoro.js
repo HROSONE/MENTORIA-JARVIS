@@ -9,7 +9,7 @@ import { clonarGLB } from './motor.js';
 
 export const YORO = { esc: 0.62, meia: 6 * 0.62 };           // rua estreita: o ladrilho de 12 m é comprimido em x
 export async function construirYoro(g, { env = null, nPeixes = 150 } = {}) {
-  const kit = await Kit.carregar(new URL('../../biblioteca3d/cidade/', import.meta.url).href);
+  const kit = await Kit.carregar(new URL('../../biblioteca3d/cidade/', import.meta.url).href, { detalhe: false });
   const R = mulberry32(21), obj = [];
   for (const gz of [-3, -2, -1, 0, 1, 2]) { const t = await kit.ladrilho('rua-reta', 0, gz, 0); t.scale.x = YORO.esc; obj.push(t); }       // rua estreita de cidade pequena
   // casas de frente para a rua (porta do kit em +Z; girar +90 leva a porta para +X)

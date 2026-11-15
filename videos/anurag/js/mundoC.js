@@ -65,7 +65,7 @@ export function criarCaixao(madeira, tampa, cor_flor = '#f4f2ee') {
 
 export async function construirC() {
   const C = mundos.C;
-  const kit = await Kit.carregar('../biblioteca3d/cidade/');
+  const kit = await Kit.carregar('../biblioteca3d/cidade/', { detalhe: false });
   const dados = { multidao: null };
   const r = mulberry32(21);
   // céu e chão

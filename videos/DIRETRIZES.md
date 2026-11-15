@@ -103,6 +103,12 @@ Complementa o `ESTILO.md`. Ler antes de começar qualquer vídeo novo.
 - Transições pelo cenário: subir a câmera até o painel e descer em outro lugar, giro rápido, nuvem. Contador diegético = painel de partidas.
 - Visitantes nunca passam entre a câmera e o personagem; conferir texto espelhado em tudo que é segurado.
 
+## 7d. Detalhe de cenário já vem na biblioteca (15/11)
+
+- O dono pediu para **não aumentar o nível de detalhe vídeo a vídeo**: a cidade do kit (`biblioteca3d/cidade/kit.js`) já aplica sozinha o detalhe procedural em ruas, calçadas, grama, paredes, telhas, janelas e água (ver o README da cidade). Em vídeo novo, carregue `Kit.carregar()` e use `kit.ambiente({ molhado, chuva })` e `kit.tempo(t)`; **não copiar** `detalhe.js` para o projeto.
+- Se uma cena ainda parecer "lisa", melhorar a receita **na biblioteca** (`detalhe.js`/`extras.js`), conferir na bancada `detalhe.html` (antes/depois com `?detalhe=0`) e registrar no inventário.
+- Vídeos já entregues usam `{ detalhe: false }` para o visual não mudar se forem renderizados de novo.
+
 ## 8. Assets prontos primeiro
 
 - Antes de modelar qualquer coisa, procurar asset pronto **CC0** (OpenGameArt filtrando CC0; Kenney; Quaternius). Só criar em código o que não existir.

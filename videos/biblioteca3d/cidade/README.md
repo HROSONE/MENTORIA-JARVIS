@@ -88,6 +88,44 @@ Câmeras prontas: `?cam=aereo|topo|centro|rua|aeroporto|pista|rodovia|condominio
 
 Pavimentos do aeroporto têm o topo em y = 0,16 (coloque em y = 0); a rodovia segue as ruas (asfalto em y = 0). Geradas por `gerador/transporte.py`.
 
+## Detalhe automático: ruas, água, chão e paredes (já vem ligado)
+
+As peças do kit são cores chapadas; o `kit.js` agora aplica sozinho, em toda peça que carrega, um **detalhe procedural** (`detalhe.js` e `extras.js`), então os vídeos novos
+não precisam refazer "mais detalhes" no cenário. Os padrões são calculados em **coordenadas do mundo** (a trinca, a mancha e a poça atravessam os ladrilhos) e o detalhe fino
+some sozinho com a distância (sem cintilar nem fazer moiré em vídeo).
+
+![ruas e calçadas, antes e depois](previews/detalhe-ruas.webp)
+![casas e prédios, antes e depois, e à noite](previews/detalhe-paredes.webp)
+![rua seca e molhada, piscina e lago](previews/detalhe-chuva-agua.webp)
+![grama e calçada, antes e depois](previews/detalhe-chao.webp)
+
+| Superfície | O que vem junto |
+|---|---|
+| **Asfalto** (ruas, rotatórias, rodovia, pista) | brita com pedrinhas claras, trincas longas e "couro de jacaré", remendos de reparo com selagem, manchas de óleo; nas ruas retas, **trilhas de pneu**, pingos de óleo no centro da faixa e areia na sarjeta; **bueiros e bocas de lobo** (geometria, sorteados pela posição do ladrilho) |
+| **Faixas e tintas** | tinta gasta, esfarelada, com o asfalto aparecendo |
+| **Calçada e meio-fio** | lajes de 1,4 m com junta, mato nas juntas, manchas, chiclete, rachaduras; meio-fio com junta a cada 2 m, lascas e sujeira de pneu na base |
+| **Grama e terra** | tufos e folhas, pontas claras, faixas do cortador, manchas secas e viçosas, falhas de terra com seixos e flores; terra batida com seixos e rachaduras |
+| **Paredes** (casas, prédios, hospital...) | reboco com grão e manchas, **faixas de chuva** escorrendo, umidade e respingos na base, mofo, tinta descascando, trincas; **tijolo** com fiadas e argamassa; **concreto** com fôrmas, furos de tirante, bolhas e ferrugem escorrida |
+| **Telhados** | telhas capa-e-canal em fiadas deslocadas (seguem qualquer inclinação), telhas de tom diferente e musgo; laje plana com manta |
+| **Janelas** | cada vidro ganha um **interior sorteado** (cortina lateral, persiana, cortina fechada ou sala escura) e reflete o céu; à noite a luz atravessa a cortina; **peitoril e pingadeira** em cada janela, alguns **ar-condicionados** e **calhas** nos cantos (geometria) |
+| **Metal, madeira, água** | ferrugem e riscos no metal (com reflexo do céu); veios e mofo na madeira; **água da piscina** com ondas que andam, reflexo do céu, brilho do sol e luzes de refração; azulejo com junta |
+
+```js
+import { Kit, criarAgua, materialDetalhado, criarReflexoPocas } from './kit.js';
+const kit = await Kit.carregar();                       // detalhe ligado; Kit.carregar(base, { detalhe: false }) mantém as peças chapadas
+kit.ambiente({ molhado: 0.9, chuva: 1 });               // rua molhada: escurece, poças com reflexo do céu e anéis de chuva (0 = seco)
+kit.ambiente({ sujeira: 0.3 });                         // 0 = cidade nova e limpa .. 1 = gasta (padrão)
+kit.ambiente({ ceuTopo: '#1a2a5a', ceuHorizonte: '#3a4a80', solDir: [0.3, 0.5, 0.2], solCor: '#aab8ff' });   // cor do céu que as poças, o vidro e o metal refletem
+kit.tempo(t);                                           // anima poças com chuva e água: em vídeo, o tempo do quadro; em página, a cada requestAnimationFrame
+scene.add(criarAgua({ largura: 200, comprimento: 120, y: 0.2, onda: 0.5 }));                 // lago, rio, mar ou enchente (cor funda e rasa, ondas, espuma, reflexo do céu)
+const chao = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), materialDetalhado(0x6fa94c, 'grama'));    // chão grande fora do kit (grama, terra, asfalto, calcada, concreto)
+scene.add(criarReflexoPocas({ largura: 60, comprimento: 120 }));                              // opcional: espelho real nas poças (reflete prédios e postes; custa uma renderização extra)
+```
+
+- **Bancada de teste:** `detalhe.html` (`?cam=rua|asfalto|calcada|casa|predio|grama|piscina|lago|aereo`, `?detalhe=0` para ver o antes, `?molhado=0.9&chuva=1`, `?noite`, `?sujeira=0..1`, `?t=segundos`, `?still`).
+- **Vídeos já entregues** (chuva de peixes, vulcão, elevador, anurag, viagem ao futuro, todos pulando) chamam `Kit.carregar(..., { detalhe: false })` para continuar com o visual antigo se forem renderizados de novo; para dar o detalhe novo a um deles, tire essa opção.
+- Peças que não vêm do kit (veículos, personagens) não são afetadas.
+
 ## Convenções
 
 | Item | Valor |

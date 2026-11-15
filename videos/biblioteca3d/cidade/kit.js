@@ -17,6 +17,8 @@
 // Girar um ladrilho 90° em Y leva a conexão S para E, depois N, depois W (sentido horário visto de cima).
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { detalharKit, redetalhar, ambiente, UT, AMB } from './detalhe.js';
+import { extrasPredio, extrasRua } from './extras.js';
 
 export const TILE = 12;
 export const FAIXA = 3.5;            // largura de cada faixa (meia pista)
@@ -24,19 +26,27 @@ export const CALCADA = 0.15;         // altura do topo da calçada
 export const CICLO = ['S', 'E', 'N', 'W'];
 export const ESCALA_VEICULO = 1.7;   // veículos do Kenney (biblioteca3d/veiculos) nesta escala ficam em proporção com as ruas
 
+export { detalhar, detalharKit, materialDetalhado, criarAgua, criarReflexoPocas, ambiente, UT, AMB } from './detalhe.js';   // detalhe procedural (ver detalhe.js)
+
 export class Kit {
-  constructor(base, manifest) {
+  constructor(base, manifest, { detalhe = true } = {}) {
     this.base = base;
     this.manifest = manifest;
+    this.detalhe = detalhe;                           // true: asfalto, calçada, grama, paredes, telhas, vidro e água vêm com relevo, sujeira e reflexo (shaders do detalhe.js)
     this.pecas = Object.fromEntries(manifest.pecas.map(p => [p.nome, p]));
     this.loader = new GLTFLoader();
     this.cache = new Map();
   }
 
-  static async carregar(base = new URL('./', import.meta.url).href) {
+  static async carregar(base = new URL('./', import.meta.url).href, opc = {}) {
     const manifest = await (await fetch(base + 'manifest.json')).json();
-    return new Kit(base, manifest);
+    return new Kit(base, manifest, opc);
   }
+
+  /** clima e céu refletido: `kit.ambiente({ molhado: 0.8, chuva: 1, sujeira: 1, ceuTopo: '#..', ceuHorizonte: '#..', solDir: [x,y,z], solCor: '#..' })` (vale para a cidade inteira) */
+  ambiente(o) { ambiente(o); return this; }
+  /** relógio do detalhe (poças com chuva, água): em vídeo chame com o tempo do quadro; em página, a cada requestAnimationFrame */
+  tempo(t) { UT.value = t; return this; }
 
   /** instância nova (clone) da peça `nome` */
   async peca(nome) {
@@ -49,6 +59,7 @@ export class Kit {
     const raiz = o.children[0];                       // nó raiz do .glb: seus `extras` (conexoes, luzes...) vão para o objeto
     if (raiz) Object.assign(o.userData, raiz.userData);
     o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+    if (this.detalhe) { detalharKit(o, nome); if (['casas', 'predios', 'equipamentos'].includes(p.categoria)) extrasPredio(o, nome); }
     return o;
   }
 
@@ -70,6 +81,7 @@ export class Kit {
     o.position.set(gx * TILE, 0, gz * TILE);
     o.rotation.y = rot * Math.PI / 2;
     o.userData.rot = rot;
+    if (this.detalhe) extrasRua(o, nome, gx, gz);      // bueiros e bocas de lobo (sorteados pela posição do ladrilho)
     return o;
   }
 
@@ -97,7 +109,7 @@ export class Kit {
       if (!m.isMesh) return;
       const luz = /^Luz(_\d+)?$/.test(m.name), janela = /^VidroLuz(_\d+)?$/.test(m.name), letreiro = /^Letreiro(_\d+)?$/.test(m.name);
       if (!luz && !janela && !letreiro) return;
-      if (!m.userData.matProprio) { m.material = m.material.clone(); m.userData.matProprio = true; m.userData.corDia = m.material.color.getHex(); }
+      if (!m.userData.matProprio) { m.material = redetalhar(m.material.clone()); m.userData.matProprio = true; m.userData.corDia = m.material.color.getHex(); }
       const mat = m.material;
       if (luz) {
         mat.color.setHex(ligada ? 0xfff2cc : 0xcdd3d8);
@@ -131,7 +143,7 @@ export class Kit {
       if (!m.isMesh || !m.name.startsWith('Luz_')) return;
       const cor = m.name.slice(4).toLowerCase();
       if (!(cor in FORTE)) return;
-      if (!m.userData.matProprio) { m.material = m.material.clone(); m.userData.matProprio = true; }
+      if (!m.userData.matProprio) { m.material = redetalhar(m.material.clone()); m.userData.matProprio = true; }
       const liga = cor === estado;
       m.material.color.setHex(liga ? FORTE[cor] : FRACA[cor]);
       m.material.emissive.setHex(liga ? FORTE[cor] : 0x000000);

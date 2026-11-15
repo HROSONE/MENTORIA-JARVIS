@@ -92,7 +92,7 @@ export async function construirMundo(mundo) {
   d.telaCel(0, 0);
 
   // ------------------------------------------------------------------ CIDADES (kit da cidade) E MULTIDÕES
-  const kit = await Kit.carregar('../biblioteca3d/cidade/'); d.kit = kit;
+  const kit = await Kit.carregar('../biblioteca3d/cidade/', { detalhe: false }); d.kit = kit;
   const PALETAS = {
     cidade: { pele: ['#f1c9a5', '#d9a07a', '#b57a52', '#8a5638', '#5a3a28'], roupa: [0xf2d13a, 0x2e9a4f, 0x2a62c8, 0xf4f4f0, 0xd24a3a, 0x333a44] },
     brasil: { pele: ['#f1c9a5', '#d9a07a', '#b57a52', '#8a5638', '#5a3a28'], roupa: [0xf2d13a, 0x2e9a4f, 0x2a62c8, 0xf4f4f0, 0xff7a2a, 0x18a0a8] },

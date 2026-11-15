@@ -7,7 +7,7 @@ import { criarIgreja } from './igreja.js';
 import { IGREJA } from './terreno.js';
 
 export async function construirAldeia(g, { alturaEm = () => 0 } = {}) {
-  const kit = await Kit.carregar(new URL('../../biblioteca3d/cidade/', import.meta.url).href), r = mulberry32(17), obj = [];
+  const kit = await Kit.carregar(new URL('../../biblioteca3d/cidade/', import.meta.url).href, { detalhe: false }), r = mulberry32(17), obj = [];
   const igreja = criarIgreja(); igreja.scale.setScalar(1.35); igreja.position.set(IGREJA.x, alturaEm(IGREJA.x, IGREJA.z), IGREJA.z); igreja.rotation.y = -Math.PI / 2; g.add(igreja); obj.push(igreja);   // fachada para a cratera (-x)
   const cores = { ParedeAmarela: ['#f0cf6a', '#f2a94a'], ParedeRosa: ['#e8909f', '#e2688a'], ParedeBranca: ['#f2ecdc', '#dfe9e0'], ParedeVermelha: ['#d85a45'], ParedeCinza: ['#8fc6c9'] };
   const casas = [['casa-simples', -34, -14], ['casa-colonial', -30, 12], ['casa-simples', -12, -32], ['casa-simples', -8, 28], ['casa-colonial', 16, -30], ['casa-simples', 20, 26], ['casa-simples', 38, -6], ['casa-simples', 36, 18], ['casa-colonial', -52, 0]];

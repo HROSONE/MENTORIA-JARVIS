@@ -29,7 +29,7 @@ function texturaCeu() {
 
 export async function construirB(hist) {
   const B = mundos.B;
-  const kit = await Kit.carregar('../biblioteca3d/cidade/');
+  const kit = await Kit.carregar('../biblioteca3d/cidade/', { detalhe: false });
   const dados = { arvores: [], postes: [], tr: hist.arvore };
   const z0 = -90, z1 = 560, L = z1 - z0, zc = (z0 + z1) / 2;
 

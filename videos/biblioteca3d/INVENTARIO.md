@@ -19,6 +19,12 @@ Regra do canal: **antes de modelar qualquer coisa, procure aqui.** Se já existe
 - **equipamentos** (5): cinema, delegacia, estacionamento, hospital, supermercado
 - **esporte** (2): campo-futebol, estadio-futebol
 
+## Detalhe automático da cidade (`biblioteca3d/cidade/detalhe.js`, `extras.js`, `detalhe.html`): **já vem ligado em `Kit.carregar()`**
+- Asfalto com brita, trincas, remendos, trilhas de pneu, óleo e areia na sarjeta; faixas gastas; calçada em lajes com juntas, mato e manchas; meio-fio; grama com tufos, manchas e flores; terra; paredes de reboco, tijolo e concreto com faixas de chuva, umidade, mofo e tinta descascando; telhas; vidro com **interior por janela** (cortina, persiana, sala escura) e reflexo do céu; piscina com ondas; metal e madeira.
+- Geometria acrescentada sozinha: peitoril e pingadeira nas janelas, ar-condicionado, calhas, **bueiros e bocas de lobo** nas ruas.
+- Controles: `kit.ambiente({ molhado, chuva, sujeira, ceuTopo, ceuHorizonte, solDir, solCor })` (rua molhada com poças e anéis de chuva), `kit.tempo(t)`; `criarAgua()` (lago, rio, mar, enchente), `materialDetalhado(cor, tipo)` (chão grande), `criarReflexoPocas()` (espelho real opcional). Nada disso precisa ser refeito por vídeo.
+- Vídeos já entregues usam `Kit.carregar(base, { detalhe: false })` para manter o visual antigo.
+
 ## Veículos (`biblioteca3d/veiculos`, Kenney CC0; escala 1,7 no kit)
 - ambulance, box, cone, cone-flat, delivery, delivery-flat, firetruck, garbage-truck, hatchback-sports, kart-oobi, kart-oodi, kart-ooli, kart-oopi, kart-oozi, police, race, race-future, sedan, sedan-sports, suv, suv-luxury, taxi, tractor, tractor-police, tractor-shovel, truck, truck-flat, van, wheel-dark, wheel-default, wheel-racing, wheel-tractor-back, wheel-tractor-dark-back, wheel-tractor-dark-front, wheel-tractor-front, wheel-truck
 

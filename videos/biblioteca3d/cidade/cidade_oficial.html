@@ -25,7 +25,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { Kit, TILE, CALCADA, ESCALA_VEICULO } from './kit.js';
+import { Kit, TILE, CALCADA, ESCALA_VEICULO, materialDetalhado } from './kit.js';
 
 const Q = new URLSearchParams(location.search);
 const NOITE = Q.has('noite');
@@ -62,7 +62,7 @@ scene.add(mundo);
 const P = [];                                                       // promessas de carga (tudo carrega em paralelo)
 
 // ---- chão: grama um pouco abaixo do asfalto (as quadras ganham ladrilhos de grama ou calçada em y = 0,15)
-const chao = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshStandardMaterial({ color: NOITE ? 0x2c4a2a : 0x6fa94c, roughness: 1 }));
+const chao = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), materialDetalhado(NOITE ? 0x2c4a2a : 0x6fa94c, 'grama'));
 chao.rotation.x = -Math.PI / 2; chao.position.set(300, -0.03, 300); chao.receiveShadow = true;
 scene.add(chao);
 
