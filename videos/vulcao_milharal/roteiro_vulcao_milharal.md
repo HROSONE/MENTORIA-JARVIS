@@ -2,7 +2,7 @@
 
 Short vertical 1080×1920, 30 fps, **43,6 s**, 12 planos, 3D em Three.js. Quadro 0 = o fenômeno (o chão do milharal solta fogo); o último plano "rebobina" o mundo e termina exatamente no quadro 0 (loop). Marca HRYZ dentro do mundo: a placa de medição "HRYZ · MEDIÇÃO" do plano 6.
 
-> Status: **aguardando aprovação do dono** (decupagem + imagens). Nada foi renderizado em vídeo ainda; só quadros soltos de teste.
+> Status: decupagem e imagens **aprovadas pelo dono**; vídeo renderizado e montado com som (ver seção 6).
 
 ## 1. Locução (o dono grava; ~95 palavras)
 
@@ -72,15 +72,22 @@ Evitado de propósito (números e relatos que divergem ou não consegui confirma
 - Povoado e igreja genéricos, não a igreja real de San Juan.
 - A "fenda incandescente" do quadro 0 é interpretação (relatos falam em fumaça, cinza e fogo saindo do chão).
 
-## 6. Som (a fazer depois da aprovação das imagens)
+## 6. Som (`sfx_vulcao.py` → `vulcao_sfx.mp3`)
 
-Seguindo as regras do canal: sem trilha musical e sem fundo contínuo sintetizado. Gravações reais CC0 baixas e filtradas (estrondo grave distante sob a erupção, fogueira de galhos no plano 2, vento leve) + impactos curtos sintetizados nos instantes das ações (batida do chão no gancho, estouro da fenda, bombas, lava tocando a casa), com os tempos exportados da própria cena; verificação por espectro e volume (média ≤ ~−18 dBFS), MP4 ≤ ~20 MB.
+Seguindo as regras do canal: **sem música e sem cama de ruído sintetizada**. Só duas gravações reais CC0, bem baixas e filtradas, mais impactos curtos sintetizados, um por ação visível:
+
+- estrondo grave: [rumble fx](https://opengameart.org/content/rumble-fx) (OpenGameArt, CC0), cortado de 35 a 600 Hz, entra com a intensidade do vulcão (some nos planos 2, 11 e no fim do 10);
+- fogo crepitando: [Fireplace Sound loop](https://opengameart.org/content/fireplace-sound-loop) (OpenGameArt, CC0), só de 250 Hz a 5 kHz (a fogueira do plano 2 e o estalar da lava nos planos 7 e 8);
+- impactos sintetizados (87 no total): estouro do chão no quadro 0 e nos cortes com flash (10,4 s, 13,6 s, 29,3 s), o chão pulsando e a terra rachando (plano 3), passos de Dionísio correndo (plano 4), pedras em brasa caindo, bolhas de lava, a placa HRYZ trocando de texto (18,4 s e 19,7 s), a lava cobrindo o telhado da casa (24,8 s), um trovão ~0,3 s depois de cada um dos 5 relâmpagos do plano 9, e o estouro "ao contrário" da rebobina, que termina logo antes do estouro do quadro 0 (o loop fecha no som também).
+
+Verificação por análise (não consigo ouvir): média **−25,4 dBFS** (−25,4 LUFS), pico −8 dBFS, só 0,3% da energia acima de 1,5 kHz (sem chiado), nada acima de 5 kHz de forma constante; os estouros têm harmônicos de 100 a 250 Hz para aparecer no alto-falante do celular. A placa (plano 11) fica em silêncio de propósito. A narração é gravada por você: o arquivo não tem voz.
 
 ## 7. Como gerar
 
 ```bash
 cd videos/vulcao_milharal
 W=540 H=960 node quadros.js /tmp/q 0 4.4 8.6      # quadros soltos de teste
-node render.js --saida /tmp/quadros_vulcao        # render completo (4 trabalhadores)
-bash montar.sh /tmp/quadros_vulcao som.mp3 saida.mp4
+node render.js --saida /tmp/quadros_vulcao        # render completo (4 trabalhadores, ~25 min)
+python3 sfx_vulcao.py <pasta com fire.wav e rumble.wav>   # gera vulcao_sfx.mp3
+bash montar.sh /tmp/quadros_vulcao vulcao_sfx.mp3 saida.mp4
 ```
