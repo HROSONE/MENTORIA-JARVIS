@@ -32,6 +32,18 @@ Regras do canal depois do "Mestres da Gravidade": **sem cama de ruído sintetiza
 - **Trovão** distante, uma vez por relâmpago (17,5 s e 22,7 s), de gravação real.
 - Narração: gravação sua.
 
+## Detalhes (segunda rodada, pedido do dono: "um pouco liso, quero mais detalhes")
+- **Superfícies:** sujeira de chuva, manchas e relevo nas paredes, telhas e calçadas (`js/detalhe.js`, sem precisar de UV); asfalto com grão, rachaduras, remendos e poças; faixas desgastadas.
+- **Rua molhada de verdade:** o cenário aparece refletido nas poças (espelho com ondulação), na rua da abertura, na praça da igreja e na rua de Yoro.
+- **Guarda-chuva:** trama do tecido, gotas de chuva em relevo e pingos que escorrem das 8 pontas (ficam parados no ar na câmera lenta).
+- **Peixe:** pele com escamas em relevo, brilho de peixe molhado com reflexo furta-cor, nadadeiras com raios, olho com anel prateado.
+- **Mulher:** capa e botas com verniz de molhado e dobras, cachecol vermelho (toque de cor).
+- **Rua da noite:** postes de energia com fios, táxi estacionado, hidrante, lixeira, vapor saindo do bueiro, feixes de luz dos postes na chuva e brilho nas lâmpadas.
+- **Yoro:** bandeirolas coloridas e faixa "LLUVIA DE PECES" com a marca HRYZ, postes e fios, van de entrega, canteiros de flores, gaivotas, bonés e um rapaz filmando o céu com o celular.
+- **Igreja:** reboco e telhas com desgaste, porta de madeira com tábuas, janelas com travessas, lampiões e velas acesas nos degraus, sino que balança, nuvem de tempestade em espiral que despeja os peixes.
+- **Hipóteses:** funil turbulento com relâmpago por dentro e espuma nas ondas; no corte do chão, pedras, raízes e bolhas na água.
+- **Acabamento de imagem** (`acabamento.sh` nos quadros soltos e `montar.sh` no vídeo): brilho nas luzes (bloom), cor um pouco mais viva, vinheta leve e grão de filme.
+
 ## Fatos, fontes e ressalvas (conferidos em 15/11)
 - **O fenômeno:** em Yoro, Honduras, depois de tempestades fortes, aparecem peixes no chão; os moradores dizem que acontece todo ano, há mais de cem anos. [Wikipedia: Lluvia de peces](https://en.wikipedia.org/wiki/Lluvia_de_peces)
 - **Os peixes:** pequenos, prateados, parecidos com sardinhas. [CNN Brasil](https://www.cnnbrasil.com.br/internacional/chuva-de-peixes-entenda-o-estranho-fenomeno-que-acontece-em-honduras/) · [Remezcla](https://remezcla.com/culture/lluvia-de-peces-honduras/). Espécie e quantidade: **nenhuma das páginas que li diz**, por isso a fala só diz "peixinhos prateados".
@@ -44,7 +56,7 @@ Regras do canal depois do "Mestres da Gravidade": **sem cama de ruído sintetiza
 - **Encenação, não registro:** a mulher com o peixe atravessando o guarda-chuva é **a sua piada de abertura**, não um fato registrado; a Yoro do vídeo é uma cidade inventada (casas do kit), as pessoas e o padre são genéricos (sem semelhança com ninguém real); a cena do padre é dramatização da lenda; o funil e o corte do chão são **ilustrações de hipóteses**; o placar de peixes é ilustrativo (não há contagem real); os peixes são desenhados com dorso azul e barbatanas laranja, **maiores que sardinhas** (33 cm na rua, 4 a 9 vezes maiores nas ilustrações) para dar para ler na tela vertical.
 
 ## Arquivos e como gerar
-`index.html` (a página do vídeo: `window.__setTime(t)` e `window.__frame(t)`), `js/planos.js` (linha do tempo, câmeras, física e relógio em câmera lenta), `js/guardachuva.js`, `js/peixe.js`, `js/cardume.js`, `js/chuva.js`, `js/ceu.js`, `js/rua.js`, `js/yoro.js`, `js/igreja.js`, `js/ciencia.js`, `js/base.js`, `js/motor.js`, `js/atores.js`, `js/util.js`, `harness.js` (servidor + navegador sem GPU), `quadros.js` (quadros soltos), `render.js`, `montar.sh`, `dev*.html` e `tiro.js` (testes).
+`index.html` (a página do vídeo: `window.__setTime(t)` e `window.__frame(t)`), `js/planos.js` (linha do tempo, câmeras, física e relógio em câmera lenta), `js/guardachuva.js`, `js/peixe.js`, `js/cardume.js`, `js/chuva.js`, `js/ceu.js`, `js/rua.js`, `js/yoro.js`, `js/igreja.js`, `js/ciencia.js`, `js/detalhe.js` (detalhe procedural e reflexo nas poças), `js/props.js` (fios, bandeirolas, gaivotas, vapor, flores, boné, celular, feixes de luz), `js/base.js`, `js/motor.js`, `js/atores.js`, `js/util.js`, `harness.js` (servidor + navegador sem GPU), `quadros.js` (quadros soltos), `render.js`, `montar.sh`, `acabamento.sh`, `dev*.html` e `tiro.js` (testes).
 ```
 cd videos/chuva_peixes
 node quadros.js <prefixo> t1 t2 …                                 # quadros soltos (W=540 H=960 para miniaturas)

@@ -2,6 +2,17 @@
 // Referencial: origem no centro do plano da copa (aro em y=0, ápice em y=H); cabo desce até y=-0,85; punho em forma de gancho.
 // A copa tem 8 gomos com costuras e a marca HRYZ em branco na barra da borda (textura gerada em canvas).
 import * as THREE from 'three';
+import { mulberry32 } from './util.js';
+
+// mapa de relevo do tecido: trama diagonal fina + gotas de chuva (alturas -> normais por Sobel)
+function normalGotas() {
+  const W = 1024, H = 512, h = new Float32Array(W * H), r = mulberry32(77);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) h[y * W + x] = 0.10 * (Math.sin((x + y) * 1.3) * 0.5 + 0.5) + 0.06 * (Math.sin((x - y) * 1.3) * 0.5 + 0.5);
+  for (let i = 0; i < 520; i++) { const cx = r() * W, cy = r() * H, rad = 2 + 7 * r() * r(), x0 = Math.floor(cx - rad - 1), x1 = Math.ceil(cx + rad + 1); for (let yy = Math.floor(cy - rad - 1); yy <= Math.ceil(cy + rad + 1); yy++) for (let xx = x0; xx <= x1; xx++) { const d = Math.hypot(xx - cx, (yy - cy) * 1.0) / rad; if (d < 1) { const k = ((xx % W) + W) % W, j = ((yy % H) + H) % H; h[j * W + k] = Math.max(h[j * W + k], 0.9 * Math.sqrt(1 - d * d)); } } }
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'), im = g.createImageData(W, H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const l = h[y * W + (x + W - 1) % W], rr = h[y * W + (x + 1) % W], u = h[((y + H - 1) % H) * W + x], d = h[((y + 1) % H) * W + x], nx = (l - rr) * 2.2, ny = (u - d) * 2.2, nz = 1, n = Math.hypot(nx, ny, nz), i = (y * W + x) * 4; im.data[i] = (nx / n * 0.5 + 0.5) * 255; im.data[i + 1] = (ny / n * 0.5 + 0.5) * 255; im.data[i + 2] = (nz / n * 0.5 + 0.5) * 255; im.data[i + 3] = 255; }
+  g.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; return t;
+}
 
 export function criarGuardaChuva({ R = 0.54, H = 0.25, P = [0.2, 0.09], env = null } = {}) {
   const g = new THREE.Group();
@@ -23,7 +34,7 @@ export function criarGuardaChuva({ R = 0.54, H = 0.25, P = [0.2, 0.09], env = nu
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nrm, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.setIndex(new THREE.BufferAttribute(new Uint32Array(NR * NP * 6), 1)); geo.index.usage = THREE.DynamicDrawUsage;
   // os triângulos olham para baixo: FrontSide = face de dentro (azul liso, mais escuro); BackSide = face de fora (textura com a marca)
-  const matFora = new THREE.MeshStandardMaterial({ map: tex, color: 0xffffff, roughness: 0.42, metalness: 0.0, side: THREE.BackSide, envMap: env, envMapIntensity: 0.7 });
+  const matFora = new THREE.MeshPhysicalMaterial({ map: tex, color: 0xffffff, roughness: 0.46, metalness: 0.0, side: THREE.BackSide, envMap: env, envMapIntensity: 0.6, normalMap: normalGotas(), normalScale: new THREE.Vector2(0.9, 0.9), clearcoat: 0.3, clearcoatRoughness: 0.35 });
   const matDentro = new THREE.MeshStandardMaterial({ color: 0x1a3fc0, roughness: 0.6, metalness: 0.0, side: THREE.FrontSide, envMap: env, envMapIntensity: 0.25, emissive: 0x0a1c66, emissiveIntensity: 0.6 });
   const fora = new THREE.Mesh(geo, matFora), dentro = new THREE.Mesh(geo, matDentro);
   fora.castShadow = false; dentro.castShadow = true; fora.receiveShadow = dentro.receiveShadow = false; fora.frustumCulled = dentro.frustumCulled = false; g.add(fora, dentro);
@@ -59,6 +70,20 @@ export function criarGuardaChuva({ R = 0.54, H = 0.25, P = [0.2, 0.09], env = nu
   }
   // altura da copa (sem deformação) no ponto local (x, z); usada para achar onde a reta do peixe cruza o tecido
   const alturaCopa = (x, z) => { const u = Math.min(1, Math.hypot(x, z) / R); return H * (1 - Math.pow(u, 2.2)) - 0.02 * Math.pow(u, 10); };
+  // pingos que escorrem das pontas das 8 varetas (instanciados): ficam parados no ar no "bullet time" porque dependem do tempo físico
+  const nD = 8 * 3, gotas = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshStandardMaterial({ color: 0xd8ecff, emissive: 0x3d6ba8, emissiveIntensity: 0.9, roughness: 0.05, transparent: true, opacity: 0.8 }), nD);
+  gotas.frustumCulled = false; const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), Pp = new THREE.Vector3(), Sc = new THREE.Vector3(), rg = mulberry32(5), fase = Array.from({ length: nD }, () => rg());
+  const pingos = (tau, mundo, deriva = [0, 0, 0]) => {
+    for (let i = 0; i < nD; i++) {
+      const k = i % 8, ph = k * Math.PI / 4, ciclo = 0.85, tt = (((tau / ciclo + fase[i]) % 1) + 1) % 1 * ciclo, cresce = Math.min(1, tt / 0.45), cai = Math.max(0, tt - 0.45);
+      const yq = -0.5 * 9.8 * cai * cai, vy = -9.8 * cai;
+      Pp.set(R * 0.97 * Math.cos(ph), -0.02 + yq, R * 0.97 * Math.sin(ph)); Pp.applyMatrix4(mundo);
+      Pp.x += deriva[0] * (cai); Pp.z += deriva[2] * (cai);
+      const r = 0.0045 * (0.3 + 0.7 * cresce) * (cai > 0 ? 1 : 1.25); Sc.set(r, r * (1 + Math.min(3, Math.abs(vy) * 0.5)), r); M.compose(Pp, Q, Sc); gotas.setMatrixAt(i, M);
+    }
+    gotas.instanceMatrix.needsUpdate = true;
+  };
+  // as gotas ficam em coordenadas de mundo: o chamador faz mundo.add(guarda.gotas)
   atualizar();
-  return { grupo: g, atualizar, alturaCopa, R, H, P };
+  return { grupo: g, atualizar, alturaCopa, R, H, P, gotas, pingos };
 }

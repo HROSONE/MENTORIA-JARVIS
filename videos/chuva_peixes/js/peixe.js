@@ -24,6 +24,23 @@ export function loft(secs, { N = 18, capIni = false, capFim = false, dAlt = null
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); g.setIndex(idx); return g;
 }
 // pele do peixe: dorso azul-marinho, flancos prateados com faixa lateral laranja, barriga clara, escamas em arcos, opérculo (guelra) e manchas escuras
+// relevo das escamas (mesmas coordenadas da pele): arcos claros com sombra por baixo
+export function relevoEscamas() {
+  const W = 1024, H = 256, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.fillStyle = '#808080'; g.fillRect(0, 0, W, H);
+  for (let row = 0; row < 26; row++) for (let col = 0; col < 42; col++) { const x = col * 24.4 + (row % 2 ? 12.2 : 0), y = row * (H / 26) + 4; const gr = g.createRadialGradient(x, y - 3, 1, x, y, 11); gr.addColorStop(0, 'rgba(255,255,255,0.55)'); gr.addColorStop(0.7, 'rgba(160,160,160,0.0)'); gr.addColorStop(1, 'rgba(0,0,0,0.55)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, 11, 0, 7); g.fill(); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = THREE.ClampToEdgeWrapping; t.anisotropy = 8; return t;
+}
+// nadadeira com raios: textura em canvas com raios que saem da base; recebe UV pela caixa do contorno
+export function texturaNadadeira(cor = '#ff8a3a', escuro = '#c4501a') {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 128; const g = c.getContext('2d'); g.fillStyle = cor; g.fillRect(0, 0, 256, 128);
+  g.strokeStyle = escuro; g.lineWidth = 1.6; for (let i = 0; i < 26; i++) { const a = (i / 25 - 0.5) * 1.6; g.beginPath(); g.moveTo(0, 64); g.lineTo(256, 64 + Math.tan(a) * 256 * 0.8); g.stroke(); }
+  const gr = g.createLinearGradient(0, 0, 256, 0); gr.addColorStop(0, 'rgba(255,255,255,0.0)'); gr.addColorStop(0.7, 'rgba(255,230,200,0.0)'); gr.addColorStop(1, 'rgba(255,240,210,0.35)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 128);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+export function uvDaCaixa(geo) { geo.computeBoundingBox(); const b = geo.boundingBox, P = geo.attributes.position, uv = new Float32Array(P.count * 2); for (let i = 0; i < P.count; i++) { uv[i * 2] = (P.getX(i) - b.min.x) / (b.max.x - b.min.x || 1); uv[i * 2 + 1] = (P.getY(i) - b.min.y) / (b.max.y - b.min.y || 1); } geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); return geo; }
+export function materialPele(env, esc = 1) {
+  return new THREE.MeshPhysicalMaterial({ map: texturaPele(), bumpMap: relevoEscamas(), bumpScale: 1.6, color: 0xffffff, roughness: 0.3, metalness: 0.1, envMap: env, envMapIntensity: 0.5, clearcoat: 0.9, clearcoatRoughness: 0.14, iridescence: 0.6, iridescenceIOR: 1.5, iridescenceThicknessRange: [200, 420] });
+}
 export function texturaPele() {
   const W = 1024, H = 256, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
   // v (linhas): 0 = flanco +z, 0.25 = dorso, 0.5 = flanco -z, 0.75 = barriga
@@ -56,7 +73,7 @@ export function barbatana(pts, cor, dupla = true) {
 // raio (meia-altura) do corpo na estação x (m, a partir do centro; nariz em +0,139)
 export const alturaCorpo = alt;
 export function criarPeixe(esc = 1, { env = null } = {}) {
-  const g = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ map: texturaPele(), color: 0xffffff, roughness: 0.34, metalness: 0.05, envMap: env, envMapIntensity: 0.4 });
+  const g = new THREE.Group(), mat = materialPele(env);
   const corpo = new THREE.Group(); g.add(corpo);
   // corpo único com malha "skinned" de três ossos (tronco, meio, cauda): dobra suave nas articulações
   const dAlt = x => (alt(x + 0.002) - alt(x - 0.002)) / 0.004;
@@ -72,9 +89,10 @@ export function criarPeixe(esc = 1, { env = null } = {}) {
   const bA = new THREE.Bone(), bB = new THREE.Bone(), bC = new THREE.Bone(); bB.position.x = HB; bC.position.x = HC - HB; bA.add(bB); bB.add(bC);
   const malha = new THREE.SkinnedMesh(geo, mat); malha.add(bA); malha.bind(new THREE.Skeleton([bA, bB, bC])); malha.castShadow = true; malha.frustumCulled = false; corpo.add(malha);
   // nadadeiras: caudal bifurcada (no osso da cauda), dorsal curva (no tronco) e peitorais
-  const tf = barbatana([[0, 0.004], [-0.05, 0.058], [-0.036, 0.008], [-0.036, -0.008], [-0.05, -0.058], [0, -0.004]], 0xff7a1c); tf.position.x = -0.052; bC.add(tf);
+  const mFin = new THREE.MeshStandardMaterial({ map: texturaNadadeira(), side: THREE.DoubleSide, roughness: 0.45, transparent: true, opacity: 0.94 });
+  const tf = new THREE.Mesh(uvDaCaixa(new THREE.ShapeGeometry(new THREE.Shape([[0, 0.004], [-0.05, 0.058], [-0.036, 0.008], [-0.036, -0.008], [-0.05, -0.058], [0, -0.004]].map(q => new THREE.Vector2(q[0], q[1]))))), mFin); tf.position.x = -0.052; bC.add(tf);
   const dfSh = new THREE.Shape(); dfSh.moveTo(0.0, 0); dfSh.bezierCurveTo(-0.004, 0.026, -0.022, 0.05, -0.062, 0.058); dfSh.bezierCurveTo(-0.05, 0.036, -0.056, 0.016, -0.07, 0); dfSh.lineTo(0, 0);
-  const df = new THREE.Mesh(new THREE.ShapeGeometry(dfSh, 10), new THREE.MeshStandardMaterial({ color: 0xff8a3a, side: THREE.DoubleSide, roughness: 0.5, transparent: true, opacity: 0.95 })); df.position.set(0.045, 0.047, 0); bA.add(df);
+  const df = new THREE.Mesh(uvDaCaixa(new THREE.ShapeGeometry(dfSh, 10)), mFin); df.position.set(0.045, 0.047, 0); bA.add(df);
   const pf = barbatana([[0, 0], [-0.03, -0.012], [-0.012, -0.03]], 0xffb066); for (const sz of [-1, 1]) { const f = pf.clone(); f.position.set(0.07, -0.02, sz * 0.026); f.rotation.x = sz * 0.9; corpo.add(f); }
   // olhos: esfera escura brilhante com anel prateado
   for (const sz of [-1, 1]) {

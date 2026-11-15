@@ -2,10 +2,10 @@
 // Cada instância: posição, giro (yaw), rolagem ao redor do eixo do corpo (roll) e inclinação (pitch). Deitado de lado: roll = -PI/2 (o dorso fica na horizontal).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { loft, alturaCorpo, texturaPele } from './peixe.js';
+import { loft, alturaCorpo, texturaPele, relevoEscamas, texturaNadadeira, uvDaCaixa } from './peixe.js';
 import { mulberry32, clamp, lerp, suave } from './util.js';
 
-let _geo = null, _tex = null;
+let _geo = null, _tex = null, _bump = null, _fin = null;
 function geometrias() {
   if (_geo) return _geo;
   const xs = Array.from({ length: 21 }, (_, i) => 0.139 - 0.276 * i / 20), dAlt = x => (alturaCorpo(x + 0.002) - alturaCorpo(x - 0.002)) / 0.004;
@@ -13,13 +13,13 @@ function geometrias() {
   // nadadeiras: caudal bifurcada + dorsal curva, planas no plano XY (o dorso do peixe é +y)
   const tail = new THREE.ShapeGeometry(new THREE.Shape([[-0.137, 0.004], [-0.187, 0.058], [-0.173, 0.008], [-0.173, -0.008], [-0.187, -0.058], [-0.137, -0.004]].map(p => new THREE.Vector2(p[0], p[1]))));
   const sh = new THREE.Shape(); sh.moveTo(0.045, 0.047); sh.bezierCurveTo(0.041, 0.073, 0.023, 0.097, -0.017, 0.105); sh.bezierCurveTo(-0.005, 0.083, -0.011, 0.063, -0.025, 0.047); sh.lineTo(0.045, 0.047);
-  const barb = mergeGeometries([tail, new THREE.ShapeGeometry(sh, 6)]);
+  const barb = mergeGeometries([uvDaCaixa(tail), uvDaCaixa(new THREE.ShapeGeometry(sh, 6))]);
   _geo = { corpo, barb }; return _geo;
 }
 export function criarCardume(pai, n, { env = null } = {}) {
-  const G = geometrias(); if (!_tex) _tex = texturaPele();
-  const mc = new THREE.MeshStandardMaterial({ map: _tex, roughness: 0.34, metalness: 0.05, envMap: env, envMapIntensity: 0.4 });
-  const mb = new THREE.MeshStandardMaterial({ color: 0xff8a3a, side: THREE.DoubleSide, roughness: 0.55 });
+  const G = geometrias(); if (!_tex) { _tex = texturaPele(); _bump = relevoEscamas(); _fin = texturaNadadeira(); }
+  const mc = new THREE.MeshPhysicalMaterial({ map: _tex, bumpMap: _bump, bumpScale: 1.4, roughness: 0.3, metalness: 0.08, envMap: env, envMapIntensity: 0.45, clearcoat: 0.7, clearcoatRoughness: 0.18, iridescence: 0.45, iridescenceIOR: 1.5, iridescenceThicknessRange: [200, 400] });
+  const mb = new THREE.MeshStandardMaterial({ map: _fin, side: THREE.DoubleSide, roughness: 0.5, transparent: true, opacity: 0.95 });
   const corpo = new THREE.InstancedMesh(G.corpo, mc, n), barb = new THREE.InstancedMesh(G.barb, mb, n);
   for (const m of [corpo, barb]) { m.frustumCulled = false; m.castShadow = true; m.receiveShadow = true; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); pai.add(m); }
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), P = new THREE.Vector3(), S = new THREE.Vector3();
