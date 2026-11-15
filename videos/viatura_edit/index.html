@@ -68,7 +68,8 @@ function quadro(t, opc = {}) {
   const pl = planoEm(t), K = pl.mb || 1, jpeg = opc.jpeg ?? 0.93;
   if (K === 1) { montar(t); renderer.render(scene, camera); return renderer.domElement.toDataURL('image/jpeg', jpeg); }
   const obt = 0.42 / 30;                                                                     // obturador de ~150°
-  for (let i = 0; i < K; i++) { montar(Math.min(t + ((i + 0.5) / K - 0.5) * obt, TOTAL - 1e-4)); renderer.render(scene, camera); actx.globalAlpha = 1 / (i + 1); actx.drawImage(renderer.domElement, 0, 0); }
+  const t0s = pl.b0 * B, t1s = pl.b1 * B - 1e-4;                                                // as subamostras ficam dentro do plano (sem dupla exposição nos cortes)
+  for (let i = 0; i < K; i++) { montar(Math.min(Math.max(t + ((i + 0.5) / K - 0.5) * obt, t0s), t1s, TOTAL - 1e-4)); renderer.render(scene, camera); actx.globalAlpha = 1 / (i + 1); actx.drawImage(renderer.domElement, 0, 0); }
   return acum.toDataURL('image/jpeg', jpeg);
 }
 window.__total = TOTAL; window.__frame = quadro; window.__planos = PLANOS.map(p => ({ nome: p.nome, b0: p.b0, b1: p.b1, t0: p.b0 * B, t1: p.b1 * B }));
