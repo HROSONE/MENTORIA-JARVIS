@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<title>Viatura Crown Victoria P71 — vitrine (câmera de cinema)</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#05070d}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<script type="module">
+// Vitrine da viatura à noite, com a câmera em ângulos de cinema (protocolo do projeto: window.__total, window.__frame(t, {jpeg})). ?w=1080&h=1920
+import * as THREE from 'three';
+import { criarViatura, criarAmbiente, criarCeuMalha } from './viatura.js';
+
+const Q = new URLSearchParams(location.search), W = +(Q.get('w') || innerWidth), H = +(Q.get('h') || innerHeight);
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.25; document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x0a1022, 0.028);
+const CEU = { zenite: [0.012, 0.022, 0.07], horizonte: [0.16, 0.2, 0.34], chao: [0.025, 0.027, 0.04], sol: [0, -1, 0] };
+const ceu = criarCeuMalha({ ...CEU, raio: 90 }); scene.add(ceu);
+scene.environment = criarAmbiente(renderer, { ...CEU, paineis: [
+  { pos: [-8, 11, 5], w: 16, h: 2.4, cor: [0.6, 0.7, 1.0], k: 5.0 }, { pos: [9, 9, -3], w: 3.2, h: 8, cor: [1.0, 0.72, 0.4], k: 6.0 },
+  { pos: [0, 7, -12], w: 14, h: 1.6, cor: [0.7, 0.8, 1.0], k: 3.5 }, { pos: [-11, 3, -2], w: 2.5, h: 6, cor: [0.55, 0.65, 1.0], k: 4.0 }] });
+scene.add(new THREE.HemisphereLight(0x6a7fbf, 0x10131c, 0.5));
+const lua = new THREE.DirectionalLight(0xa9bcff, 1.5); lua.position.set(-6, 10, 5); lua.castShadow = true; lua.shadow.mapSize.set(2048, 2048);
+Object.assign(lua.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6, near: 1, far: 30 }); lua.shadow.bias = -0.0004; lua.shadow.normalBias = 0.02; scene.add(lua);
+const contraA = new THREE.DirectionalLight(0x7f9bff, 2.6); contraA.position.set(-6, 3.5, -9); scene.add(contraA);             // contraluz frio
+const contraB = new THREE.DirectionalLight(0xffa868, 2.0); contraB.position.set(8, 2.8, -7); scene.add(contraB);              // contraluz quente (poste)
+const preench = new THREE.DirectionalLight(0x8fa6e8, 0.55); preench.position.set(7, 2.2, 9); scene.add(preench);
+
+// rua: asfalto com grão, faixa central tracejada amarela e calçadas (o carro fica na origem; a faixa central em x = 1,4)
+function asfalto() {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 1024; const g = c.getContext('2d');
+  g.fillStyle = '#2b2d32'; g.fillRect(0, 0, 1024, 1024);
+  for (let i = 0; i < 60000; i++) { const v = 30 + Math.random() * 40; g.fillStyle = `rgba(${v},${v},${v + 3},0.55)`; g.fillRect(Math.random() * 1024, Math.random() * 1024, 1 + Math.random() * 2, 1 + Math.random() * 2); }
+  g.fillStyle = '#c9a227'; for (let k = 0; k < 4; k++) g.fillRect(500, k * 256 + 20, 24, 150);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 6); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+const chao = new THREE.Mesh(new THREE.PlaneGeometry(14, 90), new THREE.MeshStandardMaterial({ map: asfalto(), roughness: 0.34, metalness: 0.0, envMapIntensity: 1.2 })); chao.rotation.x = -Math.PI / 2; chao.position.x = 1.4; chao.receiveShadow = true; scene.add(chao);
+const calcada = new THREE.MeshStandardMaterial({ color: 0x33353b, roughness: 0.8 });
+for (const s of [-1, 1]) { const m = new THREE.Mesh(new THREE.BoxGeometry(5, 0.16, 90), calcada); m.position.set(1.4 + s * 9.5, 0.08, 0); m.receiveShadow = true; scene.add(m); }
+
+const v = criarViatura({ livery: Q.get('livery') || 'preto-branco', numero: '117' });
+v.grupo.rotation.y = 0.02; scene.add(v.grupo);
+const camera = new THREE.PerspectiveCamera(36, W / H, 0.05, 200);
+
+const TOTAL = 16; window.__total = TOTAL;
+// decupagem: [t, posição da câmera, alvo, fov]  (carro em x = -1.4, frente em +z; x positivo = lado do motorista)
+const K = [
+  [0.0, [2.7, 0.50, 7.0], [0.0, 0.72, 1.4], 32],       // 1. plano baixo de frente, pelo lado do motorista: luzes piscando e faróis acesos
+  [3.2, [1.9, 0.62, 5.0], [-0.05, 0.70, 1.6], 32],     //    avança devagar (dolly) até a grade
+  [5.2, [4.6, 0.80, 2.6], [0.0, 0.78, 0.7], 32],       // 2. varre pelo flanco: porta com POLICE e distintivo
+  [8.2, [5.2, 1.00, -1.8], [0.0, 0.85, -0.3], 32],     //    passa pela lateral traseira
+  [10.6, [2.6, 1.05, -7.0], [0.0, 0.85, -2.0], 34],    // 3. traseira: lanternas, placa, luz de freio
+  [13.0, [-3.2, 1.9, -6.2], [0.0, 0.95, -0.8], 34],    // 4. sobe pela traseira do lado direito
+  [16.0, [-6.0, 3.6, 4.0], [0.0, 0.90, 0.5], 38],      //    final alto: carro e rua
+];
+const sp = (a, b, t) => a + (b - a) * t, ease = x => x * x * (3 - 2 * x);
+function pose(t) {
+  let i = 0; while (i < K.length - 2 && t > K[i + 1][0]) i++;
+  const A = K[i], B = K[i + 1], u = Math.min(Math.max((t - A[0]) / (B[0] - A[0]), 0), 1), k = ease(u);
+  const L = (p, q) => p.map((v0, j) => sp(v0, q[j], k));
+  return { pos: L(A[1], B[1]), alvo: L(A[2], B[2]), fov: sp(A[3], B[3], k) };
+}
+function quadro(t, opc = {}) {
+  const p = pose(t); camera.position.set(...p.pos); camera.lookAt(...p.alvo); camera.fov = p.fov; camera.updateProjectionMatrix();
+  v.luzes(t, 'ligado'); v.farois(true); v.freio(t > 9.8 && t < 14.5); v.re(false); v.seta(1, Math.floor(t * 2.5) % 2 === 0 && t < 6); 
+  renderer.render(scene, camera); return renderer.domElement.toDataURL('image/jpeg', opc.jpeg ?? 0.92);
+}
+window.__frame = quadro; quadro(+(Q.get('t') || 0)); window.__ready = true;
+</script>
+</body>
+</html>

@@ -26,6 +26,7 @@ Regra do canal: **antes de modelar qualquer coisa, procure aqui.** Se já existe
 - Vídeos já entregues usam `Kit.carregar(base, { detalhe: false })` para manter o visual antigo.
 
 ## Veículos (`biblioteca3d/veiculos`, Kenney CC0; escala 1,7 no kit)
+- **Viatura Ford Crown Victoria Police Interceptor (P71), réplica procedural em escala real (5,385 m)** — `biblioteca3d/veiculos/policia/` (`viatura.js`; **frente em +Z**, sem GLB): três pinturas (`preto-branco`, `branco-azul`, `branco`), faróis, lanternas, barra de luzes vermelho/azul com luz colorida na cena, LEDs, rodas, interior, `rodar`/`esterco`/`farois`/`freio`/`seta`. Detalhes e opções em `veiculos/policia/README.md`; bancada `viatura.html`, vitrine noturna `viatura_vitrine.html`. Departamento fictício (HRYZ CITY).
 - ambulance, box, cone, cone-flat, delivery, delivery-flat, firetruck, garbage-truck, hatchback-sports, kart-oobi, kart-oodi, kart-ooli, kart-oopi, kart-oozi, police, race, race-future, sedan, sedan-sports, suv, suv-luxury, taxi, tractor, tractor-police, tractor-shovel, truck, truck-flat, van, wheel-dark, wheel-default, wheel-racing, wheel-tractor-back, wheel-tractor-dark-back, wheel-tractor-dark-front, wheel-tractor-front, wheel-truck
 
 ## Personagens (`biblioteca3d/personagens/elenco`, com esqueleto, rosto que mexe e clipes Parado/Andar/Correr/Pular/Assustado)
@@ -40,6 +41,7 @@ Regra do canal: **antes de modelar qualquer coisa, procure aqui.** Se já existe
 - **Espaço e escala:** Terra (inteira, empurrada, amassada), átomo, estrelas — `todos_pulando/js/mundo.js`.
 - **Celular com tela de alerta**, relógio digital gigante — `todos_pulando/js/mundo.js`.
 - **Máquina do tempo (3 anéis de giroscópio, reator, console com tela do ano, alavanca, descargas)** — `biblioteca3d/veiculos/maquina_tempo.js` (visualizador `maquina_tempo.html`).
+- **Viatura de polícia real (Crown Victoria P71) com luzes de emergência animáveis, faróis, freio, seta, rodas que giram e esterçam** — `biblioteca3d/veiculos/policia/viatura.js` (`criarViatura(opc)`, `criarAmbiente(renderer)`; pintura por projeção triplanar em canvas, `pintura.js`; peças em `frente.js`, `rodas.js`, `acessorios.js`, `interior.js`).
 - **Cidade seca, vórtice de relógios, cidade neon, laboratório, arma de encolhimento, cidade miniatura (kit a 1:83), banana em 12 fatias cortáveis, maçã torneada, machados de miniatura** — `viagem_futuro/js/mundo.js`.
 - **Gente de verdade (elenco) em cena dramática:** andar fraco, desabar, ficar deitado, de pé fraco, magros por escala (`FINO`) — `viagem_futuro/js/gente.js`. Câmera só desenha quem está no quadro (corte por frustum em `planos.js`).
 - **Guarita de sacos de areia, ninho de atirador, sala de aula de 1942, quarto, lago com canoa, luneta, olhos fechados com cílios** — `sono_militar/js/`.
