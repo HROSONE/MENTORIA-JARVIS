@@ -243,6 +243,10 @@ function montarPlanos() {
   // 11. A placa (37,2 a 41,0 s): "este vulcão é do Dionisio Pulido", com o morro enorme ao fundo
   const PL = { x: -176, z: 14 };
   const K11 = [[0, [PL.x - 10.5, 1.4, PL.z + 3.5], [PL.x, 4.0, PL.z], 50], [3.8, [PL.x - 7.5, 1.6, PL.z + 2.0], [PL.x, 3.4, PL.z], 42]];
+  {                                                                                   // árvores no caminho do voo da rebobina (da placa ao quadro 0) saem de cena: nada atravessa a câmera
+    const A = K11[1][1], B = K1[0][1], dx = B[0] - A[0], dz = B[2] - A[2];
+    for (const p of X.aldeia.pinhos) { const t = clamp(((p.position.x - A[0]) * dx + (p.position.z - A[2]) * dz) / (dx * dx + dz * dz)); if (Math.hypot(p.position.x - (A[0] + dx * t), p.position.z - (A[2] + dz * t)) < 14) p.userData.fora = true; }
+  }
   plano('placa', 3.8, 'V', (u, t, pl) => {
     const tl = t - pl.t0; X.povo.forEach(a => a.grupo.visible = false); X.dio.grupo.visible = false; X.paula.grupo.visible = false; X.enxada.visible = false; X.fogueira.grupo.visible = false; props(false, true);
     camChaves(tl, K11, { tr: 0.35 });
@@ -270,7 +274,7 @@ function montarPlanos() {
 
 // ---------------------------------------------------------------- atualização e efeitos de quadro
 function afastarArvores() {                                                                 // árvores coladas na câmera (voo da rebobina) somem em vez de tapar o quadro
-  for (const p of X.aldeia.pinhos) p.visible = Math.hypot(p.position.x - cam.position.x, p.position.z - cam.position.z) > 9;
+  for (const p of X.aldeia.pinhos) p.visible = !p.userData.fora && Math.hypot(p.position.x - cam.position.x, p.position.z - cam.position.z) > 9;
 }
 export function atualizar(t) { const pl = acharPlano(t); X.camReq = null; X.relampagos.atualizar([0, 0, 0, 0, 0], [0, 0, 0]); pl.fn((t - pl.t0) / pl.dur, t, pl); aplicarCamera(); afastarArvores(); }
 export function efeitos(t) {
