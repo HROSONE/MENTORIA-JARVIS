@@ -1,0 +1,53 @@
+{
+ "total": 27.8,
+ "s": [
+  {
+   "k": "b1",
+   "t0": 0.1,
+   "t1": 2.9,
+   "txt": "Essa cabra come tranquila, na beira de um precipício."
+  },
+  {
+   "k": "b2",
+   "t0": 3.25,
+   "t1": 6.95,
+   "txt": "O segredo é o casco: duas metades que abrem e agarram."
+  },
+  {
+   "k": "b3",
+   "t0": 7.1,
+   "t1": 10.25,
+   "txt": "A borda é dura; a sola, macia, molda-se à rocha."
+  },
+  {
+   "k": "b4",
+   "t0": 10.5,
+   "t1": 13.4,
+   "txt": "Ao microscópio, é um feixe de tubinhos de queratina."
+  },
+  {
+   "k": "b5",
+   "t0": 13.7,
+   "t1": 16.3,
+   "txt": "Pernas fortes e equilíbrio fazem o resto."
+  },
+  {
+   "k": "b6",
+   "t0": 16.6,
+   "t1": 20.2,
+   "txt": "Lá em cima, poucos predadores chegam, e elas acham comida e sal."
+  },
+  {
+   "k": "b7",
+   "t0": 20.5,
+   "t1": 24.7,
+   "txt": "No Marrocos, na seca, cabras sobem em arganeiras atrás dos frutos."
+  },
+  {
+   "k": "b8",
+   "t0": 25.0,
+   "t1": 26.6,
+   "txt": "E ela continua comendo."
+  }
+ ]
+}

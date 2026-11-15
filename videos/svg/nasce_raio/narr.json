@@ -1,0 +1,47 @@
+{
+ "total": 26.3,
+ "s": [
+  {
+   "k": "b1",
+   "t0": 0.1,
+   "t1": 4.9,
+   "txt": "Na nuvem de tempestade, cristais de gelo e granizo se chocam e trocam carga elétrica."
+  },
+  {
+   "k": "b2",
+   "t0": 5.0,
+   "t1": 7.8,
+   "txt": "Os leves, positivos, sobem; os pesados, negativos, descem."
+  },
+  {
+   "k": "b3",
+   "t0": 7.9,
+   "t1": 11.7,
+   "txt": "O chão responde com cargas positivas, que sobem pelas árvores e prédios."
+  },
+  {
+   "k": "b4",
+   "t0": 11.8,
+   "t1": 16.3,
+   "txt": "Quando o campo vence o ar, um caminho de cargas desce em zigue-zague."
+  },
+  {
+   "k": "b5",
+   "t0": 16.4,
+   "t1": 19.2,
+   "txt": "Perto do chão, uma faísca sobe para encontrá-lo."
+  },
+  {
+   "k": "b6",
+   "t0": 19.3,
+   "t1": 23.5,
+   "txt": "No encontro, uma corrente enorme esquenta o ar a uns 30 mil graus."
+  },
+  {
+   "k": "b7",
+   "t0": 23.6,
+   "t1": 25.7,
+   "txt": "O trovão é esse ar explodindo."
+  }
+ ]
+}
