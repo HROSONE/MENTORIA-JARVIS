@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<title>Viatura Crown Victoria P71 — bancada</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#aab4bf}
+  canvas{display:block}
+  #info{position:absolute;left:10px;top:8px;color:#fff;font:600 13px system-ui,sans-serif;text-shadow:0 1px 3px #000;max-width:calc(100% - 20px)}
+  body.still #info{display:none}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="info">Bancada da viatura · ?cam=lado|frente|tras|topo|tq|tqt|baixo · ?ort=1 (ortográfica, ?h=altura visível) · ?grade=1 · ?pos=x,y,z&alvo=x,y,z&fov=40 · ?livery=… · ?still</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { criarViatura, criarAmbiente } from './viatura.js';
+
+const Q = new URLSearchParams(location.search);
+if (Q.has('still')) document.body.classList.add('still');
+const W = innerWidth, H = innerHeight;
+const TRANSP = Q.has('transp');
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: TRANSP });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(W, H);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = +(Q.get('exp') || 1.0);
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene(); if (!TRANSP) scene.background = new THREE.Color(0xaab4bf); else { renderer.setClearColor(0x000000, 0); document.body.style.background = 'transparent'; document.documentElement.style.background = 'transparent'; }
+if (Q.has('sala')) { const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; } else scene.environment = criarAmbiente(renderer);
+scene.environmentIntensity = +(Q.get('env') || 1.0);
+const sun = new THREE.DirectionalLight(0xfff2e0, 2.2); sun.position.set(-6, 9, 5); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 1, far: 30 }); sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.02; scene.add(sun);
+const chao = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0x777c80, roughness: 0.95 })); chao.rotation.x = -Math.PI / 2; chao.receiveShadow = true; chao.visible = !Q.has('semchao') && !TRANSP; scene.add(chao);
+
+const __t0 = performance.now();
+const v = criarViatura({ livery: Q.get('livery') || undefined, barra: Q.get('barra') !== '0', pushbar: Q.has('pushbar') });
+window.__triangulos = (() => { let n = 0; v.grupo.traverse(o => { if (o.geometry) n += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; }); return Math.round(n); })();
+console.warn('triângulos:', window.__triangulos, 'tempo de criação (ms):', Math.round(performance.now() - __t0));
+scene.add(v.grupo); window.__viatura = v;
+
+if (Q.has('grade')) {                                                                  // grade de medição (a cada 0,5 m, com marcas a cada 0,1 m) no plano de simetria
+  const mat = new THREE.LineBasicMaterial({ color: 0xff2020 }), mat2 = new THREE.LineBasicMaterial({ color: 0x2060ff }), pts = [], pts2 = [];
+  for (let z = -3; z <= 3.001; z += 0.5) { pts.push(new THREE.Vector3(1.6, 0, z), new THREE.Vector3(1.6, 1.8, z)); }
+  for (let y = 0; y <= 1.801; y += 0.5) { pts.push(new THREE.Vector3(1.6, y, -3), new THREE.Vector3(1.6, y, 3)); }
+  for (let z = -3; z <= 3.001; z += 0.1) { pts2.push(new THREE.Vector3(1.6, 0, z), new THREE.Vector3(1.6, z % 0.5 < 0.001 ? 0.06 : 0.03, z)); }
+  scene.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), mat), new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts2), mat2));
+}
+const num = s => s.split(',').map(Number);
+const CAMS = {
+  lado:  { pos: [30, 0.75, 0], alvo: [0, 0.75, 0], fov: 8 },
+  frente:{ pos: [0, 0.85, 30], alvo: [0, 0.75, 0], fov: 8 },
+  tras:  { pos: [0, 0.85, -30], alvo: [0, 0.75, 0], fov: 8 },
+  topo:  { pos: [0, 40, 0.001], alvo: [0, 0, 0], fov: 8 },
+  tq:    { pos: [4.6, 1.5, 6.0], alvo: [0, 0.7, 0.3], fov: 32 },
+  tqt:   { pos: [4.6, 1.6, -6.0], alvo: [0, 0.75, -0.3], fov: 32 },
+  baixo: { pos: [3.2, 0.35, 4.2], alvo: [0, 0.65, 0.4], fov: 40 },
+};
+const cfg = Q.get('pos') ? { pos: num(Q.get('pos')), alvo: num(Q.get('alvo') || '0,0.7,0'), fov: +(Q.get('fov') || 35) } : (CAMS[Q.get('cam') || 'tq'] || CAMS.tq);
+let camera;
+if (Q.has('ort')) { const h = +(Q.get('h') || 2.2), a = W / H; camera = new THREE.OrthographicCamera(-h * a / 2, h * a / 2, h / 2, -h / 2, 0.1, 200); }
+else camera = new THREE.PerspectiveCamera(cfg.fov, W / H, 0.05, 200);
+camera.position.set(...cfg.pos); camera.up.set(...(Q.get('up') ? num(Q.get('up')) : [0, 1, 0])); camera.lookAt(new THREE.Vector3(...cfg.alvo));
+if (Q.has('ort')) { const al = new THREE.Vector3(...cfg.alvo); if (Q.get('cam') === 'lado') al.z = +(Q.get('cz') || 0); camera.lookAt(al); }
+const ctl = new OrbitControls(camera, renderer.domElement); ctl.target.set(...cfg.alvo); ctl.update();
+const frame = () => renderer.render(scene, camera);
+ctl.addEventListener('change', frame);
+if (Q.has('farois')) v.farois(true); if (Q.has('freio')) v.freio(true); if (Q.has('re')) v.re(true); if (Q.has('seta')) v.seta(+Q.get('seta') || 1, true);
+if (Q.has('luzes')) v.luzes(+(Q.get('t') || 0), Q.get('luzes') || 'ligado');
+frame(); window.__ready = true;
+</script>
+</body>
+</html>
