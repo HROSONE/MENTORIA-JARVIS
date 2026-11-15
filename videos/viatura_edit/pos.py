@@ -16,14 +16,14 @@ ENT, SAI = sys.argv[1], sys.argv[2]
 # cortes (início de cada plano, em batidas) — espelha js/planos.js
 CORTES = [0, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 17.5, 19.5, 20.5, 22, 24, 25, 26, 28, 29, 30, 32, 34, 36, 36.5, 37, 37.5, 38, 38.5, 39, 39.5, 40, 44, 47]
 VARRIDAS = {8: 1, 10: 1, 12: 1, 14: 1, 17.5: 1, 19.5: 1, 20.5: 1, 22: 1, 25: 1, 26: 1, 28: 1, 29: 1, 30: 1, 32: 1, 34: 1, 44: 1, 47: 1}     # cortes com borrão de varrida (direção alterna)
-CLARAO = [(16, 1.0, 11), (24, 0.8, 12), (26, 0.45, 13), (32, 0.4, 14), (36, 0.85, 12), (40, 0.55, 12), (17.5, 0.35, 16), (20.5, 0.3, 16), (22, 0.35, 16), (28, 0.3, 16), (30, 0.25, 16), (47, 0.3, 14)]   # (batida, força, decaimento 1/s)
+CLARAO = [(16, 1.0, 5.5), (24, 0.8, 9), (26, 0.45, 10), (32, 0.4, 10), (36, 0.85, 8), (40, 0.55, 8), (17.5, 0.35, 14), (20.5, 0.3, 14), (22, 0.35, 14), (28, 0.3, 14), (30, 0.25, 14), (47, 0.3, 10)]   # (batida, força, decaimento 1/s)
 GLITCH = {16, 24, 36}                                                                  # quadros de glitch nessas batidas (3 quadros)
 
 def pulso(x, k): return math.exp(-k * x) if x >= 0 else 0.0
 
 def params(i):
     t = i / FPS; bt = t / B; ph = bt - math.floor(bt); quente = 16 <= bt < 40
-    clarao = sum(f * pulso(t - b * B, k * 0.35) for b, f, k in CLARAO)
+    clarao = sum(f * pulso(t - b * B, k) for b, f, k in CLARAO)
     pre = 0.0
     if 15.45 <= bt < 16: pre = min(1.0, (bt - 15.45) / 0.38)                           # escurece antes da queda e fica preto até o clarão
     ca = 1.0 + (3.5 * pulso(ph, 10) if bt < 16 else 8.5 * pulso(ph, 9)) + 14 * sum(f * pulso(t - b * B, 14) for b, f, _ in CLARAO)

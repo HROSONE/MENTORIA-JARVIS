@@ -8,5 +8,6 @@ AQUI=$(cd "$(dirname "$0")" && pwd); QUEDA=6.713; DUR=$(ffprobe -v error -show_e
 INI=$(python3 -c "print(round($DROP - $QUEDA, 3))")
 if python3 -c "import sys; sys.exit(0 if $INI >= 0 else 1)"; then ENT="-ss $INI -i $MUS"; ATR=""; else ENT="-i $MUS"; ATR=",adelay=$(python3 -c "print(int(-$INI*1000))")|$(python3 -c "print(int(-$INI*1000))")"; fi
 FADE=$(python3 -c "print(round($DUR - 1.2, 3))")
-ffmpeg -y -loglevel error -i "$VID" $ENT -i "$AQUI/sfx_edit.wav" -filter_complex "[1:a]atrim=0:$DUR,asetpts=PTS-STARTPTS${ATR},afade=t=out:st=$FADE:d=1.2[m];[2:a]volume=$VOL[s];[m][s]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]" -map 0:v -map "[a]" -c:v copy -c:a aac -b:a 192k -shortest -movflags +faststart "$OUT"
+SFX=$(mktemp --suffix=.wav); python3 -I "$AQUI/sfx_edit.py" "$SFX" >/dev/null
+ffmpeg -y -loglevel error -i "$VID" $ENT -i "$SFX" -filter_complex "[1:a]atrim=0:$DUR,asetpts=PTS-STARTPTS${ATR},afade=t=out:st=$FADE:d=1.2[m];[2:a]volume=$VOL[s];[m][s]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]" -map 0:v -map "[a]" -c:v copy -c:a aac -b:a 192k -shortest -movflags +faststart "$OUT"
 ls -la "$OUT"
