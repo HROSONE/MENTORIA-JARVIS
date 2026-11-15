@@ -99,7 +99,7 @@ for tl, f in taps:
 for tl in (2.35, 6.1): ev('trovão', 16.6 + tl + 0.35, trovao(), db(-13))
 pous = sorted(EV['pousosL']); ultimo = -1
 for k, p in enumerate(pous):
-    if rng.random() > .30 or p - ultimo < 0.07: continue
+    if p >= 9.0 or rng.random() > .30 or p - ultimo < 0.07: continue                     # só o que cai dentro do plano (9 s)
     ultimo = p; ev('peixe cai na praça', 16.6 + p, tap() if rng.random() < .7 else splat(1.0, .5), db(rng.uniform(-24, -18)), pan=float(rng.uniform(-.7, .7)))
 # corte do chão (32,1 a 38,6 s): peixes cuspidos pelo poço e batendo na rua
 for i in range(16):
