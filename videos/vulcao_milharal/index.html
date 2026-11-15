@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>O vulcão do milharal</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#000}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head><body><script type="module">
+// "O vulcão do milharal" (Parícutin, 1943): o vídeo inteiro é uma função do tempo: window.__setTime(t) / window.__frame(t, opções).
+import * as THREE from 'three';
+import { renderer, scene, cam, capturar } from './js/motor.js';
+import { construirTudo, atualizar, efeitos } from './js/planos.js';
+import { acharPlano } from './js/base.js';
+const Q = new URLSearchParams(location.search);
+const T = await construirTudo();
+function desenhar(t) { atualizar(t); renderer.render(scene, cam); }
+window.__setTime = t => { desenhar(t); };
+window.__frame = (t, opc = {}) => {
+  const e = efeitos(t), pl = acharPlano(t), lo = pl.t0, hi = pl.t0 + pl.dur - 1e-4;
+  const des = tk => desenhar(Math.min(Math.max(tk, lo), hi));
+  return capturar(des, t, { subs: opc.subs ?? e.subs ?? 1, obturador: opc.obturador ?? e.obturador ?? 0.5, fade: e.fade, flash: e.flash, flashCor: e.flashCor, jpeg: opc.jpeg ?? 0.92, tintas: e.tintas });
+};
+window.__total = T.total; window.__planos = T.planos.map(p => [p.id, +p.t0.toFixed(3), +p.dur.toFixed(3)]);
+window.__ready = true;
+if (Q.has('t')) desenhar(+Q.get('t'));
+</script></body></html>
