@@ -108,9 +108,13 @@ export function criarBarra(opc = {}) {
       const pat = (fase, per, tt) => { const ph = (((tt / per) + fase) % 1 + 1) % 1; return (ph < 0.10 ? 1 : 0) + (ph > 0.20 && ph < 0.30 ? 1 : 0) + (ph > 0.40 && ph < 0.50 ? 0.0 : 0) > 0 ? 1 : 0; };
       let v = 0, a = 0, amb = 0, br = 0;
       if (modo === 'fixo') { v = 1; a = 1; amb = 1; } else if (modo === 'busca') { br = 1; v = 0.25; a = 0.25; } else if (modo === 'ligado') { v = pat(0, 0.62, t); a = pat(0.5, 0.62, t); amb = (Math.floor(t * 4) % 2) ? 1 : 0.15; br = 0; }
+      api.definir(v, a, amb, br, t, 5.0);
+    },
+    /** controle direto (0..1) de cada cor: v = vermelho (lado do motorista), a = azul, amb = setas âmbar, br = faróis de busca; forca = intensidade da luz que ilumina a cena */
+    definir(v, a, amb = 0, br = 0, t = 0, forca = 5.0) {
       for (const m of modulos) { const k = m.lado > 0 ? v : a, jit = 0.85 + 0.15 * Math.sin(m.idx * 2.1 + t * 40); m.mat.emissiveIntensity = k * 7 * jit; m.glow.material.opacity = k * 0.9 * jit; m.glow.scale.setScalar(0.34 + 0.5 * k); }
       for (const m of brancos) m.emissiveIntensity = br * 6; for (const m of ambar) m.emissiveIntensity = amb * 4;
-      luzV.intensity = v * 5.0; luzA.intensity = a * 5.0; api.ultimo = { v, a };
+      luzV.intensity = v * forca; luzA.intensity = a * forca; api.ultimo = { v, a };
     },
   };
   api.atualizar(0, opc.luzes || 'off');

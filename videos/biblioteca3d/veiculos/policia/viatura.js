@@ -48,10 +48,12 @@ export function criarViatura(opc = {}) {
   const api = {
     grupo: G, pintura: pint, rodas, barra,
     /** luzes de emergência: t em segundos; modo 'off' | 'ligado' | 'fixo' | 'busca' */
+    /** luzes de emergência com controle direto: { v, a, ambar, busca, forca, t } (v = vermelho, a = azul, 0..1); forca = intensidade da luz colorida na cena (padrão 5) */
+    luzesManual({ v = 0, a = 0, ambar = 0, busca = 0, forca = 5, t = 0 } = {}) { if (barra) barra.definir(v, a, ambar, busca, t, forca); extras.atualizar(v, a); },
     luzes(t, modo = 'ligado') { if (barra) { barra.atualizar(t, modo); const u = barra.ultimo || { v: 0, a: 0 }; extras.atualizar(u.v, u.a); } else extras.atualizar(0, 0); },
     /** gira as rodas conforme a distância percorrida (m) */
     /** farois(ligado, intensidade) / freio(ligado) / re(ligado) / seta(lado: 1 esquerda | -1 direita, ligado) */
-    farois(on) { ft.luzes.definir('farol', on ? 0.85 : 0); for (const f of fachos) f.intensity = on ? 70 : 0; },
+    farois(on, forca = 70) { ft.luzes.definir('farol', on ? 0.85 : 0); for (const f of fachos) f.intensity = on ? forca : 0; },
     freio(on) { ft.luzes.definir('freio', on ? 0.5 : 0); },
     re(on) { ft.luzes.definir('re', on ? 0.9 : 0); },
     seta(lado, on) { const m = ft.luzes.materiais['seta' + (lado > 0 ? 'E' : 'D')]; if (m) m.opacity = on ? 0.9 : 0; },
