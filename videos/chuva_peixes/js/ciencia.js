@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { mulberry32, clamp, lerp, suave, inv } from './util.js';
 import { criarCardume } from './cardume.js';
 import { criarChuva } from './chuva.js';
+import { RUIDO } from './detalhe.js';
 
 const rot = (a, b) => ((a % b) + b) % b;
 
@@ -13,7 +14,8 @@ export function construirMar(g, { env = null } = {}) {
   // mar com ondas (vértices animados)
   const N = 110, geo = new THREE.PlaneGeometry(420, 420, N, N); geo.rotateX(-Math.PI / 2);
   const P = geo.attributes.position, base = Float32Array.from(P.array);
-  const mar = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x0d5a78, roughness: 0.22, metalness: 0.25, envMap: env, envMapIntensity: 1.3, flatShading: false })); mar.receiveShadow = true; G.add(mar);
+  geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array((N + 1) * (N + 1) * 3), 3));
+  const mar = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.22, metalness: 0.25, envMap: env, envMapIntensity: 1.3 })); mar.receiveShadow = true; G.add(mar);
   const onda = (x, z, t) => 0.55 * Math.sin(x * 0.22 + t * 1.3) * Math.cos(z * 0.17 - t * 0.9) + 0.3 * Math.sin((x + z) * 0.41 + t * 2.1) + 0.12 * Math.sin(x * 0.9 - t * 3.1);
   // praia de areia e estrada para dentro do continente (z negativo é o mar? usamos z>0 = terra)
   const areia = new THREE.Mesh(new THREE.PlaneGeometry(420, 60), new THREE.MeshStandardMaterial({ color: 0xe6c98a, roughness: 1 })); areia.rotation.x = -Math.PI / 2; areia.position.set(0, 0.2, 90); G.add(areia);
@@ -40,7 +42,14 @@ export function construirMar(g, { env = null } = {}) {
   const cvf = document.createElement('canvas'); cvf.width = 256; cvf.height = 256; const cf = cvf.getContext('2d'); cf.fillStyle = '#000'; cf.fillRect(0, 0, 256, 256);
   for (let i = 0; i < 60; i++) { const x = Math.random() * 256; cf.fillStyle = `rgba(255,255,255,${0.15 + Math.random() * 0.5})`; cf.fillRect(x, 0, 2 + Math.random() * 6, 256); }
   const tf = new THREE.CanvasTexture(cvf); tf.wrapS = tf.wrapT = THREE.RepeatWrapping; tf.repeat.set(2, 3);
-  const funil = new THREE.Mesh(new THREE.LatheGeometry(pf, 48), new THREE.MeshBasicMaterial({ map: tf, color: 0xd8d0f0, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide, blending: THREE.NormalBlending }));
+  const mf = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false, uniforms: { t: { value: 0 }, fl: { value: 0 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `uniform float t, fl; varying vec2 vUv; ${RUIDO}
+      void main(){ float u = abs(2.0 * vUv.x - 1.0); vec2 p = vec2(u * 9.0 + t * 1.3, vUv.y * 5.0 - t * 2.4); float n = fbm4(p), n2 = fbm4(p * 2.4 + 5.0);
+        float a = (0.28 + 0.72 * smoothstep(0.22, 0.7, n)) * (0.55 + 0.45 * n2) * smoothstep(0.0, 0.05, vUv.y);
+        vec3 c = mix(vec3(0.16, 0.12, 0.30), vec3(0.80, 0.74, 0.92), n * n2 * 1.9) + vec3(0.6, 0.7, 1.0) * fl * n2;
+        gl_FragColor = vec4(c, clamp(a * 1.25, 0.0, 0.95)); }` });
+  const funil = new THREE.Mesh(new THREE.LatheGeometry(pf, 48), mf); funil.userData.mf = mf;
   funil.position.set(-14, 0, -12); G.add(funil);
   const respingo = new THREE.Mesh(new THREE.TorusGeometry(5.5, 1.4, 8, 40), new THREE.MeshBasicMaterial({ color: 0xeef6ff, transparent: true, opacity: 0.55, depthWrite: false })); respingo.rotation.x = Math.PI / 2; respingo.position.set(-14, 0.9, -12); G.add(respingo);
   const card = criarCardume(G, 170, { env }), rf = mulberry32(12), F = [];
@@ -48,8 +57,9 @@ export function construirMar(g, { env = null } = {}) {
   const rr = h => 2.2 + 13 * Math.pow(h / H, 2.0);
   const atualizar = t => {
     for (let i = 0; i <= N; i++) for (let k = 0; k <= N; k++) { const j = (i * (N + 1) + k) * 3; P.array[j + 1] = onda(base[j], base[j + 2], t) * (1 + 1.4 * Math.exp(-((base[j] + 14) ** 2 + (base[j + 2] + 12) ** 2) / 260)); }
+    { const col = geo.attributes.color; for (let i = 0; i <= N; i++) for (let k = 0; k <= N; k++) { const j = (i * (N + 1) + k), hh = P.array[j * 3 + 1], e = Math.max(0, Math.min(1, (hh - 0.35) / 0.8 + 0.25 * Math.sin(base[j * 3] * 1.3 + base[j * 3 + 2] * 0.9 + t * 2))); col.setXYZ(j, 0.04 + 0.9 * e, 0.34 + 0.62 * e, 0.45 + 0.52 * e); } col.needsUpdate = true; }
     P.needsUpdate = true; geo.computeVertexNormals();
-    tf.offset.x = t * 0.9; tf.offset.y = -t * 0.5; funil.rotation.y = t * 1.4; funil.position.x = -14 + Math.sin(t * 0.3) * 0.8; respingo.scale.setScalar(1 + 0.08 * Math.sin(t * 5)); respingo.position.x = funil.position.x;
+    mf.uniforms.t.value = t; mf.uniforms.fl.value = Math.max(0, Math.sin(t * 5.3) * Math.sin(t * 2.1)) ** 6 * 0.9; funil.rotation.y = t * 0.9; funil.position.x = -14 + Math.sin(t * 0.3) * 0.8; respingo.scale.setScalar(1 + 0.08 * Math.sin(t * 5)); respingo.position.x = funil.position.x;
     F.forEach((f, i) => { const h = rot(f.h0 + f.v * t, H), a = f.th + t * (f.w + 5 / (1 + h / 7)), r = rr(h) * (0.35 + 0.5 * ((i * 0.37) % 1)), x = funil.position.x + Math.cos(a) * r, z = -12 + Math.sin(a) * r;
       const vx = -Math.sin(a), vz = Math.cos(a); card.set(i, x, 1.2 + h, z, Math.atan2(-vz, vx), f.roll + t * 3, 0.5 * Math.sin(a * 3 + i), f.e); });
     card.fim();
@@ -79,6 +89,15 @@ export async function construirCorte(g, { env = null, kit = null } = {}) {
   rua.visible = false;
   for (const [x0, x1] of [[-W, 2.2], [3.6, W]]) { const r = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.14, D), new THREE.MeshStandardMaterial({ color: 0x6a6a80, roughness: 0.4, metalness: 0.1, envMap: env, envMapIntensity: 0.5 })); r.position.set((x0 + x1) / 2, 0.07, -D / 2); r.receiveShadow = true; G.add(r); }
   for (const x of [-6, -2.5, 6.5]) { const f = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.14), new THREE.MeshBasicMaterial({ color: 0xffd23a })); f.rotation.x = -Math.PI / 2; f.position.set(x, 0.145, -D / 2); G.add(f); }
+  // pedras meio enterradas na face do corte, raízes finas descendo do solo e bolhas na água
+  { const nP = 150, pedras = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ roughness: 1, flatShading: true }), nP), rq = mulberry32(19), M = new THREE.Matrix4(), Qq = new THREE.Quaternion(), Pq = new THREE.Vector3(), Sq = new THREE.Vector3(), Cq = new THREE.Color(); let k = 0;
+    while (k < nP) { const x = (rq() * 2 - 1) * (W - 0.4), y = -0.5 - rq() * 8.2; if (y < -4.0 && y > -7.4 && Math.abs(x) < 8.2) continue; if (x > 2.0 && x < 3.8 && y > -4.4) continue;
+      const e = 0.05 + 0.2 * rq() * rq(); Pq.set(x, y, 0.02 + e * 0.3); Qq.setFromEuler(new THREE.Euler(rq() * 3, rq() * 3, rq() * 3)); Sq.set(e * 1.3, e, e * 0.6); M.compose(Pq, Qq, Sq); pedras.setMatrixAt(k, M); const prof = -y / 9; pedras.setColorAt(k, Cq.setHSL(0.07 - 0.04 * prof, 0.22 * (1 - prof), 0.22 + 0.3 * rq() - 0.08 * prof)); k++; }
+    pedras.castShadow = true; G.add(pedras);
+    const raizMat = new THREE.MeshStandardMaterial({ color: 0x4a2c16, roughness: 1 });
+    for (let i = 0; i < 9; i++) { const x0 = (rq() * 2 - 1) * (W - 1); if (x0 > 1.6 && x0 < 4.2) continue; const pts = [new THREE.Vector3(x0, 0, 0.04)]; let x = x0, y = 0; for (let j = 0; j < 6; j++) { x += (rq() - 0.5) * 0.7; y -= 0.25 + 0.3 * rq(); pts.push(new THREE.Vector3(x, y, 0.04 + 0.02 * rq())); }
+      const raiz = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 18, 0.045, 5), raizMat); G.add(raiz); }
+    const nB = 36, bolhas = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ color: 0xcfeaff, transparent: true, opacity: 0.6 }), nB), FB = Array.from({ length: nB }, () => ({ x: (rq() * 2 - 1) * 7.5, z: -0.6 - rq() * 4.2, f: rq(), v: 0.25 + 0.4 * rq(), e: 0.03 + 0.05 * rq() })); G.add(bolhas); bolhas.frustumCulled = false; G.userData.bolhas = t => { FB.forEach((b, i) => { const u = ((t * b.v + b.f) % 1 + 1) % 1; Pq.set(b.x + 0.15 * Math.sin(t * 2 + i), -7.15 + u * 2.1, b.z); Sq.setScalar(b.e); M.compose(Pq, Qq.identity(), Sq); bolhas.setMatrixAt(i, M); }); bolhas.instanceMatrix.needsUpdate = true; }; }
   // casas e palmeira no fundo da rua (peças do kit)
   if (kit) { for (const [nome, x, z, ry, esc] of [['casa-colonial', -4.6, -13, 0, 0.6], ['casa-simples', 4.6, -13, 0, 0.6]]) { const o = await kit.peca(nome); o.position.set(x, 0.14, z); o.rotation.y = ry; o.scale.setScalar(esc); G.add(o); } const pa = await kit.peca('arvore-palmeira'); pa.position.set(8.3, 0.14, -7); pa.scale.setScalar(0.8); G.add(pa); }
   // água: galeria (translúcida) e poço (sobe com o tempo)
@@ -108,7 +127,7 @@ export async function construirCorte(g, { env = null, kit = null } = {}) {
       }
       card.set(i, x, y, f.z, yaw, roll, pit, f.e);
     });
-    card.fim();
+    card.fim(); G.userData.bolhas(t);
     chuva.atualizar(t, [0, 0, -D / 2], { v: 9, vento: 0.1, comp: 0.5, camPos });
   };
   return { grupo: G, atualizar };

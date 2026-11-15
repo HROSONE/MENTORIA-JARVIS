@@ -15,6 +15,8 @@ import { criarCardume, chuvaDePeixes } from './cardume.js';
 import { criarIgreja, criarPraca } from './igreja.js';
 import { brilho } from './motor.js';
 import { construirMar, construirCorte } from './ciencia.js';
+import { UT, tecidoObj } from './detalhe.js';
+import { criarBone, criarCelular, feixeLuz } from './props.js';
 
 export const X = {};
 if (typeof window !== 'undefined') window.__X = X;
@@ -45,10 +47,17 @@ export async function construirTudo() {
   // mulher: capa de chuva amarela, botas vermelhas
   X.mae = await Ator.criar('mae');
   X.mae.pintar({ M_vestido: '#ffc414', M_sapato: '#d4202c', M_meia: '#2a2f3a' });
-  X.mae.obj.traverse(o => { if (o.isMesh) (Array.isArray(o.material) ? o.material : [o.material]).forEach(k => { if (k.name === 'M_vestido') { k.envMap = X.env; k.envMapIntensity = 0.9; k.roughness = 0.35; } }); });
+  // capa de chuva e botas molhadas: verniz (clearcoat) e relevo de dobras por ruído em coordenadas do objeto
+  X.mae.obj.traverse(o => { if (!o.isMesh) return; const arr = Array.isArray(o.material) ? o.material : [o.material];
+    const novo = arr.map(k => { if (k.name !== 'M_vestido' && k.name !== 'M_sapato') return k; const f = new THREE.MeshPhysicalMaterial({ color: k.color, roughness: k.name === 'M_vestido' ? 0.32 : 0.22, metalness: 0, clearcoat: 1, clearcoatRoughness: k.name === 'M_vestido' ? 0.18 : 0.08, envMap: X.env, envMapIntensity: 0.8 }); f.name = k.name; return tecidoObj(f); });
+    o.material = Array.isArray(o.material) ? novo : novo[0]; });
+  // cachecol vermelho preso ao osso do pescoço (anel e duas pontas)
+  { const verm = new THREE.MeshStandardMaterial({ color: 0xb8182a, roughness: 0.9 }), cg = new THREE.Group(), no = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.026, 10, 24), verm); no.rotation.x = Math.PI / 2; no.scale.set(1, 1, 0.8); cg.add(no);
+    for (const [dx, cr] of [[0.045, 0.18], [0.085, -0.12]]) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.2, 0.014), verm); t.position.set(dx, -0.12, 0.085); t.rotation.z = cr; cg.add(t); }
+    cg.position.set(0, 0.02, 0); X.mae.ossos.Pescoco.add(cg); X.cachecol = cg; }
   mundos.R.add(X.mae.grupo);
   X.guarda = criarGuardaChuva({ R: 0.56, H: 0.26, env: X.env });
-  mundos.R.add(X.guarda.grupo);
+  mundos.R.add(X.guarda.grupo); mundos.R.add(X.guarda.gotas);               // pingos das pontas das varetas (coordenadas de mundo)
   X.peixe = criarPeixe(1.2, { env: X.env });
   mundos.R.add(X.peixe.grupo);
   X.chuva = criarChuva(mundos.R, { n: 9000, caixa: [11, 7.5, 11] });
@@ -72,6 +81,8 @@ async function construirManha() {
     teo: await cria('teo'), davi: await cria('davi'), lia: await cria('lia'), nina: await cria('nina'),
     velha: await cria('velha'), homem: await cria('homem', { M_camisa: '#e8553b', M_camisa_manga: '#e8553b', M_camisa_gola: '#c8402a' }), jovem: await cria('jovem_b'), faxi: await cria('faxineira'),
   };
+  for (const [a, cor] of [[X.povo.jovem, 0x2f7de8], [X.povo.homem, 0xf0f0e8]]) { const b = criarBone(cor); b.position.set(0, 0.105, 0.0); b.userData.acessorio = true; a.ossos.Cabeca.add(b); }
+  X.celular = criarCelular(); g.add(X.celular);
   X.cestas = [[-0.2, 3.7], [-3.0, 7.4], [3.4, 6.6], [2.4, 1.8], [-2.2, 10.6]].map(([x, z]) => { const c = criarCesta(); c.position.set(x, 0.0, z); c.rotation.y = x; g.add(c); return c; });
   // peixes nas cestas
   X.cestaPeixes = criarCardume(g, 30, { env: envD });
@@ -109,6 +120,7 @@ async function construirLenda() {
   X.igreja = criarIgreja(); X.igreja.position.set(0, 0, -12); g.add(X.igreja);
   X.ceuL = criarCeu({ topo: '#050a22', meio: '#141c58', horiz: '#3a3a86', sol: [0, 0.3, -1], nuvens: 0.9, nuvemCor: '#10163e', nuvemLuz: '#3a4a9a', luzK: 0.2 }); scene.add(X.ceuL.mesh);
   X.padre = await Ator.criar('homem'); X.padre.pintar({ M_camisa: '#15151a', M_camisa_gola: '#f6f4ee', M_camisa_manga: '#15151a', M_jeans_plano: '#111116', M_jeans: '#15151a', M_jeans_punho: '#111116', M_tenis: '#0e0e10', M_tenis_det: '#222226' });
+  for (const c of [...X.padre.ossos.Cabeca.children]) if (c.userData.acessorio) X.padre.ossos.Cabeca.remove(c);          // o clone herdou o boné do homem da cidade
   g.add(X.padre.grupo);
   // cruz peitoral dourada
   const cruz = new THREE.Group(), ouro = new THREE.MeshStandardMaterial({ color: 0xe0b040, roughness: 0.3, metalness: 0.8 }); const braco = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.012, 0.008), ouro); braco.position.set(0, 0.02, 0); cruz.add(new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.09, 0.008), ouro), braco);
@@ -117,8 +129,17 @@ async function construirLenda() {
   X.lampiao = new THREE.Group(); const vidro = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.2, 12), new THREE.MeshStandardMaterial({ color: 0xffd58a, emissive: 0xffa030, emissiveIntensity: 2.2, transparent: true, opacity: 0.95 })); vidro.position.y = 0.2;
   const base = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.09, 0.05, 12), new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: 0.6 })); const topo = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.07, 12), new THREE.MeshStandardMaterial({ color: 0x2a2018 })); topo.position.y = 0.34;
   const bri = brilho('255,190,110', 1.6, 0.9); bri.position.y = 0.22; X.lampiao.add(vidro, base, topo, bri); X.lampiao.position.set(0.7, 0.025, 0.55); g.add(X.lampiao);
+  // nuvem escura e baixa que despeja os peixes (esferas em espiral, giram devagar; relâmpagos acendem por dentro)
+  { const nuv = new THREE.Group(), rn = mulberry32(31); X.nuvemMats = [];
+    for (let i = 0; i < 46; i++) { const a = i * 0.62, rr = 3 + i * 0.32 + rn() * 3, mt = new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(0.74, 0.32, 0.26 + 0.16 * rn()), emissive: 0x6a5cc8, emissiveIntensity: 0.22, roughness: 1 }); X.nuvemMats.push(mt);
+      const e = new THREE.Mesh(new THREE.SphereGeometry(4 + 4.5 * rn(), 14, 10), mt); e.position.set(Math.cos(a) * rr, 15 + 3 * rn() + (46 - i) * 0.05, Math.sin(a) * rr - 1); e.scale.y = 0.45; nuv.add(e); }
+    nuv.position.set(0, 0, 0); X.nuvemL = nuv; g.add(nuv); }
+  { const cand = new THREE.Group(), cera = new THREE.MeshStandardMaterial({ color: 0xf4ead0, roughness: 0.7, emissive: 0x442200, emissiveIntensity: 0.3 }); X.velas = [];
+    for (let i = 0; i < 9; i++) { const x = -3.4 + i * 0.85, z = 8.9 + 0.12 * Math.sin(i * 2.1), h = 0.1 + 0.07 * (i % 3), v = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, h, 10), cera); v.position.set(x, 0.18 + h / 2, z); cand.add(v);
+      const chama = brilho('255,190,90', 0.34, 0.95); chama.position.set(x, 0.18 + h + 0.05, z); cand.add(chama); X.velas.push(chama); }
+    cand.position.set(0, 0, -12 - 0.0 + 0); X.velasGrupo = cand; g.add(cand); X.velas.forEach(v => v.userData.z0 = v.position.z); }
   X.cardumeL = criarCardume(g, 230, { env });
-  X.cairL = chuvaDePeixes(X.cardumeL, { t0: 3.4, dur: 5.2, area: [-4.2, 4.2, -2.6, 5.4], alturas: [14, 28], chao: 0.04, semente: 5, vento: [0.5, 0.15], esc: [1.0, 1.45] });
+  X.cairL = chuvaDePeixes(X.cardumeL, { t0: 3.4, dur: 5.2, area: [-4.2, 4.2, -2.6, 5.4], alturas: [13, 19], chao: 0.04, semente: 5, vento: [0.5, 0.15], esc: [1.0, 1.45] });
   X.chuvaL = criarChuva(g, { n: 8000, caixa: [12, 9, 12] });
   X.ondasL = criarOndas(g, { n: 150, area: [10, 10], centro: [0, 1] });
 }
@@ -301,7 +322,8 @@ function posePovo(t) {
     a.ikBraco('E', loc2w(a, 0.2, 0.92, 0.36), V(0.4, -1, 0)); a.ikBraco('D', loc2w(a, -0.2, 0.92, 0.36), V(-0.4, -1, 0)); a.grupo.updateMatrixWorld(true);
     const c = X.cestas[4]; c.position.copy(loc2w(a, 0, 0.74, 0.4)); c.rotation.set(0, Math.PI, 0); }
   // jovem: olha para o céu, surpreso
-  { const a = P.jovem; ficar(a, 1.4, 10.4, Math.PI + 0.2, 'Parado', t, { expr: 'surpresa', f: 0.6 }); a.olhar(V(0, 14, 10), { forca: 0.9 }); }
+  { const a = P.jovem; ficar(a, 1.4, 10.4, Math.PI + 0.2, 'Parado', t, { expr: 'surpresa', f: 0.6 }); a.ikBraco('D', loc2w(a, -0.14, 1.52 + 0.01 * Math.sin(t * 3), 0.40), V(-0.4, -1, -0.2)); a.grupo.updateMatrixWorld(true); a.olhar(V(0, 14, 10), { forca: 0.9 }); a.grupo.updateMatrixWorld(true);
+    const mp = a.pos('MaoD'); X.celular.position.copy(mp).add(V(0, 0.03, 0.04)); X.celular.quaternion.copy(a.grupo.getWorldQuaternion(new THREE.Quaternion())); X.celular.rotateX(-0.35); }
   { const a = P.faxi; ficar(a, -4.7, 5.6, 1.9, 'Parado', t, { expr: 'sorriso', f: 0.7 }); dobrar(a, 0.9 + 0.1 * Math.sin(t * 1.5 + 1)); a.grupo.updateMatrixWorld(true);
     a.ikBraco('E', loc2w(a, 0.1, 0.1, 0.46), V(0.3, -1, 0)); a.ikBraco('D', loc2w(a, -0.12, 0.12, 0.4), V(-0.3, -1, 0)); }
   // peixes nas cestas
@@ -310,7 +332,7 @@ function posePovo(t) {
 
 // cena da rua à noite (mulher, guarda-chuva, peixe, chuva): a câmera já está posicionada
 function cenaRua(tau, rateV) {
-  const tg = X.chao.tauPouso;
+  const tg = X.chao.tauPouso; UT.value = tau * 2.0;
   mostrar('R', 0x0f1a40, [0x1c2b66, 0.014]); X.ceuR.mesh.visible = true; X.ceuD.mesh.visible = false; X.ceuL.mesh.visible = false; X.ceuM.mesh.visible = false; X.ceuC.mesh.visible = false; X.ceuR.seguir(cam);
   const tec = tecidoEm(tau); X.balanco = tec.balanco;
   const pe = peixeEm(tau);
@@ -318,12 +340,14 @@ function cenaRua(tau, rateV) {
   const ko = suave(inv(0.05, 0.38, tau)), ks = 0.7 * suave(inv(tg + 0.05, tg + 0.45, tau));
   poseMae(tau, { olhar: alvoOlhar, kolhar: ko * 0.9, ksusto: ks });
   X.guarda.atualizar({ dent: tec.dent, hole: tec.hole, flap: tec.flap, balanco: tec.balanco });
+  X.guarda.pingos(tau, X.guarda.grupo.matrixWorld, [-MAE.vel * 0.0, 0, MAE.vel * 0.45]);
   X.spray.atualizar(tau, cam); X.respingo.atualizar(tau, cam);
   const gm = X.guarda.grupo.matrixWorld.clone().invert(), gp = V(), R = X.guarda.R;
   const ocultar = (x, y, z) => { gp.set(x, y, z).applyMatrix4(gm); return gp.y < X.guarda.alturaCopa(gp.x, gp.z) + 0.02 && Math.hypot(gp.x, gp.z) < R * 1.02 && gp.y > -1.05; };
   const mz = X.mae.grupo.position.z;
   X.chuva.atualizar(tau, [MAE.x, 0, mz + 0.8], { v: 9, vento: 0.1, comp: 0.36 * clamp(rateV, 0.07, 1), ocultar, camPos: cam.position });
   X.ondas.atualizar(tau, 0.0, { taxa: 2.4, raio: 0.17 * clamp(rateV + 0.15, 0.2, 1) });
+  X.rua.vapor(tau); for (const f of X.rua.feixes) f.material.uniforms.t.value = tau;
   luzRua([MAE.x - 0.1, 1.5, mz + 0.3], { fill: [cam.position.x + 0.5, Math.max(1.4, cam.position.y), cam.position.z + 0.6] });
 }
 
@@ -363,7 +387,7 @@ function montarPlanos() {
     ], { tr: 0.5 });
     mostrar('D', 0xffc8a0, [0xf6c8a8, 0.006]);
     X.ceuR.mesh.visible = false; X.ceuL.mesh.visible = false; X.ceuM.mesh.visible = false; X.ceuC.mesh.visible = false; X.ceuD.mesh.visible = true; X.ceuD.mat.uniforms.tempo.value = tl;
-    X.yoro.atualizar(tl);
+    UT.value = tl; X.yoro.atualizar(tl);
     posePovo(tl);
     desenharPlacar(Math.floor(lerp(14, 183, suave(inv(0.3, 8.7, tl)))));
     X.ceuD.seguir(cam);
@@ -378,20 +402,22 @@ function montarPlanos() {
     camChaves(tl, [
       [0.0, [0.3, 1.30, 1.55], [0.0, 1.22, 0.3], 30],
       [3.2, [1.3, 1.25, 4.2], [0.0, 1.75, -1.5], 34],
-      [6.0, [3.0, 3.1, 8.2], [0.0, 3.4, -5.5], 42],
+      [6.0, [3.0, 2.4, 8.5], [0.0, 9.0, -4.0], 46],
       [9.0, [1.4, 9.5, 3.4], [0.0, 0.0, 0.4], 40],
     ], { tr: 0.5 });
     mostrar('L', 0x050a22, [0x141c58, 0.012]); X.ceuR.mesh.visible = false; X.ceuD.mesh.visible = false; X.ceuM.mesh.visible = false; X.ceuC.mesh.visible = false; X.ceuL.mesh.visible = true; X.ceuL.mat.uniforms.tempo.value = tl;
     const rel = (a, d) => Math.exp(-Math.pow((tl - a) / d, 2));                                   // relâmpago suave
     const fl = 0.9 * rel(2.35, 0.07) + 0.6 * rel(2.5, 0.12) + 0.9 * rel(6.1, 0.07) + 0.5 * rel(6.25, 0.14);
     X.ceuL.mat.uniforms.flash.value = fl;
-    poseReza(X.padre, tl, V(0.4, 9, -4));
-    X.cairL(tl);
+    UT.value = tl; poseReza(X.padre, tl, V(0.4, 9, -4));
+    X.cairL(tl); X.nuvemL.rotation.y = tl * 0.14; X.nuvemMats.forEach((m, i) => { m.emissiveIntensity = 0.22 + fl * (0.5 + 0.5 * Math.sin(i * 1.7)) * 1.6; });
+    { const sn = X.igreja.userData.sino; if (sn) sn.rotation.z = 0.55 * Math.sin(tl * 3.4) * (0.6 + 0.4 * Math.sin(tl * 0.7)); }
+    X.velas.forEach((v, i) => { v.material.opacity = 0.8 + 0.2 * Math.sin(tl * 12 + i * 2.1); v.scale.setScalar(0.3 + 0.05 * Math.sin(tl * 14 + i * 3.3)); });
     X.chuvaL.atualizar(tl, [0, 0, 1], { v: 9, vento: 0.14, comp: 0.4, camPos: cam.position });
     X.ondasL.atualizar(tl, 0.0, { taxa: 2.4, raio: 0.17 });
     X.ceuL.seguir(cam);
     sol.target.position.set(0, 0, 0); sol.target.updateMatrixWorld();
-    luzes({ hemiK: 0.45, ceu: 0x4a5fd0, chao: 0x1a1a3a, solK: 0.7 + 3.5 * fl, solCor: 0x9fb4ff, solPos: [-6, 12, 5], spotK: 260, spotPos: [-1.5, 4.2, -6.0], spotAlvo: [0, 1.0, 0.3], spotCor: 0xffb060, spotAng: 0.5,
+    luzes({ hemiK: 0.45, ceu: 0x4a5fd0, chao: 0x1a1a3a, solK: 0.7 + 3.5 * fl, solCor: 0x9fb4ff, solPos: [-6, 12, 5], spotK: 330, spotPos: [-1.5, 4.2, -6.0], spotAlvo: [0, 1.0, 0.3], spotCor: 0xffb060, spotAng: 0.5,
       pontoK: 9 + 1.2 * Math.sin(tl * 7.3) , pontoPos: [0.7, 0.4, 0.6], pontoCor: 0xffb468 });
     if (window.__camDbg) camara({ ...window.__camDbg, t });
   });

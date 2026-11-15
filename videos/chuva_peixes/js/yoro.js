@@ -3,6 +3,9 @@ import * as THREE from 'three';
 import { Kit } from '../../biblioteca3d/cidade/kit.js';
 import { mulberry32, lerp } from './util.js';
 import { criarCardume } from './cardume.js';
+import { detalharKit, detalhar, criarReflexoPocas } from './detalhe.js';
+import { linhaDeFios, bandeirolas, faixa, criarGaivotas, canteiro } from './props.js';
+import { clonarGLB } from './motor.js';
 
 export const YORO = { esc: 0.62, meia: 6 * 0.62 };           // rua estreita: o ladrilho de 12 m é comprimido em x
 export async function construirYoro(g, { env = null, nPeixes = 150 } = {}) {
@@ -17,9 +20,19 @@ export async function construirYoro(g, { env = null, nPeixes = 150 } = {}) {
     o.position.set(lado * (YORO.meia + larg + 0.35), 0.15, z); o.rotation.y = lado < 0 ? Math.PI / 2 : -Math.PI / 2; kit.luzEstado(o, false); obj.push(o);
   }
   for (const [x, z] of [[-4.0, -22], [-4.1, -9], [4.1, -12], [4.0, 3], [-4.1, 14], [4.1, 16], [-4.0, 27], [4.1, -26], [-4.1, 3]]) { const p = await kit.peca('arvore-palmeira'); p.position.set(x, 0.15, z); p.rotation.y = R() * 6.28; p.scale.setScalar(0.9 + 0.3 * R()); obj.push(p); }
+  // postes de energia nos dois lados (fios ao longo da rua), bandeirolas e faixa de festa atravessando a rua, canteiros de flores na frente das casas
+  const pL = [], pR = []; for (const z of [-20, -6, 8, 22]) { for (const [lado, arr] of [[-1, pL], [1, pR]]) { const p = await kit.peca('poste-energia'); p.position.set(lado * (YORO.meia - 0.2), 0.15, z); p.rotation.y = Math.PI / 2; g.add(p); arr.push([lado * (YORO.meia - 0.2), z]); } }
+  linhaDeFios(g, pL, 8.0, { x: [-0.6, 0, 0.6], sag: 0.5 }); linhaDeFios(g, pR, 8.0, { x: [-0.6, 0, 0.6], sag: 0.5 });
+  const flags = [bandeirolas(g, [-(YORO.meia - 0.2), 5.6, 3.0], [YORO.meia - 0.2, 5.7, 3.0], { n: 30, sag: 0.8, semente: 3 }), bandeirolas(g, [-(YORO.meia - 0.2), 5.7, 13.0], [YORO.meia - 0.2, 5.6, 13.0], { n: 30, sag: 0.8, semente: 6 })];
+  const faixaFesta = faixa(g, { pos: [0, 4.6, 8.5], larg: 5.4, alt: 1.15, yaw: Math.PI });
+  for (const lado of [-1, 1]) for (const z of [-24, -12, 0, 12, 24]) canteiro(g, { x0: lado * (YORO.meia + 0.4), x1: lado * (YORO.meia + 1.9), z0: z - 2.2, z1: z + 2.2, y: 0.12, n: 26, semente: 7 + Math.floor(z) + (lado > 0 ? 3 : 0) });
+  const gaivotas = criarGaivotas(g, 8, { centro: [0, 8, 6], raio: 9, semente: 11 });
+  try { const van = await clonarGLB(new URL('../../biblioteca3d/veiculos/delivery.glb', import.meta.url).href); van.scale.setScalar(1.7); van.position.set(-2.4, 0.0, 17); van.rotation.y = 0; van.traverse(m => { if (m.isMesh) m.castShadow = m.receiveShadow = true; }); g.add(van); } catch (e) { console.warn('van', e.message); }
   const placa = await kit.peca('placa-rua-hryz'); placa.position.set(3.5, 0.15, 7); placa.rotation.y = -Math.PI / 2; obj.push(placa);
   for (const o of obj) g.add(o);
-  g.traverse(m => { if (!m.isMesh) return; if (m.name === 'Asfalto') m.material = new THREE.MeshStandardMaterial({ color: 0x6a5a4c, roughness: 0.26, metalness: 0.1, envMap: env, envMapIntensity: 0.55 }); });
+  g.traverse(m => { if (!m.isMesh) return; if (m.name === 'Asfalto') m.material = new THREE.MeshStandardMaterial({ color: 0x75665a, roughness: 0.45, metalness: 0.08, envMap: env, envMapIntensity: 0.3 }); });
+  detalharKit(g);
+  const reflexo = criarReflexoPocas({ largura: YORO.meia * 2, comprimento: 74, centro: [0, 0, -6], molhado: 0.22, intens: 0.9 }); g.add(reflexo);
   // montanhas ao fundo (cristas baixas, verdes e roxas na névoa)
   const mont = new THREE.Group();
   for (let k = 0; k < 3; k++) {
@@ -29,7 +42,7 @@ export async function construirYoro(g, { env = null, nPeixes = 150 } = {}) {
   }
   g.add(mont);
   // chão de terra e capim até as montanhas
-  const solo = new THREE.Mesh(new THREE.PlaneGeometry(600, 700), new THREE.MeshStandardMaterial({ color: 0x6f9a4c, roughness: 1 })); solo.rotation.x = -Math.PI / 2; solo.position.set(0, -0.03, 120); solo.receiveShadow = true; g.add(solo);
+  const solo = new THREE.Mesh(new THREE.PlaneGeometry(600, 700), detalhar(new THREE.MeshStandardMaterial({ color: 0x6f9a4c, roughness: 1 }), 'terra')); solo.rotation.x = -Math.PI / 2; solo.position.set(0, -0.03, 120); solo.receiveShadow = true; g.add(solo);
   // peixes espalhados (deitados de lado); alguns se debatem
   const card = criarCardume(g, nPeixes, { env });
   const F = [];
@@ -45,7 +58,8 @@ export async function construirYoro(g, { env = null, nPeixes = 150 } = {}) {
     });
     card.fim();
   };
-  return { kit, card, atualizar, objetos: obj, peixes: F };
+  const extra = t => { for (const f of flags) f.atualizar(t); faixaFesta.atualizar(t); gaivotas.atualizar(t); };
+  return { kit, card, atualizar: t => { atualizar(t); extra(t); }, objetos: obj, peixes: F, reflexo };
 }
 
 // cesta de vime (tronco de cone aberto) com peixes por cima; devolve o grupo
