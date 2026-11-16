@@ -256,6 +256,10 @@ def relevo(o, cabeca=True):
     V += Nn * d[:, None]
     for i, v in enumerate(me.vertices): v.co = V[i]
     me.update()
+PELE_LISA = MAND_LISA = None
+if ETAPA == 'glb':                                                              # cópias lisas (antes do relevo): a UV delas sai em pedaços grandes
+    def _copia(o, n): c = o.copy(); c.data = o.data.copy(); c.name = n; c.data.materials.clear(); cena.collection.objects.link(c); return c
+    PELE_LISA, MAND_LISA = _copia(pele, 'trex_pele_lisa'), _copia(mand, 'trex_mandibula_lisa')
 relevo(pele); relevo(mand)
 
 from mathutils import kdtree, Matrix
@@ -479,6 +483,106 @@ if arg('blend'):                                                                
 def argila(cor):
     m = bpy.data.materials.new('argila'); m.use_nodes = True; b = m.node_tree.nodes['Principled BSDF']
     b.inputs['Base Color'].default_value = (*cor, 1); b.inputs['Roughness'].default_value = 0.8; return m
+
+# ------------------------------------------------------------------------------------------------ GLB para o Three.js: esqueleto, pele leve com texturas assadas, peças rígidas presas aos ossos
+# uso: blender -b --python criar_trex.py -- --etapa glb --saida trex.glb [--res 2048] [--tris 160000]
+if ETAPA == 'glb':
+    RES, ALVO = int(arg('res', 2048)), float(arg('tris', 160000))
+    TEXD = arg('texdir') or os.path.dirname(os.path.abspath(SAIDA or 'trex.glb'))
+    def ativo(o, *sel):
+        for x in bpy.context.view_layer.objects: x.select_set(False)
+        for x in sel: x.select_set(True)
+        o.select_set(True); bpy.context.view_layer.objects.active = o
+    def leve_com_textura(alta, baixa, nome, alvo_tris):
+        """baixa (cópia lisa) é simplificada, desdobrada e recebe a cor e o relevo assados da alta (detalhada); a alta é apagada"""
+        tris = sum(len(p.vertices) - 2 for p in baixa.data.polygons)
+        ativo(baixa); d = baixa.modifiers.new('dec', 'DECIMATE'); d.ratio = min(1.0, alvo_tris / tris); d.use_collapse_triangulate = True; bpy.ops.object.modifier_apply(modifier=d.name)
+        bpy.ops.object.shade_smooth()
+        bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); bpy.ops.uv.smart_project(angle_limit=math.radians(72), island_margin=0.004); bpy.ops.object.mode_set(mode='OBJECT')
+        tmp = bpy.data.materials.new('_assar'); tmp.use_nodes = True; baixa.data.materials.append(tmp); imgs = {}
+        for tipo, sufixo, cor in (('DIFFUSE', 'cor', True), ('NORMAL', 'normal', False)):
+            img = bpy.data.images.new(f'{nome}_{sufixo}', RES, RES, alpha=False)
+            if not cor: img.colorspace_settings.name = 'Non-Color'
+            n = tmp.node_tree.nodes.new('ShaderNodeTexImage'); n.image = img; tmp.node_tree.nodes.active = n
+            cena.render.engine = 'CYCLES'; cena.cycles.samples = 16; cena.cycles.device = 'CPU'
+            ativo(baixa, alta)
+            bpy.ops.object.bake(type=tipo, pass_filter={'COLOR'} if tipo == 'DIFFUSE' else set(), use_selected_to_active=True, cage_extrusion=0.06, max_ray_distance=0.16, margin=12, normal_space='TANGENT')
+            img.filepath_raw = os.path.join(TEXD, f'{nome}_{sufixo}.png'); img.file_format = 'PNG'; img.save(); imgs[sufixo] = img
+            tmp.node_tree.nodes.remove(n); print('ASSADO', nome, sufixo)
+        mg = bpy.data.materials.new(nome + '_glb'); mg.use_nodes = True; nt = mg.node_tree; b = nt.nodes['Principled BSDF']
+        tc = nt.nodes.new('ShaderNodeTexImage'); tc.image = imgs['cor']; nt.links.new(tc.outputs['Color'], b.inputs['Base Color'])
+        tn = nt.nodes.new('ShaderNodeTexImage'); tn.image = imgs['normal']; nm = nt.nodes.new('ShaderNodeNormalMap'); nt.links.new(tn.outputs['Color'], nm.inputs['Color']); nt.links.new(nm.outputs['Normal'], b.inputs['Normal'])
+        b.inputs['Roughness'].default_value = 0.68; b.inputs['Specular IOR Level'].default_value = 0.35
+        baixa.data.materials.clear(); baixa.data.materials.append(mg)
+        nome_alta = alta.name; bpy.data.objects.remove(alta, do_unlink=True); baixa.name = nome_alta
+        return baixa
+    for o in GARRAS:
+        ativo(o)
+        for m_ in list(o.modifiers): bpy.ops.object.modifier_apply(modifier=m_.name)
+    # mandíbula sai do pivô (mantém a posição) antes de simplificar
+    bpy.context.view_layer.update(); mw = mand.matrix_world.copy(); mand.parent = None; mand.matrix_world = mw
+    pele = leve_com_textura(pele, PELE_LISA, 'trex_pele', ALVO); mand = leve_com_textura(mand, MAND_LISA, 'trex_mandibula', ALVO * 0.08)
+
+    # esqueleto (x = frente, z = cima)
+    ad = bpy.data.armatures.new('esqueleto'); arm = bpy.data.objects.new('trex_esqueleto', ad); cena.collection.objects.link(arm); ativo(arm); bpy.ops.object.mode_set(mode='EDIT')
+    def osso(nome, a, b, pai=None, liga=True):
+        e = ad.edit_bones.new(nome); e.head = a; e.tail = b
+        if pai: e.parent = ad.edit_bones[pai]; e.use_connect = liga and (Vector(a) - ad.edit_bones[pai].tail).length < 1e-4
+        return e
+    osso('raiz', (0, 0, 0), (0, 0, 0.5), liga=False)
+    osso('quadril', (0, 0, 3.30), (0.9, 0, 3.36), 'raiz', False)
+    osso('coluna1', (0.9, 0, 3.36), (1.8, 0, 3.30), 'quadril'); osso('peito', (1.8, 0, 3.30), (2.7, 0, 3.24), 'coluna1')
+    osso('pescoco1', (2.7, 0, 3.24), (3.2, 0, 3.40), 'peito'); osso('pescoco2', (3.2, 0, 3.40), (3.75, 0, 3.58), 'pescoco1')
+    osso('cabeca', (3.75, 0, 3.58), (5.45, 0, 3.40), 'pescoco2'); osso('mandibula', (4.02, 0, 3.27), (5.45, 0, 2.95), 'cabeca', False)
+    xs_c = [-0.3, -1.2, -2.1, -3.0, -3.8, -4.6, -5.3, -5.9, -6.5]; prev = 'quadril'
+    for k in range(8):
+        z0, z1 = 3.30 - 0.18 * k, 3.30 - 0.18 * (k + 1)
+        osso(f'cauda{k + 1}', (xs_c[k], 0, 3.25 - 0.15 * k), (xs_c[k + 1], 0, 3.25 - 0.15 * (k + 1)), prev, k > 0); prev = f'cauda{k + 1}'
+    for l, s_ in (('l', 1), ('r', -1)):
+        osso(f'coxa_{l}', (0.0, 0.55 * s_, 3.00), (0.52, 0.64 * s_, 1.83), 'quadril', False); osso(f'canela_{l}', (0.52, 0.64 * s_, 1.83), (0.05, 0.57 * s_, 0.77), f'coxa_{l}')
+        osso(f'metatarso_{l}', (0.05, 0.57 * s_, 0.77), (0.44, 0.53 * s_, 0.20), f'canela_{l}'); osso(f'dedos_{l}', (0.44, 0.53 * s_, 0.20), (1.10, 0.53 * s_, 0.05), f'metatarso_{l}')
+        osso(f'braco_{l}', (2.50, 0.50 * s_, 2.72), (2.66, 0.58 * s_, 2.36), 'peito', False); osso(f'antebraco_{l}', (2.66, 0.58 * s_, 2.36), (2.86, 0.56 * s_, 2.28), f'braco_{l}')
+        osso(f'mao_{l}', (2.86, 0.56 * s_, 2.28), (3.02, 0.56 * s_, 2.14), f'antebraco_{l}')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    # pele: pesos automáticos (calor); se falhar, envelope
+    ativo(arm, pele); bpy.ops.object.parent_set(type='ARMATURE_AUTO')
+    if not any(len(v.groups) for v in pele.data.vertices[:2000]): ativo(arm, pele); bpy.ops.object.parent_set(type='ARMATURE_ENVELOPE'); print('PESOS: envelope')
+    # peças rígidas presas a um osso
+    def prender_osso(o, nome_osso):
+        bpy.context.view_layer.update(); mw = o.matrix_world.copy(); o.parent = None; o.matrix_world = mw
+        ativo(arm, o); ad.bones.active = ad.bones[nome_osso]; bpy.ops.object.parent_set(type='BONE', keep_transform=True)
+    prender_osso(mand, 'mandibula')
+    for o in list(bpy.data.objects):
+        n = o.name
+        if n.startswith(('dente_inf', 'gengiva_inf', 'lingua')): prender_osso(o, 'mandibula')
+        elif n.startswith(('dente_sup', 'gengiva_sup', 'olho_', 'pupila_')): prender_osso(o, 'cabeca')
+        elif n.startswith('garramao'): prender_osso(o, 'mao_' + n[-1])
+        elif n.startswith('garra'): prender_osso(o, 'dedos_' + n[-1])
+    # interior da boca: membrana que estica quando a mandíbula abre (topo preso na cabeça, fundo na mandíbula)
+    bm = bmesh.new(); topo, fundo = [], []
+    for x in np.linspace(3.98, 4.60, 7):
+        topo.append([bm.verts.new((x, s_ * wc(x) * 0.74, linha_boca(x) - 0.04)) for s_ in (1, -1)])
+        fundo.append([bm.verts.new((x, s_ * wm(x) * 0.72, linha_boca(x) - 0.045)) for s_ in (1, -1)])
+    for i in range(len(topo) - 1):
+        for k in (0, 1): bm.faces.new((topo[i][k], topo[i + 1][k], fundo[i + 1][k], fundo[i][k]))     # paredes laterais (bochechas por dentro)
+    bm.faces.new((topo[0][0], fundo[0][0], fundo[0][1], topo[0][1]))                                      # fundo da garganta
+    me_g = bpy.data.meshes.new('boca_interna'); bm.to_mesh(me_g); bm.free(); og = bpy.data.objects.new('boca_interna', me_g); cena.collection.objects.link(og)
+    og.data.materials.append(M_GARG); vt, vf = og.vertex_groups.new(name='cabeca'), og.vertex_groups.new(name='mandibula')
+    for v in og.data.vertices: (vt if (v.index // 2) % 2 == 0 else vf).add([v.index], 1.0, 'REPLACE')
+    og.parent = arm; mo_ = og.modifiers.new('arm', 'ARMATURE'); mo_.object = arm
+    # dentes: cor fixa (o glTF não leva a rampa)
+    nt_ = M_DENTE.node_tree
+    for l_ in list(nt_.links):
+        if l_.to_node.type == 'BSDF_PRINCIPLED' and l_.to_socket.name == 'Base Color': nt_.links.remove(l_)
+    nt_.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.40, 0.33, 0.20, 1)
+    # exporta só o T. rex
+    for x in bpy.context.view_layer.objects: x.select_set(False)
+    arm.select_set(True)
+    for o in arm.children_recursive: o.select_set(True)
+    bpy.context.view_layer.objects.active = arm
+    bpy.ops.export_scene.gltf(filepath=SAIDA, export_format='GLB', use_selection=True, export_image_format='JPEG', export_jpeg_quality=88, export_skins=True, export_animations=False)
+    print('GLB', SAIDA, 'ossos', len(ad.bones), 'faces pele', len(pele.data.polygons), 'mandíbula', len(mand.data.polygons))
+    sys.exit(0)
 
 # ------------------------------------------------------------------------------------------------ prévias
 if PREVIA:
