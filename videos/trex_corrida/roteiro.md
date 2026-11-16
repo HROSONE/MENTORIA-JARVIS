@@ -32,17 +32,19 @@ Texto só diegético: o **relógio de pulso** (velocidade) e o **número de peit
 | S2 | 1,6–3,2 | De frente, plano médio do trilheiro: grita, vira e dispara | 50 mm, câmera na mão | Sol manchado | **Grito** + primeiros passos | Corte na ação |
 | **Tentativa 1: a reta** | | | | | | |
 | S3 | 3,2–8,0 | De frente, trilheiro correndo na estrada de terra na direção da lente; o T. rex atrás, cada vez maior | 35 mm, câmera recuando à frente dele (o perseguidor cresce = perigo) | Sol de lado, poeira | Passos, respiração, **pisadas** que sacodem a câmera | Corte |
-| S4 | 8,0–10,0 | Close de frente: rosto ofegante; a sombra da cabeça do T. rex cobre ele | 50 mm, na mão | A sombra apaga o sol | Respiração, rosnado colado | Corte |
-| S5 | 10,0–11,8 | De frente, plano médio: a cabeça desce por trás dele e a boca fecha | 35 mm, tremor forte | — | Mordida, **grito cortado** | Corta no fechar da boca |
-| S6 | 11,8–13,2 | O T. rex de cabeça erguida mastigando; um tênis cai na estrada (sem sangue) | 50 mm, baixo | Contraluz | Mastigar, tênis no chão | **Volta no tempo** |
+| S4 | 8,0–9,4 | Close de frente: rosto ofegante, olha para trás; a boca cresce atrás dele | 50 mm, na mão | A cabeça escurece o fundo | Respiração colada, pisadas | Corte |
+| S5 | 9,4–10,3 | De frente, plano médio: a cabeça desce por trás de boca aberta (ele grita) e fecha | 35 mm, tremor forte | — | **Grito cortado** pela mordida | Corta no fechar da boca (10,24 s): nada é mostrado |
+| S6 | 10,3–13,2 | Contra-plongée rente à estrada: o T. rex de cabeça erguida mastigando; um tênis cai e quica em primeiro plano (sem sangue) | 28 mm, baixo | Contraluz | Mastigar abafado, rosnado, tênis no chão | **Volta no tempo** (o tênis sobe de volta para a boca, a corrida desanda) |
 | **Tentativa 2: a mata** | | | | | | |
 | S7 | 14,2–18,5 | De frente: ele sai da estrada e corre entre árvores e pedras; atrás o T. rex quebrando galhos, travando | 28 mm, câmera recuando entre os troncos | Fachos de luz na névoa | Galhos, folhas, pisadas, troncos batendo | Corte |
 | S8 | 18,5–21,5 | Câmera dentro da fenda entre duas rochas, de frente para ele que se espreme ali; a boca do T. rex bate na entrada e não cabe, ruge | 24 mm, fixa (proteção) | Escuro da fenda, contraluz | Mandíbula batendo na pedra, **rugido de raiva**, respiração | **Volta no tempo** |
 | **Tentativa 3: o maratonista** | | | | | | |
-| S9 | 22,5–27,5 | De frente: ele de maratonista (regata, número **HRYZ**, relógio a 21 km/h) na estrada; o T. rex atrás **não chega mais perto** (mesmo tamanho no quadro) | 35 mm, recuando no mesmo ritmo | Sol | Passos ritmados, respiração controlada, pisadas | Corte |
+| S9 | 22,5–24,6 | De frente: ele de maratonista (regata, número **HRYZ 21**) na estrada; o T. rex atrás **não chega mais perto** | 35 mm, recuando no mesmo ritmo | Sol | Passos ritmados, respiração controlada, pisadas | Corte |
+| S9r | 24,6–25,9 | Inserto: o relógio no pulso marca **21 km/h**, câmera presa ao antebraço (balança com a passada) | 85 mm | Sol | Bipe do relógio | Corte |
+| S9b | 25,9–27,5 | Rente ao chão, 3/4 de frente: a passada solta; o T. rex ao fundo | 28 mm | Sol | Passos | Corte |
 | S10 | 27,5–31,5 | Close de frente: sorri, olha para trás; o T. rex continua lá, andando, sem cansar | 50 mm | Fim de tarde | Respiração, pisadas constantes | Corte |
-| S11 | 31,5–34,5 | De frente: ele entra entre as rochas e se esconde; o T. rex para | 28 mm | Névoa | Rugido de frustração | Corte |
-| S12 | 34,5–36,0 | Volta ao S1 (laço) | igual | igual | Rugido | — |
+| S11 | 31,5–34,5 | De frente, atrás da fileira de rochas: ele vem correndo para a lente e se agacha; por cima das pedras o T. rex para na estrada, procura e ruge | 28 mm, baixa | Névoa | Pisadas param, respiração presa, **rugido** | Corte no rugido |
+| S12 | 34,5–36,0 | Close do S1, um instante ANTES: boca fechada, respiração, rosnado subindo; o último quadro emenda no rugido do quadro 0 (laço sem repetir o rugido) | igual ao S1 | igual | Rosnado grave crescendo | Laço |
 
 ## Enquadramento (regra do dono)
 Todo plano passa por um verificador antes do render: o contorno do protagonista e do T. rex é projetado na tela 9:16 com margem; se não couber, a câmera gira em volta do assunto até caber. O T. rex nunca aparece inteiro de perfil; de frente, por trás do protagonista ou em detalhe.
