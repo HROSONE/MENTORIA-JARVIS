@@ -4,67 +4,35 @@
 **Origem:** conto enviado pelo dono (Lucas, a viatura no desfiladeiro, a telecinese e o preço do poder). A história é **ficção**: o título marca "(ficção)" e a narração nunca a apresenta como caso real.
 **Pedido do dono:** abrir no estado decrépito (a consequência), depois desenvolver até chegar lá; máximo de 60 s.
 
-## Estrutura
-- **Gancho (0–4 s):** o final primeiro. Lucas, aos 12 anos, caído no chão do quarto e sem conseguir ficar de pé, com a lata e a revista ainda caindo do ar em volta dele. Pergunta: *como alguém que voa não consegue andar?*
-- **Rebobina para dois anos antes (4–45 s):** viatura, desprezo, raiva, explosão, queda, resgate, voo até a delegacia.
-- **Escalada da preguiça (45–52 s):** cada ação do dia a dia é trocada pelo poder (repetida e escalando).
-- **Resposta e volta ao começo (52–58 s):** a luz cai, ele pousa, os joelhos cedem. O último quadro repete o quadro 0 (loop).
+## Estrutura (revisão do dono, 16/11: ≈ 50 s)
+- **0–4 s gancho:** Lucas aos 12 anos caído no chão do quarto, os braços tremem e cedem (teste aprovado).
+- **4–19 s o carro (15 s):** estrada de terra na beira do desfiladeiro; dentro da viatura, o policial aponta para ele e humilha; Lucas entristece, depois enfurece, e já explode de raiva.
+- **19–29 s a queda (10 s):** a viatura explode e despenca; a bolha azul segura o Lucas e os casulos seguram os dois policiais.
+- **29–34 s a delegacia (5 s):** ele voa sobre a cidade levando os dois e os deixa no banco da delegacia.
+- **34–44 s os poderes (10 s):** levanta um carro; vai para a escola levitando, com a mochila flutuando atrás; a professora escreve com giz e ele controla a mão dela a distância para escrever **HRYZ** na lousa.
+- **44–50 s o preço:** a luz acaba, ele pisa no chão e as pernas cedem; o último quadro é o quadro 0 (loop).
 
-## Narração (o dono narra; ≈ 160 palavras em 58 s)
-Escrita para ser falada: frases curtas com conectivos ("e", "só que", "e foi aí que", "desde então", "até que") que puxam a próxima cena. O começo planta a pergunta (por que ele não fica de pé?), o meio explica de onde veio o poder e como ele passou a depender dele, e o fim responde e cai de novo na primeira frase (loop).
-As duas falas entre aspas são dos personagens; dá para fazer com voz própria ou narrar por cima.
+## Narração (o dono narra; ≈ 130 palavras)
+Frases curtas com conectivos que puxam a cena seguinte; o começo planta a pergunta, o meio mostra de onde veio o poder e como ele passou a depender dele, o fim responde e cai de novo na primeira frase.
 
 | Tempo | O que aparece | Narração |
 |---|---|---|
-| 0,0–4,0 | Lucas caído no piso de madeira, braços tremendo; a lata e a revista caem do ar | Esse garoto consegue voar. Só que não consegue mais ficar de pé. |
-| 4,0–8,0 | A imagem rebobina; a viatura na estrada de terra à beira do desfiladeiro, poeira vermelha | E tudo começou dois anos antes, no banco de trás de uma viatura, na beira de um desfiladeiro. |
-| 8,0–13,0 | Lucas se inclina para a frente; os dois policiais riem e nem olham | Lucas tinha dez anos e estava com fome. "Moço, a gente já tá chegando?" Mas os dois da frente nem viraram o rosto. |
-| 13,0–17,0 | Lucas de cabeça baixa; Rocha aumenta o rádio | Ele tentou explicar que não tinha fugido, que só foi atrás do cachorro… "Cala a boca, garoto." |
-| 17,0–22,0 | Mãos fechando nos joelhos, garrafas tremendo, olhos acendendo azul | E foi aí que alguma coisa dentro dele estalou. O carro começou a tremer, os olhos dele acenderam… |
-| 22,0–27,0 | A viatura explode por dentro e cai do penhasco | …e a raiva saiu de uma vez só. |
-| 27,0–32,0 | Queda; Lucas estende as mãos e uma bolha azul o segura | A viatura partiu ao meio e despencou. Só que o mesmo poder que destruiu o carro… |
-| 32,0–36,0 | Casulos azuis pegam os dois policiais antes das pedras | …segurou os três no ar, a um palmo das pedras. |
-| 36,0–41,0 | Lucas voa sobre a cidade levando os dois desacordados | Então ele levou os policiais voando até a delegacia, deixou os dois na porta e sumiu no céu. |
-| 41,0–45,0 | Pousa no quarto e sorri | E naquela noite ele decidiu que nunca mais ia ter medo de nada. |
-| 45,0–52,0 | Calendário virando; a lata vem até a boca, a mochila o segue, sobe a escada sem pisar | Desde então, andar virou perda de tempo. Ele flutuava pra comer, pra estudar, pra subir a escada… durante dois anos. |
-| 52,0–58,0 | Tempestade, a luz cai, ele pousa e os joelhos cedem (= quadro 0) | Até o dia em que a luz acabou, ele encostou os pés no chão… e as pernas não aguentaram. |
+| 0,0–4,0 | Lucas caído no quarto, braços tremendo; a lata cai | Esse garoto consegue voar. Só que não consegue mais ficar de pé. |
+| 4,0–8,0 | A imagem rebobina; a viatura levanta poeira vermelha na beira do desfiladeiro | E tudo começou dois anos antes, no banco de trás de uma viatura. |
+| 8,0–13,0 | O policial vira, aponta o dedo e ri; o outro aumenta o rádio | Os policiais achavam que ele tinha fugido de casa… e não paravam de humilhar o menino. |
+| 13,0–19,0 | Lucas de cabeça baixa → os punhos fecham, as garrafas tremem, os olhos acendem azul | Só que a tristeza virou raiva… e a raiva virou outra coisa. |
+| 19,0–29,0 | A viatura explode por dentro e cai no abismo; bolha e casulos azuis seguram os três a um palmo das pedras | A viatura explodiu e despencou. Mas, no último segundo, o mesmo poder segurou os três no ar. |
+| 29,0–34,0 | Voo noturno sobre a cidade; os policiais no banco da delegacia | Ele deixou os policiais na delegacia e sumiu no céu. |
+| 34,0–44,0 | Levanta um carro; vai levitando para a escola com a mochila atrás; a mão da professora escreve HRYZ na lousa | Desde então, Lucas usava o poder pra tudo: levantar carro, ir pra escola sem pisar no chão… até escrever na lousa pela mão da professora. |
+| 44,0–50,0 | A luz acaba; ele pousa, os joelhos cedem (= quadro 0) | Até o dia em que a luz acabou, ele encostou os pés no chão… e as pernas não aguentaram. |
 
-O tempo de cada linha é a referência para gravar; depois que a narração estiver gravada, ajusto os cortes ao áudio real.
+Texto na tela só diegético: **HRYZ** escrito na lousa (marca do canal) e a placa da delegacia. Sem legendas.
 
-Texto na tela só diegético: um calendário na parede que vira as folhas (contador dos dois anos) e a placa da delegacia com a marca **HRYZ** (marca do canal). Sem legendas.
-Título sugerido (até 6 palavras + 1 emoji): **"Ele podia voar 🧠 (ficção)"**.
+## Personagens (todos realistas, gerados no Blender a partir do MakeHuman: `biblioteca3d/personagens/`)
+- **Lucas:** 12 anos (magro, pálido, sardas, olheiras, camiseta cáqui, bermuda cinza) e 10 anos (saudável, camiseta e jeans) para o carro.
+- **Mendes e Rocha:** policiais adultos, farda azul-marinho e quepe.
+- **Professora:** uns 40 anos, blusa e saia, cabelo preso.
 
-## Decupagem (diretor de cinema)
+## Movimento
+Captura de movimento real da CMU (uso livre) aplicada aos esqueletos (`biblioteca3d/mocap/`), com ajustes por cima (tremor, olhar, mãos); gestos sem captura disponível (apontar, mão guiada na lousa) por cinemática inversa.
 
-| # | Tempo | Função | Tamanho | Ângulo | Lente | Movimento e motivo | Luz e foco | Transição |
-|---|---|---|---|---|---|---|---|---|
-| 1 | 0–4 | **Gancho**: o preço, antes da causa | close→plano médio | plongée (fragilidade) | grande-angular perto | push-in lento enquanto ele tenta erguer o tronco e os braços falham | relâmpago pela janela recorta o corpo; pernas finas e pálidas nítidas no centro | rebobinar (fita voltando, whoosh) |
-| 2 | 4–7,5 | Onde estamos | grande plano geral→plano geral | aéreo, de lado | teleobjetiva leve | drone acompanha a viatura na curva; o abismo aparece embaixo | sol baixo, poeira vermelha contra a luz | corte no movimento para dentro do carro |
-| 3 | 7,5–13 | Desprezo dos dois policiais | plano médio | por cima do ombro de Lucas (ele é pequeno, os dois ocupam a frente) | grande-angular | câmera na mão no balanço do carro; Mendes abana a mão sem virar o rosto | contraluz do para-brisa; Lucas na sombra | corte seco |
-| 4 | 13–17 | Injustiça | close | altura dos olhos de Lucas | teleobjetiva (isola) | push-in lento; Rocha desfocado aumenta o rádio | rosto de Lucas iluminado pela janela | raccord de olhar para as mãos |
-| 5 | 17–22 | A raiva sobe | detalhe (mãos, garrafas) → close (olhos) | baixo, holandês crescente (algo errado) | macro / grande-angular | push-in rápido nos olhos que acendem azul; a imagem treme cada vez mais | brilho azul nos olhos é a luz mais forte do quadro | clarão branco |
-| 6 | 22–27 | **Clímax**: a explosão | plano geral | de fora, de lado, na altura do carro | grande-angular | câmera lenta: portas arrancadas, teto que se abre, motor em bola de fogo, carro partido escorregando pelo cascalho e despencando | fogo laranja contra o céu; uma sacudida de câmera só aqui | queda acompanhando |
-| 7 | 27–32 | Pânico → instinto | plano médio | contra-plongée, de baixo, caindo junto | grande-angular | câmera cai com ele; destroços passam; ele estende as mãos e a bolha azul se forma nas copas | bolha translúcida acende; o resto escurece | corte no movimento para baixo |
-| 8 | 32–36 | O resgate | plano geral→close | plongée sobre as pedras | normal | os casulos pegam os policiais a centímetros das pedras e quicam; silêncio | casulos azuis iluminam as pedras | pull-out e subida |
-| 9 | 36–41 | O poder agora obedece | grande plano geral | aéreo, atrás e acima | grande-angular | travelling acompanhando o voo sobre a cidade pequena à noite | luzes da praça; Lucas em contraluz azul | whip pan |
-| 10 | 41–45 | Segredo e alívio | plano geral→close | altura dos olhos | normal | deixa os dois no banco da delegacia (placa HRYZ), sobe e some; match cut para ele pousando no quarto e sorrindo | luz quente da varanda; lua | match cut: o pé que pousa vira o tapete do quarto |
-| 11 | 45–52 | **Escalada**: o poder substitui o corpo | plano médio, detalhes | variados (de lado, de cima) | normal | órbita lenta pelo quarto: calendário vira as folhas, a lata atravessa o quarto, a mochila o segue, ele sobe a escada sem pisar, close no tapete empoeirado sem pegadas | dia claro e colorido (o melhor momento dele) | corte nos detalhes |
-| 12 | 52–58 | **Resposta** e loop | close→plano médio | plongée | grande-angular | a lâmpada apaga, ele desliga a levitação, os pés tocam o chão, os joelhos cedem; a câmera termina exatamente no enquadramento do plano 1 | relâmpago igual ao do quadro 0 | loop para o quadro 0 |
-
-## Biblioteca: o que já existe e o que falta
-| Item | Situação |
-|---|---|
-| Lucas (10 e 12 anos) | **existe**: `davi` do elenco (menino de 9 anos, jaqueta azul, com esqueleto, rosto e clipes). Aos 12 anos: escala 1,08 e roupa repintada. As pernas atrofiadas pedem um afinamento **moderado** de coxa e canela (a regra "proibido deformar" vale; vai ficar magro, não grotesco). **Criar:** afinamento só das pernas e braços |
-| Mendes e Rocha | **existe**: `policial` do elenco, duas variações repintadas |
-| Viatura | **existe**: Crown Victoria procedural (`veiculos/policia`), pintura `branco-azul`. **Criar:** versão que se parte (portas soltas, teto que se abre, corte ao meio) |
-| Explosão, fogo, fumaça, onda de choque | **existe**: `sono_militar/js/fx.js` (explosões, fogueiras, pulso de luz) e `todos_pulando/js/mundo.js` (anel e cúpula de choque) |
-| Desfiladeiro, estrada de terra vermelha, vale com pedras e árvores | **criar** (aproveitando o terreno de alturas de `vulcao_milharal/js/terreno.js`, o paredão de `mestres_gravidade/js/mundoP.js` e as árvores do kit) |
-| Bolhas e casulos de energia ("vidro líquido") | **criar** (material translúcido com Fresnel e ondulação) |
-| Cidade pequena à noite e delegacia | **existe**: kit da cidade (`delegacia`, praça, postes) |
-| Quarto, tempestade e relâmpago | **existe**: quarto de `sono_militar/js/`, relâmpago de `chuva_peixes/js/ceu.js`. **Criar:** cama, escada, calendário de parede, lata, revista, mochila, garrafas, rádio |
-| Som | Efeitos reais (BigSoundBank, Kenney) + impactos curtos sintetizados; sem música, sem cama de ruído |
-
-## Riscos que já sei
-- **Personagem 3D precisa ter vida** (lição da cadeira voadora): Lucas fala, respira, pisca e treme; nada de pose travada.
-- **Pernas atrofiadas × "proibido deformar":** afinar só o necessário para ler "fraco"; mostro um teste antes.
-- **A Crown Victoria é um carro americano;** num conto brasileiro, o ideal seria uma viatura nacional. Modelar outra viatura é trabalho grande, então a proposta é reaproveitar a Crown Victoria com a pintura branca e azul.

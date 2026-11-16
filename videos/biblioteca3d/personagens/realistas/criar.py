@@ -11,13 +11,12 @@ import numpy as np
 
 A = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 def arg(n, d=None): return A[A.index('--' + n) + 1] if '--' + n in A else d
-DADOS, ASSETS, SAIDA = arg('dados'), arg('assets'), arg('saida', 'lucas.glb')
-IDADE, MAGREZA, ROUPA, PREVIA, CABELO = float(arg('idade', 12)), float(arg('magreza', 1.0)), arg('roupa', 'casa'), arg('previa'), arg('cabelo', 'mechas')
-TEX = arg('texturas')
+DADOS, ASSETS, SAIDA, PREVIA, TEX = arg('dados'), arg('assets'), arg('saida'), arg('previa'), arg('texturas')
+FICHA = json.load(open(arg('ficha'))); CAB = FICHA.get('cabelo', {'tipo': 'mechas'}); CABELO = CAB['tipo']; R_ = FICHA['roupa']
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from mh import ler_obj, ler_alvo, corpo_lucas, centro as _centro, ler_mhclo, encaixar, recortar_roupa, cabelo_procedural
-V, base_VT, base_F, base_G, grupos = corpo_lucas(DADOS, IDADE, MAGREZA)
+from mh import ler_obj, ler_alvo, corpo, centro as _centro, ler_mhclo, encaixar, recortar_roupa, cabelo_procedural
+V, base_VT, base_F, base_G, grupos = corpo(DADOS, FICHA['corpo'])
 T = os.path.join(DADOS, 'targets')
 def centro(g): return _centro(V, grupos, g)
 para_b = lambda P: np.stack([P[..., 0] * 0.1, -P[..., 2] * 0.1, P[..., 1] * 0.1], axis=-1)   # OBJ (dm, y para cima) -> Blender (m, z para cima)
@@ -32,7 +31,7 @@ pesos = json.load(open(os.path.join(DADOS, 'rigs/standard/weights.game_engine.js
 def ponto(spec):
     if spec['strategy'] == 'CUBE': return para_b(centro(spec['cube_name']))
     return para_b(V[spec['vertex_indices']].mean(axis=0))
-arm_dados = bpy.data.armatures.new('Lucas_rig'); arm = bpy.data.objects.new('Lucas', arm_dados); cena.collection.objects.link(arm)
+arm_dados = bpy.data.armatures.new(FICHA['nome'] + '_rig'); arm = bpy.data.objects.new(FICHA['nome'], arm_dados); cena.collection.objects.link(arm)
 bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode='EDIT')
 for nome, b in rig.items():
     eb = arm_dados.edit_bones.new(nome); eb.head = ponto(b['head']); eb.tail = ponto(b['tail']); eb.roll = b.get('roll', 0)
@@ -104,11 +103,11 @@ def mat_pbr(nome, cor=None, tex=None, normal=None, rug=0.6, alfa=None, sss=0.0, 
     m.use_backface_culling = not dupla
     return m
 
-m_pele = mat_pbr('pele', tex=os.path.join(TEX, 'pele.jpg'), rug=0.52, sss=0.25, brilho_esp=0.45)
+m_pele = mat_pbr('pele', tex=os.path.join(TEX, 'pele.jpg'), rug=FICHA.get('pele', {}).get('rugosidade', 0.52), sss=0.25, brilho_esp=0.45)
 m_olho = mat_pbr('olho', tex=os.path.join(TEX, 'olho.jpg'), rug=0.08, brilho_esp=0.8)
-SUIT = 'male_casualsuit02'
-m_roupa = mat_pbr('roupa', tex=os.path.join(TEX, f'roupa_{ROUPA}.jpg'), normal=os.path.join(ASSETS, f'clothes/{SUIT}/{SUIT}_normal.png'), rug=0.9, brilho_esp=0.2, dupla=True)
-m_cabelo = mat_pbr('cabelo', tex=os.path.join(TEX, 'mecha.png' if CABELO == 'mechas' else f'cabelo_{CABELO}.png'), normal=os.path.join(ASSETS, f'hair/{CABELO}/{CABELO}_normal.png'), rug=0.55, alfa=True, dupla=True)
+SUIT = R_['suit']
+m_roupa = mat_pbr('roupa', tex=os.path.join(TEX, 'roupa.jpg'), normal=os.path.join(ASSETS, f'clothes/{SUIT}/{SUIT}_normal.png'), rug=0.9, brilho_esp=0.2, dupla=True)
+m_cabelo = mat_pbr('cabelo', tex=os.path.join(TEX, 'mecha.png' if CABELO == 'mechas' else 'cabelo.png'), normal=os.path.join(ASSETS, f'hair/{CABELO}/{CABELO}_normal.png'), rug=0.55, alfa=True, dupla=True)
 m_sobr = mat_pbr('sobrancelha', tex=os.path.join(TEX, 'sobrancelha.png'), rug=0.7, alfa=True, dupla=True)
 m_cilio = mat_pbr('cilios', tex=os.path.join(TEX, 'cilios.png'), rug=0.7, alfa=True, dupla=True)
 m_dente = mat_pbr('dentes', cor=(0.88, 0.85, 0.78), rug=0.3)
@@ -120,15 +119,22 @@ def proxy(caminho_mhclo, nome, mat, roupa=None):
     info = ler_mhclo(caminho_mhclo); Pv, idx, w = encaixar(info, V)
     Vp, VTp, Fp, _ = ler_obj(os.path.join(os.path.dirname(caminho_mhclo), info['obj']))
     if roupa:
-        mant, _, esconder = recortar_roupa(V, grupos, Pv, [f[0] for f in Fp], info['delete'], roupa, uvs=[[VTp[t] for t in f[1]] for f in Fp]); Fp = [Fp[k] for k in mant]
+        mant, _, esconder, Pn = recortar_roupa(V, grupos, Pv, [f[0] for f in Fp], info['delete'], None, uvs=[[VTp[t] for t in f[1]] for f in Fp], manga=roupa.get('manga', 'curta'), perna=roupa.get('perna', 'longa')); Fp = [Fp[k] for k in mant]
+        mud = np.where(np.linalg.norm(Pn - Pv, axis=1) > 1e-6)[0]                 # vértices trazidos para a barra: pesos do vértice do corpo mais próximo
+        if len(mud):
+            cb = np.array(sorted(set(i for (vs, _), g in zip(base_F, base_G) if g == 'body' for i in vs))); idx = idx.copy(); w = np.array(w, float).copy()
+            for i in mud: j = cb[np.argmin(np.linalg.norm(V[cb] - Pn[i], axis=1))]; idx[i] = [j, j, j]; w[i] = [1, 0, 0]
+        Pv = Pn
     else: esconder = info['delete']
     apagar.update(esconder)
     return criar_malha(nome, Pv, [vs for vs, _ in Fp], [[VTp[t] for t in ts] for _, ts in Fp], refs=(idx, w), mat=mat)
-proxy(os.path.join(ASSETS, f'clothes/{SUIT}/{SUIT}.mhclo'), 'roupa', m_roupa, roupa=ROUPA)
+proxy(os.path.join(ASSETS, f'clothes/{SUIT}/{SUIT}.mhclo'), 'roupa', m_roupa, roupa=R_)
 if CABELO == 'mechas':
-    Vh, Fh, UVh, _ = cabelo_procedural(V, grupos, base_F, base_G); criar_malha('cabelo', Vh, Fh, UVh, refs=None, mat=m_cabelo, so_osso='head')
+    Vh, Fh, UVh, _ = cabelo_procedural(V, grupos, base_F, base_G, n=int(CAB.get('n', 3600)), comp=CAB.get('comp', 1.0), franja=CAB.get('franja', True)); criar_malha('cabelo', Vh, Fh, UVh, refs=None, mat=m_cabelo, so_osso='head')
 else: proxy(os.path.join(ASSETS, f'hair/{CABELO}/{CABELO}.mhclo'), 'cabelo', m_cabelo)
-proxy(os.path.join(ASSETS, 'eyebrows/eyebrow001/eyebrow001.mhclo'), 'sobrancelhas', m_sobr)
+SB = FICHA.get('sobrancelha', 'eyebrow001'); proxy(os.path.join(ASSETS, f'eyebrows/{SB}/{SB}.mhclo'), 'sobrancelhas', m_sobr)
+if FICHA.get('sapatos'):
+    SP_ = FICHA['sapatos']['tipo']; proxy(os.path.join(ASSETS, f'clothes/{SP_}/{SP_}.mhclo'), 'sapatos', mat_pbr('sapatos', tex=os.path.join(TEX, 'sapatos.png'), normal=os.path.join(ASSETS, f'clothes/{SP_}/{SP_}_normal.png'), rug=0.45, brilho_esp=0.5))
 proxy(os.path.join(ASSETS, 'eyelashes/eyelashes01/eyelashes01.mhclo'), 'cilios', m_cilio)
 proxy(os.path.join(ASSETS, 'teeth/teeth_base/teeth_base.mhclo'), 'dentes', m_dente)
 proxy(os.path.join(ASSETS, 'tongue/tongue01/tongue01.mhclo'), 'lingua', m_lingua)
@@ -159,8 +165,37 @@ for lado, g in (('E', 'helper-l-eye'), ('D', 'helper-r-eye')):
     Ve, Fe, UVe = esfera(c, r)
     ob = criar_malha('olho' + lado, Ve, Fe, UVe, refs=None, mat=m_olho, so_osso='head')
 
+# extras: quepe de polícia (copa, faixa, aba e distintivo), preso à cabeça
+if 'quepe' in FICHA.get('extras', []):
+    oE_, oD_ = centro('helper-l-eye'), centro('helper-r-eye'); o_ = (oE_ + oD_) / 2; k_ = np.linalg.norm(oE_ - oD_) / 0.55
+    yb = o_[1] + 0.30 * k_
+    cab = np.array([v for v in V[sorted(set(i for (vs, _), g in zip(base_F, base_G) if g == 'body' for i in vs))] if yb < v[1] < yb + 0.3 * k_])
+    cx, cz = 0.0, (cab[:, 2].max() + cab[:, 2].min()) / 2; rx, rz = (cab[:, 0].max() - cab[:, 0].min()) / 2 + 0.10, (cab[:, 2].max() - cab[:, 2].min()) / 2 + 0.10
+    Vq, Fq, UVq, NS = [], [], [], 40
+    for j, (yy, esc) in enumerate([(yb - 0.05, 1.0), (yb + 0.22 * k_, 1.03), (yb + 0.42 * k_, 1.13), (yb + 0.55 * k_, 1.20), (yb + 0.60 * k_, 1.12), (yb + 0.63 * k_, 0.0)]):
+        for i in range(NS):
+            a = 2 * math.pi * i / NS; Vq.append([cx + rx * esc * math.sin(a), yy, cz + rz * esc * math.cos(a)])
+    for j in range(5):
+        for i in range(NS):
+            a, b = j * NS + i, j * NS + (i + 1) % NS; Fq.append([a, b, b + NS, a + NS]); UVq.append([(i / NS, j / 5), ((i + 1) / NS, j / 5), ((i + 1) / NS, (j + 1) / 5), (i / NS, (j + 1) / 5)])
+    criar_malha('quepe', np.array(Vq), Fq, UVq, mat=mat_pbr('quepe', cor=(0.035, 0.05, 0.10), rug=0.6), so_osso='head')
+    Va, Fa, UVa = [], [], []                                                      # aba: meia elipse na frente, inclinada para baixo
+    for j in range(6):
+        for i in range(21):
+            a = math.pi * (i / 20 - 0.5) * 0.95; r_ = 1.0 + 0.55 * j / 5
+            Va.append([cx + rx * 0.98 * r_ * math.sin(a), yb + 0.02 - 0.22 * k_ * (j / 5) ** 1.3, cz + rz * 0.98 * (1 + 0.62 * j / 5) * math.cos(a)])
+    for j in range(5):
+        for i in range(20):
+            a = j * 21 + i; Fa.append([a, a + 1, a + 22, a + 21]); UVa.append([(0, 0), (1, 0), (1, 1), (0, 1)])
+    criar_malha('aba', np.array(Va), Fa, UVa, mat=mat_pbr('aba', cor=(0.01, 0.01, 0.012), rug=0.15, brilho_esp=0.8, dupla=True), so_osso='head')
+    Vd, Fd, UVd = [[cx, yb + 0.30 * k_, cz + rz * 1.08 + 0.02]], [], []          # distintivo dourado
+    for i in range(16): a = 2 * math.pi * i / 16; Vd.append([cx + 0.08 * k_ * math.sin(a), yb + 0.30 * k_ + 0.08 * k_ * math.cos(a), cz + rz * 1.08 + 0.01])
+    for i in range(16): Fd.append([0, 1 + i, 1 + (i + 1) % 16]); UVd.append([(0.5, 0.5), (0, 0), (1, 0)])
+    criar_malha('distintivo', np.array(Vd), Fd, UVd, mat=mat_pbr('distintivo', cor=(0.80, 0.58, 0.18), rug=0.25), so_osso='head')
+
 # chão em z = 0: desloca o esqueleto (e tudo o que é filho)
-zmin = min((corpo.matrix_world @ v.co).z for v in corpo.data.vertices)
+CORPO_IDX = sorted(set(i for (vs, _), g in zip(base_F, base_G) if g == 'body' for i in vs))
+zmin = float(para_b(V[CORPO_IDX])[:, 2].min())                                   # sola dos pés (mesmo com sapato cobrindo o pé)
 arm.location.z = -zmin
 bpy.context.view_layer.update()
 
@@ -188,4 +223,4 @@ bpy.ops.object.select_all(action='DESELECT')
 for o in cena.objects:
     if o == arm or o.parent == arm: o.select_set(True)
 bpy.ops.export_scene.gltf(filepath=SAIDA, export_format='GLB', use_selection=True, export_skins=True, export_morph=True, export_apply=False, export_image_format='JPEG', export_jpeg_quality=88, export_yup=True, export_animations=False)
-print('PRONTO', SAIDA, 'altura', round(max((corpo.matrix_world @ v.co).z for v in corpo.data.vertices), 3))
+print('PRONTO', SAIDA, 'altura', round(float(para_b(V[CORPO_IDX])[:, 2].max()) - zmin, 3))
