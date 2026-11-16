@@ -12,6 +12,8 @@ def arg(n, d=None): return sys.argv[sys.argv.index('--' + n) + 1] if '--' + n in
 DADOS, ASSETS, OUT = arg('dados'), arg('assets'), arg('saida'); IDADE, MAGREZA, ROUPA = float(arg('idade', 12)), float(arg('magreza', 1)), arg('roupa', 'casa')
 os.makedirs(OUT, exist_ok=True)
 V, VT, F, G, grupos = corpo_lucas(DADOS, IDADE, MAGREZA)
+from mh import cabelo_procedural
+_, _, _, (RAIZ_CAB, _, FACES_ESC) = cabelo_procedural(V, grupos, F, G, n=10)
 
 # ---- pele
 im = Image.open(os.path.join(ASSETS, 'skins/textures/young_lightskinned_male_diffuse.png')).convert('RGB'); WI, HI = im.size
@@ -33,13 +35,28 @@ cam = Image.new('RGBA', im.size, (0, 0, 0, 0)); dr = ImageDraw.Draw(cam)
 olhoE, olhoD = centro(V, grupos, 'helper-l-eye'), centro(V, grupos, 'helper-r-eye'); dist_olhos = np.linalg.norm(olhoE - olhoD)
 for olho in (olhoE, olhoD):                                                   # olheiras arroxeadas logo abaixo dos olhos
     for uv in uv_perto(olho + np.array([0, -0.13, 0.05]) * dist_olhos / 0.6, 0.11 * dist_olhos / 0.6):
-        x, y = pix(uv); dr.ellipse([x - 8, y - 5, x + 8, y + 5], fill=(78, 40, 62, int(40 * MAGREZA + 8)))
-rng = np.random.default_rng(12); nariz = (olhoE + olhoD) / 2 + np.array([0, -0.25, 0.30]) * dist_olhos / 0.6
-for _ in range(520):                                                          # sardas no nariz e nas bochechas
-    p = nariz + np.array([rng.normal(0, 0.38), rng.normal(0.05, 0.14), 0]) * dist_olhos / 0.6
+        x, y = pix(uv); dr.ellipse([x - 8, y - 5, x + 8, y + 5], fill=(74, 36, 58, int(70 * MAGREZA + 10)))
+rng = np.random.default_rng(12); nariz = (olhoE + olhoD) / 2 + np.array([0, -0.42, 0.22]) * dist_olhos / 0.6
+for _ in range(700):                                                          # sardas no nariz e nas bochechas
+    p = nariz + np.array([rng.normal(0, 0.50), rng.normal(0.0, 0.10), 0]) * dist_olhos / 0.6
     u = uv_perto(p, 0.05 * dist_olhos / 0.6)
-    if len(u): x, y = pix(u[rng.integers(len(u))]); r = rng.uniform(1.0, 2.6); dr.ellipse([x - r, y - r, x + r, y + r], fill=(118, 66, 40, int(rng.uniform(60, 150))))
-cam = cam.filter(ImageFilter.GaussianBlur(2.2)); im.paste(cam, (0, 0), cam); im.save(os.path.join(OUT, 'pele.jpg'), quality=92)
+    if len(u): x, y = pix(u[rng.integers(len(u))]); r = rng.uniform(0.6, 1.6); dr.ellipse([x - r, y - r, x + r, y + r], fill=(122, 70, 44, int(rng.uniform(50, 120))))
+cam = cam.filter(ImageFilter.GaussianBlur(1.2)); im.paste(cam, (0, 0), cam)
+couro = Image.new('RGBA', im.size, (0, 0, 0, 0)); dc = ImageDraw.Draw(couro)
+for k in FACES_ESC:
+    dc.polygon([pix(VT[t]) for t in F[k][1]], fill=(62, 41, 26, 235))
+couro = couro.filter(ImageFilter.GaussianBlur(6)); im.paste(couro, (0, 0), couro)
+im.save(os.path.join(OUT, 'pele.jpg'), quality=92)
+# mechas: 4 colunas de fios ondulados castanhos com alfa (pontas finas)
+M = Image.new('RGBA', (1024, 1024), (0, 0, 0, 0)); dmc = ImageDraw.Draw(M); rr = np.random.default_rng(21)
+for col in range(4):
+    for _ in range(70):
+        x0 = col * 256 + 10 + rr.random() * 236; amp = rr.uniform(1, 6); fase = rr.uniform(0, 6.28); comp = rr.uniform(0.7, 1.0)
+        tom = rr.uniform(0.75, 1.25); cor = (int(min(255, 74 * tom)), int(min(255, 52 * tom)), int(min(255, 34 * tom)))
+        pts = [(x0 + amp * np.sin(fase + y / 90) + (y / 1024) * rr.normal(0, 8), y) for y in range(0, int(1024 * comp), 16)]
+        for (xa, ya), (xb, yb) in zip(pts, pts[1:]):
+            a = int(255 * (1 - (ya / 1024 / comp) ** 2.5)); dmc.line([(xa, ya), (xb, yb)], fill=(*cor, a), width=int(rr.integers(2, 5)))
+M.save(os.path.join(OUT, 'mecha.png'))
 print('olhos (dm):', olhoE.round(3), olhoD.round(3), 'distância', round(dist_olhos, 3))
 
 # ---- olho: textura polar (linha de cima = polo da frente = pupila)
@@ -59,8 +76,8 @@ o.save(os.path.join(OUT, 'olho.jpg'), quality=92)
 # ---- roupa (male_casualsuit02): cada face é pintada pela classe (camiseta ou calça), com as dobras do mapa de AO original
 SUIT = 'male_casualsuit02'; src = os.path.join(ASSETS, f'clothes/{SUIT}'); N = 2048
 info = ler_mhclo(f'{src}/{SUIT}.mhclo'); Pv, _, _ = encaixar(info, V); Vp, VTp, Fp, _ = ler_obj(f'{src}/{SUIT}.obj')
-mant, cls, _ = recortar_roupa(V, grupos, Pv, [f[0] for f in Fp], info['delete'], ROUPA)
-cor = {'casa': {'camisa': (0.50, 0.47, 0.36), 'calca': (0.18, 0.18, 0.19)}, 'carro': {'camisa': (0.20, 0.33, 0.56), 'calca': (0.22, 0.29, 0.40)}}[ROUPA]
+mant, cls, _ = recortar_roupa(V, grupos, Pv, [f[0] for f in Fp], info['delete'], ROUPA, uvs=[[VTp[t] for t in f[1]] for f in Fp])
+cor = {'casa': {'camisa': (0.60, 0.55, 0.42), 'calca': (0.18, 0.18, 0.19)}, 'carro': {'camisa': (0.20, 0.33, 0.56), 'calca': (0.22, 0.29, 0.40)}}[ROUPA]
 mapa = Image.new('RGB', (N, N), tuple(int(255 * c) for c in cor['camisa'])); dm = ImageDraw.Draw(mapa)
 for k, c in zip(mant, cls):
     pts = [(VTp[t][0] * N, (1 - VTp[t][1]) * N) for t in Fp[k][1]]

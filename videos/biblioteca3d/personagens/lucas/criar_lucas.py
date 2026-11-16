@@ -12,11 +12,11 @@ import numpy as np
 A = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 def arg(n, d=None): return A[A.index('--' + n) + 1] if '--' + n in A else d
 DADOS, ASSETS, SAIDA = arg('dados'), arg('assets'), arg('saida', 'lucas.glb')
-IDADE, MAGREZA, ROUPA, PREVIA, CABELO = float(arg('idade', 12)), float(arg('magreza', 1.0)), arg('roupa', 'casa'), arg('previa'), arg('cabelo', 'short02')
+IDADE, MAGREZA, ROUPA, PREVIA, CABELO = float(arg('idade', 12)), float(arg('magreza', 1.0)), arg('roupa', 'casa'), arg('previa'), arg('cabelo', 'mechas')
 TEX = arg('texturas')
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from mh import ler_obj, ler_alvo, corpo_lucas, centro as _centro, ler_mhclo, encaixar, recortar_roupa
+from mh import ler_obj, ler_alvo, corpo_lucas, centro as _centro, ler_mhclo, encaixar, recortar_roupa, cabelo_procedural
 V, base_VT, base_F, base_G, grupos = corpo_lucas(DADOS, IDADE, MAGREZA)
 T = os.path.join(DADOS, 'targets')
 def centro(g): return _centro(V, grupos, g)
@@ -108,7 +108,7 @@ m_pele = mat_pbr('pele', tex=os.path.join(TEX, 'pele.jpg'), rug=0.52, sss=0.25, 
 m_olho = mat_pbr('olho', tex=os.path.join(TEX, 'olho.jpg'), rug=0.08, brilho_esp=0.8)
 SUIT = 'male_casualsuit02'
 m_roupa = mat_pbr('roupa', tex=os.path.join(TEX, f'roupa_{ROUPA}.jpg'), normal=os.path.join(ASSETS, f'clothes/{SUIT}/{SUIT}_normal.png'), rug=0.9, brilho_esp=0.2, dupla=True)
-m_cabelo = mat_pbr('cabelo', tex=os.path.join(TEX, f'cabelo_{CABELO}.png'), normal=os.path.join(ASSETS, f'hair/{CABELO}/{CABELO}_normal.png'), rug=0.55, alfa=True, dupla=True)
+m_cabelo = mat_pbr('cabelo', tex=os.path.join(TEX, 'mecha.png' if CABELO == 'mechas' else f'cabelo_{CABELO}.png'), normal=os.path.join(ASSETS, f'hair/{CABELO}/{CABELO}_normal.png'), rug=0.55, alfa=True, dupla=True)
 m_sobr = mat_pbr('sobrancelha', tex=os.path.join(TEX, 'sobrancelha.png'), rug=0.7, alfa=True, dupla=True)
 m_cilio = mat_pbr('cilios', tex=os.path.join(TEX, 'cilios.png'), rug=0.7, alfa=True, dupla=True)
 m_dente = mat_pbr('dentes', cor=(0.88, 0.85, 0.78), rug=0.3)
@@ -120,12 +120,14 @@ def proxy(caminho_mhclo, nome, mat, roupa=None):
     info = ler_mhclo(caminho_mhclo); Pv, idx, w = encaixar(info, V)
     Vp, VTp, Fp, _ = ler_obj(os.path.join(os.path.dirname(caminho_mhclo), info['obj']))
     if roupa:
-        mant, _, esconder = recortar_roupa(V, grupos, Pv, [f[0] for f in Fp], info['delete'], roupa); Fp = [Fp[k] for k in mant]
+        mant, _, esconder = recortar_roupa(V, grupos, Pv, [f[0] for f in Fp], info['delete'], roupa, uvs=[[VTp[t] for t in f[1]] for f in Fp]); Fp = [Fp[k] for k in mant]
     else: esconder = info['delete']
     apagar.update(esconder)
     return criar_malha(nome, Pv, [vs for vs, _ in Fp], [[VTp[t] for t in ts] for _, ts in Fp], refs=(idx, w), mat=mat)
 proxy(os.path.join(ASSETS, f'clothes/{SUIT}/{SUIT}.mhclo'), 'roupa', m_roupa, roupa=ROUPA)
-proxy(os.path.join(ASSETS, f'hair/{CABELO}/{CABELO}.mhclo'), 'cabelo', m_cabelo)
+if CABELO == 'mechas':
+    Vh, Fh, UVh, _ = cabelo_procedural(V, grupos, base_F, base_G); criar_malha('cabelo', Vh, Fh, UVh, refs=None, mat=m_cabelo, so_osso='head')
+else: proxy(os.path.join(ASSETS, f'hair/{CABELO}/{CABELO}.mhclo'), 'cabelo', m_cabelo)
 proxy(os.path.join(ASSETS, 'eyebrows/eyebrow001/eyebrow001.mhclo'), 'sobrancelhas', m_sobr)
 proxy(os.path.join(ASSETS, 'eyelashes/eyelashes01/eyelashes01.mhclo'), 'cilios', m_cilio)
 proxy(os.path.join(ASSETS, 'teeth/teeth_base/teeth_base.mhclo'), 'dentes', m_dente)

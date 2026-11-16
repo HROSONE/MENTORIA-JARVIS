@@ -4,6 +4,8 @@ import { scene, cam, lente, renderer, Q } from './motor.js';
 import { clamp, lerp, suave, sai, entra, ruido } from './util.js';
 import { construirQuarto, relampago, criarLata, criarGibi } from './quarto.js';
 import { criarLucas, noChao } from './lucas.js';
+import { criarLucasReal } from './lucasreal.js';
+import { carregarMocap, aplicarMocap } from './mocap.js';
 
 export const S = { planos: [], total: 0 };
 const plano = (id, dur, fn, extra = {}) => { S.planos.push({ id, t0: S.total, dur, fn, ...extra }); S.total += dur; };
@@ -32,6 +34,8 @@ function queda(t, y0, yc, e = 0.3) {
 export async function construirTudo() {
   const quarto = await construirQuarto(scene, renderer); scene.environment = quarto.ambiente;
   const lucas = await criarLucas({ idade: 12 }); scene.add(lucas.grupo);
+  const real = await criarLucasReal(); scene.add(real.grupo); real.grupo.visible = false;
+  const clips = {}; for (const c of ['140_01', '140_02', '90_16', '13_05']) clips[c] = await carregarMocap('../biblioteca3d/mocap/cmu/' + c + '.json');
   const lata = criarLata(), gibi = criarGibi(); scene.add(lata, gibi);
   scene.background = new THREE.Color(0x0b0e12);
   const LX = -0.15, LZ = 0.05;                                                                 // onde o Lucas cai (cabeça para +z, pés para a janela)
@@ -43,14 +47,27 @@ export async function construirTudo() {
     // ele tenta duas vezes e os braços falham
     const esforco = u < 1.25 ? lerp(0.62, 0.90, sai(u / 1.25)) : u < 1.75 ? lerp(0.90, 0.30, entra((u - 1.25) / 0.5)) : lerp(0.30, 0.70, suave((u - 2.1) / 1.4));
     const cansa = u < 1.25 ? 0 : u < 2.1 ? 0.55 * suave((u - 1.25) / 0.5) : 0.55 * (1 - suave((u - 2.1) / 1.0));
-    noChao(lucas, { x: LX, z: LZ, yaw: 0, esforco, cansa, treme: 0.6 + 0.6 * clamp(esforco), t });
+    if (Q.get('pose') === 'antigo') noChao(lucas, { x: LX, z: LZ, yaw: 0, esforco, cansa, treme: 0.6 + 0.6 * clamp(esforco), t });
+    else {
+      // captura real (CMU 140_01, levantar de bruços): tenta erguer o tronco, os braços tremem e cedem, tenta de novo mais fraco
+      lucas.grupo.visible = false; real.grupo.visible = true;
+      const tc = u < 1.2 ? lerp(0.70, 1.45, sai(u / 1.2)) : u < 1.75 ? lerp(1.45, 0.30, entra((u - 1.2) / 0.55)) : lerp(0.30, 1.05, suave((u - 1.95) / 2.0));
+      aplicarMocap(real, clips['140_01'], tc, { origem: [LX, 0, LZ], yaw: -Math.PI / 2, ossos: ['spine_01', 'spine_02', 'spine_03', 'neck_01', 'head', 'clavicle_l', 'upperarm_l', 'lowerarm_l', 'hand_l', 'clavicle_r', 'upperarm_r', 'lowerarm_r', 'hand_r'] });
+      for (const l of ['l', 'r']) real.girar('foot_' + l, [1, 0, 0], 0.5);
+      const forca = clamp((tc - 0.4) / 1.0), tr = (0.5 + forca) * (u < 1.2 ? 1 : u < 1.75 ? 0.3 : 1.4);
+      for (const l of ['l', 'r']) { real.dobrar('upperarm_' + l, 3.5 * tr * ruido(t * 17, l === 'l' ? 1 : 2), 0, 2.5 * tr * ruido(t * 13, 3)); real.dobrar('lowerarm_' + l, 4 * tr * ruido(t * 21, l === 'l' ? 4 : 5), 0, 0); }
+      real.olharPara(new THREE.Vector3(LX + 0.5, 0.9, LZ + 2.6), 0.55 + 0.4 * forca);             // ergue o rosto na direção da câmera (pernas ficam esticadas: atrofiadas)
+      real.dobrar('head', 4 * tr * ruido(t * 9, 6), 3 * ruido(t * 3, 7), 0);
+      const caiu = u > 1.2 && u < 2.3 ? suave((u - 1.2) / 0.3) * (1 - suave((u - 1.9) / 0.4)) : 0;
+      real.rosto({ esforco: clamp(0.35 + 0.65 * forca) * (1 - caiu), triste: 0.5 + 0.5 * caiu, piscar: 0.6 * caiu, boca: 0.25 * caiu });
+    }
     // a lata e o gibi estavam flutuando: caem no quadro 0 (ainda no ar) e batem no chão
     const ql = queda(u, 0.62, 0.033, 0.28), qg = queda(u - 0.05, 0.85, 0.004, 0.0);
-    lata.position.set(LX + 0.32 + 0.20 * clamp(u - 0.36) * (1 - Math.exp(-(u - 0.36) * 2)), ql.y, LZ + 1.55); lata.rotation.set(ql.parado ? Math.PI / 2 : 0.4 + u * 3.5, 0.6, ql.parado ? 0 : u * 2.0);
+    lata.position.set(LX + 0.62 + 0.20 * clamp(u - 0.36) * (1 - Math.exp(-(u - 0.36) * 2)), ql.y, LZ + 1.55); lata.rotation.set(ql.parado ? Math.PI / 2 : 0.4 + u * 3.5, 0.6, ql.parado ? 0 : u * 2.0);
     if (ql.parado) lata.position.y = 0.033;
     gibi.position.set(LX - 0.48, qg.y + 0.003, LZ + 1.05); gibi.rotation.set(qg.parado ? 0 : 0.5 - u * 1.4, 0.4, qg.parado ? 0.02 : 0.3 + u * 1.1);
     const e = suave(u / 4);
-    const d = camera([lerp(0.60, 0.45, e), lerp(1.70, 1.40, e), lerp(2.75, 2.45, e)], [LX + 0.0, 0.22, LZ + 0.95], lerp(44, 37, e), { roll: lerp(0.06, 0.0, e), tremor: 1, t });
+    const d = camera([lerp(0.70, 0.50, e), lerp(1.25, 1.00, e), lerp(2.55, 2.20, e)], [LX + 0.0, 0.30, LZ + 0.70], lerp(42, 36, e), { roll: lerp(0.06, 0.0, e), tremor: 1, t });
     lente({ foco: d - 0.35, abertura: 0.010, desfoque: 0.012, brilho: 0.45, limiar: 0.8 });
   });
   return S;
