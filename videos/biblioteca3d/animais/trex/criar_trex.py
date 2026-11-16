@@ -317,11 +317,11 @@ M_BOCA = material_simples('boca', (0.075, 0.016, 0.014), 0.45, 0.2)
 M_LINGUA = material_simples('lingua', (0.24, 0.055, 0.05), 0.30, 0.3)
 M_GARG = material_simples('garganta', (0.05, 0.008, 0.008), 0.6)
 
-def dente(nome, base, dirv, comp, r, pai=None):
+def dente(nome, base, dirv, comp, r, pai=None, curva=-28):
     """dente cônico achatado dos lados, curvado para trás (como os do T. rex)"""
     bpy.ops.mesh.primitive_cone_add(vertices=12, radius1=r, radius2=r * 0.06, depth=comp, location=(0, 0, 0)); o = bpy.context.object; o.name = nome
     o.data.transform(Matrix.Translation((0, 0, comp / 2))); o.data.transform(Matrix.Diagonal((0.62, 1.0, 1.0, 1.0)))
-    sd = o.modifiers.new('cv', 'SIMPLE_DEFORM'); sd.deform_method = 'BEND'; sd.deform_axis = 'X'; sd.angle = math.radians(-28)
+    sd = o.modifiers.new('cv', 'SIMPLE_DEFORM'); sd.deform_method = 'BEND'; sd.deform_axis = 'X'; sd.angle = math.radians(curva)
     bpy.ops.object.modifier_apply(modifier=sd.name)
     z = Vector(dirv).normalized(); yb = Vector((-1, 0, 0)); yb = (yb - z * yb.dot(z)).normalized(); x = yb.cross(z)
     o.matrix_world = Matrix((list(x) + [0], list(yb) + [0], list(z) + [0], [0, 0, 0, 1])).transposed() @ Matrix.Identity(4)
@@ -340,7 +340,7 @@ for s_ in (1, -1):
         L = tamanho_dente(t, 0.26); DENTES.append(dente(f'dente_sup{i}_{s_}', (x, y, zm + 0.03), (0.12 + 0.05 * math.sin(i * 1.7), 0.12 * s_, -1), L, L * 0.34))
     for i in range(11):                                                                        # de baixo (dentário): presos à mandíbula
         t = i / 10; x = 5.34 - t * (5.34 - 4.46) + 0.012 * math.sin(i * 1.9); zm = linha_boca(x) + 0.035; y = s_ * wm(x) * 0.80
-        L = tamanho_dente(t, 0.24); DENTES.append(dente(f'dente_inf{i}_{s_}', (x, y, zm - 0.03), (0.08 + 0.05 * math.sin(i * 2.1), 0.10 * s_, 1), L, L * 0.27, pai=True))
+        L = tamanho_dente(t, 0.24); DENTES.append(dente(f'dente_inf{i}_{s_}', (x, y, zm - 0.03), (0.08 + 0.05 * math.sin(i * 2.1), 0.10 * s_, 1), L, L * 0.27, pai=True, curva=-8))
     # gengivas ao longo das fileiras
     gs = loft(f'gengiva_sup_{s_}', [[x, s_ * wc(x) * 0.80, linha_boca(x) - 0.060, 0.032, 0.022, 0.018] for x in np.linspace(5.44, 4.25, 9)], N=12, expo=2.0); gs.data.materials.append(M_GENG)
     gi = loft(f'gengiva_inf_{s_}', [[x, s_ * wm(x) * 0.78, linha_boca(x) + 0.03, 0.03, 0.018, 0.018] for x in np.linspace(5.40, 4.35, 9)], N=12, expo=2.0); gi.data.materials.append(M_GENG); prender(gi)

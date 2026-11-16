@@ -34,7 +34,7 @@ def altura(x, y):
     h = 0.45 * fbm2(x, y, 0.07, 4, 1) * suave(6, 14, d0)                                  # chão ondulado, plano na clareira do T. rex
     h += -2.6 * (1 - suave(0.55, 1.0, r)) - 0.35 * (1 - suave(1.0, 1.15, r))                 # bacia do lago e margem baixa
     h += suave(32, 60, d0) * (4 + 6 * fbm2(x, y, 0.03, 3, 2))                                 # encostas da mata ao longe
-    h += suave(24, 32, y) * suave(-14, -4, x) * (1 - suave(16, 24, x)) * 7.0                    # paredão atrás do lago
+    h += suave(34, 44, y) * 6.0                                                               # encosta do paredão, além do lago
     return h
 T = 70; PASSO = 0.5
 xs = np.arange(-T, T + 1e-6, PASSO); ys = np.arange(-T, T + 1e-6, PASSO); XX, YY = np.meshgrid(xs, ys); ZZ = altura(XX, YY)
@@ -101,11 +101,20 @@ TRONCO = [asset(n) for n in ('dead_tree_trunk_02', 'root_cluster_01')]
 bpy.context.view_layer.layer_collection.children['_assets'].exclude = True          # as fontes não aparecem, só as instâncias
 
 CAM_ATAQUE = np.array([7.9, -3.9])
+CAMS_VISTA = [((7.9, -3.9), (3.7, 0.0)), ((1.5, 19.0), (1.5, 0.0)), ((18.0, -16.0), (0.0, 5.0))]   # (câmera, alvo) no plano
+def na_frente_da_camera(x, y):
+    """nada nasce num cone de 40° à frente de cada câmera até 14 m (senão tapa o quadro)"""
+    for c, a in CAMS_VISTA:
+        v, d = np.array([x - c[0], y - c[1]]), np.array([a[0] - c[0], a[1] - c[1]]); dist = np.linalg.norm(v)
+        if dist < 14 and dist > 0 and np.dot(v, d) / (dist * np.linalg.norm(d)) > math.cos(math.radians(40)): return True
+    return False
 def livre(x, y, folga_trex=3.5, folga_lago=1.12):
     """fora do lago, longe dos pés do T. rex e fora do corredor entre a câmera de ataque e o bicho"""
     if r_lago(x, y) < folga_lago: return False
     if abs(y) < 1.6 and -7.5 < x < 6.5: return False                                        # o próprio corpo
     if math.hypot(x - 0.4, y) < folga_trex: return False
+    if math.hypot(x - 4.4, y + 0.6) < 3.2: return False                                    # a cabeça (virada na pose de ataque)
+    if na_frente_da_camera(x, y): return False
     p, a, b_ = np.array([x, y]), CAM_ATAQUE, np.array([3.0, 0.0]); t = np.clip(np.dot(p - a, b_ - a) / np.dot(b_ - a, b_ - a), 0, 1)
     return np.linalg.norm(p - (a + t * (b_ - a))) > 2.6
 def espalhar(cols, n, rmin, rmax, esc, tent=40, **kw):
@@ -124,13 +133,13 @@ print('arbustos', espalhar([SUB['shrub_01'], SUB['shrub_04']], 120, 6, 50, (1.0,
 # margem do lago: rochas com musgo, algumas meio dentro d'água
 for k in range(46):
     t = rng.uniform(0, 6.283); f = rng.uniform(0.92, 1.12); x = LAGO_C[0] + LAGO_R[0] * f * math.cos(t); y = LAGO_C[1] + LAGO_R[1] * f * math.sin(t)
-    if math.hypot(x - 0.4, y) < 4.0: continue
+    if math.hypot(x - 0.4, y) < 4.0 or na_frente_da_camera(x, y): continue
     por(PED[rng.integers(len(PED))], x, y, rng.uniform(0.8, 2.6), afunda=0.15, inclina=0.12)
 # paredão do outro lado do lago e troncos
-for k, x in enumerate(np.linspace(-12, 16, 6)): por(PAREDE[k % 2], x + rng.normal(0, 1.5), 27 + rng.normal(0, 1.5), rng.uniform(5, 8), giro=math.pi + rng.normal(0, 0.3), afunda=0.1)
+for k, x in enumerate(np.linspace(-26, 22, 7)): por(PAREDE[0], x + rng.normal(0, 2), 40 + rng.normal(0, 2), rng.uniform(3.0, 4.2), giro=math.pi + rng.normal(0, 0.3), afunda=0.1)   # paredão ao fundo, além do lago
 for _ in range(10):
     t = rng.uniform(0, 6.283); x, y = 9 * math.cos(t) + rng.normal(0, 3), 9 * math.sin(t) + rng.normal(0, 3)
-    if livre(x, y): por(TRONCO[rng.integers(2)], x, y, rng.uniform(1.0, 1.8))
+    if livre(x, y) and not na_frente_da_camera(x, y): por(TRONCO[rng.integers(2)], x, y, rng.uniform(1.0, 1.8))
 
 # ------------------------------------------------------------------------------------------------ o T. rex
 if TREX:
@@ -141,8 +150,8 @@ if TREX:
 # ------------------------------------------------------------------------------------------------ luz, névoa, câmeras
 w = bpy.data.worlds.new('mundo'); cena.world = w; w.use_nodes = True; nt = w.node_tree
 env = nt.nodes.new('ShaderNodeTexEnvironment'); env.image = bpy.data.images.load(os.path.join(PH, 'hdri', 'mossy_forest_2k.hdr')); nt.links.new(env.outputs['Color'], nt.nodes['Background'].inputs['Color'])
-nt.nodes['Background'].inputs['Strength'].default_value = float(arg('ceu', 0.9))
-sol = bpy.data.lights.new('sol', 'SUN'); sol.energy = float(arg('sol', 4.0)); sol.angle = math.radians(1.5); sol.color = (1.0, 0.88, 0.70)
+nt.nodes['Background'].inputs['Strength'].default_value = float(arg('ceu', 1.5))
+sol = bpy.data.lights.new('sol', 'SUN'); sol.energy = float(arg('sol', 6.0)); sol.angle = math.radians(1.5); sol.color = (1.0, 0.88, 0.70)
 so = bpy.data.objects.new('sol', sol); so.rotation_euler = (math.radians(58), 0, math.radians(-150)); cena.collection.objects.link(so)   # sol de trás/lado: contorno e fachos
 chave = bpy.data.lights.new('chave', 'AREA'); chave.energy = float(arg('chave', 1800)); chave.size = 4.0; ch = bpy.data.objects.new('chave', chave); ch.location = (10, -6, 8); cena.collection.objects.link(ch)
 cc = ch.constraints.new('TRACK_TO'); alc = bpy.data.objects.new('alvo_chave', None); alc.location = (4.0, 0, 3.4); cena.collection.objects.link(alc); cc.target = alc; cc.track_axis = 'TRACK_NEGATIVE_Z'; cc.up_axis = 'UP_Y'
@@ -154,7 +163,7 @@ if NEVOA > 0:                                                                   
 cena.render.engine = 'CYCLES'; cena.cycles.samples = AMOSTRAS; cena.cycles.use_denoising = True; cena.cycles.device = 'CPU'; cena.cycles.volume_step_rate = 4.0
 cena.render.resolution_x, cena.render.resolution_y = LARG, int(LARG * 0.62)
 cena.view_settings.look = 'AgX - Medium High Contrast' if 'AgX' in cena.view_settings.view_transform else 'None'
-CAMERAS = {'ataque': ((7.9, -3.9, 3.05), (3.7, 0, 3.35), 38), 'lago': (( 3.0, 25.5, 2.0), (2.0, 0.0, 3.2), 30), 'aerea': ((26, -24, 17), (0, 8, 1), 28),
+CAMERAS = {'ataque': ((7.9, -3.9, 3.05), (3.7, 0, 3.35), 38), 'lago': ((1.5, 19.0, 0.55), (1.5, 0.0, 3.0), 28), 'aerea': ((18, -16, 12), (0, 5, 1), 28),
            'lado': ((2.0, -16.0, 2.6), (1.0, 4.0, 3.0), 30)}
 for nome, (loc, alvo, lente) in CAMERAS.items():
     if nome not in CAMS.split(','): continue
