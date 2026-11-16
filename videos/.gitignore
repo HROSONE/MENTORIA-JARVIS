@@ -47,3 +47,4 @@ biblioteca3d/polyhaven/textura/
 biblioteca3d/polyhaven/modelo/
 biblioteca3d/polyhaven/hdri/
 __pycache__/
+biblioteca3d/sons/bsb/*.ogg
