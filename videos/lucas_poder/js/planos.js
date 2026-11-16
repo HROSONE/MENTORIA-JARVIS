@@ -210,8 +210,8 @@ export async function construirTudo() {
   const posL = tau => arco(SL, em(VP, 0, 0, 6.5), TB, tau, 4);
   const posM = tau => arco(SM, em(R1, 0, 0, 2.2), 3.3, tau, 3.5), posR = tau => arco(SR, em(R2, 0, 0, 2.2), 3.5, tau, 3.0);
   const posC = tau => arco(new THREE.Vector3(cE.x, 0.6, cE.z), em(VC, 0, 0, 0.9), TQ, tau, 6);
-  function soltarAtores() { for (const A of [l10, mendes, rocha]) if (A.grupo.parent !== desf.g) desf.g.add(A.grupo); }
-  function noCarroAtores() { for (const A of [l10, mendes, rocha]) if (A.grupo.parent !== carro.grupo) carro.grupo.add(A.grupo); }
+  function soltarAtores() { for (const A of [l10, mendes, rocha]) { if (A.grupo.parent !== desf.g) desf.g.add(A.grupo); A.grupo.visible = true; } }
+  function noCarroAtores() { for (const A of [l10, mendes, rocha]) { if (A.grupo.parent !== carro.grupo) carro.grupo.add(A.grupo); A.grupo.visible = true; } }   // o gancho esconde os três: aqui voltam
   function rodopiar(A, P, tau, semente, { bracos = 1 } = {}) {                                                         // corpo girando no ar, braços e pernas se debatendo
     A.reset(); A.grupo.position.copy(P).addScaledVector(UP, -0.9); A.grupo.rotation.set(tau * (1.6 + semente * 0.3), yawE + tau * 0.7, tau * (0.9 - semente * 0.2));
     const s = k => Math.sin(tau * (7 + semente) + k);
