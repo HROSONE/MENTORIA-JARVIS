@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clamp } from './util.js';
 
-const URL_LUCAS = '../biblioteca3d/personagens/lucas/lucas12.glb';
+const URL_LUCAS = '../biblioteca3d/personagens/realistas/lucas12.glb';
+export const URL_REAL = nome => '../biblioteca3d/personagens/realistas/' + nome + '.glb';
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _v = new THREE.Vector3(), _v2 = new THREE.Vector3();
 
 export async function criarLucasReal({ url = URL_LUCAS } = {}) {
