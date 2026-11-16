@@ -10,7 +10,7 @@
 <script type="module">
 // Protocolo do projeto: window.__total (s), window.__frame(t, { jpeg, subs }) -> dataURL, window.__planos, window.__enquadramento() (conferência 9:16).
 import { desenharTela, capturar } from './js/motor.js';
-import { construirTudo, atualizar, efeitos, acharPlano, verificarEnquadramento } from './js/planos.js';
+import { construirTudo, atualizar, efeitos, acharPlano, verificarEnquadramento, eventosSom, marcas } from './js/planos.js';
 const Q = new URLSearchParams(location.search);
 const S = await construirTudo();
 const desenhar = t => { atualizar(t); desenharTela(); };
@@ -22,6 +22,8 @@ window.__total = S.total;
 window.__planos = S.planos.map(p => ({ nome: p.id, t0: p.t0, t1: p.t0 + p.dur }));
 window.__efeitos = t => efeitos(t);
 window.__enquadramento = () => verificarEnquadramento();
+window.__eventosSom = () => eventosSom();
+window.__marcas = () => marcas();
 if (Q.has('t')) desenhar(+Q.get('t'));
 window.__ready = true;
 </script>

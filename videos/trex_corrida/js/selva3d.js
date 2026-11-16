@@ -8,8 +8,11 @@ import { mulberry32, clamp } from './util.js';
 export const ESTRADA_LARG = 4.2;
 // trilha da tentativa 2: sai da estrada em x≈6 e entra na mata (+z) até a fenda (~21 m de corrida: ~4 s)
 export const TRILHA = [[2, 0], [6, 0.4], [10, 2.5], [14, 5.0], [17.5, 7.2], [19.6, 8.6]];
-export const FENDA = { x: 20.8, z: 9.4, giro: 0.6 };                   // entre duas rochas grandes; abertura ~0,8 m
-export const ESCONDE_M = { x: 58, z: -6.5 };                             // rochas do maratonista (lado -z)
+export const FENDA = { x: 20.8, z: 9.4, giro: 0.6, meio: 1.6 };       // entre dois matacões; abertura ~0,8 m; ele para em FENDA + 0,4 dirF
+// rochas do maratonista (lado -z): fileira de 3 matacões ao longo de x, face de trás em z ≈ -7,6; ele se agacha em ESCONDE_M.agacha (atrás da 1ª)
+export const ESCONDE_M = { x: 55.6, z: -6.2, agacha: { x: 53.4, z: -8.45 } };
+// zonas sem vegetação (o caminho dele atrás das rochas e o lugar da câmera do plano S11)
+const CLAROS = [{ x0: 46.5, x1: 58, z0: -13.5, z1: -3.2 }];
 
 export function alturaChao(x, z) {
   const d = Math.abs(z);
@@ -59,7 +62,7 @@ export async function construirSelva(pai, renderer) {
   const sam = await modeloPH('fern_02'), fol = [await modeloPH('anthurium_botany_01'), await modeloPH('calathea_orbifolia_01'), await modeloPH('pachira_aquatica_01')];
   const arb = [await modeloPH('shrub_01', L), await modeloPH('shrub_04')], ped = [await modeloPH('rock_moss_set_01'), await modeloPH('rock_moss_set_02'), await modeloPH('boulder_01'), await modeloPH('rock_07')];
   const tronco = [await modeloPH('dead_tree_trunk_02'), await modeloPH('root_cluster_01', L)];
-  const livre = (x, z, folga) => Math.abs(z) > ESTRADA_LARG / 2 + folga && distTrilha(x, z) > 1.6 + folga * 0.5 && Math.hypot(x - FENDA.x, z - FENDA.z) > 3.2 && Math.hypot(x - ESCONDE_M.x, z - ESCONDE_M.z) > 3.5;
+  const livre = (x, z, folga) => Math.abs(z) > ESTRADA_LARG / 2 + folga && distTrilha(x, z) > 1.6 + folga * 0.5 && Math.hypot(x - FENDA.x - Math.cos(FENDA.giro) * 1.6, z - FENDA.z - Math.sin(FENDA.giro) * 1.6) > 6.2 && !CLAROS.some(c => x > c.x0 - folga && x < c.x1 + folga && z > c.z0 - folga && z < c.z1 + folga);
   const M = (x, z, esc, giro, afunda = 0) => new THREE.Matrix4().compose(new THREE.Vector3(x, alturaChao(x, z) - afunda, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), giro), new THREE.Vector3(esc, esc, esc));
   const espalhar = (mods, n, rmin, rmax, esc, folga, xs = [-90, 140]) => {
     const por = mods.map(() => []);
@@ -80,18 +83,25 @@ export async function construirSelva(pai, renderer) {
   const perto = [];
   for (let i = 0; i < 26; i++) {
     const u = R(), seg = curva.getPointAt(0.25 + 0.7 * u), tg = curva.getTangentAt(0.25 + 0.7 * u), lado = R() < 0.5 ? -1 : 1, d = 2.1 + R() * 1.6;
-    const x = seg.x - tg.z * lado * d, z = seg.z + tg.x * lado * d; if (Math.hypot(x - FENDA.x, z - FENDA.z) < 3) continue; perto.push(M(x, z, 0.9 + R() * 0.5, R() * 6.283));
+    const x = seg.x - tg.z * lado * d, z = seg.z + tg.x * lado * d; if (Math.hypot(x - FENDA.x - Math.cos(FENDA.giro) * 1.6, z - FENDA.z - Math.sin(FENDA.giro) * 1.6) < 5.5) continue; perto.push(M(x, z, 0.9 + R() * 0.5, R() * 6.283));
   }
   instanciar(G, arv[1], perto);
-  // a fenda: duas rochas grandes inclinadas uma contra a outra, abertura estreita
-  const rocha = await modeloPH('boulder_01'); const bb = new THREE.Box3().setFromObject(rocha), tam = bb.getSize(new THREE.Vector3());
-  const escR = 3.4 / Math.max(tam.x, tam.z);
+  // a fenda: dois matacões grandes (~3 m de altura, 6 m de comprimento) com o comprimento ao longo de dirF, abertura ~0,8 m, topos inclinados um
+  // para o outro. O meio da fenda fica 1,6 m adiante de FENDA: a entrada (em FENDA - 1,55 dirF) coincide com o fim da trilha.
+  const rocha = await modeloPH('boulder_01');                                      // 1,27 (x) x 0,93 (y) x 1,83 (z) m, centro em x = -0,11
+  const escR = 3.4, dirF = new THREE.Vector3(Math.cos(FENDA.giro), 0, Math.sin(FENDA.giro)), lat = new THREE.Vector3(-dirF.z, 0, dirF.x);
+  const meio = new THREE.Vector3(FENDA.x, 0, FENDA.z).addScaledVector(dirF, FENDA.meio);
   for (const s of [-1, 1]) {
-    const r = rocha.clone(), dx = Math.cos(FENDA.giro + Math.PI / 2) * s * (0.4 + tam.x * escR / 2), dz = Math.sin(FENDA.giro + Math.PI / 2) * s * (0.4 + tam.z * escR / 2);
-    r.position.set(FENDA.x + dx, alturaChao(FENDA.x, FENDA.z) - 0.2, FENDA.z + dz); r.scale.setScalar(escR); r.rotation.set(0, FENDA.giro + (s > 0 ? Math.PI : 0), s * 0.12); G.add(r);
+    const r = rocha.clone(), off = 0.4 + (1.27 / 2) * escR;
+    const q = new THREE.Quaternion().setFromAxisAngle(dirF, -s * 0.13).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2 - FENDA.giro + (s > 0 ? Math.PI : 0)));
+    const c = meio.clone().addScaledVector(lat, s * off); r.position.set(c.x, alturaChao(c.x, c.z) - 0.25, c.z); r.quaternion.copy(q); r.scale.setScalar(escR);
+    r.updateMatrixWorld(true); const bx = new THREE.Box3().setFromObject(r), cc = bx.getCenter(new THREE.Vector3());
+    const err = cc.clone().sub(c); err.y = 0; const ao_lado = err.dot(lat); r.position.addScaledVector(lat, -ao_lado);   // corrige o centro deslocado do modelo
+    G.add(r);
   }
   // esconderijo do maratonista: rochas altas
-  for (let i = 0; i < 4; i++) { const r = ped[2].clone(); r.position.set(ESCONDE_M.x + (i - 1.5) * 2.6, alturaChao(ESCONDE_M.x, ESCONDE_M.z) - 0.25, ESCONDE_M.z - 1.2 + (i % 2) * 1.4); r.scale.setScalar(1.8 + 0.4 * (i % 2)); r.rotation.y = i * 1.3; G.add(r); }
+  // boulder_01 tem 1,27 x 0,93 x 1,83 m; em escala 2,2 e girado 90° o comprimento (4 m) fica ao longo de x e a altura útil ~1,8 m
+  for (let i = 0; i < 3; i++) { const r = rocha.clone(), x = ESCONDE_M.x + (i - 1) * 3.7; r.position.set(x, alturaChao(x, ESCONDE_M.z) - 0.25, ESCONDE_M.z + 0.24 * (i % 2)); r.scale.setScalar(2.2 - 0.15 * (i % 2)); r.rotation.set(0, Math.PI / 2 + (i - 1) * 0.12 + (i === 1 ? Math.PI : 0), 0); G.add(r); }
   // céu e luz: floresta (HDRI), sol entre as copas, névoa esverdeada
   const hd = await hdriPH('mossy_forest', renderer, { res: '2k' });
   const ceu = new THREE.Mesh(new THREE.SphereGeometry(400, 48, 24), new THREE.MeshBasicMaterial({ map: hd.fundo, side: THREE.BackSide, fog: false, depthWrite: false })); ceu.renderOrder = -10; G.add(ceu);

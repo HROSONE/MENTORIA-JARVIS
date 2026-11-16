@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Teste do T. rex (rig e poses)</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#000}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<script type="module">
+// Conferência do rig: ?pose=andar|rugido|mordida|mastigar &vista=lado|frente|tres &d=distância andada &t=tempo. window.__frame(t) desenha a pose.
+import * as THREE from 'three';
+import { scene, cam, renderer, lente, desenharTela, capturar } from './js/motor.js';
+import { criarTrex } from './js/trex.js';
+const Q = new URLSearchParams(location.search);
+scene.background = new THREE.Color(0x9fb39a);
+const sol = new THREE.DirectionalLight(0xffe2b8, 3.2); sol.position.set(-6, 14, 9); sol.castShadow = true; sol.shadow.mapSize.set(2048, 2048);
+Object.assign(sol.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12, near: 1, far: 60 }); scene.add(sol, new THREE.HemisphereLight(0xcfe4c8, 0x3a3020, 1.0));
+const chao = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0x5a4a36, roughness: 1 })); chao.rotation.x = -Math.PI / 2; chao.receiveShadow = true; scene.add(chao);
+const T = await criarTrex(); scene.add(T.grupo);
+const alvo = new THREE.Mesh(new THREE.SphereGeometry(0.12), new THREE.MeshStandardMaterial({ color: 0xff3020 })); scene.add(alvo);
+const pose = Q.get('pose') || 'andar', vista = Q.get('vista') || 'lado';
+window.__frame = (t, opc = {}) => capturar(tk => {
+  const d = +(Q.get('d') || 0) + (pose === 'andar' ? tk * 5.8 : 0), v = pose === 'andar' ? 5.8 : 0;
+  alvo.position.set(9, pose === 'mordida' ? 1.4 : 1.7, 0);
+  T.grupo.position.set(0, 0, 0);
+  T.posar({ dist: d, vel: v, t: tk, olhar: pose === 'andar' ? null : alvo.position, rugido: pose === 'rugido' ? 1 : 0, mordida: pose === 'mordida' ? Math.min(1, tk) : 0, mastigar: pose === 'mastigar' ? 1 : 0 });
+  const C = { lado: [1, 2.6, 15.5], frente: [14, 2.2, 3], tres: [9, 4.5, 9.5], cabeca: [9.0, 3.2, 3.2] }[vista];
+  cam.position.set(...C); cam.lookAt(vista === 'cabeca' ? 5 : 0.5, vista === 'cabeca' ? 3.3 : 2.3, 0); cam.fov = vista === 'cabeca' ? 34 : 50; cam.updateProjectionMatrix();
+  lente({ ao: 0.6, brilho: 0.2 }); desenharTela();
+}, t, { subs: 1, jpeg: opc.jpeg ?? 0.9 });
+window.__total = 2; window.__ready = true;
+</script>
+</body>
+</html>

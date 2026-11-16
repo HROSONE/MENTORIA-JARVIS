@@ -37,3 +37,39 @@ Os `.ogg` não vão para o git; para baixar de novo: `sh baixar.sh`. Página de 
 | 3099 | Car interior, 50 km/h | 241 s | lucas_poder: dentro da viatura |
 | 3113 | Thunder | 5 s | lucas_poder: trovão; ronco da raiva (meia velocidade) |
 | 3115 | Thunder | 17 s | lucas_poder: trovões |
+| 0100 | Forest ambience | 55 s | trex_corrida: leito da mata |
+| 0137 | Footsteps in dead leaves | 64 s | trex_corrida: passos na mata |
+| 0486 | Grunts | 12 s | reserva (grunhidos) |
+| 0495 | Steps in the mud | 10 s | trex_corrida: terra das pisadas do T. rex, mastigar |
+| 0596 | Bones cracking | 39 s | trex_corrida: mastigar (abafado) |
+| 1103 | Breathless man | 24 s | trex_corrida: ofego do trilheiro |
+| 1299 | Twigs | 4 s | reserva (galhos) |
+| 1300 | Twig breaking | 1 s | trex_corrida: estalo da mordida |
+| 1301 | Twigs breaking | 16 s | trex_corrida: galhos sob o T. rex |
+| 1408 | Bone crack | 0,9 s | trex_corrida: dentes batendo |
+| 1409 | Bone crack | 0,9 s | reserva (estalo) |
+| 1519 | Splash | — | reserva (água) |
+| 1520 | Splash | — | reserva (água) |
+| 1521 | Splash | — | reserva (água) |
+| 1664 | Howling of a Boy #1 | 2,5 s | trex_corrida: grito (a 0,75x, voz de adulto) se a sessão VOX não estiver baixada |
+| 1679 | Howling of a boy #2 | 2,3 s | reserva (grito) |
+| 1762 | Screaming Piha | 1,6 s | trex_corrida: pássaro de alarme |
+| 1881 | Cat roar | 1,2 s | reserva (rugido) |
+| 1882 | Cat roar | — | trex_corrida: ataque do rugido (0,42x) |
+| 1883 | Cat roar | 0,9 s | reserva (rugido) |
+| 2106 | Zombie growl | 19 s | trex_corrida: rosnado grave (0,5-0,6x) |
+| 2107 | Zombie growl | — | trex_corrida: rouquidão do rugido |
+| 2110 | Zombie growl | 4 s | reserva (rosnado) |
+| 2195 | Man Breathing | 77 s | trex_corrida: respiração do maratonista |
+| 2254 | Watch beep | 0,4 s | trex_corrida: bipe do relógio |
+| 2361 | Cry of Pain | 0,6 s | trex_corrida: soluço antes do grito |
+| 2449 | Man/Woman Violence | 23 s | reserva (vozes) |
+| 1639 | Strangled man #1 | 8 s | reserva (ofego) |
+| 1345 | Breathless Woman | — | reserva (ofego) |
+| 2453 | Body Fall | 1,5 s | trex_corrida: corpo na mordida |
+| 2454 | Body Fall | 1,5 s | trex_corrida: tênis batendo na estrada |
+| 2749 | Forest ambience | 226 s | trex_corrida: leito da mata |
+| 2889 | Footsteps in leaves | 65 s | reserva (passos) |
+| 2891 | Bird flight | 2,6 s | trex_corrida: pássaros fugindo do rugido |
+| 2893 | Bird flight | 1,9 s | trex_corrida: pássaros fugindo |
+| 3616 | Forest ambience, sika deer rut calls | — | trex_corrida: bramido do rugido |

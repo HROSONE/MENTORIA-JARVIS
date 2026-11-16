@@ -490,7 +490,7 @@ if ETAPA == 'glb':
     RES, ALVO = int(arg('res', 2048)), float(arg('tris', 160000))
     TEXD = arg('texdir') or os.path.dirname(os.path.abspath(SAIDA or 'trex.glb'))
     def ativo(o, *sel):
-        for x in bpy.context.view_layer.objects: x.select_set(False)
+        for x in list(bpy.context.selected_objects): x.select_set(False)
         for x in sel: x.select_set(True)
         o.select_set(True); bpy.context.view_layer.objects.active = o
     def leve_com_textura(alta, baixa, nome, alvo_tris):

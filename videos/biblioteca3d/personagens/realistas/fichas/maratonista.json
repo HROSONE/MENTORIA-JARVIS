@@ -3,5 +3,5 @@
   "pele": { "textura": "young_lightskinned_male_diffuse", "tom": [1.02, 0.97, 0.93], "barba": 0.55, "rugosidade": 0.3 },
   "olhos": [0.30, 0.20, 0.10],
   "roupa": { "suit": "male_casualsuit02", "manga": "curta", "perna": "bermuda", "cores": { "cima": [0.85, 0.86, 0.88], "baixo": [0.08, 0.10, 0.20] } },
-  "cabelo": { "tipo": "short01", "cor": [0.16, 0.11, 0.07] }, "sobrancelha": "eyebrow001",
+  "cabelo": { "tipo": "mechas", "franja": true, "comp": 0.85, "n": 4600, "cor": [0.16, 0.11, 0.07] }, "sobrancelha": "eyebrow001",
   "sapatos": { "tipo": "shoes02", "cor": [0.85, 0.35, 0.10] } }
