@@ -16,8 +16,9 @@ carro.freio(true); carro.re(false); carro.seta(1, true);   // seta: 1 = esquerda
 carro.rodar(metrosPercorridos); carro.esterco(-0.3);       // gira as rodas (distância acumulada) / esterça as dianteiras (rad, + = esquerda)
 ```
 
-`criarViatura(opc)`: `livery` (`'preto-branco'` clássica, `'branco-azul'` faixa azul e dourada, `'branco'` lisa), `numero` (teto, porta traseira), `cidade`, `placa`, `barra` (`false` = sem barra), `pushbar` (`true` = para-choque de proteção), `corBase` (substitui a cor da pintura), `sujeira` (0–1, sujeira de estrada embaixo; padrão 0,5), `sombraChao` (`false` desliga a sombra de contato), `luzes` (modo inicial da barra), `relevo` (força das frestas).
-Devolve `{ grupo, pintura, rodas, barra, luzes, luzesManual, farois, freio, re, seta, rodar, esterco }`.
+`criarViatura(opc)`: `livery` (`'preto-branco'` clássica, `'branco-azul'` faixa azul e dourada, `'branco'` lisa, `'liso'` preto sem grafismo), `civil` (`true` = carro comum: sem barra, holofote, antenas, LEDs, push bar, MDT e grade), `numero` (teto, porta traseira), `cidade`, `placa`, `barra` (`false` = sem barra), `pushbar` (`true` = para-choque de proteção), `corBase` (substitui a cor da pintura), `sujeira` (0–1, sujeira de estrada embaixo; padrão 0,5), `sombraChao` (`false` desliga a sombra de contato), `luzes` (modo inicial da barra), `relevo` (força das frestas).
+Devolve `{ grupo, pintura, rodas, barra, mdt, luzes, luzesManual, farois, freio, re, seta, rodar, esterco }`.
+`carro.mdt({ cabecalho, cor, linhas: [..], numero, barra: 0..1, fundo, piscar: 0..1 })` redesenha a tela do computador de bordo (texto dinâmico; legível numa câmera dentro da cabine, sobre o ombro do motorista).
 
 ## O que tem
 - **Carroceria** em "loft" de seções transversais (capô, para-lamas, portas, porta-malas, para-choques com projeção e recuo) + casca da cabine (teto, colunas) com os vidros recortados por máscara; arcos de roda circulares com friso e túnel escuro.

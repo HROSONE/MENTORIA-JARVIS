@@ -38,12 +38,33 @@ export function criarInterior(opc = {}) {
     add(R(0.50, 0.62, 0.12, 0.05), tecido, x, 0.80, 3.04, -0.14);                                   // encosto
     add(R(0.24, 0.17, 0.09, 0.04), tecido, x, 1.19, 3.10, -0.14);                                   // apoio de cabeça
   }
-  // console central com computador (MDT) e controlador de sirene
+  // console central com computador (MDT) e controlador de sirene (carro civil: só o console)
   add(R(0.26, 0.18, 0.78, 0.04), plastico, 0, 0.55, 2.74);
+  if (opc.civil) {
+    add(R(1.42, 0.12, 0.50, 0.05), tecido, 0, 0.47, 3.62); add(R(1.40, 0.62, 0.12, 0.05), tecido, 0, 0.80, 3.88, -0.14);          // banco traseiro de tecido
+    return G;
+  }
   add(R(0.2, 0.04, 0.2, 0.01), metal, 0, 0.66, 2.55);                                               // suporte
-  add(new THREE.CylinderGeometry(0.014, 0.014, 0.34, 8), metal, 0, 0.78, 2.5);                      // haste do suporte
-  const tela = add(R(0.34, 0.24, 0.025, 0.012), preto, 0, 0.99, 2.48, -0.28); void tela;
-  const lcd = add(new THREE.PlaneGeometry(0.30, 0.20), new THREE.MeshStandardMaterial({ color: 0x0a0e14, emissive: 0x27658c, emissiveIntensity: 0.65, roughness: 0.4 }), 0, 0.99, 2.465, -0.28); lcd.rotation.y = Math.PI; lcd.position.z -= 0.0;
+  add(new THREE.CylinderGeometry(0.014, 0.014, 0.30, 8), metal, 0, 0.72, 2.44);                     // haste do suporte (atrás da moldura, vista do motorista)
+  const tela = add(R(0.34, 0.24, 0.025, 0.012), preto, 0, 0.99, 2.48, 0.20); void tela;                 // tela inclinada para trás (a face olha para cima e para o motorista)
+  // tela do MDT: canvas com texto dinâmico (alertas, distância); G.userData.mdt({ cabecalho, cor, linhas, numero, barra, fundo })
+  const cv = document.createElement('canvas'); cv.width = 720; cv.height = 480; const g2 = cv.getContext('2d'), tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  const fonte = `'Arial Black', 'Liberation Sans', 'DejaVu Sans', Arial, sans-serif`;
+  function desenharMDT(c = {}) {
+    const { cabecalho = '', cor = '#38e8ff', linhas = [], numero = '', barra = null, fundo = '#06101a', piscar = 1 } = c;
+    g2.fillStyle = fundo; g2.fillRect(0, 0, 720, 480);
+    g2.fillStyle = '#0d2a44'; g2.fillRect(0, 0, 720, 58); g2.fillStyle = '#7fd8ff'; g2.font = `700 28px ${fonte}`; g2.textBaseline = 'middle'; g2.textAlign = 'left'; g2.fillText('HRYZ PD  ·  MDT', 22, 30); g2.textAlign = 'right'; g2.fillText('UNID 117', 698, 30);
+    let y = 78;
+    if (cabecalho) { g2.fillStyle = cor; g2.globalAlpha = piscar; g2.fillRect(22, y, 676, 96); g2.globalAlpha = 1; g2.fillStyle = '#fff'; g2.textAlign = 'center'; g2.font = `900 68px ${fonte}`; g2.fillText(cabecalho, 360, y + 50); y += 114; }
+    g2.textAlign = 'left'; g2.fillStyle = '#e8f4ff'; g2.font = `800 38px ${fonte}`; for (const l of linhas) { g2.fillText(l, 30, y + 26); y += 50; }
+    if (numero) { g2.textAlign = 'center'; g2.fillStyle = cor; g2.font = `900 150px ${fonte}`; g2.fillText(numero, 360, 330 + (cabecalho ? 24 : 0)); }
+    if (barra !== null) { g2.strokeStyle = cor; g2.lineWidth = 5; g2.strokeRect(30, 420, 660, 34); g2.fillStyle = cor; g2.fillRect(34, 424, 652 * Math.max(0, Math.min(1, barra)), 26); }
+    g2.fillStyle = 'rgba(0,0,0,0.16)'; for (let k = 0; k < 480; k += 4) g2.fillRect(0, k, 720, 1.5);                                            // linhas de varredura
+    tex.needsUpdate = true;
+  }
+  desenharMDT({ cabecalho: 'EM SERVIÇO', cor: '#1fa8d8', linhas: ['UNIDADE 117 · RONDA'], barra: null });
+  const lcd = add(new THREE.PlaneGeometry(0.30, 0.20), new THREE.MeshStandardMaterial({ color: 0xffffff, map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 1.15, roughness: 0.35 }), 0, 0.9928, 2.4937, 0.20); lcd.rotation.y = Math.PI;                  // o LCD fica colado na face traseira da moldura, virado para o motorista
+  G.userData.mdt = desenharMDT;
   add(R(0.30, 0.04, 0.12, 0.015), preto, 0, 0.665, 2.82);                                           // controlador de sirene
   // grade divisória entre a frente e o banco traseiro
   const grade = new THREE.MeshStandardMaterial({ color: 0x0c0d0f, map: texturaGrade(), transparent: true, alphaTest: 0.2, side: THREE.DoubleSide, roughness: 0.6, metalness: 0.4 });
