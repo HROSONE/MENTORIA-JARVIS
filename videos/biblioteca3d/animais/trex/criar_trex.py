@@ -87,12 +87,12 @@ corpo = loft('corpo', CORPO, N=56, expo=2.3, eixo=(1, 0, 0))
 # crânio (maxila) e mandíbula, também medidos na referência: a boca vai da ponta (z 3,07) ao canto sob o olho (z 3,30)
 def linha_boca(x): return 3.30 - 0.22 * (x - 4.45) if x > 4.45 else 3.30 + 0.05 * (4.45 - x)
 CRANIO = [[x, 0, linha_boca(x), w, topo - linha_boca(x), 0.085, 0.28 + 0.30 * min(1, max(0, (x - 4.2) / 0.8)), 0.0] for x, w, topo in [
-    (3.45, 0.40, 4.06), (3.62, 0.42, 4.12), (3.80, 0.45, 4.17), (4.00, 0.50, 4.20), (4.20, 0.48, 4.15), (4.45, 0.37, 3.95), (4.70, 0.27, 3.81), (5.00, 0.21, 3.64),
-    (5.20, 0.18, 3.55), (5.35, 0.155, 3.45), (5.45, 0.12, 3.33), (5.52, 0.05, 3.20)]]
-cranio = loft('cranio', CRANIO, N=48, expo=3.1)                       # crânio de T. rex é 'caixa': laterais quase retas
+    (3.45, 0.40, 4.00), (3.62, 0.42, 4.05), (3.80, 0.46, 4.08), (4.00, 0.51, 4.09), (4.20, 0.49, 4.05), (4.45, 0.37, 3.90), (4.70, 0.27, 3.77), (5.00, 0.21, 3.62),
+    (5.20, 0.18, 3.53), (5.35, 0.155, 3.44), (5.45, 0.12, 3.33), (5.52, 0.05, 3.20)]]
+cranio = loft('cranio', CRANIO, N=48, expo=3.8)                       # crânio de T. rex é 'caixa': laterais quase retas
 MAND = [[x, 0, linha_boca(x) - 0.01, w * 0.93, 0.05, linha_boca(x) - base, 0.0, 0.32] for x, w, base in [        # um pouco mais estreita: o lábio de cima a cobre
-    (3.95, 0.36, 3.00), (4.12, 0.42, 2.96), (4.40, 0.37, 2.93), (4.80, 0.26, 2.88), (5.15, 0.20, 2.85),
-    (5.35, 0.16, 2.88), (5.47, 0.11, 2.97), (5.51, 0.05, 3.02)]]
+    (3.95, 0.37, 2.90), (4.12, 0.43, 2.85), (4.40, 0.38, 2.83), (4.80, 0.27, 2.80), (5.15, 0.21, 2.78),
+    (5.35, 0.17, 2.82), (5.47, 0.12, 2.92), (5.51, 0.05, 3.00)]]
 mandibula = loft('mandibula', MAND, N=44, expo=3.0)
 
 # pernas (de pé, joelho à frente, tornozelo atrás, metatarso para a frente) e dedos
@@ -134,8 +134,10 @@ for l, s_ in (('l', 1), ('r', -1)):
     relevos.append(esfera('lacrimal_' + l, (4.56, 0.17 * s_, zl - 0.02), 0.10, esc=(1.5, 0.8, 0.55)))                           # 'chifre' na frente do olho
     zp = superficie_cima(cranio, 4.27, 0.27 * s_)
     relevos.append(esfera('posorbital_' + l, (4.27, 0.27 * s_, zp - 0.03), 0.09, esc=(1.1, 0.9, 0.7)))                          # bossa acima e atrás do olho
-    ys = superficie_lado(cranio, 4.40, 3.87, s_)
-    relevos.append(esfera('sobrolho_' + l, (4.43, ys - 0.012 * s_, 3.858), 0.088, esc=(1.8, 0.85, 0.46)))      # cai sobre o olho: olhar de raiva                        # sobrancelha óssea
+    ys = superficie_lado(cranio, 4.40, 3.87, s_) or superficie_lado(cranio, 4.40, 3.82, s_)
+    yb1 = superficie_lado(cranio, 4.62, 3.74, s_) or 0.20 * s_; yb2 = superficie_lado(cranio, 4.22, 3.84, s_) or 0.30 * s_
+    relevos.append(membro('sobrancelha_' + l, [(4.64, yb1 - 0.04 * s_, 3.80), (4.42, ys + 0.004 * s_, 3.872), (4.20, yb2 - 0.01 * s_, 3.89)],
+                          [(0.040, 0.05, 0.05), (0.060, 0.07, 0.07), (0.05, 0.06, 0.06)], N=16, ref=(0, 0, 1)))     # prateleira óssea sobre o olho: olhar pesado                        # sobrancelha óssea
     relevos.append(esfera('palpsup_' + l, (4.40, yo - 0.002 * s_, OLHO[1] + 0.020), 0.052, esc=(1.3, 0.6, 0.42)))            # pálpebra de cima
     relevos.append(esfera('palpinf_' + l, (4.40, yo - 0.008 * s_, OLHO[1] - 0.030), 0.050, esc=(1.25, 0.55, 0.35)))            # pálpebra de baixo
 relevos.append(esfera('garganta', (3.72, 0.0, 3.02), 0.30, esc=(1.55, 1.15, 0.62)))
@@ -194,7 +196,7 @@ if ETAPA == 'furos':
     for e in nm[:15]: print('   em', tuple(round(c, 2) for c in e.verts[0].co))
     sys.exit(0)
 mand = unir([mandibula], 'trex_mandibula', voxel=0.012, suave=4)
-olhos = [esfera('olho_' + l, tuple(POS_OLHO[l] + Vector((0, 0.016 * (1 if l == 'l' else -1), -0.004))), 0.060) for l in ('l', 'r')]
+olhos = [esfera('olho_' + l, tuple(POS_OLHO[l] + Vector((0, 0.022 * (1 if l == 'l' else -1), -0.008))), 0.064) for l in ('l', 'r')]
 mgarra = bpy.data.materials.new('garra'); mgarra.use_nodes = True; bg_ = mgarra.node_tree.nodes['Principled BSDF']
 bg_.inputs['Base Color'].default_value = (0.03, 0.025, 0.02, 1); bg_.inputs['Roughness'].default_value = 0.35
 for g in GARRAS: g.data.materials.append(mgarra)     # pequeno e afundado entre as pálpebras
@@ -280,13 +282,16 @@ def tuberculos(o, camadas, sem=1):
     me.update()
 
 def g(v, a, b): return suave(a, b, v)
+_mx, _mw = [e[0] for e in MAND], [e[3] for e in MAND]; _cx, _cw = [e[0] for e in CRANIO], [e[3] for e in CRANIO]
+def fora_boca_cima(V, N): return 1 - ((N[:, 2] < -0.3) & (V[:, 0] > 4.0) & (np.abs(V[:, 1]) < 0.9 * np.interp(V[:, 0], _cx, _cw)) & (V[:, 2] < 3.40)).astype(float)
+def fora_boca_baixo(V, N): return 1 - ((N[:, 2] > 0.3) & (np.abs(V[:, 1]) < 0.9 * np.interp(V[:, 0], _mx, _mw))).astype(float)
 tuberculos(pele, [
-    (lambda V, N: g(V[:, 0], 3.85, 4.1), 0.050, 0.013, 0.6),                                                              # cabeça
+    (lambda V, N: g(V[:, 0], 3.85, 4.1) * fora_boca_cima(V, N), 0.050, 0.013, 0.6),                                    # cabeça (não dentro da boca)
     (lambda V, N: g(V[:, 0], 4.35, 4.6) * np.clip(N[:, 2], 0, 1) + np.exp(-((V[:, 0] - 4.42) ** 2 + (V[:, 2] - 3.90) ** 2) / 0.012) * (np.abs(V[:, 1]) > 0.15), 0.085, 0.020, 0.5),   # crista do focinho e sobrancelha
     (lambda V, N: np.exp(-(V[:, 1] / 0.13) ** 2) * np.clip(N[:, 2], 0, 1) * g(V[:, 0], -5.5, -4.5) * (1 - g(V[:, 0], 3.6, 3.9)), 0.11, 0.024, 0.5),   # fileira grossa no dorso
     (lambda V, N: 1 - g(V[:, 0], 3.85, 4.1), 0.032, 0.0045, 0.8),                                                         # pele do corpo
 ], sem=3)
-tuberculos(mand, [(lambda V, N: np.ones(len(V)), 0.045, 0.012, 0.6)], sem=5)
+tuberculos(mand, [(lambda V, N: fora_boca_baixo(V, N), 0.045, 0.012, 0.6)], sem=5)
 
 # ------------------------------------------------------------------------------------------------ boca: mandíbula num pivô, dentes, gengiva, língua, céu da boca e garganta
 ABRE = float(arg('abre', 0))
@@ -308,7 +313,7 @@ _rp = _nt.nodes.new('ShaderNodeValToRGB'); _rp.color_ramp.elements[0].color = (0
 _rp.color_ramp.elements[1].color = (0.36, 0.29, 0.16, 1); _rp.color_ramp.elements[1].position = 0.55; _nt.links.new(_sp.outputs['Z'], _rp.inputs['Fac'])
 _nt.links.new(_rp.outputs['Color'], _nt.nodes['Principled BSDF'].inputs['Base Color'])                                   # base escura (gengiva/sujeira), ponta marfim
 M_GENG = material_simples('gengiva', (0.12, 0.028, 0.025), 0.45, 0.25)
-M_BOCA = material_simples('boca', (0.13, 0.030, 0.026), 0.45, 0.2)
+M_BOCA = material_simples('boca', (0.075, 0.016, 0.014), 0.45, 0.2)
 M_LINGUA = material_simples('lingua', (0.24, 0.055, 0.05), 0.30, 0.3)
 M_GARG = material_simples('garganta', (0.05, 0.008, 0.008), 0.6)
 
@@ -335,11 +340,11 @@ for s_ in (1, -1):
         L = tamanho_dente(t, 0.26); DENTES.append(dente(f'dente_sup{i}_{s_}', (x, y, zm + 0.03), (0.12 + 0.05 * math.sin(i * 1.7), 0.12 * s_, -1), L, L * 0.34))
     for i in range(11):                                                                        # de baixo (dentário): presos à mandíbula
         t = i / 10; x = 5.34 - t * (5.34 - 4.46) + 0.012 * math.sin(i * 1.9); zm = linha_boca(x) + 0.035; y = s_ * wm(x) * 0.80
-        L = tamanho_dente(t, 0.21); DENTES.append(dente(f'dente_inf{i}_{s_}', (x, y, zm - 0.03), (0.08 + 0.05 * math.sin(i * 2.1), 0.10 * s_, 1), L, L * 0.34, pai=True))
+        L = tamanho_dente(t, 0.24); DENTES.append(dente(f'dente_inf{i}_{s_}', (x, y, zm - 0.03), (0.08 + 0.05 * math.sin(i * 2.1), 0.10 * s_, 1), L, L * 0.27, pai=True))
     # gengivas ao longo das fileiras
     gs = loft(f'gengiva_sup_{s_}', [[x, s_ * wc(x) * 0.80, linha_boca(x) - 0.060, 0.032, 0.022, 0.018] for x in np.linspace(5.44, 4.25, 9)], N=12, expo=2.0); gs.data.materials.append(M_GENG)
     gi = loft(f'gengiva_inf_{s_}', [[x, s_ * wm(x) * 0.78, linha_boca(x) + 0.03, 0.03, 0.018, 0.018] for x in np.linspace(5.40, 4.35, 9)], N=12, expo=2.0); gi.data.materials.append(M_GENG); prender(gi)
-lingua = loft('lingua', [[x, 0, linha_boca(x) + 0.05, w, 0.05, 0.03] for x, w in ((4.15, 0.16), (4.5, 0.15), (4.85, 0.11), (5.05, 0.06))], N=24, expo=2.2); lingua.data.materials.append(M_LINGUA); prender(lingua)
+lingua = loft('lingua', [[x, 0, linha_boca(x) + 0.07, w, 0.06, 0.04] for x, w in ((4.10, 0.21), (4.45, 0.20), (4.80, 0.15), (5.02, 0.07))], N=24, expo=2.2); lingua.data.materials.append(M_LINGUA); prender(lingua)
 # céu da boca e assoalho com a cor da boca
 def pintar_boca(o, lado_cima):
     me = o.data; me.materials.append(M_BOCA); im = len(me.materials) - 1
@@ -402,8 +407,8 @@ def material_pele(nome='pele_trex'):
     bump = no('ShaderNodeBump', in_Strength=0.55, in_Distance=0.012); L_.new(alt2.outputs[0], bump.inputs['Height']); L_.new(bump.outputs['Normal'], b.inputs['Normal'])
     # cor: dorso oliva-escuro, flanco castanho, barriga areia; manchas largas e sujeira nos sulcos
     rampa = no('ShaderNodeValToRGB'); cr = rampa.color_ramp
-    cr.elements[0].position = 0.10; cr.elements[0].color = (0.25, 0.20, 0.12, 1); cr.elements[1].position = 0.95; cr.elements[1].color = (0.030, 0.027, 0.014, 1)
-    e = cr.elements.new(0.42); e.color = (0.085, 0.070, 0.038, 1); e = cr.elements.new(0.62); e.color = (0.050, 0.043, 0.022, 1)
+    cr.elements[0].position = 0.10; cr.elements[0].color = (0.17, 0.13, 0.065, 1); cr.elements[1].position = 0.95; cr.elements[1].color = (0.014, 0.013, 0.007, 1)
+    e = cr.elements.new(0.42); e.color = (0.058, 0.047, 0.020, 1); e = cr.elements.new(0.62); e.color = (0.032, 0.028, 0.012, 1)
     L_.new(dorso.outputs[0], rampa.inputs['Fac'])
     manchas = no('ShaderNodeTexNoise', in_Scale=1.2, in_Detail=3.0); L_.new(tc.outputs['Object'], manchas.inputs['Vector'])
     mR = no('ShaderNodeMapRange', in_From_Min=0.48, in_From_Max=0.60, in_To_Min=1.0, in_To_Max=0.55); L_.new(manchas.outputs['Fac'], mR.inputs['Value'])
@@ -415,12 +420,12 @@ def material_pele(nome='pele_trex'):
     fM = no('ShaderNodeMix', data_type='FLOAT'); L_.new(fD.outputs[0], fM.inputs[0]); L_.new(fR.outputs[0], fM.inputs[2]); fM.inputs[3].default_value = 1.0   # faixas só no dorso
     c0 = no('ShaderNodeMix', data_type='RGBA', blend_type='MULTIPLY', in_Factor=1.0); L_.new(c1.outputs[2], c0.inputs[6]); L_.new(fM.outputs[0], c0.inputs[7]); c1 = c0
     tom = no('ShaderNodeTexNoise', in_Scale=0.6, in_Detail=2.0); L_.new(tc.outputs['Object'], tom.inputs['Vector'])
-    tomR = no('ShaderNodeValToRGB'); tomR.color_ramp.elements[0].color = (1.0, 0.86, 0.72, 1); tomR.color_ramp.elements[1].color = (0.80, 0.86, 0.80, 1); L_.new(tom.outputs['Fac'], tomR.inputs['Fac'])
+    tomR = no('ShaderNodeValToRGB'); tomR.color_ramp.elements[0].color = (1.0, 0.85, 0.70, 1); tomR.color_ramp.elements[1].color = (0.80, 0.90, 0.72, 1); L_.new(tom.outputs['Fac'], tomR.inputs['Fac'])
     cT = no('ShaderNodeMix', data_type='RGBA', blend_type='MULTIPLY', in_Factor=0.6); L_.new(c1.outputs[2], cT.inputs[6]); L_.new(tomR.outputs['Color'], cT.inputs[7]); c1 = cT
     dO = no('ShaderNodeVectorMath', operation='DISTANCE'); L_.new(tc.outputs['Object'], dO.inputs[0]); dO.inputs[1].default_value = (4.40, 0.26, 3.80)
     dO2 = no('ShaderNodeVectorMath', operation='DISTANCE'); L_.new(tc.outputs['Object'], dO2.inputs[0]); dO2.inputs[1].default_value = (4.40, -0.26, 3.80)
     dMin = no('ShaderNodeMath', operation='MINIMUM'); L_.new(dO.outputs['Value'], dMin.inputs[0]); L_.new(dO2.outputs['Value'], dMin.inputs[1])
-    escO = no('ShaderNodeMapRange', in_From_Min=0.06, in_From_Max=0.30, in_To_Min=0.22, in_To_Max=1.0); L_.new(dMin.outputs[0], escO.inputs['Value'])     # mancha escura em volta do olho
+    escO = no('ShaderNodeMapRange', in_From_Min=0.07, in_From_Max=0.26, in_To_Min=0.12, in_To_Max=1.0); L_.new(dMin.outputs[0], escO.inputs['Value'])     # mancha escura em volta do olho
     cE = no('ShaderNodeMix', data_type='RGBA', blend_type='MULTIPLY', in_Factor=1.0); L_.new(c1.outputs[2], cE.inputs[6]); L_.new(escO.outputs[0], cE.inputs[7]); c1 = cE
     vale = no('ShaderNodeMapRange', in_From_Min=0.0, in_From_Max=0.25, in_To_Min=0.55, in_To_Max=1.0); L_.new(esc.outputs['Distance'], vale.inputs['Value'])
     c2 = no('ShaderNodeMix', data_type='RGBA', blend_type='MULTIPLY', in_Factor=1.0); L_.new(c1.outputs[2], c2.inputs[6]); L_.new(vale.outputs[0], c2.inputs[7])
@@ -439,7 +444,7 @@ def material_pele(nome='pele_trex'):
 
 def material_olho():
     m = bpy.data.materials.new('olho'); m.use_nodes = True; b = m.node_tree.nodes['Principled BSDF']
-    b.inputs['Base Color'].default_value = (0.55, 0.28, 0.02, 1); b.inputs['Roughness'].default_value = 0.05; b.inputs['Emission Color'].default_value = (0.5, 0.22, 0.02, 1); b.inputs['Emission Strength'].default_value = 0.15; b.inputs['Coat Weight'].default_value = 1.0; return m
+    b.inputs['Base Color'].default_value = (0.13, 0.055, 0.008, 1); b.inputs['Roughness'].default_value = 0.03; b.inputs['Coat Weight'].default_value = 1.0; return m
 
 mp = material_pele(); pele.data.materials.append(mp); mand.data.materials.append(mp)
 pintar_boca(pele, True); pintar_boca(mand, False)
@@ -448,7 +453,29 @@ mo = material_olho(); mpup = bpy.data.materials.new('pupila'); mpup.use_nodes = 
 for o, s_ in zip(olhos, (1, -1)):
     o.data.materials.append(mo)
     dvec = Vector((0.55, 0.83 * s_, 0.05)).normalized(); c = Vector(o.location) if o.location.length > 0 else Vector((4.31, 0.375 * s_, 3.88))
-    pu = esfera('pupila_' + ('l' if s_ > 0 else 'r'), tuple(POS_OLHO['l' if s_ > 0 else 'r'] + dvec * 0.043), 0.014, esc=(1, 1, 1.5)); pu.data.materials.append(mpup)
+    pu = esfera('pupila_' + ('l' if s_ > 0 else 'r'), tuple(o.location + dvec * 0.052), 0.032, esc=(0.5, 0.5, 1.0)); pu.data.materials.append(mpup)
+POSE = arg('pose')
+def posar(guinada, inclina, cauda):
+    """pose sem esqueleto: o pescoço dobra suavemente (peso 0 em x=2,95 e 1 em x=3,95) e a cabeça inteira acompanha; a cauda curva para o lado"""
+    bpy.context.view_layer.update(); P = Vector((2.95, 0.0, 3.30)); Pc = Vector((-1.0, 0.0, 3.15))
+    def rot(V, a, b, c):
+        ca, sa, cb, sb = np.cos(a), np.sin(a), np.cos(b), np.sin(b); X = V - np.array(c)
+        x1 = X[:, 0] * ca + X[:, 2] * sa; z1 = -X[:, 0] * sa + X[:, 2] * ca; y1 = X[:, 1]
+        return np.stack([x1 * cb - y1 * sb, x1 * sb + y1 * cb, z1], 1) + np.array(c)
+    me = pele.data; V = np.array([v.co[:] for v in me.vertices]); x = V[:, 0]
+    w = suave(2.95, 3.95, x); V = rot(V, math.radians(inclina) * w, math.radians(guinada) * w, P)
+    wt = suave(-1.0, -6.5, x); V = rot(V, -math.radians(cauda) * 0.15 * wt, math.radians(cauda) * wt, Pc)
+    for i, v in enumerate(me.vertices): v.co = V[i]
+    me.update()
+    M = Matrix.Translation(P) @ Matrix.Rotation(math.radians(guinada), 4, 'Z') @ Matrix.Rotation(math.radians(inclina), 4, 'Y') @ Matrix.Translation(-P)
+    for o in list(bpy.data.objects):
+        if o.parent is None and (o.name.startswith(('olho_', 'pupila_', 'dente_sup', 'gengiva_sup', 'garganta_int')) or o == piv): o.matrix_world = M @ o.matrix_world
+if POSE == 'ataque': posar(-22, 10, 14)
+if arg('blend'):                                                                # salva o bicho pronto (para a selva importar)
+    for o in GARRAS:
+        bpy.context.view_layer.objects.active = o; o.select_set(True)
+        for m_ in list(o.modifiers): bpy.ops.object.modifier_apply(modifier=m_.name)
+    bpy.ops.wm.save_as_mainfile(filepath=arg('blend')); print('BLEND salvo', arg('blend'))
 def argila(cor):
     m = bpy.data.materials.new('argila'); m.use_nodes = True; b = m.node_tree.nodes['Principled BSDF']
     b.inputs['Base Color'].default_value = (*cor, 1); b.inputs['Roughness'].default_value = 0.8; return m
@@ -464,9 +491,11 @@ if PREVIA:
     w = bpy.data.worlds.new('mundo'); cena.world = w; w.use_nodes = True
     if HDRI:
         nt = w.node_tree; env = nt.nodes.new('ShaderNodeTexEnvironment'); env.image = bpy.data.images.load(HDRI); nt.links.new(env.outputs['Color'], nt.nodes['Background'].inputs['Color'])
-        nt.nodes['Background'].inputs['Strength'].default_value = 1.0
+        nt.nodes['Background'].inputs['Strength'].default_value = float(arg('ceu', 1.0))
     else: w.node_tree.nodes['Background'].inputs['Color'].default_value = (0.55, 0.62, 0.72, 1); w.node_tree.nodes['Background'].inputs['Strength'].default_value = 0.35
-    sol = bpy.data.lights.new('sol', 'SUN'); sol.energy = 4.5; sol.angle = math.radians(2); so = bpy.data.objects.new('sol', sol); so.rotation_euler = (math.radians(50), 0, math.radians(35)); cena.collection.objects.link(so)
+    chave = bpy.data.lights.new('chave', 'AREA'); chave.energy = float(arg('chave', 0)); chave.size = 3.0; ch = bpy.data.objects.new('chave', chave); ch.location = (9.5, -5.0, 7.5); cena.collection.objects.link(ch)
+    cc = ch.constraints.new('TRACK_TO'); alc = bpy.data.objects.new('alvo_chave', None); alc.location = (4.4, 0, 3.5); cena.collection.objects.link(alc); cc.target = alc; cc.track_axis = 'TRACK_NEGATIVE_Z'; cc.up_axis = 'UP_Y'
+    sol = bpy.data.lights.new('sol', 'SUN'); sol.energy = float(arg('sol', 4.5)); sol.angle = math.radians(2); so = bpy.data.objects.new('sol', sol); so.rotation_euler = (math.radians(50), 0, math.radians(35)); cena.collection.objects.link(so)
     chao = bpy.data.meshes.new('chao'); oc = bpy.data.objects.new('chao', chao); cena.collection.objects.link(oc)
     bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=40); bm.to_mesh(chao); bm.free()
     if CHAO:                                                                    # chão de terra real (Poly Haven), repetido
