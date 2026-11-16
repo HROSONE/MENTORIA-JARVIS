@@ -106,6 +106,7 @@ def na_frente_da_camera(x, y):
     """nada nasce num cone de 40° à frente de cada câmera até 14 m (senão tapa o quadro)"""
     for c, a in CAMS_VISTA:
         v, d = np.array([x - c[0], y - c[1]]), np.array([a[0] - c[0], a[1] - c[1]]); dist = np.linalg.norm(v)
+        if dist < 7: return True                                                          # nada em cima ou em volta da câmera
         if dist < 14 and dist > 0 and np.dot(v, d) / (dist * np.linalg.norm(d)) > math.cos(math.radians(40)): return True
     return False
 def livre(x, y, folga_trex=3.5, folga_lago=1.12):
