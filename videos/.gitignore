@@ -49,3 +49,6 @@ biblioteca3d/polyhaven/hdri/
 __pycache__/
 biblioteca3d/sons/bsb/*.ogg
 biblioteca3d/mocap/cmu/*.amc
+biblioteca3d/sons/commons/*.ogg
+biblioteca3d/sons/commons/*.mp3
+biblioteca3d/sons/commons/*.wav
