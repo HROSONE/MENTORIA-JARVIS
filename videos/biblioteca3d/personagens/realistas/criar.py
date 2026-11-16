@@ -213,7 +213,7 @@ if PREVIA:
     luz('chave', 'AREA', (1.4, -2.2, altura * 1.1), 260, 1.5); luz('recorte', 'AREA', (-1.6, 1.4, altura * 1.2), 180, 1.0); luz('enche', 'AREA', (-2.0, -1.8, altura * 0.6), 60, 2.0)
     chao = bpy.data.meshes.new('chao'); oc = bpy.data.objects.new('chao', chao); cena.collection.objects.link(oc)
     bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=6); bm.to_mesh(chao); bm.free(); oc.data.materials.append(mat_pbr('chao', cor=(0.55, 0.56, 0.58), rug=0.8))
-    for nome_c, loc, alvo_z, lente in [('frente', (0.0, -2.2, altura * 0.62), altura * 0.55, 50), ('rosto', (0.18, -0.75, altura * 0.93), altura * 0.92, 85)]:
+    for nome_c, loc, alvo_z, lente in [('frente', (0.0, -2.2, altura * 0.62), altura * 0.55, 50), ('rosto', (0.18, -0.75, altura * 0.93), altura * 0.92, 85), ('nuca', (-0.45, 0.62, altura * 0.95), altura * 0.90, 70)]:   # nuca: confere o cabelo atrás
         cd = bpy.data.cameras.new(nome_c); cd.lens = lente; oc2 = bpy.data.objects.new(nome_c, cd); oc2.location = loc; cena.collection.objects.link(oc2)
         alvo = bpy.data.objects.new('alvo_' + nome_c, None); alvo.location = (0, 0, alvo_z); cena.collection.objects.link(alvo)
         c = oc2.constraints.new('TRACK_TO'); c.target = alvo; c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y'

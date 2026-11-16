@@ -166,7 +166,10 @@ def cabelo_procedural(V, grupos, F=None, G=None, n=3600, semente=7, comp=1.0, fr
     def escalpo(P):
         Nn = P - Ch; dist = np.linalg.norm(Nn, axis=-1); Nn = Nn / dist[..., None]
         linha_testa = olhos[1] + 0.58 * dist_o / 0.55
-        return (dist < 1.6 * dist_o / 0.55) & (Nn[..., 1] > -0.15) & ~((Nn[..., 2] > 0.30) & (P[..., 1] < linha_testa)) & ~((np.abs(Nn[..., 0]) > 0.75) & (P[..., 1] < olhos[1] + 0.25))
+        topo = (Nn[..., 1] > -0.15) & ~((Nn[..., 2] > 0.30) & (P[..., 1] < linha_testa)) & ~((np.abs(Nn[..., 0]) > 0.75) & (P[..., 1] < olhos[1] + 0.25))
+        # nuca: a parte de trás da cabeça abaixo do centro do crânio também tem cabelo, até a linha da nuca (altura do lóbulo da orelha)
+        nuca = (Nn[..., 2] < -0.25) & (np.abs(Nn[..., 0]) < 0.85) & (P[..., 1] > olhos[1] - 0.62 * dist_o / 0.55)
+        return (dist < 1.6 * dist_o / 0.55) & (topo | nuca)
     faces_esc, tris = [], []
     for k, ((vs, _), g) in enumerate(zip(F, G)):
         if g == 'body' and escalpo(V[vs]).all():
@@ -187,6 +190,7 @@ def cabelo_procedural(V, grupos, F=None, G=None, n=3600, semente=7, comp=1.0, fr
         elif frente > 0.15 and cima > 0.2:   flow = np.array([0.75 + rng.normal(0, 0.35), -0.8, 0.7]); L = rng.uniform(0.7, 1.35)      # franja, varrida para um lado
         elif cima > 0.6:                    flow = np.array([rng.normal(0, 0.6), -0.2, 1.0 + rng.normal(0, 0.3)]); L = rng.uniform(0.8, 1.15) # coroa
         else:                               flow = np.array([0.15 * np.sign(nrm[0]), -1.0, -0.2]); L = rng.uniform(0.55, 0.85) * (1.2 if frente < -0.3 else 1)
+        if cima < -0.15: L *= 0.45                                                   # nuca: fios curtos, rente (a cabeça afina para o pescoço)
         L *= comp
         pos = p + nrm * 0.015; pts = [pos.copy()]; camada = 0.025 + 0.06 * rng.random() ** 1.5; corte_franja = rng.uniform(0.18, 0.75) * dist_o / 0.55
         for s_ in range(S):
