@@ -157,23 +157,51 @@ def recortar_roupa(V, grupos, Pv, faces, delete, roupa, uvs=None, manga=None, pe
     return mant, cls, esconder, Pn
 
 # ------------------------------------------------------------------------------------------------ cabelo procedural (mechas em fitas com alfa), bagunçado com franja
-def cabelo_procedural(V, grupos, F=None, G=None, n=3600, semente=7, comp=1.0, franja=True):
-    """mechas em fitas presas à pele do couro cabeludo (vértices do corpo acima da linha do cabelo), penteadas rente ao crânio:
-    franja caindo na testa, coroa para a frente e para os lados, laterais e nuca para baixo. Espaço OBJ (dm)."""
+def medidas_cabeca(V, grupos, F, G):
+    """olhos, escala (distância entre olhos / 0,55), centro do crânio e o centro de cada orelha (vértices mais laterais da cabeça na altura dos olhos)"""
+    oE, oD = centro(V, grupos, 'helper-l-eye'), centro(V, grupos, 'helper-r-eye'); olhos = (oE + oD) / 2; k = np.linalg.norm(oE - oD) / 0.55
+    Ch = olhos + np.array([0, 0.40, -0.62]) * k
+    idx = np.array(sorted(set(i for (vs, _), g in zip(F, G) if g == 'body' for i in vs))); P = V[idx]
+    perto = P[(np.abs(P[:, 1] - (olhos[1] - 0.05 * k)) < 0.45 * k) & (P[:, 2] < olhos[2] - 0.2 * k) & (P[:, 2] > olhos[2] - 1.5 * k)]
+    orelhas = []
+    for s in (1, -1):
+        lado = perto[perto[:, 0] * s > 0]; xm = (lado[:, 0] * s).max(); orelhas.append(lado[lado[:, 0] * s > xm - 0.14 * k].mean(axis=0))
+    return olhos, k, Ch, orelhas
+
+def medidas_quepe(V, grupos, F, G):
+    """faixa do quepe: altura da borda de baixo (yb) e elipse que abraça a cabeça (cx, cz, rx, rz). Usado pelo quepe e pelo cabelo (que fica por baixo)."""
+    olhos, k, _, _ = medidas_cabeca(V, grupos, F, G); yb = olhos[1] + 0.24 * k            # faixa logo acima das sobrancelhas
+    cab = np.array([v for v in V[sorted(set(i for (vs, _), g in zip(F, G) if g == 'body' for i in vs))] if yb < v[1] < yb + 0.3 * k])
+    cz = (cab[:, 2].max() + cab[:, 2].min()) / 2
+    return dict(yb=yb, k=k, cx=0.0, cz=cz, rx=(cab[:, 0].max() - cab[:, 0].min()) / 2 + 0.045, rz=(cab[:, 2].max() - cab[:, 2].min()) / 2 + 0.045, inclina=0.22 * k)
+
+def queda_quepe(Q, a):
+    """quanto a borda do quepe desce no ângulo a (0 = frente, pi = nuca): quepe usado inclinado, alto na testa e baixo atrás"""
+    return -Q['inclina'] * ((1 - np.cos(a)) / 2) ** 1.3
+
+def borda_quepe(Q, x, z):
+    """altura da borda de baixo do quepe na direção do ponto (x, z) da cabeça"""
+    return Q['yb'] + queda_quepe(Q, np.arctan2(x - Q['cx'], z - Q['cz']))
+
+def cabelo_procedural(V, grupos, F=None, G=None, n=3600, semente=7, comp=1.0, franja=True, quepe=None, curto=False):
+    """mechas em fitas presas à pele do couro cabeludo, penteadas rente ao crânio. Penteado CONTÍNUO (sem risca): os fios saem de um redemoinho no
+    alto de trás da cabeça, vão para a frente no topo e caem para baixo atrás e dos lados; a franja cai na testa (franja=True) ou o topo é penteado
+    para trás (adulto). As orelhas ficam livres. quepe (medidas_quepe): o cabelo só nasce e só existe abaixo da faixa. Espaço OBJ (dm)."""
     rng = np.random.default_rng(semente)
-    oE, oD = centro(V, grupos, 'helper-l-eye'), centro(V, grupos, 'helper-r-eye'); olhos = (oE + oD) / 2; dist_o = np.linalg.norm(oE - oD)
-    Ch = olhos + np.array([0, 0.40, -0.62]) * dist_o / 0.55                       # centro aproximado do crânio
+    olhos, k, Ch, orelhas = medidas_cabeca(V, grupos, F, G); dist_o = 0.55 * k
+    def longe_orelha(P, r=0.26): return np.all([np.linalg.norm(P - o, axis=-1) > r * k for o in orelhas], axis=0)   # só a orelha fica livre
     def escalpo(P):
         Nn = P - Ch; dist = np.linalg.norm(Nn, axis=-1); Nn = Nn / dist[..., None]
-        linha_testa = olhos[1] + 0.58 * dist_o / 0.55
-        topo = (Nn[..., 1] > -0.15) & ~((Nn[..., 2] > 0.30) & (P[..., 1] < linha_testa)) & ~((np.abs(Nn[..., 0]) > 0.75) & (P[..., 1] < olhos[1] + 0.25))
-        # nuca: a parte de trás da cabeça abaixo do centro do crânio também tem cabelo, até a linha da nuca (altura do lóbulo da orelha)
-        nuca = (Nn[..., 2] < -0.25) & (np.abs(Nn[..., 0]) < 0.85) & (P[..., 1] > olhos[1] - 0.62 * dist_o / 0.55)
-        return (dist < 1.6 * dist_o / 0.55) & (topo | nuca)
+        linha_testa = olhos[1] + 0.58 * k
+        topo = (Nn[..., 1] > -0.15) & ~((Nn[..., 2] > 0.30) & (P[..., 1] < linha_testa)) & ~((np.abs(Nn[..., 0]) > 0.75) & (P[..., 1] < olhos[1] - 0.12 * k))   # costeleta desce na frente da orelha
+        nuca = (Nn[..., 2] < -0.25) & (np.abs(Nn[..., 0]) < 0.80) & (P[..., 1] > olhos[1] - 0.62 * k)      # até a linha da nuca
+        ok = (dist < 1.6 * k) & (topo | nuca) & longe_orelha(P)
+        if quepe: ok &= P[..., 1] < borda_quepe(quepe, P[..., 0], P[..., 2]) + 0.05 * k
+        return ok
     faces_esc, tris = [], []
-    for k, ((vs, _), g) in enumerate(zip(F, G)):
+    for kf, ((vs, _), g) in enumerate(zip(F, G)):
         if g == 'body' and escalpo(V[vs]).all():
-            faces_esc.append(k)
+            faces_esc.append(kf)
             for a in range(1, len(vs) - 1): tris.append((vs[0], vs[a], vs[a + 1]))
     tris = np.array(tris); A_, B_, C_ = V[tris[:, 0]], V[tris[:, 1]], V[tris[:, 2]]
     area = np.linalg.norm(np.cross(B_ - A_, C_ - A_), axis=1); prob = area / area.sum()
@@ -182,31 +210,55 @@ def cabelo_procedural(V, grupos, F=None, G=None, n=3600, semente=7, comp=1.0, fr
         if u + v > 1: u, v = 1 - u, 1 - v
         return A_[t] + u * (B_[t] - A_[t]) + v * (C_[t] - A_[t])
     raiz = np.array([amostra() for _ in range(400)])
-    Vs, F_, UV = [], [], []; S = 8
-    for k in range(n):
+    # pele da cabeça com normais: o fio acompanha a superfície real (casca esférica afastava o fio na nuca e fazia degraus)
+    NV = np.zeros_like(V)
+    for (vs, _), g in zip(F, G):
+        if g != 'body' or len(vs) < 3: continue
+        nf = np.cross(V[vs[1]] - V[vs[0]], V[vs[2]] - V[vs[0]])
+        for i in vs: NV[i] += nf
+    hi = np.array(sorted(set(i for (vs, _), g in zip(F, G) if g == 'body' for i in vs if V[i][1] > olhos[1] - 1.2 * k)))
+    HP, HN = V[hi], NV[hi] / (np.linalg.norm(NV[hi], axis=1, keepdims=True) + 1e-12)
+    HN *= np.sign(((HP - Ch) * HN).sum(1, keepdims=True) + 1e-9)                     # normais para fora
+    W = Ch + np.array([0.0, 0.80, -0.60]) / np.linalg.norm([0.0, 0.80, -0.60]) * 1.05 * k     # redemoinho (alto de trás)
+    baixo, tras = np.array([0.0, -1.0, 0.0]), np.array([0.0, 0.0, -1.0])
+    def tangente(v, nq): v = v - nq * v.dot(nq); return v / (np.linalg.norm(v) + 1e-9)
+    def fluxo(p):
+        """direção do penteado no ponto p (contínua na cabeça toda)"""
+        nq = (p - Ch) / np.linalg.norm(p - Ch); cima, frente = nq[1], nq[2]
+        sai = tangente(p - W, nq)                                                     # para longe do redemoinho
+        if np.linalg.norm(p - W) < 0.35 * k: sai = tangente(np.cross(nq, sai) * 0.7 + sai, nq)   # gira em espiral perto do redemoinho
+        if not franja and not quepe: sai = tangente(0.35 * sai + tras * 0.65, nq) if cima > 0.3 else sai   # adulto: topo penteado para trás
+        g = tangente(baixo, nq); peso_g = np.clip(0.75 - cima, 0, 1) ** 1.2              # dos lados e atrás a gravidade manda
+        d = tangente(sai * (1 - peso_g) + g * peso_g + rng.normal(0, 0.12, 3), nq)
+        if franja and frente > 0.15 and cima > 0.15:                                   # franja: cai na testa, varrida para um lado
+            d = tangente(d * 0.35 + np.array([0.55, -0.85, 0.35]), nq)
+        return d, cima, frente
+    Vs, F_, UV = [], [], []; S = 9
+    for _ in range(int(n * (2.2 if curto else 1.25))):                                # mais fios, mais finos (fitas largas viravam placas)
         p = amostra(); nrm = (p - Ch) / np.linalg.norm(p - Ch)
-        cima, frente = nrm[1], nrm[2]
-        if not franja and cima > 0.2:      flow = np.array([rng.normal(0, 0.3), -0.3, -1.0]); L = rng.uniform(0.6, 0.9)              # penteado para trás (adulto, cabelo curto)
-        elif frente > 0.15 and cima > 0.2:   flow = np.array([0.75 + rng.normal(0, 0.35), -0.8, 0.7]); L = rng.uniform(0.7, 1.35)      # franja, varrida para um lado
-        elif cima > 0.6:                    flow = np.array([rng.normal(0, 0.6), -0.2, 1.0 + rng.normal(0, 0.3)]); L = rng.uniform(0.8, 1.15) # coroa
-        else:                               flow = np.array([0.15 * np.sign(nrm[0]), -1.0, -0.2]); L = rng.uniform(0.55, 0.85) * (1.2 if frente < -0.3 else 1)
-        if cima < -0.15: L *= 0.45                                                   # nuca: fios curtos, rente (a cabeça afina para o pescoço)
+        d0, cima, frente = fluxo(p)
+        L = rng.uniform(0.75, 1.15) if cima > 0.3 else rng.uniform(0.55, 0.85)
+        if franja and frente > 0.15 and cima > 0.15: L = rng.uniform(0.75, 1.30)
+        if cima < -0.15: L *= 0.45                                                      # nuca: fios curtos, rente
+        if not franja: L *= 0.85
         L *= comp
-        pos = p + nrm * 0.015; pts = [pos.copy()]; camada = 0.025 + 0.06 * rng.random() ** 1.5; corte_franja = rng.uniform(0.18, 0.75) * dist_o / 0.55
+        if curto: L = rng.uniform(0.10, 0.22) * k                                        # cabelo curto: penugem rente sobre a pele pintada
+        pos = p + nrm * 0.012; pts = [pos.copy()]; camada = (0.006 + 0.012 * rng.random()) if curto else (0.020 + 0.05 * rng.random() ** 1.5); corte_franja = rng.uniform(0.18, 0.75) * k
         for s_ in range(S):
-            q = pos - Ch; nq = q / np.linalg.norm(q)
-            d = flow - nq * flow.dot(nq) + nq * 0.10 + rng.normal(0, 0.18, 3); d /= np.linalg.norm(d)
+            d, _, _ = fluxo(pos) if s_ else (d0, 0, 0)
             pos = pos + d * L / S
-            q = pos - Ch; dq = np.linalg.norm(q); alvo = np.linalg.norm(p - Ch) + camada * (1 + 0.6 * s_ / S)
-            pos = Ch + q / dq * max(dq, alvo) if dq < alvo else Ch + q / dq * min(dq, alvo + 0.05)
-            if franja and frente > 0.15 and pos[1] < olhos[1] + corte_franja: break                                  # a franja para em alturas desencontradas
+            j = np.argmin(((HP - pos) ** 2).sum(1)); dn = (pos - HP[j]).dot(HN[j]); alvo = camada * (1 + 0.5 * s_ / S)
+            pos = pos + HN[j] * (np.clip(dn, alvo, alvo + 0.035) - dn)                      # fica rente à pele, a uma altura de camada
+            if franja and frente > 0.15 and pos[1] < olhos[1] + corte_franja: break               # a franja para em alturas desencontradas
+            if not longe_orelha(pos, 0.20): break                                                    # não cobre a orelha
+            if quepe and pos[1] > borda_quepe(quepe, pos[0], pos[2]) - 0.01: break                     # nada aparece por cima da faixa do quepe
             pts.append(pos.copy())
         if len(pts) < 3: continue
-        pts = np.array(pts); m = len(pts) - 1; w0 = rng.uniform(0.10, 0.18); col = rng.integers(4); base = len(Vs)
+        pts = np.array(pts); m = len(pts) - 1; w0 = rng.uniform(0.08, 0.14) * (0.5 if cima < -0.15 else 1.0) * (0.45 if curto else 1.0); col = rng.integers(4); base = len(Vs)
         for s_ in range(m + 1):
             t = s_ / m; tang = pts[min(s_ + 1, m)] - pts[max(s_ - 1, 0)]; tang /= np.linalg.norm(tang) + 1e-9
             out = pts[s_] - Ch; out /= np.linalg.norm(out); lat = np.cross(tang, out); lat /= (np.linalg.norm(lat) + 1e-9)
-            w = w0 * (1 - 0.6 * t ** 1.5); Vs += [pts[s_] - lat * w / 2, pts[s_] + lat * w / 2]
+            w = w0 * (1 - 0.8 * t ** 1.3); Vs += [pts[s_] - lat * w / 2, pts[s_] + lat * w / 2]
         for s_ in range(m):
             a = base + 2 * s_; F_.append([a, a + 1, a + 3, a + 2]); u0, u1 = col / 4 + 0.01, (col + 1) / 4 - 0.01
             UV.append([(u0, 1 - s_ / m), (u1, 1 - s_ / m), (u1, 1 - (s_ + 1) / m), (u0, 1 - (s_ + 1) / m)])

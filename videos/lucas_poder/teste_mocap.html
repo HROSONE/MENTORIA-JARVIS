@@ -25,7 +25,9 @@ const troca = +(Q.get('troca') || 3), dur = 0.8, suave = x => { x = Math.min(1, 
 const clip = misturarClipes(A, B, t => t, t => t - troca + 1, t => suave((t - troca) / dur), { yawB: +(Q.get('yawB') || 0) });
 const desenhar = t => {
   aplicarMocap(L, clip, t, { origem: [0, 0, 0], yaw: 0 }); vida(L, t, { forca: 1, ofegante: 0.3 });
-  const p = L.pos('spine_03'); cam.position.set(p.x + 2.6, 1.3, p.z + 3.4); cam.lookAt(p.x, 0.75, p.z);
+  if (Q.has('ang')) {                                                     // ?ang=graus: câmera perto da cabeça, girando em volta (0 = de frente)
+    const c = L.pos('head'), a = +Q.get('ang') * Math.PI / 180; cam.position.set(c.x + 0.75 * Math.sin(a), c.y + 0.12, c.z + 0.75 * Math.cos(a)); cam.lookAt(c.x, c.y + 0.06, c.z);
+  } else { const p = L.pos('spine_03'); cam.position.set(p.x + 2.6, 1.3, p.z + 3.4); cam.lookAt(p.x, 0.75, p.z); }
   renderer.render(scene, cam);
 };
 window.__total = 6;

@@ -50,20 +50,30 @@ if P_.get('barba', 0):                                                         #
 cam = cam.filter(ImageFilter.GaussianBlur(1.2)); im.paste(cam, (0, 0), cam)
 if CAB.get('tipo') == 'mechas':                                               # couro cabeludo escuro sob as mechas
     _, _, _, (_, _, FACES_ESC) = cabelo_procedural(V, grupos, F, G, n=10)
-    couro = Image.new('RGBA', im.size, (0, 0, 0, 0)); dc = ImageDraw.Draw(couro); cc = tuple(int(255 * c * 0.8) for c in CAB['cor'])
-    for k in FACES_ESC: dc.polygon([pix(VT[t]) for t in F[k][1]], fill=(*cc, 235))
-    couro = couro.filter(ImageFilter.GaussianBlur(6)); im.paste(couro, (0, 0), couro)
+    couro = Image.new('RGBA', im.size, (0, 0, 0, 0)); dc = ImageDraw.Draw(couro); cc = tuple(int(255 * c * 0.6) for c in CAB['cor'])
+    for k in FACES_ESC: dc.polygon([pix(VT[t]) for t in F[k][1]], fill=(*cc, 245))
+    couro = couro.filter(ImageFilter.GaussianBlur(5))
+    # textura de fio por cima (no cabelo curto ela É o cabelo; no comprido some sob as mechas e evita falha clara)
+    fios = Image.new('RGBA', im.size, (0, 0, 0, 0)); df = ImageDraw.Draw(fios); rf = np.random.default_rng(5); cb_ = np.array(CAB['cor']) * 255
+    for k in FACES_ESC:
+        pts_ = np.array([pix(VT[t]) for t in F[k][1]], float)
+        for _ in range(26):
+            w_ = rf.dirichlet(np.ones(len(pts_))); x, y = (w_[:, None] * pts_).sum(0); ang = rf.normal(1.57, 0.35); l_ = rf.uniform(3, 8)
+            tom = rf.uniform(0.55, 1.15); c_ = tuple(int(min(255, v * tom)) for v in cb_)
+            df.line([(x, y), (x + l_ * np.cos(ang), y + l_ * np.sin(ang))], fill=(*c_, 200), width=1)
+    couro.alpha_composite(fios.filter(ImageFilter.GaussianBlur(0.4)))
+    im.paste(couro, (0, 0), couro)
 im.save(os.path.join(OUT, 'pele.jpg'), quality=92)
 
 # ---- mechas (cabelo procedural): 4 colunas de fios ondulados com alfa
 M = Image.new('RGBA', (1024, 1024), (0, 0, 0, 0)); dmc = ImageDraw.Draw(M); rr = np.random.default_rng(21); cb = np.array(CAB.get('cor', [0.3, 0.2, 0.12])) * 255
 for col in range(4):
-    for _ in range(70):
-        x0 = col * 256 + 10 + rr.random() * 236; amp = rr.uniform(1, 6); fase = rr.uniform(0, 6.28); comp = rr.uniform(0.7, 1.0)
+    for _ in range(130):                                                     # 70 fios: o fundo aparecia (grisalho); 190: lascas opacas. Meio-termo com bordas suaves
+        x0 = col * 256 + 8 + rr.random() * 240; borda = 1 - abs((x0 - col * 256 - 128) / 128) ** 3; amp = rr.uniform(1, 6); fase = rr.uniform(0, 6.28); comp = rr.uniform(0.7, 1.0)
         tom = rr.uniform(0.75, 1.25); cor = tuple(int(min(255, c * tom)) for c in cb)
         pts = [(x0 + amp * np.sin(fase + y / 90) + (y / 1024) * rr.normal(0, 8), y) for y in range(0, int(1024 * comp), 16)]
         for (xa, ya), (xb, yb) in zip(pts, pts[1:]):
-            a = int(255 * (1 - (ya / 1024 / comp) ** 2.5)); dmc.line([(xa, ya), (xb, yb)], fill=(*cor, a), width=int(rr.integers(2, 5)))
+            a = int(235 * borda * (1 - (ya / 1024 / comp) ** 1.8)); dmc.line([(xa, ya), (xb, yb)], fill=(*cor, a), width=int(rr.integers(2, 6)))
 M.save(os.path.join(OUT, 'mecha.png'))
 
 # ---- olho: textura polar (linha de cima = polo da frente = pupila); cor da íris na ficha
