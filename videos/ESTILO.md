@@ -9,6 +9,7 @@ Regras pedidas pelo dono do canal. Valem para todo vídeo novo.
   - zoom in ou zoom out rápido (punch-in), marcando as batidas da narração;
   - avanço ou recuo (dolly), ou panorâmica.
 - **O personagem nunca fica parado:** respira, pisca, mexe a cabeça, gesticula, anda. Objetos também se mexem: fumaça, poeira, chuva, luz piscando.
+- **Personagem realista mexe como gente:** captura real (CMU) misturada entre ações, respiração e peso por cima, antecipação e acomodação em cada gesto; regras em `DIRETRIZES.md` §4b.
 - **Cenas curtas:** cerca de 3 segundos por plano, no máximo. Planos mais longos só se tiverem movimento forte o tempo todo.
 - **Cortes com energia:** whip pan (passada rápida de câmera), flash ou zoom rápido entre as cenas.
 

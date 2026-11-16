@@ -76,3 +76,48 @@ export function aplicarMocap(L, clip, t, { origem = [0, 0, 0], yaw = 0, tRef = 0
   }
   return L;
 }
+
+// ---------------------------------------------------------------------------------------------------- movimento mais vivo (lição do "Ele podia voar")
+// Antes: um clipe só, tocado em trechos, e "tremor" de ruído por cima. Ficou duro. Agora: misturar capturas, tocar ao contrário e pôr respiração e peso.
+
+/**
+ * Clipe virtual que MISTURA dois clipes (posições das juntas relativas ao quadril, interpoladas): transição suave de uma ação para outra.
+ * k(t) dá o peso de B (0 = só A, 1 = só B) no tempo t do clipe misto; tA(t) e tB(t) dizem que instante de cada clipe tocar.
+ * Ex.: de "andar triste" (91_14) para "sentar" em 0,6 s: misturarClipes(andar, sentar, t => t, t => t - 2, t => suave((t - 2) / 0.6))
+ * O quadril (root) segue A até a troca e B depois, para o personagem não escorregar.
+ * yawB (rad) gira a captura B em volta do quadril para ela olhar para o mesmo lado que A (capturas diferentes começam viradas para lados diferentes).
+ */
+export function misturarClipes(A, B, tA, tB, k, { yawB = 0 } = {}) {
+  const cb = Math.cos(yawB), sb = Math.sin(yawB);
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), ra = new THREE.Vector3(), rb = new THREE.Vector3();
+  return {
+    fps: A.fps, J: A.J, dur: Math.max(A.dur, B.dur),
+    pos(t, nome, alvo = new THREE.Vector3()) {
+      const w = Math.min(1, Math.max(0, k(t)));
+      A.pos(tA(t), 'root', ra); B.pos(tB(t), 'root', rb);
+      A.pos(tA(t), nome, a).sub(ra); B.pos(tB(t), nome, b).sub(rb); b.set(b.x * cb + b.z * sb, b.y, -b.x * sb + b.z * cb);
+      const raiz = ra.lerp(rb, w);
+      return alvo.copy(a).lerp(b, w).add(raiz);
+    },
+  };
+}
+
+/** Clipe tocado ao contrário e/ou com outra velocidade, a partir de t0 (ex.: levantar de bruços ao contrário = desabar). */
+export function retimar(C, { inverte = false, vel = 1, t0 = 0 } = {}) {
+  return { fps: C.fps, J: C.J, dur: C.dur / vel, pos: (t, nome, alvo) => C.pos(inverte ? Math.max(0, t0 - t * vel) : t0 + t * vel, nome, alvo) };
+}
+
+/**
+ * Camada de vida por cima da captura (ou de uma pose feita à mão): respiração (peito e ombros sobem), troca de peso lenta, cabeça que
+ * nunca fica cravada. Chamar DEPOIS de aplicarMocap/poses. forca 0..1; ofegante 0..1 deixa a respiração rápida e funda (esforço, medo, raiva).
+ * As frequências têm fase por personagem (semente) para dois atores não respirarem juntos.
+ */
+export function vida(L, t, { forca = 1, ofegante = 0, semente = 0 } = {}) {
+  const f = 0.25 + 0.35 * ofegante, amp = (1 + 2.2 * ofegante) * forca, ph = semente * 1.7;
+  const resp = Math.sin(2 * Math.PI * f * t + ph), resp2 = Math.max(0, resp);
+  L.dobrar('spine_03', -1.6 * amp * resp, 0, 0).dobrar('spine_02', -0.8 * amp * resp, 0, 0);
+  L.dobrar('clavicle_l', 0, 0, 1.4 * amp * resp2).dobrar('clavicle_r', 0, 0, -1.4 * amp * resp2);
+  const peso = Math.sin(2 * Math.PI * 0.11 * t + ph * 0.6), deriva = Math.sin(2 * Math.PI * 0.23 * t + ph) * 0.6 + Math.sin(2 * Math.PI * 0.37 * t + ph * 2) * 0.4;
+  L.dobrar('spine_01', 0, 1.2 * forca * peso, 0.8 * forca * peso).dobrar('neck_01', 1.2 * forca * deriva, 1.8 * forca * deriva, 0).dobrar('head', 0.8 * amp * resp, 0, 0);
+  return L;
+}

@@ -2,7 +2,7 @@
 """Captura de movimento CMU (ASF/AMC) -> JSON com as posições das articulações por quadro (30 fps, metros, y para cima), para reaproveitar
 em qualquer personagem do canal (o Three.js alinha cada osso com o segmento correspondente: js de retarget em lucas_poder/js/mocap.js).
 Dados da CMU Graphics Lab Motion Capture Database (http://mocap.cs.cmu.edu): uso livre, inclusive em produtos comerciais (não revender os dados brutos).
-uso: python3 amc2json.py <arquivo.asf> <arquivo.amc> <saida.json> [--de 0 --ate 9999 (quadros a 120 fps)]"""
+uso: python3 amc2json.py <arquivo.asf> <arquivo.amc> <saida.json> [--de 0 --ate 9999 (quadros na taxa original)] [--fps 120 (taxa da captura: 120 ou 60, ver catalogo_cmu.tsv)]"""
 import sys, json, math
 import numpy as np
 
@@ -69,7 +69,7 @@ def fk(q):
 JUNTAS = ['root', 'lhipjoint', 'lfemur', 'ltibia', 'lfoot', 'ltoes', 'rhipjoint', 'rfemur', 'rtibia', 'rfoot', 'rtoes', 'lowerback', 'upperback', 'thorax', 'lowerneck', 'upperneck', 'head',
           'lclavicle', 'lhumerus', 'lradius', 'lwrist', 'lhand', 'rclavicle', 'rhumerus', 'rradius', 'rwrist', 'rhand']
 saida = {'fps': 30, 'juntas': JUNTAS, 'nota': 'posição do FIM de cada osso CMU (root = quadril), metros, y para cima', 'quadros': []}
-for k in range(0, len(quadros), 4):                            # 120 -> 30 fps
+for k in range(0, len(quadros), max(1, int(arg('fps', 120)) // 30)):   # 120 (ou 60) -> 30 fps
     P = fk(quadros[k]); saida['quadros'].append([round(float(c), 4) for j in JUNTAS for c in P.get(j, P['root'])])
 json.dump(saida, open(OUT, 'w'), separators=(',', ':'))
 print(OUT, len(saida['quadros']), 'quadros a 30 fps')

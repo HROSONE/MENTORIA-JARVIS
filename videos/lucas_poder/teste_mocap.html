@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Teste de mocap</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#000}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<script type="module">
+// Bancada de movimento: um realista num chão neutro tocando uma mistura de capturas com a camada de vida por cima.
+// ?a=91_14&b=79_71&troca=3&ator=lucas12 ; protocolo igual ao do Short (window.__frame / __total), para usar com quadros.js --pagina.
+import * as THREE from 'three';
+import { criarLucasReal, URL_REAL } from './js/lucasreal.js';
+import { carregarMocap, aplicarMocap, misturarClipes, vida } from './js/mocap.js';
+const Q = new URLSearchParams(location.search), W = +Q.get('w') || 540, H = +Q.get('h') || 960;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); renderer.setSize(W, H); renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.shadowMap.enabled = true; document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x30343a);
+const cam = new THREE.PerspectiveCamera(35, W / H, 0.05, 100);
+scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x403830, 1.2)); const sol = new THREE.DirectionalLight(0xfff0dd, 2.5); sol.position.set(2, 4, 3); sol.castShadow = true; scene.add(sol);
+const chao = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: 0x8a8580, roughness: 0.9 })); chao.rotation.x = -Math.PI / 2; chao.receiveShadow = true; scene.add(chao);
+const L = await criarLucasReal({ url: URL_REAL(Q.get('ator') || 'lucas12') }); scene.add(L.grupo);
+const base = '../biblioteca3d/mocap/cmu/', A = await carregarMocap(base + (Q.get('a') || '91_14') + '.json'), B = await carregarMocap(base + (Q.get('b') || '79_71') + '.json');
+const troca = +(Q.get('troca') || 3), dur = 0.8, suave = x => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
+const clip = misturarClipes(A, B, t => t, t => t - troca + 1, t => suave((t - troca) / dur), { yawB: +(Q.get('yawB') || 0) });
+const desenhar = t => {
+  aplicarMocap(L, clip, t, { origem: [0, 0, 0], yaw: 0 }); vida(L, t, { forca: 1, ofegante: 0.3 });
+  const p = L.pos('spine_03'); cam.position.set(p.x + 2.6, 1.3, p.z + 3.4); cam.lookAt(p.x, 0.75, p.z);
+  renderer.render(scene, cam);
+};
+window.__total = 6;
+window.__frame = (t, o = {}) => { desenhar(t); return renderer.domElement.toDataURL('image/jpeg', o.jpeg ?? 0.9); };
+window.__ready = true;
+</script>
+</body>
+</html>
