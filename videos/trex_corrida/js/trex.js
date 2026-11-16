@@ -21,6 +21,24 @@ export async function criarTrex({ url = '../biblioteca3d/animais/trex/trex.glb' 
       if (o.name.startsWith('olho')) { o.material = o.material.clone(); o.material.roughness = 0.03; o.material.metalness = 0; o.material.envMapIntensity = 1.6; }
     }
   });
+  // pesos da boca: os automáticos do Blender puxavam o lábio de cima junto com a mandíbula (o focinho esticava ao abrir). Acima da linha da boca
+  // a pele é 100% crânio; abaixo dela, na frente da garganta, segue a mandíbula aos poucos. (Mesma regra no criar_trex.py para as próximas exportações.)
+  g.scene.updateMatrixWorld(true);
+  const linhaBoca = x => x > 4.45 ? 3.30 - 0.22 * (x - 4.45) : 3.30 + 0.05 * (4.45 - x);
+  g.scene.traverse(o => {
+    if (!o.isSkinnedMesh || o.name !== 'trex') return;
+    const nomes = o.skeleton.bones.map(b => b.name), iC = nomes.indexOf('cabeca'), iM = nomes.indexOf('mandibula'); if (iC < 0 || iM < 0) return;
+    const P = o.geometry.attributes.position, SI = o.geometry.attributes.skinIndex, SW = o.geometry.attributes.skinWeight, v = new THREE.Vector3();
+    let mud = 0;
+    for (let i = 0; i < P.count; i++) {
+      v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld); if (v.x < 3.7) continue;
+      const acima = v.y > linhaBoca(v.x) - 0.18, km = acima ? 0 : clamp((v.x - 3.95) / 0.35, 0, 1);
+      // a parte que não é da mandíbula vai toda para o crânio (na cabeça não há outro osso que deva mexer a pele)
+      for (let k = 0; k < 4; k++) { SI.setComponent(i, k, k === 0 ? iC : k === 1 ? iM : 0); SW.setComponent(i, k, k === 0 ? 1 - km : k === 1 ? km : 0); }
+      mud++;
+    }
+    SI.needsUpdate = SW.needsUpdate = true; o.userData.pesosBoca = mud;
+  });
   const repouso = {}; for (const k in ossos) repouso[k] = ossos[k].quaternion.clone();
   grupo.updateMatrixWorld(true);
   const posRep = {}; for (const k in ossos) posRep[k] = ossos[k].getWorldPosition(new THREE.Vector3());      // juntas em repouso (espaço do modelo)

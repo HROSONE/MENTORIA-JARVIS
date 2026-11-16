@@ -547,6 +547,16 @@ if ETAPA == 'glb':
     # pele: pesos automáticos (calor); se falhar, envelope
     ativo(arm, pele); bpy.ops.object.parent_set(type='ARMATURE_AUTO')
     if not any(len(v.groups) for v in pele.data.vertices[:2000]): ativo(arm, pele); bpy.ops.object.parent_set(type='ARMATURE_ENVELOPE'); print('PESOS: envelope')
+    # boca: os pesos automáticos puxavam o lábio de cima com a mandíbula (o focinho esticava). Na cabeça (x > 3,7), acima da linha da boca a pele
+    # é 100% crânio; abaixo, na frente da garganta, segue a mandíbula aos poucos (0 em x = 3,95, 1 em x = 4,30)
+    gC, gM = pele.vertex_groups['cabeca'], pele.vertex_groups['mandibula']; mw_ = pele.matrix_world
+    for v in pele.data.vertices:
+        c = mw_ @ v.co
+        if c.x < 3.7: continue
+        km = 0.0 if c.z > linha_boca(c.x) - 0.18 else min(1.0, max(0.0, (c.x - 3.95) / 0.35))
+        for g_ in list(v.groups): pele.vertex_groups[g_.group].remove([v.index])
+        if km < 1: gC.add([v.index], 1 - km, 'REPLACE')
+        if km > 0: gM.add([v.index], km, 'REPLACE')
     # peças rígidas presas a um osso
     def prender_osso(o, nome_osso):
         bpy.context.view_layer.update(); mw = o.matrix_world.copy(); o.parent = None; o.matrix_world = mw
