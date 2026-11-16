@@ -86,11 +86,29 @@ export async function construirTudo() {
   const passoClip = Math.hypot(a1.x - a0.x, a1.z - a0.z) * corrida._esc;        // comprimento de um ciclo (m)
   // para onde o corpo da captura está virado (quadril: esquerda x cima = frente), em ângulo no plano xz
   const frenteClip = (c, tc) => { const l = c.pos(tc, 'lhipjoint', V()).sub(c.pos(tc, 'rhipjoint', V())); return Math.atan2(l.x, -l.z); };
-  const rel = relogio(), relM = relogio(), moch = mochila(), num = numeroPeito(), ten = tenis(); scene.add(ten);
-  H.ossos.hand_l.add(rel); rel.position.set(-0.02, 0.07, 0.0); rel.rotation.set(0, 0, Math.PI / 2);
-  Mt.ossos.hand_l.add(relM); relM.position.set(-0.02, 0.07, 0.0); relM.rotation.set(0, 0, Math.PI / 2);
-  H.ossos.spine_03.add(moch); moch.position.set(0, 0.05, -0.12);
-  Mt.ossos.spine_03.add(num); num.position.set(0, 0.06, 0.16);
+  const rel = relogio(), relM = relogio(), num = numeroPeito(), ten = tenis(); scene.add(ten);
+  // acessórios presos a ossos: a posição é decidida no corpo em REPOUSO (espaço do modelo: rosto para +z) e convertida para o osso
+  // (os eixos próprios dos ossos não são os do corpo; foi isso que deixou a mochila como um cubo solto no ar)
+  function prender(A, osso, obj, pos, quat) {
+    A.reset(); A.grupo.position.set(0, 0, 0); A.grupo.rotation.set(0, 0, 0); A.grupo.updateMatrixWorld(true);
+    const M = new THREE.Matrix4().compose(pos, quat, V(1, 1, 1)); obj.matrix.copy(A.ossos[osso].matrixWorld.clone().invert().multiply(M));
+    obj.matrix.decompose(obj.position, obj.quaternion, obj.scale); A.ossos[osso].add(obj);
+  }
+  function relogioNoPulso(A, obj) {                                   // no dorso do pulso esquerdo, visor para fora
+    A.reset(); A.grupo.position.set(0, 0, 0); A.grupo.rotation.set(0, 0, 0); A.grupo.updateMatrixWorld(true);
+    const mao = A.pos('hand_l'), cot = A.pos('lowerarm_l'), d = mao.clone().sub(cot).normalize();
+    const n = V(0, 1, 0).addScaledVector(d, -d.y).normalize(), z = new THREE.Vector3().crossVectors(d, n);
+    const q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(d, n, z));
+    prender(A, 'lowerarm_l', obj, mao.clone().addScaledVector(d, -0.06).addScaledVector(n, 0.03), q);
+  }
+  function frentePeito(A) {                                           // ponto mais à frente da roupa na altura do peito (repouso)
+    A.reset(); A.grupo.updateMatrixWorld(true); const yc = A.pos('spine_03').y + 0.02; let zMax = 0; const v = V();
+    for (const m of A.malhas) { if (/cabelo|cilio|sobrancelha|olho/i.test(m.name + (m.material.name || ''))) continue; const P = m.geometry.attributes.position;
+      for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(m.matrixWorld); if (Math.abs(v.y - yc) < 0.04 && Math.abs(v.x) < 0.07) zMax = Math.max(zMax, v.z); } }
+    return V(0, yc, zMax + 0.006);
+  }
+  relogioNoPulso(H, rel); relogioNoPulso(Mt, relM);
+  prender(Mt, 'spine_03', num, frentePeito(Mt), new THREE.Quaternion());
   const poeira = criarFumaca(scene, tela.alt);
   MUNDO = { selva, T, H, Mt, corrida, RUMO_CLIP, passoClip, rel, relM, ten, poeira };
 
@@ -265,7 +283,7 @@ export async function construirTudo() {
   // S7 (14,2-18,5): de frente na trilha (câmera sobre a própria trilha, à frente dele); o T. rex atrás, travando entre as árvores
   plano('S7 mata', 4.3, (u, t) => {
     const e = estado2(t); const c = H.pos('spine_03'); ilumina(c);
-    const pc = ptArco(Math.min(e.sR + 6.5, L2 - 0.3)); pc.y = alturaChao(pc.x, pc.z) + 1.55;
+    const sc = Math.min(e.sR + 6.5, L2 + 1.45), pc = sc <= L2 ? ptArco(sc) : ptArco(L2).addScaledVector(dirF, sc - L2); pc.y = alturaChao(pc.x, pc.z) + (sc > L2 - 0.5 ? 0.95 : 1.55);
     const d = camEm(pc, V(c.x, c.y + 0.9, c.z), 46, { tremor: 0.4 + tremorPisada(e.sT, e.vt, 0.7), t });
     lente({ foco: d, abertura: 0.004, brilho: 0.35, ao: 0.85 });
   }, { precisa: () => [...corpoH(H), T_.boca(), T_.pontos()[0]] });
@@ -290,9 +308,9 @@ export async function construirTudo() {
   }, { precisa: () => [...corpoH(Mt), ...T_.pontos()] });
   // S9r (24,6-25,9): o relógio no pulso, câmera presa ao antebraço (balança com o braço): 21 km/h
   plano('S9r relogio', 1.3, (u, t) => {
-    estado3(t); Mt.grupo.updateMatrixWorld(true); const m = Mt.ossos.lowerarm_l.matrixWorld, rp = relM.getWorldPosition(V());
-    const q = Mt.ossos.lowerarm_l.getWorldQuaternion(new THREE.Quaternion()), cima = V(0, 0.16, 0.10).applyQuaternion(relM.getWorldQuaternion(new THREE.Quaternion()));
-    cam.position.copy(rp).add(cima.multiplyScalar(1.0)); cam.up.set(0, 1, 0).applyQuaternion(q); cam.lookAt(rp);
+    estado3(t); Mt.grupo.updateMatrixWorld(true); const rp = relM.getWorldPosition(V()), q = relM.getWorldQuaternion(new THREE.Quaternion());
+    const n = V(0, 1, 0).applyQuaternion(q), d = V(1, 0, 0).applyQuaternion(q);              // normal do visor e direção do antebraço
+    cam.position.copy(rp).addScaledVector(n, 0.20).addScaledVector(d, -0.07); cam.up.copy(d); cam.lookAt(rp);
     if (cam.fov !== 38) { cam.fov = 38; cam.updateProjectionMatrix(); }
     ilumina(rp); lente({ foco: cam.position.distanceTo(rp), abertura: 0.02, desfoque: 0.014, brilho: 0.4, ao: 0.6 });
   }, { precisa: () => [relM.getWorldPosition(V())] });

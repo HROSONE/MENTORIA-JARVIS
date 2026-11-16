@@ -54,7 +54,7 @@ export async function construirSelva(pai, renderer) {
   const mE = materialPH('brown_mud_03', { rep: [80, 1.6], extra: { transparent: false } }); const estrada = new THREE.Mesh(geoE, mE); estrada.receiveShadow = true; G.add(estrada);
   // trilha batida para dentro da mata
   const pts = TRILHA.map(([x, z]) => new THREE.Vector3(x, 0, z)); const curva = new THREE.CatmullRomCurve3(pts);
-  const trilhaGeo = new THREE.TubeGeometry(curva, 60, 0.9, 6, false); trilhaGeo.scale(1, 0.02, 1); const tr = new THREE.Mesh(trilhaGeo, mTerra); tr.position.y = 0.03; tr.receiveShadow = true; G.add(tr);
+  // (a trilha é o corredor sem vegetação; o tubo achatado que marcava o chão parecia uma laje e saiu)
 
   // assets
   const L = { leve: true };
@@ -62,7 +62,7 @@ export async function construirSelva(pai, renderer) {
   const sam = await modeloPH('fern_02'), fol = [await modeloPH('anthurium_botany_01'), await modeloPH('calathea_orbifolia_01'), await modeloPH('pachira_aquatica_01')];
   const arb = [await modeloPH('shrub_01', L), await modeloPH('shrub_04')], ped = [await modeloPH('rock_moss_set_01'), await modeloPH('rock_moss_set_02'), await modeloPH('boulder_01'), await modeloPH('rock_07')];
   const tronco = [await modeloPH('dead_tree_trunk_02'), await modeloPH('root_cluster_01', L)];
-  const livre = (x, z, folga) => Math.abs(z) > ESTRADA_LARG / 2 + folga && distTrilha(x, z) > 1.6 + folga * 0.5 && Math.hypot(x - FENDA.x - Math.cos(FENDA.giro) * 1.6, z - FENDA.z - Math.sin(FENDA.giro) * 1.6) > 6.2 && !CLAROS.some(c => x > c.x0 - folga && x < c.x1 + folga && z > c.z0 - folga && z < c.z1 + folga);
+  const livre = (x, z, folga) => Math.abs(z) > ESTRADA_LARG / 2 + folga && distTrilha(x, z) > 2.2 + folga && Math.hypot(x - FENDA.x - Math.cos(FENDA.giro) * 1.6, z - FENDA.z - Math.sin(FENDA.giro) * 1.6) > 6.2 && !CLAROS.some(c => x > c.x0 - folga && x < c.x1 + folga && z > c.z0 - folga && z < c.z1 + folga);
   const M = (x, z, esc, giro, afunda = 0) => new THREE.Matrix4().compose(new THREE.Vector3(x, alturaChao(x, z) - afunda, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), giro), new THREE.Vector3(esc, esc, esc));
   const espalhar = (mods, n, rmin, rmax, esc, folga, xs = [-90, 140]) => {
     const por = mods.map(() => []);
@@ -74,16 +74,17 @@ export async function construirSelva(pai, renderer) {
     mods.forEach((m, i) => por[i].length && instanciar(G, m, por[i]));
   };
   espalhar(arv, 170, 5.5, 60, [0.9, 1.5], 3.0);                           // árvores
-  espalhar([sam], 900, 2.8, 40, [1.6, 3.0], 0.6);                         // samambaias gigantes
-  espalhar(fol, 500, 2.8, 35, [1.2, 2.4], 0.5);                           // folhagens tropicais
-  espalhar(arb, 260, 3.0, 45, [1.0, 2.0], 0.8);                           // arbustos
-  espalhar(ped, 120, 3.2, 40, [0.8, 2.4], 0.8);                           // rochas com musgo
-  espalhar(tronco, 30, 4, 30, [1.0, 1.6], 1.0);
+  // vegetação baixa recuada da estrada: na escala usada as folhas avançam ~1,5 m; antes elas entravam na estrada e na frente da lente
+  espalhar([sam], 900, 4.6, 40, [1.6, 3.0], 1.6);                         // samambaias gigantes
+  espalhar(fol, 500, 4.4, 35, [1.2, 2.4], 1.5);                           // folhagens tropicais
+  espalhar(arb, 260, 4.6, 45, [1.0, 2.0], 1.6);                           // arbustos
+  espalhar(ped, 120, 4.0, 40, [0.8, 2.4], 1.2);                           // rochas com musgo
+  espalhar(tronco, 30, 6, 30, [1.0, 1.6], 2.5);
   // a trilha da tentativa 2 fica cercada de árvores próximas (ele passa entre elas; o T. rex trava)
   const perto = [];
   for (let i = 0; i < 26; i++) {
     const u = R(), seg = curva.getPointAt(0.25 + 0.7 * u), tg = curva.getTangentAt(0.25 + 0.7 * u), lado = R() < 0.5 ? -1 : 1, d = 2.1 + R() * 1.6;
-    const x = seg.x - tg.z * lado * d, z = seg.z + tg.x * lado * d; if (Math.hypot(x - FENDA.x - Math.cos(FENDA.giro) * 1.6, z - FENDA.z - Math.sin(FENDA.giro) * 1.6) < 5.5) continue; perto.push(M(x, z, 0.9 + R() * 0.5, R() * 6.283));
+    const x = seg.x - tg.z * lado * d, z = seg.z + tg.x * lado * d; if (Math.abs(z) < ESTRADA_LARG / 2 + 2.6) continue; if (Math.hypot(x - FENDA.x - Math.cos(FENDA.giro) * 1.6, z - FENDA.z - Math.sin(FENDA.giro) * 1.6) < 5.5) continue; perto.push(M(x, z, 0.9 + R() * 0.5, R() * 6.283));
   }
   instanciar(G, arv[1], perto);
   // a fenda: dois matacões grandes (~3 m de altura, 6 m de comprimento) com o comprimento ao longo de dirF, abertura ~0,8 m, topos inclinados um

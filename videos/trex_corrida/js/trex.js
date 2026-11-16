@@ -43,6 +43,10 @@ export async function criarTrex({ url = '../biblioteca3d/animais/trex/trex.glb' 
   grupo.updateMatrixWorld(true);
   const posRep = {}; for (const k in ossos) posRep[k] = ossos[k].getWorldPosition(new THREE.Vector3());      // juntas em repouso (espaço do modelo)
   const raizY0 = ossos.quadril.position.y;
+  // direções do MODELO (x frente, y cima) escritas no eixo próprio de cada osso em repouso: um osso do Blender aponta no próprio Y, então
+  // "frente da cabeça" não é (1, 0, 0) do osso. dirOsso(nome, v) devolve v (modelo, em repouso) girado junto com o osso agora (mundo).
+  const qRep = {}; for (const k in ossos) qRep[k] = ossos[k].getWorldQuaternion(new THREE.Quaternion());
+  const dirOsso = (nome, v) => v.clone().applyQuaternion(qRep[nome].clone().invert()).applyQuaternion(ossos[nome].getWorldQuaternion(new THREE.Quaternion()));
 
   function girar(nome, eixo, ang) {                                    // gira o osso em torno de um eixo do MODELO (x frente, y cima, z direita)
     const b = ossos[nome]; if (!b || !ang) return;
@@ -107,7 +111,7 @@ export async function criarTrex({ url = '../biblioteca3d/animais/trex/trex.glb' 
       const tornozelo = bola.clone().add(new THREE.Vector3(-Math.cos(angM) * Lm, Math.sin(angM) * Lm, 0));
       ik2('coxa_' + l, 'canela_' + l, 'metatarso_' + l, L2W(tornozelo), L2W(new THREE.Vector3(1, 0.1, 0)).sub(L2W(new THREE.Vector3())));
       const pm = P('metatarso_' + l), pd = P('dedos_' + l); apontar('metatarso_' + l, pd.clone().sub(pm), L2W(bola).sub(pm));
-      const pd2 = P('dedos_' + l); apontar('dedos_' + l, new THREE.Vector3(1, -0.2, 0).applyQuaternion(ossos['dedos_' + l].getWorldQuaternion(_q)), L2W(bola.clone().add(new THREE.Vector3(0.66, -0.15 - y * 0.3, 0))).sub(pd2));
+      const pd2 = P('dedos_' + l); apontar('dedos_' + l, dirOsso('dedos_' + l, new THREE.Vector3(1, -0.2, 0)), L2W(bola.clone().add(new THREE.Vector3(0.66, -0.15 - y * 0.3, 0))).sub(pd2));
     }
     // braços: balanço curto
     for (const l of ['l', 'r']) { girar('braco_' + l, [0, 0, 1], 0.12 * anda * Math.sin(2 * Math.PI * fase + (l === 'l' ? 0 : Math.PI)) - 0.2 * rugido); girar('antebraco_' + l, [0, 0, 1], -0.25 - 0.2 * rugido); }
@@ -116,11 +120,11 @@ export async function criarTrex({ url = '../biblioteca3d/animais/trex/trex.glb' 
     girar('pescoco2', [0, 0, 1], 0.06 * rugido - 0.18 * mordida + 0.10 * mastigar);
     if (olhar) {
       grupo.updateMatrixWorld(true);
-      const pc = P('cabeca'), frente = new THREE.Vector3(1, -0.1, 0).applyQuaternion(ossos.cabeca.getWorldQuaternion(_q)), alvo = olhar.clone().sub(pc).normalize();
+      const pc = P('cabeca'), frente = dirOsso('cabeca', new THREE.Vector3(1, -0.1, 0)), alvo = olhar.clone().sub(pc).normalize();
       const q = new THREE.Quaternion().setFromUnitVectors(frente.normalize(), alvo); const qp = new THREE.Quaternion().slerp(q, 0.55);   // metade no pescoço, metade na cabeça
       const b = ossos.pescoco2, pw = b.parent.getWorldQuaternion(new THREE.Quaternion()), bw = b.getWorldQuaternion(new THREE.Quaternion()); b.quaternion.copy(pw.clone().invert().multiply(qp.clone().multiply(bw)));
       grupo.updateMatrixWorld(true);
-      const frente2 = new THREE.Vector3(1, -0.1, 0).applyQuaternion(ossos.cabeca.getWorldQuaternion(_q)), alvo2 = olhar.clone().sub(P('cabeca')).normalize();
+      const frente2 = dirOsso('cabeca', new THREE.Vector3(1, -0.1, 0)), alvo2 = olhar.clone().sub(P('cabeca')).normalize();
       const q2 = new THREE.Quaternion().setFromUnitVectors(frente2.normalize(), alvo2); const c = ossos.cabeca, pw2 = c.parent.getWorldQuaternion(new THREE.Quaternion()), cw = c.getWorldQuaternion(new THREE.Quaternion());
       c.quaternion.copy(pw2.invert().multiply(new THREE.Quaternion().slerp(q2, 0.9).multiply(cw)));
     }
@@ -134,7 +138,7 @@ export async function criarTrex({ url = '../biblioteca3d/animais/trex/trex.glb' 
     grupo.updateMatrixWorld(true);
   }
   /** ponto da boca no mundo (para encaixar a câmera, a vítima e o enquadramento) */
-  const boca = (alvo = new THREE.Vector3()) => { grupo.updateMatrixWorld(true); return alvo.copy(P('cabeca')).lerp(P('mandibula'), 0.5).add(new THREE.Vector3(0.9, -0.2, 0).applyQuaternion(ossos.cabeca.getWorldQuaternion(_q))); };
+  const boca = (alvo = new THREE.Vector3()) => { grupo.updateMatrixWorld(true); return alvo.copy(P('cabeca')).lerp(P('mandibula'), 0.5).add(dirOsso('cabeca', new THREE.Vector3(0.9, -0.2, 0))); };
   /** caixa aproximada (pontos-chave do corpo) para o verificador de enquadramento */
   const pontos = () => { grupo.updateMatrixWorld(true); return ['cabeca', 'mandibula', 'pescoco2', 'peito', 'quadril', 'cauda4', 'cauda8', 'dedos_l', 'dedos_r', 'coxa_l', 'coxa_r'].map(P); };
   return { grupo, ossos, malhas, posar, boca, pontos, girar };
