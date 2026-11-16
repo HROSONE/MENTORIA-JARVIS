@@ -17,3 +17,19 @@ para baixar tudo de novo: `python3 baixar.py lista`. Formato de cada linha: `tip
 `modelo WoodenTable_01 1k`
 `modelo painted_wooden_chair_01 1k`
 `hdri approaching_storm 1k`
+
+## Short "Ele podia voar": desfiladeiro, estrada de terra e carro
+`textura red_laterite_soil_stones 2k`
+`textura cliff_side 2k`
+`textura dry_ground_rocks 2k`
+`textura rock_face 1k`
+`modelo namaqualand_boulder_02 1k`
+`modelo namaqualand_boulder_05 1k`
+`modelo namaqualand_cliff_01 1k`
+`modelo island_tree_02 1k`
+`modelo shrub_02 1k`
+`modelo shrub_04 1k`
+`modelo dead_tree_trunk 1k`
+`modelo metal_toolbox 1k`
+`hdri valley_of_desolation 2k`
+`hdri red_hill_curve 2k`

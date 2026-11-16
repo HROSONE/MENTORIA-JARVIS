@@ -31,6 +31,7 @@ export async function criarLucasReal({ url = URL_LUCAS } = {}) {
   const repouso = {}; for (const k in ossos) repouso[k] = { q: ossos[k].quaternion.clone(), p: ossos[k].position.clone() };
   const morphs = malhas.filter(m => m.morphTargetDictionary);
   grupo.updateMatrixWorld(true); const cabRep = ossos.head.getWorldQuaternion(new THREE.Quaternion());      // orientação de repouso da cabeça (rosto para +z)
+  const quadril0 = ossos.pelvis.getWorldPosition(new THREE.Vector3());                                         // altura do quadril em pé (para sentar)
 
   const L = {
     grupo, ossos, malhas, altura: 1.384,
@@ -79,6 +80,22 @@ export async function criarLucasReal({ url = URL_LUCAS } = {}) {
       }
       return L;
     },
+    /** sentado: quadril em `p` (coordenadas do pai do grupo, ex.: o carro), virado para `yaw`; coxas para a frente, canelas para baixo */
+    sentar(p, { yaw = 0, coxa = -84, canela = 82, recosto = -6, abre = 6 } = {}) {
+      L.reset(); grupo.position.set(p[0], p[1] - quadril0.y, p[2] - quadril0.z); grupo.rotation.set(0, yaw, 0);
+      L.dobrar('thigh_l', coxa, 0, -abre).dobrar('thigh_r', coxa, 0, abre).dobrar('calf_l', canela, 0, 0).dobrar('calf_r', canela, 0, 0).dobrar('spine_01', recosto, 0, 0);
+      return L;
+    },
+    /** fecha os dedos (0 aberto .. 1 punho); `indicador` 0 deixa o indicador esticado (apontando) */
+    dedos(lado, fechar = 1, { indicador = null, polegar = null } = {}) {
+      for (const f of ['index', 'middle', 'ring', 'pinky', 'thumb']) {
+        const k = f === 'index' && indicador !== null ? indicador : f === 'thumb' && polegar !== null ? polegar : fechar;
+        for (let i = 1; i <= 3; i++) { const b = ossos[`${f}_0${i}_${lado}`]; if (b) b.rotateX((f === 'thumb' ? 0.5 : 1.15) * k * (i === 1 ? 0.9 : 1.1) * (L.sinalDedo || 1)); }
+      }
+      return L;
+    },
+    /** olhos acesos (azul elétrico), k 0..1 */
+    olhosBrilho(k) { for (const m of malhas) if (m.material.name === 'olho') { m.material.emissive.setRGB(0.10, 0.45, 1.0); m.material.emissiveIntensity = 1.4 * k; } return L; },
     /** expressões: { 'eye-left-closure': 0..1, ... } (nomes do MakeHuman); atalhos: piscar, triste, esforco, boca */
     expressao(mapa) {
       for (const m of morphs) { const d = m.morphTargetDictionary; for (const k in mapa) if (k in d) m.morphTargetInfluences[d[k]] = mapa[k]; }

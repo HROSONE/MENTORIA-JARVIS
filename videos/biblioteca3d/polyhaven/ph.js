@@ -23,8 +23,8 @@ export function materialPH(id, { res = '2k', rep = [1, 1], ao = true, normal = 1
   return m;
 }
 /** modelo glTF (clonado a cada chamada); sombras ligadas */
-export async function modeloPH(id, { res = '1k', sombra = true } = {}) {
-  const url = `${BASE}modelo/${id}/${id}_${res}.gltf`;
+export async function modeloPH(id, { res = '1k', sombra = true, leve = false } = {}) {
+  const url = leve ? `${BASE}modelo/${id}/${id}_leve.glb` : `${BASE}modelo/${id}/${id}_${res}.gltf`;            // leve: versão simplificada por decimar.py (para muitas cópias)
   if (!cacheMod.has(url)) cacheMod.set(url, new GLTFLoader().loadAsync(url));
   const g = (await cacheMod.get(url)).scene.clone(true);
   g.traverse(o => { if (o.isMesh) { o.castShadow = sombra; o.receiveShadow = true; } });
