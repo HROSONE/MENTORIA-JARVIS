@@ -10,6 +10,7 @@ import { modeloPH } from '../../biblioteca3d/polyhaven/ph.js';
 import { criarFumaca } from './poeira.js';
 import { criarBolha, criarFogo, criarOnda, criarDestrocos } from './efeitos.js';
 import { construirCidade } from './cidade.js';
+import { construirEscola } from './escola.js';
 import { carregarMocap, aplicarMocap } from './mocap.js';
 
 export const S = { planos: [], total: 0 };
@@ -41,7 +42,8 @@ export async function construirTudo() {
   const real = await criarLucasReal(); scene.add(real.grupo); real.grupo.visible = false;
   const desf = await construirDesfiladeiro(scene, renderer);
   const cidade = await construirCidade(scene, { origem: [3000, 0, 0] });
-  const mundos = { quarto: [quarto.g, real.grupo], desf: [desf.g], cidade: [cidade.g] };
+  const escola = await construirEscola(scene, { origem: [6000, 0, 0] });
+  const mundos = { quarto: [quarto.g, real.grupo], desf: [desf.g], cidade: [cidade.g], escola: [escola.g] };
   const fundoNoite = new THREE.Color(0x0a1230), nevoaNoite = new THREE.FogExp2(0x101a33, 0.0065), fundoDia = new THREE.Color(0xa9c8ea), nevoaDia = new THREE.FogExp2(0xc4d8ec, 0.0035);
   const fundoQuarto = new THREE.Color(0x0b0e12);
   let noite_ = true;
@@ -49,6 +51,7 @@ export async function construirTudo() {
     for (const k in mundos) for (const g of mundos[k]) g.visible = k === nome;
     if (nome === 'quarto') { scene.environment = quarto.ambiente; scene.fog = null; scene.background = fundoQuarto; }
     if (nome === 'desf') { scene.environment = desf.ambiente; scene.fog = desf.nevoa; scene.background = null; }
+    if (nome === 'escola') { scene.environment = null; scene.fog = null; scene.background = fundoDia; }
     if (nome === 'cidade') { scene.environment = null; scene.fog = noite_ ? nevoaNoite : nevoaDia; scene.background = noite_ ? fundoNoite : fundoDia; cidade.noite(noite_); }
   }
   const clips = {}; for (const c of ['140_01', '140_02', '90_16', '13_05']) clips[c] = await carregarMocap('../biblioteca3d/mocap/cmu/' + c + '.json');
@@ -61,7 +64,7 @@ export async function construirTudo() {
     renderer.toneMappingExposure = 1.0;
     quarto.atualizar(t, { relampago: relampago(t, [1.55]), luzAcesa: 0 });
     // ele tenta duas vezes e os braços falham
-    mundo('quarto'); lata.visible = gibi.visible = true;
+    mundo('quarto'); lata.visible = gibi.visible = true; for (const A of [l10, mendes, rocha]) A.grupo.visible = false;
     {
       // captura real (CMU 140_01, levantar de bruços): tenta erguer o tronco, os braços tremem e cedem, tenta de novo mais fraco
       real.grupo.visible = true;
@@ -307,7 +310,112 @@ export async function construirTudo() {
     const d = camera(ptC(18 - 5.5, 1.5, -12.96 - 11.5).toArray(), ptC(18, 1.2 + 2.5 * sobe, -12.96 - 8.2).toArray(), 46, { tremor: 0.8, t });
     lente({ foco: d, abertura: 0.004, brilho: 0.8, limiar: 0.7, ao: 0.7 });
   });
+  // ================================================================================================ 5) OS PODERES (34-44 s): levanta um carro, vai para a escola levitando com a mochila, escreve HRYZ pela mão da professora
+  const sedan = criarViatura({ livery: 'liso', civil: true, placa: 'HRYZ 204', sujeira: 0.4 }); sedan.grupo.rotation.order = 'YXZ'; scene.add(sedan.grupo); mundos.cidade.push(sedan.grupo); sedan.farois(false);
+  const placaEscola = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 0.8), new THREE.MeshStandardMaterial({ map: canvasTexto('ESCOLA MUNICIPAL HRYZ', '#f4f1e6', '#1f3c6e'), roughness: 0.6 })); placaEscola.position.set(-24, 4.3, 7.1); placaEscola.rotation.y = Math.PI; cidade.g.add(placaEscola);
+  const mochila = new THREE.Group(); { const m = new THREE.MeshStandardMaterial({ color: 0x2f5fa8, roughness: 0.8 }), z = new THREE.MeshStandardMaterial({ color: 0x1b2f4f, roughness: 0.6 });
+    const c = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.40, 0.15), m); c.geometry.translate(0, 0.2, 0); mochila.add(c); const bolso = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.05), m); bolso.position.set(0, 0.12, 0.095); mochila.add(bolso);
+    for (const x of [-0.08, 0.08]) { const a = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.015, 6, 16, Math.PI), z); a.position.set(x, 0.28, -0.08); a.rotation.set(0, Math.PI / 2, Math.PI / 2); mochila.add(a); }
+    mochila.traverse(o => { if (o.isMesh) o.castShadow = true; }); scene.add(mochila); mundos.cidade.push(mochila); }
+  const prof = await criarLucasReal({ url: URL_REAL('professora') }); scene.add(prof.grupo); mundos.escola.push(prof.grupo);
+  const giz = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.07, 8), new THREE.MeshStandardMaterial({ color: 0xf6f6f2, roughness: 0.9 })); scene.add(giz); mundos.escola.push(giz);
+  function levitando(A, P, yaw, t, { bracoD = null, olhar = null } = {}) {
+    A.reset(); A.grupo.position.set(P.x, P.y + 0.04 * Math.sin(t * 2.2), P.z); A.grupo.rotation.set(0, yaw, 0);
+    A.dobrar('thigh_l', -6, 0, 0).dobrar('thigh_r', 4, 0, 0).dobrar('calf_l', 14, 0, 0).dobrar('calf_r', 10, 0, 0).dobrar('foot_l', 30, 0, 0).dobrar('foot_r', 30, 0, 0);
+    A.dobrar('upperarm_l', 0, 0, -48).dobrar('upperarm_r', 0, 0, 48).dobrar('lowerarm_l', -10, 0, 0).dobrar('lowerarm_r', -10, 0, 0);
+    if (bracoD) A.ik('upperarm_r', 'lowerarm_r', 'hand_r', bracoD, new THREE.Vector3(0, -1, 0)).dedos('r', 0.1);
+    if (olhar) A.olharPara(olhar, 0.7);
+  }
+  const C_ = (x, y, z) => new THREE.Vector3(cidade.origem.x + x, y, cidade.origem.z + z);
+  const prepM = () => { mundo('cidade', false); real.grupo.visible = true; if (real.grupo.parent !== scene) scene.add(real.grupo); lata.visible = gibi.visible = false; for (const A of [l10, mendes, rocha]) A.grupo.visible = false; for (const b of [bolhaL, bolhaM, bolhaR]) b.userData.atualizar(0, 0); };
+  plano('M1 levanta um carro com a mão', 2.5, (u, t) => {
+    prepM(); const sobe = suave(clamp((u - 0.3) / 1.6));
+    sedan.grupo.position.copy(C_(-20, 0.02 + 2.6 * sobe, -1.75)); sedan.grupo.rotation.set(0.05 * Math.sin(t * 1.7) * sobe, Math.PI / 2 + 0.25 * sobe, 0.08 * Math.sin(t * 1.3) * sobe, 'YXZ'); sedan.rodar(t * 3 * sobe);
+    levitando(real, C_(-20.3, 0.35, 5.6), Math.PI, t, { bracoD: C_(-20.2, 1.55 + 0.4 * sobe, 4.6), olhar: C_(-20, 1.2 + 2.6 * sobe, -1.75) }); real.rosto({ esforco: 0.15 }); real.olhosBrilho(0.35 * sobe);
+    mochila.visible = false; placaEscola.visible = true;
+    const e = suave(u / 2.5); const d = camera(C_(lerp(-18.8, -19.2, e), lerp(0.55, 0.7, e), lerp(-6.6, -6.2, e)).toArray(), C_(-20.2, lerp(1.6, 2.1, e), 2.2).toArray(), 50, { tremor: 0.8, t });
+    lente({ foco: d, abertura: 0.004, brilho: 0.35, limiar: 0.9, ao: 0.7 });
+  });
+  plano('M2 vai para a escola levitando, a mochila atrás', 3.5, (u, t) => {
+    prepM(); sedan.grupo.position.copy(C_(-6, 0.02, -1.75)); sedan.grupo.rotation.set(0, Math.PI / 2, 0, 'YXZ');
+    const x = lerp(-33, -25.2, suave(u / 3.5)), P = C_(x, 0.45, 5.8);
+    levitando(real, P, Math.PI / 2, t, { olhar: C_(x + 6, 1.2, 6) }); real.dobrar('upperarm_l', 0, 0, 20).dobrar('upperarm_r', 0, 0, -20); real.rosto({}); real.olhosBrilho(0);
+    mochila.visible = true; mochila.position.copy(P).add(new THREE.Vector3(-0.75, 0.75 + 0.06 * Math.sin(t * 3), 0.0)); mochila.rotation.set(0.08 * Math.sin(t * 2), Math.PI / 2 + 0.15 * Math.sin(t * 1.5), 0.06 * Math.sin(t * 2.6));
+    const e = suave(u / 3.5); const d = camera(C_(x - lerp(2.6, 3.2, e), lerp(1.0, 1.25, e), 1.6).toArray(), C_(x + lerp(0.2, 1.4, e), lerp(1.1, 2.6, e), 6.4).toArray(), 46, { tremor: 0.6, t });
+    lente({ foco: d, abertura: 0.006, brilho: 0.35, limiar: 0.9, ao: 0.7 });
+  });
+  const E_ = (x, y, z) => new THREE.Vector3(escola.origem.x + x, y, escola.origem.z + z);
+  const kEscrita = t => clamp((t - 40.3) / 3.3);
+  function sala(t) {
+    mundo('escola'); real.grupo.visible = true; if (real.grupo.parent !== scene) scene.add(real.grupo); lata.visible = gibi.visible = false; for (const A of [l10, mendes, rocha]) A.grupo.visible = false; mochila.visible = false;
+    const k = kEscrita(t); escola.escrever(k);
+    const pen = escola.ponta(k), tr = 0.012 * (k > 0 && k < 1 ? 1 : 0);
+    pen.x += tr * Math.sin(t * 31); pen.y += tr * Math.sin(t * 27 + 1);
+    prof.reset(); prof.grupo.position.set(pen.x + 0.55, 0, escola.origem.z - 4.4 + 0.62); prof.grupo.rotation.set(0, Math.PI + 0.35, 0);
+    prof.ik('upperarm_r', 'lowerarm_r', 'hand_r', pen.clone().add(new THREE.Vector3(0.02, -0.04, 0.05)), new THREE.Vector3(1, -0.4, 0.4)).dedos('r', 0.55);
+    prof.dobrar('upperarm_l', 0, 0, -20).dobrar('lowerarm_l', -60, 0, 0);
+    const choque = clamp((k - 0.25) / 0.3); prof.olharPara(prof.pos('hand_r').lerp(E_(0.75, 1.15, 2.0), 0.25 * (1 - choque)), 0.9);
+    prof.rosto({}).expressao({ 'eyebrows-left-inner-up': choque, 'eyebrows-right-inner-up': choque, 'eyebrows-left-up': choque, 'mouth-open': 0.35 * choque, 'eye-left-closure': 0 });
+    prof.dobrar('spine_02', 0, 0, -6 * choque);
+    const mao = prof.ossos.hand_r; mao.updateMatrixWorld(true); giz.position.copy(pen).add(new THREE.Vector3(0.0, -0.01, 0.03)); giz.rotation.set(1.2, 0, 0.4);
+    // Lucas na terceira fileira: sentado, o dedo indicador "escrevendo" no ar, olhos acesos de leve
+    real.sentar([E_(0.75, 0, 0).x, 0.47, escola.origem.z + 2.0 + 0.45], { yaw: Math.PI, recosto: -4 }); real.grupo.rotation.y = Math.PI;
+    const alvoDedo = E_(0.75 + 0.18 + (pen.x - escola.origem.x) * 0.05, 1.0 + (pen.y - 1.55) * 0.08, escola.origem.z + 1.55 - escola.origem.z);
+    real.ik('upperarm_r', 'lowerarm_r', 'hand_r', alvoDedo, new THREE.Vector3(1, -1, 0)).dedos('r', 1, { indicador: 0, polegar: 0.6 });
+    real.olharPara(E_(0, 1.6, -4.3), 0.8); real.rosto({ esforco: 0.25 }); real.olhosBrilho(0.4 * (k > 0 && k < 1 ? 1 : 0.3));
+    return pen;
+  }
+  plano('M3a a lousa: o dedo do Lucas guia o giz', 2.0, (u, t) => {
+    sala(t); const e = suave(u / 2);
+    const d = Q.has('lado') ? camera(E_(3.8, 1.4, 2.2).toArray(), E_(0.75, 0.8, 2.3).toArray(), 50) : camera(E_(lerp(1.0, 0.95, e), 1.32, lerp(3.15, 3.0, e)).toArray(), E_(0.3, 1.35, -4.2).toArray(), 46, { tremor: 0.6, t });
+    lente({ foco: d * 0.75, abertura: 0.008, desfoque: 0.010, brilho: 0.3, limiar: 0.9, ao: 0.8 });
+  });
+  plano('M3b a mão da professora escreve HRYZ sozinha', 2.0, (u, t) => {
+    const pen = sala(t); const e = suave(u / 2);
+    const d = camera(E_(lerp(2.0, 1.75, e), 1.5, lerp(-1.6, -2.0, e)).toArray(), pen.clone().lerp(prof.pos('head'), 0.45).toArray(), lerp(46, 40, e), { tremor: 0.8, t });
+    lente({ foco: d, abertura: 0.006, brilho: 0.3, limiar: 0.9, ao: 0.8 });
+  });
+
+  // ================================================================================================ 6) O PREÇO (44-50 s): a luz acaba, ele pisa no chão e desaba (o último quadro é o quadro 0)
+  const lataIni = () => { lata.position.set(LX + 0.62, 0.62, LZ + 1.55); lata.rotation.set(0.4, 0.6, 0); gibi.position.set(LX - 0.48, 0.853, LZ + 1.05); gibi.rotation.set(0.5, 0.4, 0.3); };
+  plano('F1 flutuando, até a luz acabar', 2.5, (u, t) => {
+    mundo('quarto'); lata.visible = gibi.visible = true; real.grupo.visible = true; if (real.grupo.parent !== scene) scene.add(real.grupo);
+    for (const A of [l10, mendes, rocha]) A.grupo.visible = false;
+    const apaga = u < 1.5 ? 1 : (u < 1.75 ? (Math.sin(u * 90) > 0 ? 1 : 0.1) : 0);
+    quarto.atualizar(t, { relampago: relampago(t, [44 + 1.55]), luzAcesa: apaga });
+    real.reset(); real.grupo.position.set(-1.25, 0.95 + 0.04 * Math.sin(t * 1.8), 0.55); real.grupo.rotation.set(-Math.PI / 2 + 0.25, 0, 0.0, 'YXZ');
+    real.dobrar('thigh_l', -20, 0, 0).dobrar('calf_l', 30, 0, 0).dobrar('upperarm_l', -40, 0, -20).dobrar('upperarm_r', -50, 0, 25);
+    real.olharPara(new THREE.Vector3(-1.25, 1.55, -0.5), 0.8); real.rosto({}); real.olhosBrilho(0);
+    gibi.position.set(-1.25, 1.55, -0.45 + 0.02 * Math.sin(t)); gibi.rotation.set(-1.25 + Math.PI, 0, 0.1); lata.position.set(-0.9, 1.3 + 0.03 * Math.sin(t * 1.4), -0.25); lata.rotation.set(0.1, 0.6, 0.15);
+    const e = suave(u / 2.5); const d = camera([lerp(-0.05, -0.2, e), lerp(1.6, 1.55, e), lerp(-1.35, -1.25, e)], [-1.25, 1.2, -0.45], 50, { tremor: 0.8, t });
+    lente({ foco: d, abertura: 0.008, brilho: 0.4, limiar: 0.8, ao: 0.85 });
+  });
+  plano('F2 pisa no chão e desaba (volta ao quadro 0)', 3.5, (u, t) => {
+    mundo('quarto'); lata.visible = gibi.visible = true; real.grupo.visible = true; for (const A of [l10, mendes, rocha]) A.grupo.visible = false;
+    quarto.atualizar(t, { relampago: relampago(t, [44 + 2.9]), luzAcesa: 0 });
+    // desce de pé (captura de pé, tc 6.5) e depois o "levantar de bruços" ao contrário, acelerado: os joelhos cedem e ele cai na pose do quadro 0
+    const tc = u < 1.0 ? 6.5 : u < 3.1 ? lerp(6.5, 0.70, entra(clamp((u - 1.0) / 2.1)) ** 0.8) : 0.70;
+    const desce = u < 1.0 ? lerp(0.55, 0, suave(u / 1.0)) : 0;
+    const soCima = u > 3.1;
+    aplicarMocap(real, clips['140_01'], tc, { origem: [LX, desce, LZ], yaw: -Math.PI / 2, ossos: soCima ? ['spine_01', 'spine_02', 'spine_03', 'neck_01', 'head', 'clavicle_l', 'upperarm_l', 'lowerarm_l', 'hand_l', 'clavicle_r', 'upperarm_r', 'lowerarm_r', 'hand_r'] : null });
+    if (soCima) for (const l of ['l', 'r']) real.girar('foot_' + l, [1, 0, 0], 0.5);
+    const tr = u > 3.1 ? 0.8 : 0.3; for (const l of ['l', 'r']) real.dobrar('lowerarm_' + l, 4 * tr * ruido(t * 21, l === 'l' ? 4 : 5), 0, 0);
+    if (u > 2.6) real.olharPara(new THREE.Vector3(LX + 0.5, 0.9, LZ + 2.6), 0.55 + 0.4 * clamp((0.7 - 0.4) / 1.0) * clamp((u - 2.6) / 0.5));
+    real.rosto({ esforco: u > 1.0 ? 0.5 : 0.1, triste: 0.5, boca: u > 1 && u < 2.5 ? 0.4 : 0 });
+    lataIni();
+    // câmera: de um plano médio até exatamente o enquadramento do quadro 0
+    const e = suave(clamp((u - 0.2) / 3.2));
+    const d = camera([lerp(-0.6, 0.70, e), lerp(1.55, 1.25, e), lerp(1.9, 2.55, e)], [lerp(LX, LX, e), lerp(0.75, 0.30, e), lerp(LZ + 0.4, LZ + 0.70, e)], lerp(46, 42, e), { roll: lerp(0, 0.06, e), tremor: lerp(1.5, 1, e), t });
+    lente({ foco: d - 0.35, abertura: 0.010, desfoque: 0.012, brilho: 0.45, limiar: 0.8 });
+  });
   return S;
+}
+
+function canvasTexto(txt, fundo, cor) {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 196; const g = c.getContext('2d');
+  g.fillStyle = fundo; g.fillRect(0, 0, 1024, 196); g.strokeStyle = cor; g.lineWidth = 10; g.strokeRect(8, 8, 1008, 180);
+  g.fillStyle = cor; g.font = '900 86px "DejaVu Sans", Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, 512, 102);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
 export function atualizar(t) { const p = acharPlano(t); p.fn(clamp(t - p.t0, 0, p.dur), t, p); }

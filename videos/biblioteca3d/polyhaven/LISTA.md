@@ -33,3 +33,8 @@ para baixar tudo de novo: `python3 baixar.py lista`. Formato de cada linha: `tip
 `modelo metal_toolbox 1k`
 `hdri valley_of_desolation 2k`
 `hdri red_hill_curve 2k`
+
+## Short "Ele podia voar": escola
+`modelo SchoolDesk_01 1k`
+`modelo SchoolChair_01 1k`
+`modelo wall_clock 1k`
