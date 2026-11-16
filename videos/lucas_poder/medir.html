@@ -1,0 +1,6 @@
+<!doctype html><html><head><meta charset="utf-8"><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script></head><body><script type="module">
+import * as THREE from 'three'; import { modeloPH } from '../biblioteca3d/polyhaven/ph.js';
+const ids = new URLSearchParams(location.search).get('ids').split(','); const out = {};
+for (const id of ids) { const g = await modeloPH(id); const b = new THREE.Box3().setFromObject(g); out[id] = { min: b.min.toArray().map(v => +v.toFixed(3)), max: b.max.toArray().map(v => +v.toFixed(3)) }; }
+window.__out = out; window.__ready = true;
+</script></body></html>

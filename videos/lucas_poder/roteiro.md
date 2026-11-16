@@ -1,6 +1,6 @@
 # "Ele podia voar" (ficção): roteiro adaptado e decupagem — Short 9:16, ≈ 58 s
 
-**Status:** plano para aprovação do dono. Nada animado ainda.
+**Status:** aprovado pelo dono (16/11), com pedido de qualidade de cinema ("nível Blender"). Lucas com as pernas atrofiadas é exceção à regra "proibido deformar", só neste vídeo.
 **Origem:** conto enviado pelo dono (Lucas, a viatura no desfiladeiro, a telecinese e o preço do poder). A história é **ficção**: o título marca "(ficção)" e a narração nunca a apresenta como caso real.
 **Pedido do dono:** abrir no estado decrépito (a consequência), depois desenvolver até chegar lá; máximo de 60 s.
 
@@ -10,23 +10,26 @@
 - **Escalada da preguiça (45–52 s):** cada ação do dia a dia é trocada pelo poder (repetida e escalando).
 - **Resposta e volta ao começo (52–58 s):** a luz cai, ele pousa, os joelhos cedem. O último quadro repete o quadro 0 (loop).
 
-## Narração (o dono grava; ≈ 145 palavras, ≈ 2,6 palavras por segundo)
-O conto tem cerca de 1.100 palavras e não cabe em 60 s, então condensei a narração e mantive as falas dos personagens quase iguais às do texto.
+## Narração (o dono narra; ≈ 160 palavras em 58 s)
+Escrita para ser falada: frases curtas com conectivos ("e", "só que", "e foi aí que", "desde então", "até que") que puxam a próxima cena. O começo planta a pergunta (por que ele não fica de pé?), o meio explica de onde veio o poder e como ele passou a depender dele, e o fim responde e cai de novo na primeira frase (loop).
+As duas falas entre aspas são dos personagens; dá para fazer com voz própria ou narrar por cima.
 
-| Tempo | O que aparece | Fala |
+| Tempo | O que aparece | Narração |
 |---|---|---|
-| 0,0–4,0 | Lucas caído no piso de madeira, braços tremendo; lata e revista caem do ar | "Esse garoto consegue voar… mas não consegue ficar de pé." |
-| 4,0–7,5 | Rebobina; viatura na estrada de terra à beira do desfiladeiro, poeira vermelha | "Dois anos antes, Lucas tinha dez anos e ia no banco de trás de uma viatura." |
-| 7,5–13,0 | Lucas se inclina para a frente; os dois policiais riem | LUCAS: "Moço, a gente já tá chegando? Tô com fome." — MENDES: "Quieto aí atrás, moleque." |
-| 13,0–17,0 | Lucas de cabeça baixa; Rocha aumenta o rádio | LUCAS: "Eu não fugi… fui procurar meu cachorro." — ROCHA: "Cala a boca, garoto." |
-| 17,0–22,0 | Mãos fechando nos joelhos, garrafas tremendo, olhos acendendo azul | "Algo dentro dele estalou." — ROCHA: "Que barulho é esse?" |
-| 22,0–27,0 | A viatura explode por dentro e cai do penhasco | "E a raiva saiu de uma vez." |
-| 27,0–32,0 | Queda; Lucas estende as mãos e uma bolha azul o segura | "Mas o mesmo poder que destruiu o carro…" |
-| 32,0–36,0 | Casulos azuis pegam os dois policiais antes das pedras | "…salvou todo mundo." |
-| 36,0–41,0 | Lucas voa sobre a cidade levando os dois desacordados | "Ele levou os dois voando até a delegacia…" |
-| 41,0–45,0 | Deixa os dois no banco e some no céu; depois pousa no quarto e sorri | "…e decidiu que nunca mais teria medo de nada." |
-| 45,0–52,0 | Dois anos depois: flutua na cama, a lata vem até a boca, a mochila o segue, sobe a escada sem pisar | "Andar virou perda de tempo. Ele flutuava pra tudo." |
-| 52,0–58,0 | Tempestade, a luz cai, ele pousa e os joelhos cedem (= quadro 0) | "Até o dia em que a luz acabou… e ele tentou andar." |
+| 0,0–4,0 | Lucas caído no piso de madeira, braços tremendo; a lata e a revista caem do ar | Esse garoto consegue voar. Só que não consegue mais ficar de pé. |
+| 4,0–8,0 | A imagem rebobina; a viatura na estrada de terra à beira do desfiladeiro, poeira vermelha | E tudo começou dois anos antes, no banco de trás de uma viatura, na beira de um desfiladeiro. |
+| 8,0–13,0 | Lucas se inclina para a frente; os dois policiais riem e nem olham | Lucas tinha dez anos e estava com fome. "Moço, a gente já tá chegando?" Mas os dois da frente nem viraram o rosto. |
+| 13,0–17,0 | Lucas de cabeça baixa; Rocha aumenta o rádio | Ele tentou explicar que não tinha fugido, que só foi atrás do cachorro… "Cala a boca, garoto." |
+| 17,0–22,0 | Mãos fechando nos joelhos, garrafas tremendo, olhos acendendo azul | E foi aí que alguma coisa dentro dele estalou. O carro começou a tremer, os olhos dele acenderam… |
+| 22,0–27,0 | A viatura explode por dentro e cai do penhasco | …e a raiva saiu de uma vez só. |
+| 27,0–32,0 | Queda; Lucas estende as mãos e uma bolha azul o segura | A viatura partiu ao meio e despencou. Só que o mesmo poder que destruiu o carro… |
+| 32,0–36,0 | Casulos azuis pegam os dois policiais antes das pedras | …segurou os três no ar, a um palmo das pedras. |
+| 36,0–41,0 | Lucas voa sobre a cidade levando os dois desacordados | Então ele levou os policiais voando até a delegacia, deixou os dois na porta e sumiu no céu. |
+| 41,0–45,0 | Pousa no quarto e sorri | E naquela noite ele decidiu que nunca mais ia ter medo de nada. |
+| 45,0–52,0 | Calendário virando; a lata vem até a boca, a mochila o segue, sobe a escada sem pisar | Desde então, andar virou perda de tempo. Ele flutuava pra comer, pra estudar, pra subir a escada… durante dois anos. |
+| 52,0–58,0 | Tempestade, a luz cai, ele pousa e os joelhos cedem (= quadro 0) | Até o dia em que a luz acabou, ele encostou os pés no chão… e as pernas não aguentaram. |
+
+O tempo de cada linha é a referência para gravar; depois que a narração estiver gravada, ajusto os cortes ao áudio real.
 
 Texto na tela só diegético: um calendário na parede que vira as folhas (contador dos dois anos) e a placa da delegacia com a marca **HRYZ** (marca do canal). Sem legendas.
 Título sugerido (até 6 palavras + 1 emoji): **"Ele podia voar 🧠 (ficção)"**.
