@@ -54,7 +54,7 @@ def loft(nome, estacoes, N=56, expo=2.25, n_por_seg=6):
         for j in range(N): F.append((k, i0 * N + (j + 1) % N, i0 * N + j) if not inv else (k, i0 * N + j, i0 * N + (j + 1) % N))
     ob = malha(nome, V, F); return ob
 
-def nadadeira(nome, bordo, fuga, span, comp, ponta=0.12, enflech=0.3, falc=0.25, esp=0.11, min_esp=0.02, n_sec=16, n_c=20, arredonda=0.35):
+def nadadeira(nome, bordo, fuga, span, comp, ponta=0.12, enflech=0.3, falc=0.25, esp=0.11, min_esp=0.03, n_sec=16, n_c=20, arredonda=0.35):
     """nadadeira com perfil de asa: raiz do bordo de ataque (bordo) ao bordo de fuga (fuga), saindo na direção span por comp metros;
     enflech: recuo do bordo de ataque (rad); falc: quanto o bordo de fuga é côncavo (forma de foice); ponta: corda na ponta / corda na raiz"""
     a, b, s = np.array(bordo, float), np.array(fuga, float), np.array(span, float); s /= np.linalg.norm(s)
@@ -125,9 +125,9 @@ CORPO = [   # x, zc, meia-largura, alto, baixo, afina em cima, afina embaixo
     (3.15, 0.00, 0.485, 0.505, 0.490, 0.15, 0.04),
     (3.50, 0.00, 0.450, 0.450, 0.420, 0.12, 0.05),
     (3.80, 0.00, 0.400, 0.405, 0.300, 0.10, 0.05),   # cabeça mais alta (no animal real a cabeça é grande)
-    (3.95, 0.01, 0.335, 0.350, 0.215, 0.08, 0.10),   # daqui para a frente o "baixo" é a linha da boca; focinho cônico
-    (4.10, 0.02, 0.260, 0.272, 0.185, 0.06, 0.12),
-    (4.25, 0.03, 0.170, 0.185, 0.135, 0.05, 0.12),
+    (3.95, 0.01, 0.335, 0.350, 0.290, 0.08, 0.10),   # cabeça funda: a mandíbula faz o fundo e o lábio de cima desce pela lateral até a linha da boca
+    (4.10, 0.02, 0.265, 0.272, 0.250, 0.06, 0.12),
+    (4.25, 0.03, 0.175, 0.185, 0.180, 0.05, 0.12),
     (4.38, 0.015, 0.094, 0.100, 0.095, 0.0, 0.05),   # focinho cônico cheio por baixo também (não "bico de pato")
     (4.46, 0.010, 0.058, 0.060, 0.058, 0.0, 0.0),    # ponta arredondada
     (4.50, 0.008, 0.020, 0.022, 0.020, 0.0, 0.0),
@@ -154,7 +154,7 @@ nad.append(nadadeira('dorsal2', (1.13, 0, 0.08), (0.99, 0, 0.08), (-0.30, 0, 1),
 nad.append(nadadeira('anal', (1.09, 0, -0.07), (0.97, 0, -0.07), (-0.30, 0, -1), 0.11, ponta=0.25, enflech=0.4, falc=0.25))
 nad.append(nadadeira('caudal_sup', (0.95, 0, 0.03), (0.58, 0, 0.03), (-0.58, 0, 0.81), 1.00, ponta=0.12, enflech=0.22, falc=0.30, esp=0.10))      # lóbulos largos
 nad.append(nadadeira('caudal_inf', (0.93, 0, -0.02), (0.60, 0, 0.0), (-0.52, 0, -0.85), 0.90, ponta=0.12, enflech=0.22, falc=0.30, esp=0.10))
-pele = unir([corpo, mand] + nad, 'tubarao', voxel=0.0085)
+pele = unir([corpo, mand] + nad, 'tubarao', voxel=0.0070)
 print('CORPO faces', len(pele.data.polygons))
 
 def raio(o, origem, direcao):
@@ -184,7 +184,7 @@ def detalhes_cabeca(V, N):
     d = np.zeros(len(V))
     # narinas: duas fendas oblíquas embaixo do focinho
     for s_ in (1, -1):
-        p = np.array([4.32, 0.130 * s_, -0.010]); q = V - p; u = q[:, 0] * 0.85 + q[:, 2] * 0.53; w_ = -q[:, 0] * 0.53 + q[:, 2] * 0.85
+        p = np.array([4.33, 0.085 * s_, -0.070]); q = V - p; u = q[:, 0] * 0.85 + q[:, 2] * 0.53; w_ = -q[:, 0] * 0.53 + q[:, 2] * 0.85
         d += -0.012 * np.exp(-(u / 0.022) ** 2 - (w_ / 0.006) ** 2 - (q[:, 1] / 0.04) ** 2)
     # sulco labial: dobra na comissura da boca
     for s_ in (1, -1):
@@ -285,7 +285,7 @@ DIST_BOCA = dict(zip(np.nonzero(dentro_)[0].tolist(), d[dentro_].tolist()))
 def colorir(o):
     me = o.data; V = np.array([v.co[:] for v in me.vertices]); N = np.array([v.normal[:] for v in me.vertices])
     # divisa irregular como na foto: linha base + lobos grandes (cinza que desce, branco que sobe) + serrilhado fino
-    base = -0.04 + 0.05 * np.tanh((V[:, 0] - 3.2) * 2) + 0.10 * suave(3.6, 4.2, V[:, 0])
+    base = -0.04 + 0.05 * np.tanh((V[:, 0] - 3.2) * 2) - 0.05 * suave(3.6, 4.2, V[:, 0])
     lobos = 0.095 * fbm3(V * np.array([1.0, 0.35, 0.35]), 1.8, 3, sem=11) + 0.042 * fbm3(V * np.array([1.0, 1.0, 1.6]), 6.5, 3, sem=12) + 0.020 * fbm3(V, 19.0, 2, sem=13)
     divisa = base + lobos
     dorso = suave(-0.022, 0.022, V[:, 2] - divisa)
@@ -356,9 +356,9 @@ def material_pele():
         lin = conta('MINIMUM', mapa(n.outputs['Fac'], 0.5 - w, 0.5), mapa(n.outputs['Fac'], 0.5, 0.5 + w, 1.0, 0.0))
         sel = no('ShaderNodeTexNoise', in_Scale=sel_esc, in_Detail=2.0); lig(obj, sel.inputs['Vector'])
         return conta('MULTIPLY', lin, mapa(sel.outputs['Fac'], sel_a, sel_b))
-    r1 = riscos((2.0, 26.0, 26.0), (0.3, 0.0, 0.5), 0.006, 2.2, 0.50, 0.58)                  # compridos, ao longo do corpo
-    r2 = riscos((20.0, 20.0, 2.5), (0.9, 0.2, 0.4), 0.007, 3.5, 0.53, 0.60, dist=0.7)         # curtos e tortos (cabeça)
-    r3 = riscos((3.0, 24.0, 24.0), (0.0, 0.7, 1.2), 0.006, 2.8, 0.52, 0.60)                  # diagonais
+    r1 = riscos((1.2, 14.0, 14.0), (0.3, 0.0, 0.5), 0.010, 2.0, 0.55, 0.61)                  # compridos, ao longo do corpo
+    r2 = riscos((10.0, 10.0, 1.6), (0.9, 0.2, 0.4), 0.012, 3.0, 0.57, 0.63, dist=0.7)         # curtos e tortos (cabeça)
+    r3 = riscos((1.8, 13.0, 13.0), (0.0, 0.7, 1.2), 0.010, 2.4, 0.56, 0.62)                  # diagonais
     escuras = conta('MAXIMUM', conta('MULTIPLY', r1, 0.80), conta('MAXIMUM', conta('MULTIPLY', r2, am.outputs['Fac']), conta('MULTIPLY', r3, 0.70)))
     cor = mistura(escuras, cor, (0.018, 0.017, 0.017, 1.0))
     p1 = riscos((3.5, 20.0, 20.0), (0.5, 0.3, 0.2), 0.004, 1.8, 0.58, 0.66)                  # cicatrizes claras, só no dorso
@@ -440,7 +440,7 @@ def dente(nome, base, cima, frente, larg, alt, esp=0.006, curva=0.25):
 dentes_sup, dentes_inf = [], []
 for s_ in (1, -1):
     for fila, recua, inclina in ((0, 0.016, 0.0), (1, 0.036, 0.75), (2, 0.054, 1.35)):        # 3ª fileira deitada: dentes de reposição
-        n_ = (11, 10, 8)[fila]
+        n_ = (12, 11, 9)[fila]
         for k in range(n_):
             t = (k + 0.5) / n_ * 0.97; (x, y), fora = ponto_contorno(t, s_, recua)
             tam = (1.0 - 0.55 * t ** 1.4) * (1.0, 0.82, 0.62)[fila]
@@ -494,6 +494,7 @@ for v in pele.data.vertices:
     if c.x > X_COM - 0.22:                                                                # boca: abaixo da fenda manda a mandíbula
         zl = linha_boca(min(c.x, FRENTE_BOCA)) - FENDA_Z
         km = 0.0 if c.z > zl else float(suave(X_COM - 0.14, X_COM + 0.06, c.x)) * (float(suave(zl + 0.002, zl - 0.03, c.z)) if c.x < X_COM + 0.02 else 1.0)
+        km *= float(suave(FRENTE_BOCA + 0.05, FRENTE_BOCA + 0.01, c.x))
         if km > 0: w = {k: x * (1 - km) for k, x in w.items()}; w['mandibula'] = km
     for k, x in w.items():
         if x > 1e-4: grupos[k].add([v.index], x, 'REPLACE')
@@ -558,7 +559,7 @@ def padrao_luz(sp, escalas, larguras, fundo, uniao=False):
     mul = ln.nodes.new('ShaderNodeMath'); mul.operation = 'MAXIMUM' if uniao else 'MULTIPLY'; ln.links.new(saidas[0], mul.inputs[0]); ln.links.new(saidas[1], mul.inputs[1])
     ln.links.new(mul.outputs[0], em.inputs['Strength'])
 
-RAIOS_W = float(arg('raios', 250000))
+RAIOS_W = float(arg('raios', 70000))
 def mundo_agua():
     w = bpy.data.worlds.new('agua'); cena.world = w; w.use_nodes = True; nt = w.node_tree; Nn = nt.nodes; L = nt.links
     tc = Nn.new('ShaderNodeTexCoord'); sep = Nn.new('ShaderNodeSeparateXYZ'); L.new(tc.outputs['Generated'], sep.inputs['Vector'])
@@ -580,7 +581,8 @@ def mundo_agua():
     # raios de sol: outro projetor, bem forte, de cima, que só ilumina o volume da água (light linking): aparecem as cortinas de luz
     # na água sem estourar a pele do tubarão (que continua com a luz do sol e das cáusticas)
     sr = bpy.data.lights.new('raios', 'SPOT'); sr.energy = RAIOS_W; sr.spot_size = math.radians(58); sr.spot_blend = 0.7; sr.color = (0.85, 1.0, 0.92); sr.shadow_soft_size = 0.2
-    padrao_luz(sr, (12.0, 30.0), (0.05, 0.07), 0.03, uniao=True)
+    padrao_luz(sr, (10.0, 26.0), (0.028, 0.040), 0.0, uniao=True)
+    globals()['RAIOS_LUZ'] = sr
     sro = bpy.data.objects.new('raios', sr); cena.collection.objects.link(sro); sro.location = (2.2, 0.8, 11.0); sro.rotation_euler = (math.radians(-6), math.radians(-5), 0)
     col_a = bpy.data.collections.new('so_agua'); cena.collection.children.link(col_a); col_a.objects.link(cubo)
     try: sro.light_linking.receiver_collection = col_a; print('LIGHT LINKING ok: os raios só iluminam a água')
@@ -589,8 +591,12 @@ def mundo_agua():
     bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=0.0035); grao = bpy.context.object; grao.name = 'grao'
     mg = material_simples('grao', (0.8, 0.9, 0.9), rug=0.6); grao.data.materials.append(mg)
     rng = np.random.default_rng(3)
-    for i in range(900):
-        g_ = grao.copy(); g_.location = (rng.uniform(-1, 7), rng.uniform(-6, 6), rng.uniform(-2.8, 3.5)); k_ = 0.5 + rng.lognormal(0, 0.55); g_.scale = (k_,) * 3; cena.collection.objects.link(g_)
+    CAMS_PREVIAS = [(3.55, 4.15, -1.05), (5.35, -2.05, 0.30), (3.05, -3.1, 0.15), (6.6, -1.9, -0.35), (5.35, -1.15, -0.32), (2.4, -6.6, 0.25), (3.2, -2.6, -3.6), (2.25, 0, 7.5)]
+    n_ok = 0
+    while n_ok < 900:
+        pos_ = (rng.uniform(-1, 7), rng.uniform(-6, 6), rng.uniform(-2.8, 3.5))
+        if min(math.dist(pos_, c_) for c_ in CAMS_PREVIAS) < 1.3: continue
+        g_ = grao.copy(); g_.location = pos_; k_ = 0.6 + rng.lognormal(-0.3, 0.35); g_.scale = (k_,) * 3; cena.collection.objects.link(g_); n_ok += 1
     grao.hide_render = True
 
 def render(nome, cam_pos, alvo, lente=45, larg=LARG, alt=None, dof=None, fill=None):
@@ -619,6 +625,10 @@ if PREVIA:
         posar(fase=1.6, amp=0.8, abre=ABRE or 32, vira=0.6); render('ataque', (6.6, -1.9, -0.35), (3.6, 0.1, -0.05), lente=40, dof=4.0)
     if 'foto' in VISTAS:
         posar(fase=2.3, amp=0.55, abre=2.5, vira=-0.3); render('foto', (3.55, 4.15, -1.05), (2.30, 0.0, -0.05), lente=26, larg=LARG, alt=int(LARG * 0.75))
+    if 'raios' in VISTAS:                                                         # teste de intensidade dos raios: mesma vista da foto, várias potências
+        for w_ in [float(x) for x in arg('raios_lista', '30000,70000,140000').split(',')]:
+            RAIOS_LUZ.energy = w_; posar(fase=2.3, amp=0.55, abre=2.5, vira=-0.3)
+            render(f'raios_{int(w_ / 1000)}k', (3.55, 4.15, -1.05), (2.30, 0.0, -0.05), lente=26, larg=LARG, alt=int(LARG * 0.75))
     if 'cabeca' in VISTAS:
         posar(fase=1.2, amp=0.3, abre=3, vira=0.1); render('cabeca', (5.35, -2.05, 0.30), (3.95, 0.0, 0.0), lente=48, larg=LARG, alt=int(LARG * 0.75))
     if 'flanco' in VISTAS:
