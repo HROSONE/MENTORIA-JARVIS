@@ -1,34 +1,36 @@
-# Montagem final do Short "Ele podia voar": quadros renderizados (720x1280, 30 fps) -> MP4 1080x1920 com acabamento
-# (ampliação lanczos, cor, vinheta, grão de filme), o "rebobinar" no corte gancho -> viatura e a trilha de efeitos.
+# Montagem final do Short "Você fugiria de um T. rex?": quadros renderizados (720x1280, 30 fps) -> MP4 1080x1920 com acabamento
+# (ampliação lanczos, cor, vinheta, grão de filme) e o visual de "volta no tempo" nos planos R1 e R2 (a imagem já vem de trás para a frente
+# do próprio render; aqui entra a aberração de cor, o desfoque leve, a cor lavada e o grão mais forte). Trilha de efeitos do sfx_trex.py.
 # uso: python3 montar.py <pasta_quadros> <sfx.wav ou -> <saida.mp4> [--ate N]
-import os, subprocess, sys, tempfile
+import json, os, subprocess, sys, tempfile
 
 FPS = 30
+AQUI = os.path.dirname(os.path.abspath(__file__))
 pasta, sfx, saida = sys.argv[1], sys.argv[2], sys.argv[3]
 ate = int(sys.argv[sys.argv.index('--ate') + 1]) if '--ate' in sys.argv else None
 quadros = sorted(f for f in os.listdir(pasta) if f.startswith('f') and f.endswith('.jpg'))
 if ate: quadros = quadros[:ate]
 N = len(quadros)
 
-# rebobinar: os últimos 10 quadros do gancho (3,67 a 4,0 s) viram o gancho inteiro passando de trás para frente, rápido
-seq = list(range(N))
-R0, R1 = 110, 120
-if N > R1:
-    for k, i in enumerate(range(R0, R1)): seq[i] = int(R0 * (1 - (k + 1) / (R1 - R0 + 1)))
+# janelas de volta no tempo: os planos "R..." da linha do tempo (gravados em eventos.json pelo eventos.js)
+planos = json.load(open(os.path.join(AQUI, 'eventos.json')))['planos']
+volta = [(p['t0'], p['t1']) for p in planos if p['nome'].startswith('R')]
+dentro = '+'.join(f'between(t,{a:.3f},{b:.3f})' for a, b in volta) or '0'
 
 lista = tempfile.NamedTemporaryFile('w', suffix='.txt', delete=False)
-for i in seq: lista.write(f"file '{os.path.abspath(os.path.join(pasta, quadros[i]))}'\nduration {1 / FPS:.6f}\n")
-lista.write(f"file '{os.path.abspath(os.path.join(pasta, quadros[seq[-1]]))}'\n"); lista.close()
+for q in quadros: lista.write(f"file '{os.path.abspath(os.path.join(pasta, q))}'\nduration {1 / FPS:.6f}\n")
+lista.write(f"file '{os.path.abspath(os.path.join(pasta, quadros[-1]))}'\n"); lista.close()
 
-r0, r1 = R0 / FPS, R1 / FPS
 filtro = ','.join([
     'scale=1080:1920:flags=lanczos',
-    'eq=contrast=1.04:saturation=1.06:gamma=0.98',
+    'eq=contrast=1.05:saturation=1.05:gamma=0.98',
+    f"eq=saturation=0.55:contrast=1.12:enable='{dentro}'",                          # volta no tempo: cor lavada
     'vignette=angle=PI/5:mode=forward',
-    f"rgbashift=rh=-8:bh=8:enable='between(t,{r0:.3f},{r1:.3f})'",              # aberração no rebobinar
-    f"gblur=sigma=2.5:steps=1:enable='between(t,{r0:.3f},{r1:.3f})'",
+    f"rgbashift=rh=-10:bh=10:enable='{dentro}'",                                     # aberração de cor
+    f"gblur=sigma=1.6:steps=1:enable='{dentro}'",
     'unsharp=5:5:0.35',
-    'noise=alls=5:allf=t',                                                         # grão de filme leve
+    'noise=alls=5:allf=t',                                                          # grão de filme leve
+    f"noise=alls=14:allf=t:enable='{dentro}'",                                       # e mais forte na volta no tempo
     'format=yuv420p',
 ])
 cmd = ['ffmpeg', '-y', '-v', 'error', '-f', 'concat', '-safe', '0', '-i', lista.name]

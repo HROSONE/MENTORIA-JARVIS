@@ -282,7 +282,7 @@ export async function construirTudo() {
   plano('S6 mastiga', 2.9, (u, t) => {
     const e = estado1(t); const b = T_.boca(); ilumina(b);
     const base = V(e.xt + BOCA_X, 0, 0);
-    const d = camEm(V(base.x + 5.2, 0.45, 1.4), V(base.x, 1.5, 0), 50, { tremor: 0.25, t });
+    const d = camEm(V(base.x + 5.6, 0.45, 1.4), V(base.x, 2.1, 0), 54, { tremor: 0.25, t });
     lente({ foco: 5.0, abertura: 0.005, brilho: 0.3, ao: 0.8 });
   }, { precisa: () => [T_.boca(), T_.pontos()[0], ...(ten.visible ? [ten.position.clone()] : [])], efeito: u => ({ rebobina: u > 2.5 ? (u - 2.5) / 0.4 : 0 }) });
   // R1 (13,2-14,2): volta no tempo: o tênis volta para a boca e a corrida desanda até o começo
