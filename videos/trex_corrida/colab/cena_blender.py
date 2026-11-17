@@ -28,9 +28,13 @@ def importar_gltf(caminho, col):
     bpy.ops.import_scene.gltf(filepath=caminho)
     novos = [o for o in bpy.data.objects if o not in antes]
     for o in novos:
+        # o importador cria "formas de osso" auxiliares (Icosphere, de 2 m) para desenhar os esqueletos na tela; elas ficam numa coleção escondida.
+        # Antes eu as puxava para a coleção visível e apareciam no render como bolas brancas no centro do mundo.
+        if o.name.startswith('Icosphere') or any(c.name == 'glTF_not_exported' for c in o.users_collection):
+            o.hide_render = True; o.hide_viewport = True; continue
         for c in list(o.users_collection): c.objects.unlink(o)
         col.objects.link(o)
-    return novos
+    return [o for o in novos if not o.hide_render]
 def srgb_lin(h):
     h = h.lstrip('#'); c = [int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)]
     return [x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
@@ -168,9 +172,10 @@ ct.links.new(mix.outputs[0], out.inputs['Image'])
 r = cena.render; r.engine = 'CYCLES'; r.resolution_x, r.resolution_y, r.resolution_percentage = LARG, ALT, 100
 cena.frame_start, cena.frame_end = inicio, inicio + N - 1
 cy = cena.cycles; cy.device = 'GPU' if GPU else 'CPU'
-cy.samples = 96 if QUAL == 'cinema' else 32; cy.adaptive_threshold = 0.015 if QUAL == 'cinema' else 0.04
+cy.samples = int(arg('amostras', 96 if QUAL == 'cinema' else 32)); cy.adaptive_threshold = 0.015 if QUAL == 'cinema' else 0.04       # --amostras N: menos amostras = mais rápido (o denoiser limpa o resto)
 cy.use_denoising = True; cy.denoiser = 'OPENIMAGEDENOISE'          # (o denoiser do OptiX não funciona no driver do Colab)
-cy.max_bounces, cy.diffuse_bounces, cy.glossy_bounces, cy.transmission_bounces, cy.volume_bounces, cy.transparent_max_bounces = 6, 3, 3, 6, 0, 32
+REB, TRANSP = int(arg('rebatidas', 6)), int(arg('transparentes', 32))       # --rebatidas / --transparentes: menos saltos de luz e menos folhas atravessadas por raio = mais rápido
+cy.max_bounces, cy.diffuse_bounces, cy.glossy_bounces, cy.transmission_bounces, cy.volume_bounces, cy.transparent_max_bounces = REB, min(3, REB), min(3, REB), min(6, REB), 0, TRANSP
 cy.caustics_reflective = cy.caustics_refractive = False; cy.sample_clamp_indirect = 8.0; cy.blur_glossy = 1.0
 r.use_motion_blur = True; r.motion_blur_shutter = 0.5
 r.use_persistent_data = True                                                          # (o cenário fica na memória entre um quadro e outro)
