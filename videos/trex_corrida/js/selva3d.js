@@ -28,7 +28,10 @@ function distTrilha(x, z) {
   return m;
 }
 
+/** registro das cópias (para exportar a cena para o Blender): id do modelo do Poly Haven, matrizes de cada cópia e as malhas instanciadas */
+export const INSTANCIAS = [];
 function instanciar(pai, modelo, matrizes, { sombra = true } = {}) {
+  INSTANCIAS.push({ id: modelo.userData.ph, matrizes: matrizes.map(m => m.clone()), ims: [] });
   modelo.updateMatrixWorld(true);
   modelo.traverse(o => {
     if (!o.isMesh) return;
@@ -36,7 +39,7 @@ function instanciar(pai, modelo, matrizes, { sombra = true } = {}) {
     matrizes.forEach((M, i) => im.setMatrixAt(i, M.clone().multiply(rel)));
     im.castShadow = sombra; im.receiveShadow = true; im.frustumCulled = false;
     if (o.material.transparent || o.material.alphaTest) { o.material.alphaTest = Math.max(o.material.alphaTest || 0, 0.45); o.material.transparent = false; o.material.side = THREE.DoubleSide; }
-    pai.add(im);
+    pai.add(im); INSTANCIAS[INSTANCIAS.length - 1].ims.push(im);
   });
 }
 

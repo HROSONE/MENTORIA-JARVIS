@@ -19,6 +19,7 @@ export function materialPH(id, { res = '2k', rep = [1, 1], ao = true, normal = 1
   const p = `${BASE}textura/${id}/${id}_`, s = `_${res}.jpg`;
   const m = new THREE.MeshStandardMaterial({ map: tex(p + 'diff' + s, true, rep), normalMap: tex(p + 'nor_gl' + s, false, rep), roughnessMap: tex(p + 'rough' + s, false, rep), roughness: 1, metalness: 0, ...extra });
   m.normalScale.set(normal, normal);
+  m.userData.ph = { id, rep, res };                                   // (para exportar: o Blender refaz o material com a mesma textura)
   if (ao) { m.aoMap = tex(p + 'ao' + s, false, rep); m.aoMapIntensity = 0.8; }
   return m;
 }
@@ -27,6 +28,7 @@ export async function modeloPH(id, { res = '1k', sombra = true, leve = false } =
   const url = leve ? `${BASE}modelo/${id}/${id}_leve.glb` : `${BASE}modelo/${id}/${id}_${res}.gltf`;            // leve: versão simplificada por decimar.py (para muitas cópias)
   if (!cacheMod.has(url)) cacheMod.set(url, new GLTFLoader().loadAsync(url));
   const g = (await cacheMod.get(url)).scene.clone(true);
+  g.userData.ph = id;                                                     // (para exportar: o Blender usa o modelo original pelo id)
   g.traverse(o => { if (o.isMesh) { o.castShadow = sombra; o.receiveShadow = true; } });
   return g;
 }

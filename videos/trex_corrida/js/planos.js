@@ -35,6 +35,7 @@ A2.dR = tabela(A2.vR, 0, 8); A2.dT = tabela(A2.vT, 0, 8);
 const A3 = { t0: 22.5, vR: 5.9, vT: 5.6 };
 
 let MUNDO = null;      // preenchido em construirTudo
+export const mundo = () => MUNDO;
 
 // ------------------------------------------------------------------------------------------------ objetos de cena
 function relogio() {                                             // relógio de pulso com a velocidade (texto diegético)
