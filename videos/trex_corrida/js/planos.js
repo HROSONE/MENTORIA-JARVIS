@@ -181,7 +181,7 @@ export async function construirTudo() {
   // tentativa 2: a trilha continua para dentro da fenda; quem corre para no fundo, o T. rex fica com a boca na entrada
   const dirF = V(Math.cos(FENDA.giro), 0, Math.sin(FENDA.giro));
   const curva2 = new THREE.CatmullRomCurve3([...TRILHA.map(([x, z]) => V(x, 0, z)), V(FENDA.x, 0, FENDA.z), V(FENDA.x, 0, FENDA.z).addScaledVector(dirF, 0.4)]);
-  const L2 = curva2.getLength(), ENTRADA = L2 - 1.65;            // arco onde fica a boca da fenda
+  const L2 = curva2.getLength(), ENTRADA = L2 - 1.8;            // arco onde fica a boca da fenda
   const ptArco = (s, alvo = V()) => s <= 0 ? alvo.set(TRILHA[0][0] + s, 0, TRILHA[0][1]) : curva2.getPointAt(Math.min(s / L2, 1), alvo);
   const tgArco = s => s <= 0 ? V(1, 0, 0) : curva2.getTangentAt(clamp(s / L2, 0, 1));
   const sR2 = u => softmin(A2.dR(u), L2 - 0.05, 0.5);
@@ -342,7 +342,33 @@ export async function construirTudo() {
   // S12 (34,5-36): o instante ANTES do primeiro quadro (boca fechada, respira, cabeça se armando): o último quadro emenda no rugido do quadro 0 (laço)
   plano('S12 laco', 1.5, (u, t) => MUNDO.planosPorNome['S1 rugido'].fn(u - 1.5, u - 1.5), { precisa: () => [T_.boca(), T_.pontos()[0]] });
   MUNDO.planosPorNome = Object.fromEntries(S.planos.map(p => [p.id, p]));
+  S.limpos = MUNDO.limpos = limparLente();
   return S;
+}
+
+/**
+ * Como a equipe de um set: tira da frente da lente o que atrapalha. Percorre o filme inteiro (a cada 0,2 s), guarda a posição da câmera e
+ * pontos na linha câmera -> assunto (o primeiro ponto do "precisa" do plano) e esconde as instâncias de vegetação e pedras que caem ali.
+ * Árvores (copa grande) só saem se o TRONCO estiver no caminho. Assim nenhum plano abre dentro de uma folha ou com um galho na frente dele.
+ */
+function limparLente() {
+  const pts = [], M = new THREE.Matrix4(), cen = new THREE.Vector3(), sc = new THREE.Vector3(), q = new THREE.Quaternion(), cw = new THREE.Vector3();
+  for (let t = 0; t < S.total; t += 0.2) {
+    const p = acharPlano(t); atualizar(t); const c = cam.position.clone(); pts.push(c);
+    const alvo = p.precisa ? p.precisa()[0] : null; if (alvo) for (const f of [0.25, 0.5, 0.75]) pts.push(c.clone().lerp(alvo, f));
+  }
+  let tirados = 0;
+  scene.traverse(o => {
+    if (!o.isInstancedMesh) return; if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere(); const bs = o.geometry.boundingSphere;
+    for (let i = 0; i < o.count; i++) {
+      o.getMatrixAt(i, M); M.decompose(cen, q, sc); if (sc.x === 0) continue; cw.copy(bs.center).applyMatrix4(M); const r = bs.radius * Math.max(sc.x, sc.y, sc.z);
+      const arvore = r > 3.2, R = arvore ? 1.3 : 0.6 * r + 0.3, ref   // (a esfera envolvente exagera o tamanho da planta)
+      = arvore ? cen : cw;
+      for (const p of pts) { const dx = p.x - ref.x, dz = p.z - ref.z, dy = arvore ? 0 : p.y - ref.y; if (dx * dx + dy * dy + dz * dz < R * R) { M.makeScale(0, 0, 0); o.setMatrixAt(i, M); tirados++; break; } }
+    }
+    o.instanceMatrix.needsUpdate = true;
+  });
+  return tirados;
 }
 
 export function atualizar(t) { const p = acharPlano(t); p.fn(clamp(t - p.t0, 0, p.dur), t, p); scene.updateMatrixWorld(true); }

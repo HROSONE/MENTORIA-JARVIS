@@ -89,32 +89,27 @@ export async function construirSelva(pai, renderer) {
     const x = seg.x - tg.z * lado * d, z = seg.z + tg.x * lado * d; if (Math.abs(z) < ESTRADA_LARG / 2 + 2.6) continue; if (Math.hypot(x - FENDA.x - Math.cos(FENDA.giro) * 1.6, z - FENDA.z - Math.sin(FENDA.giro) * 1.6) < 5.5) continue; perto.push(M(x, z, 0.9 + R() * 0.5, R() * 6.283));
   }
   instanciar(G, arv[1], perto);
-  // a fenda: duas paredes de rocha (rock_face_01 do Poly Haven: laje escaneada de 4,95 x 3,56 m, face voltada para +z) uma de frente para a outra,
-  // ao longo de dirF; o meio fica 1,6 m adiante de FENDA, então a entrada (FENDA - 1,25 dirF) cai no fim da trilha. (Dois matacões redondos
-  // davam uma abertura em funil e não uma fenda.)
+  // a fenda: duas PAREDES de rocha feitas aqui (6 m de comprimento, 3,8 m de altura, 1,6 m de espessura), uma de cada lado do eixo dirF,
+  // com face irregular e topo recortado, textura de rocha com musgo do Poly Haven. As faces só recuam (nunca avançam): a fenda tem 0,8 m
+  // no ponto mais estreito e até ~1,3 m nos recuos. O meio fica 1,6 m adiante de FENDA; a entrada (FENDA - 1,4 dirF) cai no fim da trilha.
+  // (Matacões redondos davam um funil e a laje rock_face_01 é uma rampa de 45°: nenhum dos dois parecia uma fenda.)
   const rocha = await modeloPH('boulder_01');                                      // (usado no esconderijo do maratonista)
-  const parede = await modeloPH('rock_face_01');
-  const escR = 1.15, dirF = new THREE.Vector3(Math.cos(FENDA.giro), 0, Math.sin(FENDA.giro)), lat = new THREE.Vector3(-dirF.z, 0, dirF.x);
+  const dirF = new THREE.Vector3(Math.cos(FENDA.giro), 0, Math.sin(FENDA.giro)), lat = new THREE.Vector3(-dirF.z, 0, dirF.x);
   const meio = new THREE.Vector3(FENDA.x, 0, FENDA.z).addScaledVector(dirF, FENDA.meio);
+  const mRocha = materialPH('mossy_rock', { rep: [3, 2] });
+  const nz = (x, y, k) => Math.sin(x * 1.7 + k) * Math.sin(y * 1.3 + 2 * k) + 0.5 * Math.sin(x * 3.9 + y * 2.1 + 3 * k) + 0.25 * Math.sin(x * 8.3 - y * 6.7 + k);
   for (const s of [-1, 1]) {
-    const r = parede.clone(), giro = Math.atan2(s * dirF.z, -s * dirF.x) + (FENDA.vira ? Math.PI : 0);    // face (+z) virada para o eixo
-    const c = meio.clone().addScaledVector(lat, s * 1.2); r.position.set(c.x, alturaChao(c.x, c.z) - 0.15, c.z); r.rotation.set(0, giro, 0); r.scale.setScalar(escR);
-    r.updateMatrixWorld(true); const bx = new THREE.Box3().setFromObject(r), cc = bx.getCenter(new THREE.Vector3());
-    r.position.addScaledVector(dirF, meio.clone().sub(cc).dot(dirF));                                      // centra a laje ao longo da fenda
-    // o matacão é irregular: mede a superfície DE VERDADE com raios saindo do eixo da fenda (alturas 0,3-1,9 m, ao longo de -1,5..+4,5 m)
-    // e desliza a pedra até a face ficar a 0,40 m do eixo (fenda de 0,8 m na altura do corpo)
-    // (raio de FORA para dentro, faces dos dois lados: o último ponto atravessado é a face voltada para a fenda, mesmo se a pedra cruzar o eixo)
-    r.updateMatrixWorld(true); const rc = new THREE.Raycaster(), lados = []; let dmin = Infinity;
-    r.traverse(o => { if (o.isMesh) { lados.push([o.material, o.material.side]); o.material.side = THREE.DoubleSide; } });
-    for (let ao = -1.5; ao <= 4.5; ao += 0.5) for (let h = 0.3; h <= 1.9; h += 0.4) {
-      const o = new THREE.Vector3(FENDA.x, alturaChao(FENDA.x, FENDA.z) + h, FENDA.z).addScaledVector(dirF, ao).addScaledVector(lat, s * 9);
-      rc.set(o, lat.clone().multiplyScalar(-s)); rc.far = 18; const hits = rc.intersectObject(r, true);
-      if (hits.length) { const ultimo = hits[hits.length - 1]; dmin = Math.min(dmin, 9 - ultimo.distance); }
+    const C = 6.0, A = 3.8, E = 1.6, g = new THREE.BoxGeometry(C, A, E, 60, 38, 6), P = g.attributes.position;
+    for (let i = 0; i < P.count; i++) {
+      let x = P.getX(i), y = P.getY(i), z = P.getZ(i); const k = s * 5;
+      z -= Math.sign(z) * (0.12 + 0.12 * nz(x, y, k)) * (Math.abs(z) > E / 2 - 1e-3 ? 1 : 0.5);        // faces recuam (ondulação de rocha)
+      if (y > A / 2 - 1e-3) y += 0.45 * nz(x * 0.8, 0, k + 1) - 0.2;                                     // topo recortado
+      const ponta = Math.max(0, Math.abs(x) - (C / 2 - 0.9)); z *= 1 - 0.5 * ponta; y -= 0.6 * ponta * ponta * (y > 0 ? 1 : 0);   // pontas arredondadas
+      P.setXYZ(i, x, y, z);
     }
-    for (const [m, sd] of lados) m.side = sd;
-    if (dmin < Infinity) { r.position.addScaledVector(lat, s * (0.40 - dmin)); r.updateMatrixWorld(true); }
-    FENDA.medida = FENDA.medida || []; FENDA.medida.push(+dmin.toFixed(2));
-    G.add(r);
+    g.computeVertexNormals(); g.setAttribute('uv2', g.attributes.uv);
+    const w = new THREE.Mesh(g, mRocha); w.castShadow = w.receiveShadow = true;
+    const c = meio.clone().addScaledVector(lat, s * (0.4 + E / 2)); w.position.set(c.x, alturaChao(c.x, c.z) + A / 2 - 0.3, c.z); w.rotation.y = -FENDA.giro; G.add(w);
   }
   // esconderijo do maratonista: rochas altas
   // boulder_01 tem 1,27 x 0,93 x 1,83 m; em escala 2,2 e girado 90° o comprimento (4 m) fica ao longo de x e a altura útil ~1,8 m
