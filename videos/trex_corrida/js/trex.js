@@ -5,9 +5,24 @@
 // duas vezes por ciclo, balanço lateral, cauda contrabalançando em onda, cabeça estabilizada mirando um alvo. Velocidade ~ caminhada rápida.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { clamp, lerp } from './util.js';
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion();
+
+/**
+ * Interior da boca (o Blender usa espalhamento subsuperficial, que o glTF não leva: aqui vira mucosa úmida e escura). A língua vinha com normais
+ * "em facetas" (cone de papel) e rosada de tanto refletir o céu: normais suaves, mais achatada e achatada no chão da boca, vermelho-escuro com verniz úmido.
+ */
+const mucosa = (cor, rug, verniz) => new THREE.MeshPhysicalMaterial({ color: new THREE.Color(cor), roughness: rug, metalness: 0, clearcoat: verniz, clearcoatRoughness: 0.28, envMapIntensity: 0.55 });
+function acabamentoBoca(o) {
+  if (o.name === 'lingua') {
+    let g = o.geometry.clone(); g.deleteAttribute('normal'); if (g.attributes.uv) g.deleteAttribute('uv'); g = mergeVertices(g, 1e-4); g.computeVertexNormals();
+    g.computeBoundingBox(); const y0 = g.boundingBox.min.y; g.translate(0, -y0, 0); g.scale(1, 0.55, 1); g.translate(0, y0, 0);          // achatada sobre o chão da boca
+    g.computeVertexNormals(); o.geometry = g; o.material = mucosa('#6b1a1d', 0.5, 0.45);
+  } else if (o.name.startsWith('gengiva')) o.material = mucosa('#3f1013', 0.55, 0.3);
+  else if (o.name === 'boca_interna') { const lado = o.material.side; o.material = mucosa('#1c0508', 0.65, 0.15); o.material.side = lado; }
+}
 
 export async function criarTrex({ url = '../biblioteca3d/animais/trex/trex.glb' } = {}) {
   const g = await new GLTFLoader().loadAsync(url);
@@ -19,6 +34,7 @@ export async function criarTrex({ url = '../biblioteca3d/animais/trex/trex.glb' 
       o.castShadow = o.receiveShadow = true; o.frustumCulled = false; malhas.push(o);
       const m = o.material; if (m && m.map) { m.map.anisotropy = 8; m.roughness = 0.72; m.envMapIntensity = 0.8; }
       if (o.name.startsWith('olho')) { o.material = o.material.clone(); o.material.roughness = 0.03; o.material.metalness = 0; o.material.envMapIntensity = 1.6; }
+      acabamentoBoca(o);
     }
   });
   // pesos da boca: os automáticos do Blender puxavam o lábio de cima junto com a mandíbula (o focinho esticava ao abrir). Acima da linha da boca
