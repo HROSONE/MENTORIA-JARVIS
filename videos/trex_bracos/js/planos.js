@@ -67,7 +67,8 @@ export async function construirTudo() {
   scene.add(REX.grupo, B.grupo, C.grupo);
   const car = await carcaca(); scene.add(car);
   const c12 = cota('12 m', 0.9), c1 = cota('1 m', 0.5), kg = rotulo('~200 kg', 0.16); scene.add(kg);
-  M = { selva, REX, B, C, car, c12, c1, kg };
+  const luzBraco = new THREE.PointLight(0xffe2c0, 0, 3.5, 2); scene.add(luzBraco);          // luz de recorte no bracinho (o herói do plano 1 fica na sombra do peito)
+  M = { selva, REX, B, C, car, c12, c1, kg, luzBraco };
   // sol do lado da câmera (o da selva vinha de frente para estas câmeras e lavava a imagem)
   const ilumina = (p, D = V(0.35, 0.72, -0.6)) => { const sol = selva.sol, d = D.clone().normalize(); sol.position.copy(p).addScaledVector(d, 50); sol.target.position.copy(p); sol.target.updateMatrixWorld(); };
   const W = (T, n) => T.ossos[n].getWorldPosition(V());
@@ -75,7 +76,7 @@ export async function construirTudo() {
   // ---------------------------------------------------------------------------------------------- poses
   /** põe um T. rex com os quadris em (x, z) olhando para `rumo` (rad no plano xz; 0 = +x) e posa */
   function trexEm(T, x, z, rumo, opc) {
-    T.grupo.visible = true; T.grupo.position.set(x, alturaChao(x + 2 * Math.cos(rumo), z + 2 * Math.sin(rumo)), z); T.grupo.rotation.set(0, -rumo, 0); T.posar(opc);
+    T.grupo.visible = true; T.grupo.position.set(x, alturaChao(x + 2 * Math.cos(rumo), z + 2 * Math.sin(rumo)), z); T.grupo.rotation.set(0, -rumo, 0); T.posar({ bocaK: 0.5, ...opc });
     if (opc.inclina) { T.girar('cauda1', [0, 0, 1], 0.6 * opc.inclina); T.girar('cauda3', [0, 0, 1], 0.3 * opc.inclina); T.grupo.updateMatrixWorld(true); }   // corpo inclinado para comer: a cauda não sobe junto
   }
   /** braço esquerdo (o da câmera): levanta para a frente (ergue), dobra o cotovelo (dobra), e o comprimento (k = 1 real) */
@@ -94,9 +95,9 @@ export async function construirTudo() {
     const cabecaDesce = alcanca * 0.9;
     const flex = u > 7.0 ? 0.5 + 0.5 * Math.sin((u - 7.0) * 4.2 - Math.PI / 2) : 0;   // P4: dobra o braço com força
     const olhaBraco = suave(inv(10.0, 10.6, u));                                      // P5
-    trexEm(REX, x, SOLO.z, 0, { dist, vel, t, parado: 1 - clamp(vel / 0.8), olhar: olhaBraco > 0.01 ? W(REX, 'mao_l').lerp(V(x + 6, 3.4, SOLO.z), 1 - olhaBraco) : null });
+    trexEm(REX, x, SOLO.z, 0, { dist, vel, t, parado: 1 - clamp(vel / 0.8), olhar: olhaBraco > 0.01 ? W(REX, 'mao_l').add(V(0.9, 0.7, -1.0)).lerp(V(x + 6, 3.4, SOLO.z), 1 - olhaBraco) : null });
     REX.girar('pescoco1', [0, 0, 1], -0.22 * cabecaDesce); REX.girar('pescoco2', [0, 0, 1], -0.16 * cabecaDesce); REX.girar('cabeca', [0, 0, 1], -0.25 * cabecaDesce);
-    braco(REX, { ergue: 1.15 * alcanca + 0.25 * flex, dobra: -0.6 * alcanca - 1.1 * flex });
+    braco(REX, { ergue: 1.15 * alcanca + 0.45 * flex, dobra: -0.6 * alcanca - 1.5 * flex });
     return { x, u };
   }
   // cena 2: a carcaça. REX ao norte (olhando para -z); B a leste; C a oeste. Cada um come (abaixa e morde em ciclos) e às vezes morde para o lado.
@@ -111,10 +112,10 @@ export async function construirTudo() {
   const L = (x, y, z) => V(RX.x + x, alturaChao(RX.x + x, RX.z + z) + y, RX.z + z);
   const ciclo = (t, per, fase) => (((t + fase) / per) % 1 + 1) % 1;
   /** mordida de B no braço de REX: começa em tb, fecha ~0,9 s depois; erra = distância (m) entre os dentes e a mão quando fecha */
-  function grupo(t, { tb = null, erra = 0.35, kBraco = 1, chegada = 1 } = {}) {
+  function grupo(t, { tb = null, erra = 0.35, kBraco = 1, chegada = 1, alerta = 0 } = {}) {      // alerta: REX de cabeça erguida, de olho em B
     const P = POS.REX;
     const mR = ciclo(t, 2.2, 0.3);
-    trexEm(M.REX, P.x, P.z, P.rumo, { t, parado: 1, inclina: 0.30, abaixa: 0.35, olhar: V(CARC.x - 1.0, 1.0, CARC.z - 0.3), mordida: mR });
+    trexEm(M.REX, P.x, P.z, P.rumo, { t, parado: 1, inclina: 0.30 * (1 - alerta), abaixa: 0.35 * (1 - alerta), olhar: V(CARC.x - 1.0, 1.0, CARC.z - 0.3).lerp(L(6.0, 3.2, -3.8), alerta), mordida: mR * (1 - alerta) });
     braco(M.REX, { ergue: -0.15, dobra: -0.2, k: kBraco });
     const mao = W(M.REX, 'mao_l'), ant = W(M.REX, 'antebraco_l');
     const anda = (p, k, d) => [p.x - Math.cos(p.rumo) * d * (1 - k), p.z - Math.sin(p.rumo) * d * (1 - k)];
@@ -141,7 +142,7 @@ export async function construirTudo() {
     if (tremor) { cam.position.y += tremor * 0.03 * ruido(t * 40, 1); cam.rotateX(tremor * 0.010 * ruido(t * 37, 2)); cam.rotateZ(tremor * 0.008 * ruido(t * 33, 3)); }
     return pos.distanceTo(olha);
   }
-  const semRotulos = () => { M.c12.visible = M.c1.visible = M.kg.visible = false; };
+  const semRotulos = () => { M.c12.visible = M.c1.visible = M.kg.visible = false; M.luzBraco.intensity = 0; };
 
   // ---------------------------------------------------------------------------------------------- planos
   // P1 / P10: close do bracinho esquerdo de REX visto da frente-esquerda, de baixo; a boca de B entra pela esquerda do quadro e fecha a
@@ -150,15 +151,16 @@ export async function construirTudo() {
   function closeMordida(u, t0) {
     semRotulos(); esconde(M.REX, M.B, M.C);
     const t = 40 + u;                                                         // instante "do mundo" da cena da carcaça (o mesmo no P1 e no P10)
-    grupo(t, { tb: 40 + TB, erra: 0.30 });
+    grupo(t, { tb: 40 + TB, erra: 0.30, alerta: 1 });
     const recua = suave(inv(TB + 0.75, TB + 0.95, u)) * (1 - 0.6 * suave(inv(TB + 1.1, 2.4, u)));
     braco(M.REX, { ergue: -0.15 - 0.55 * recua, dobra: -0.2 - 0.9 * recua });
     const mao = W(M.REX, 'mao_l'); ilumina(mao);
     const fecha = u > TB + 0.8 ? Math.exp(-(u - (TB + 0.8)) * 9) : 0;
-    const pos = L(4.6, 0.95, -1.9), d = camEm(pos, mao.clone().add(V(0.35, 0.15, -0.6)), 54, { tremor: 2.2 * fecha, t: t0 + u });   // (perto do braço: a cabeça de B não passa na frente da lente na volta do bote)
+    M.luzBraco.position.copy(mao).add(V(0.9, 0.3, -0.5)); M.luzBraco.intensity = 6;
+    const pos = L(5.3, 1.25, -1.0), d = camEm(pos, mao.clone().add(V(0.05, 0.05, -0.3)), 60, { tremor: 2.2 * fecha, t: t0 + u });   // (perto do braço: a cabeça de B não passa na frente da lente na volta do bote)
     lente({ foco: d, abertura: 0.010, desfoque: 0.012, brilho: 0.12, limiar: 0.95, ao: 0.8 });
   }
-  plano('P1 mordida', 2.4, (u, t) => closeMordida(u, t), { precisa: () => [W(M.REX, 'mao_l'), M.B.boca()] });
+  plano('P1 mordida', 2.4, (u, t) => closeMordida(u, t), { precisa: () => [W(M.REX, 'mao_l'), W(M.REX, 'antebraco_l')] });
   // R1: rebobina o P1 (de trás para a frente, rápido)
   plano('R1 volta', 0.5, (u, t) => closeMordida(2.4 * (1 - u / 0.5), t));
   // cena 1: pontos no referencial de REX sozinho (anda em +x; esquerda dele = -z)
@@ -169,16 +171,16 @@ export async function construirTudo() {
     esconde(M.REX); M.kg.visible = false; const { x } = rexSolo(t); ilumina(V(x + 1, 2, SOLO.z));
     M.c12.userData.por(Ls(x, -6.6, 5.0, -0.6), Ls(x, 5.7, 5.0, -0.6), inv(0.3, 1.1, u), 0.045, 0.5);
     const b0 = W(M.REX, 'braco_l'), b1 = W(M.REX, 'mao_l'); M.c1.userData.por(b0.add(V(0, 0, -0.9)), b1.add(V(0, -0.1, -0.9)), inv(1.3, 1.9, u), 0.025, 0.2);
-    const alvo = Ls(x, -0.2, 2.6, 0), d = camEm(Ls(x, -6.5, 1.6, -11.5), alvo, 50, { t });
+    const alvo = Ls(x, 0.6, 2.4, 0), d = camEm(Ls(x, -12.5, 2.6, -6.6), alvo, 50, { t });
     lente({ foco: d, abertura: 0.002, brilho: 0.15, ao: 0.8 });
-  }, { precisa: () => [W(M.REX, 'cabeca'), W(M.REX, 'cauda8'), W(M.REX, 'dedos_l')] });
+  }, { precisa: () => [M.REX.boca(), W(M.REX, 'cauda8'), W(M.REX, 'dedos_l'), W(M.REX, 'dedos_r'), W(M.REX, 'mao_l')] });
   // P3: a mão tenta chegar à boca (3/4 frente-esquerda, de baixo, push-in lento)
   plano('P3 boca', 3.5, (u, t) => {
     esconde(M.REX); M.c12.visible = M.kg.visible = false; M.c1.userData.por(V(), V(), 0);
-    const { x } = rexSolo(t); const alvo = Ls(x, 3.7, 2.6, -0.3); ilumina(alvo);
-    const k = suave(u / 3.5), d = camEm(Ls(x, lerp(9.0, 8.0, k), 1.4, lerp(-5.2, -4.4, k)), alvo, 44, { t });
+    const { x } = rexSolo(t); const alvo = Ls(x, 4.0, 2.7, -0.3); ilumina(alvo);
+    const k = suave(u / 3.5), d = camEm(Ls(x, lerp(10.2, 9.2, k), 1.5, lerp(-6.4, -5.6, k)), alvo, 46, { t });
     lente({ foco: d, abertura: 0.006, brilho: 0.15, ao: 0.85 });
-  }, { precisa: () => [W(M.REX, 'mao_l'), M.REX.boca()] });
+  }, { precisa: () => [W(M.REX, 'mao_l'), M.REX.boca(), W(M.REX, 'cabeca')] });
   // P4: close do braço dobrando com força (de lado, tele, fundo achatado); etiqueta "~200 kg"
   plano('P4 forca', 3.0, (u, t) => {
     esconde(M.REX); M.c12.visible = false; M.c1.userData.por(V(), V(), 0);
@@ -190,7 +192,7 @@ export async function construirTudo() {
   // P5: ele olha para o próprio braço: por cima do ombro esquerdo, leve órbita
   plano('P5 pergunta', 2.0, (u, t) => {
     esconde(M.REX); semRotulos(); const { x } = rexSolo(t); const m = W(M.REX, 'mao_l'), cab = W(M.REX, 'cabeca'); ilumina(cab);
-    const a = suave(u / 2), d = camEm(Ls(x, lerp(-0.4, 0.4, a), 4.7, lerp(-3.9, -3.5, a)), m.clone().lerp(cab, 0.35), 42, { t });
+    const a = suave(u / 2), d = camEm(Ls(x, lerp(2.6, 3.2, a), 2.4, lerp(-6.4, -6.0, a)), Ls(x, 4.0, 2.3, -0.4), 52, { t });
     lente({ foco: d, abertura: 0.008, brilho: 0.15, ao: 0.85 });
   }, { precisa: () => [W(M.REX, 'cabeca'), W(M.REX, 'mao_l')] });
   // P6: a clareira com a carcaça, de cima e de trás de REX; B e C saem da mata (grua descendo)
@@ -202,7 +204,7 @@ export async function construirTudo() {
   }, { precisa: () => [M.REX.boca(), V(CARC.x, 0.5, CARC.z)] });
   // P7: disputa: cortes curtos (1 s), câmera na mão entre as cabeças (posições no referencial de REX)
   const CAOS = [
-    { pos: [4.4, 0.6, -2.4], olha: 'B', fov: 58 }, { pos: [4.3, 0.7, 2.4], olha: 'C', fov: 56 }, { pos: [4.6, 0.5, -0.9], olha: 'REX', fov: 60 },
+    { pos: [4.4, 0.6, -2.4], olha: 'B', fov: 58 }, { pos: [4.3, 0.7, 2.4], olha: 'C', fov: 56 }, { pos: [8.4, 4.4, -2.6], olha: 'REX', fov: 50 },
     { pos: [7.0, 3.8, -3.2], olha: 'B', fov: 52 }, { pos: [6.6, 3.4, 0.4], olha: 'REX', fov: 56 },
   ];
   plano('P7 caos', 5.0, (u, t) => {
@@ -215,23 +217,23 @@ export async function construirTudo() {
   // P8: "e se fosse comprido?": o braço de REX cresce e a mordida de B o puxa (plano médio, push-in quando a boca chega)
   plano('P8 comprido', 4.0, (u, t) => {
     semRotulos(); esconde(M.REX, M.B, M.C); const kB = lerp(1, 2.6, suave(inv(0.2, 1.2, u)));
-    grupo(50 + u, { tb: 50 + 2.4, erra: -0.05, kBraco: kB });
+    grupo(50 + u, { tb: 50 + 2.4, erra: -0.05, kBraco: kB, alerta: 1 });
     const puxa = suave(inv(3.15, 3.35, u)) * (1 - 0.5 * suave(inv(3.5, 4.0, u)));
     if (puxa > 0) braco(M.REX, { ergue: -0.15 + 0.45 * puxa, dobra: -0.2 + 0.35 * puxa, k: kB });
-    const mao = W(M.REX, 'mao_l'), alvo = W(M.REX, 'braco_l').lerp(mao, 0.6); ilumina(alvo);
-    const k = suave(inv(1.8, 3.2, u)), d = camEm(L(lerp(8.0, 7.3, k), lerp(4.6, 4.1, k), lerp(-2.4, -2.0, k)), alvo, 50, { tremor: 2 * (u > 3.3 ? Math.exp(-(u - 3.3) * 6) : 0), t });
+    const mao = W(M.REX, 'mao_l'), alvo = W(M.REX, 'braco_l').lerp(mao, 0.5); ilumina(alvo); M.luzBraco.position.copy(alvo).add(V(1.0, 0.3, -0.6)); M.luzBraco.intensity = 6;
+    const k = suave(inv(1.8, 3.2, u)), d = camEm(L(lerp(8.0, 7.6, k), 2.3, lerp(-2.4, -2.2, k)), L(3.4, 2.35, -0.9), 62, { tremor: 2 * (u > 3.3 ? Math.exp(-(u - 3.3) * 6) : 0), t });
     lente({ foco: d, abertura: 0.008, brilho: 0.15, ao: 0.85 });
-  }, { precisa: () => [W(M.REX, 'braco_l'), W(M.REX, 'mao_l')] });
+  }, { precisa: () => [W(M.REX, 'braco_l'), W(M.REX, 'mao_l'), M.REX.boca()] });
   // P9: o braço volta ao tamanho real; a mordida passa e erra (pull-out revela)
   plano('P9 curto', 4.5, (u, t) => {
     semRotulos(); esconde(M.REX, M.B, M.C); const kB = lerp(2.6, 1, suave(inv(0, 0.8, u)));
-    grupo(60 + u, { tb: 60 + 2.2, erra: 0.45, kBraco: kB });
-    const mao = W(M.REX, 'mao_l'); ilumina(mao);
-    const k = suave(inv(2.9, 4.5, u)), d = camEm(L(lerp(7.3, 8.6, k), lerp(4.1, 5.2, k), lerp(-2.0, -2.8, k)), mao.clone().add(V(0.4, 0.2, -0.5)), lerp(50, 58, k), { t });
+    grupo(60 + u, { tb: 60 + 2.2, erra: 0.45, kBraco: kB, alerta: 1 });
+    const mao = W(M.REX, 'mao_l'), alvo = W(M.REX, 'braco_l').lerp(mao, 0.5); ilumina(mao); M.luzBraco.position.copy(mao).add(V(0.9, 0.3, -0.5)); M.luzBraco.intensity = 6;
+    const k = suave(inv(2.9, 4.5, u)), d = camEm(L(lerp(7.6, 8.6, k), lerp(2.3, 2.6, k), lerp(-2.2, -3.0, k)), L(3.4, 2.35, -0.9), lerp(62, 66, k), { t });
     lente({ foco: d, abertura: 0.008, brilho: 0.15, ao: 0.85 });
-  }, { precisa: () => [W(M.REX, 'mao_l'), M.B.boca()] });
+  }, { precisa: () => [W(M.REX, 'mao_l'), M.REX.boca(), M.B.boca()] });
   // P10: igual ao P1 (laço)
-  plano('P10 laco', 3.5, (u, t) => closeMordida(Math.min(u * 2.4 / 3.5, 2.4), t), { precisa: () => [W(M.REX, 'mao_l'), M.B.boca()] });
+  plano('P10 laco', 3.5, (u, t) => closeMordida(Math.min(u * 2.4 / 3.5, 2.4), t), { precisa: () => [W(M.REX, 'mao_l'), W(M.REX, 'antebraco_l')] });
 
   S.limpos = limparLente();
   prepararCorte(INSTANCIAS);

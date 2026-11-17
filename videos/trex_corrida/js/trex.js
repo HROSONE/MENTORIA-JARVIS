@@ -94,7 +94,7 @@ export async function criarTrex({ url = '../biblioteca3d/animais/trex/trex.glb' 
    * rugido 0..1 (cabeça sobe, boca abre 45°, tremor); mordida 0..1 (bote: cabeça desce para a frente, boca abre e fecha no fim);
    * mastigar 0..1 (cabeça erguida, mandíbula batendo); parado: 0..1 (1 = pés juntos, sem passo); t: tempo (tremores e respiração)
    */
-  function posar({ dist = 0, vel = 0, olhar = null, rugido = 0, mordida = 0, mastigar = 0, parado = 0, t = 0, chao = 0, inclina = 0, abaixa = 0 } = {}) {   // inclina (rad) e abaixa (m): corpo para a frente e quadril mais baixo, para comer no chão
+  function posar({ dist = 0, vel = 0, olhar = null, rugido = 0, mordida = 0, mastigar = 0, parado = 0, t = 0, chao = 0, inclina = 0, abaixa = 0, bocaK = 1 } = {}) {   // inclina (rad) e abaixa (m): corpo para a frente e quadril mais baixo, para comer no chão
     for (const k in ossos) ossos[k].quaternion.copy(repouso[k]);
     ossos.quadril.position.y = raizY0;
     const ciclo = 2.8 + 0.42 * vel, fase = dist / ciclo, beta = clamp(0.62 - 0.03 * vel, 0.5, 0.65);
@@ -150,7 +150,7 @@ export async function criarTrex({ url = '../biblioteca3d/animais/trex/trex.glb' 
     // mandíbula: rugido abre ~45°, bote abre e fecha no fim, mastigar bate
     const boteAbre = mordida < 0.75 ? clamp(mordida / 0.4, 0, 1) : clamp(1 - (mordida - 0.75) / 0.12, 0, 1);
     const abre = Math.max(0.78 * rugido * (0.85 + 0.15 * Math.sin(t * 9)), 0.85 * boteAbre, mastigar * (0.08 + 0.10 * Math.max(0, Math.sin(t * 9))));
-    girar('mandibula', [0, 0, 1], -abre);
+    girar('mandibula', [0, 0, 1], -abre * bocaK);                 // bocaK < 1: modelos que já vêm de boca entreaberta (o Tyrant King) não abrem além do que a malha aguenta
     grupo.updateMatrixWorld(true);
   }
   /** ponto da boca no mundo (para encaixar a câmera, a vítima e o enquadramento) */
