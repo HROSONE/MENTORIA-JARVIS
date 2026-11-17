@@ -1,0 +1,14 @@
+{
+ "total": 34.4,
+ "s": [
+  { "k": "n1", "t0": 0.10, "t1": 4.00, "txt": "Uns cem filhotes saem da areia juntos. Nenhum conhece a mãe. Quantos vão sobreviver?" },
+  { "k": "n2", "t0": 4.25, "t1": 8.05, "txt": "Ela cavou um buraco, botou uns cem ovos, cobriu tudo e voltou pro mar." },
+  { "k": "n3", "t0": 8.30, "t1": 11.80, "txt": "Dois meses depois, eles quebram a casca e cavam juntos, um ajudando o outro." },
+  { "k": "n4", "t0": 12.05, "t1": 16.05, "txt": "Saem de noite e seguem a parte mais clara do horizonte: o mar refletindo a lua." },
+  { "k": "n5", "t0": 16.30, "t1": 19.90, "txt": "Só que uma luz na praia engana. E tem caranguejo, e tem ave." },
+  { "k": "n6", "t0": 20.15, "t1": 23.05, "txt": "Quem chega na água ainda nada até o mar aberto." },
+  { "k": "n7", "t0": 23.30, "t1": 26.15, "txt": "Estimam que só um em cada mil chega a adulto." },
+  { "k": "n8", "t0": 26.40, "t1": 30.10, "txt": "Se for fêmea, uns trinta anos depois ela volta pra onde nasceu." },
+  { "k": "n9", "t0": 30.35, "t1": 33.55, "txt": "E faz igualzinho: bota os ovos e vai embora." }
+ ]
+}
