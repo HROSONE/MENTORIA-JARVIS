@@ -103,7 +103,7 @@ export async function construirSelva(pai, renderer) {
     for (let i = 0; i < P.count; i++) {
       let x = P.getX(i), y = P.getY(i), z = P.getZ(i); const k = s * 5;
       z -= Math.sign(z) * (0.12 + 0.12 * nz(x, y, k)) * (Math.abs(z) > E / 2 - 1e-3 ? 1 : 0.5);        // faces recuam (ondulação de rocha)
-      if (y > A / 2 - 1e-3) y += 0.45 * nz(x * 0.8, 0, k + 1) - 0.2;                                     // topo recortado
+      if (y > A / 2 - 1e-3) y += 0.22 * nz(x * 0.6, 0, k + 1) - 0.1;                                     // topo recortado
       const ponta = Math.max(0, Math.abs(x) - (C / 2 - 0.9)); z *= 1 - 0.5 * ponta; y -= 0.6 * ponta * ponta * (y > 0 ? 1 : 0);   // pontas arredondadas
       P.setXYZ(i, x, y, z);
     }

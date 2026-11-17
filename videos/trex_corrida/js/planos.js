@@ -185,8 +185,11 @@ export async function construirTudo() {
   const ptArco = (s, alvo = V()) => s <= 0 ? alvo.set(TRILHA[0][0] + s, 0, TRILHA[0][1]) : curva2.getPointAt(Math.min(s / L2, 1), alvo);
   const tgArco = s => s <= 0 ? V(1, 0, 0) : curva2.getTangentAt(clamp(s / L2, 0, 1));
   const sR2 = u => softmin(A2.dR(u), L2 - 0.05, 0.5);
-  const sT2 = u => softmin(sR2(u) - lerp(6.5, 9.5, clamp(u / 4)), ENTRADA + 0.4, 0.5);        // boca do T. rex (arco), atrás de quem corre
   let chega2 = 0; for (let u = 0; u < 8; u += 1 / 60) if (L2 - sR2(u) < 0.45) { chega2 = u; break; }
+  // boca do T. rex (arco): atrás de quem corre (perde terreno entre as árvores); quando ele entra na fenda, o bicho continua até a entrada
+  const gap2 = u => lerp(6.5, 8.0, clamp(u / 4));
+  const sT2 = u => softmin(u < chega2 ? sR2(u) - gap2(u) : sR2(chega2) - gap2(chega2) + 5.5 * (u - chega2), ENTRADA + 0.4, 0.4);
+  let tb2 = chega2 + 1; for (let u = chega2; u < 8; u += 1 / 60) if (sT2(u) > ENTRADA + 0.05) { tb2 = u; break; }      // a boca chega na entrada: bote
   function estado2(t) {
     const u = t - A2.t0, sR = sR2(u), sT = sT2(u), vr = derivada(sR2, u), vt = derivada(sT2, u);
     const p = ptArco(sR), tg = tgArco(sR), rumo = Math.atan2(tg.z, tg.x);
@@ -198,7 +201,7 @@ export async function construirTudo() {
     viver(H, t, { olhaTras: u > 2.3 && u < 3.3 ? 0.7 * suave(inv(2.3, 2.6, u)) * (1 - inv(3.0, 3.3, u)) : naFenda ? 0.9 * suave(inv(0.5, 1.0, ua)) : 0, ofegante: naFenda ? 1 : 0.6 });
     H.rosto({ esforco: 0.8, boca: naFenda ? 0.45 + 0.25 * Math.sin(t * 7) : 0.4 });
     rel.userData.mostrar(vr * 3.6);
-    const tb = chega2 + 0.75;                                          // a boca bate na entrada
+    const tb = tb2;                                                    // a boca chega na entrada: bote
     trexEm(xt, zt, rumoT, A1.tx0 + sT, vt, t, { olhar: H.pos('head'), mordida: u > tb && u < tb + 1.2 ? inv(tb, tb + 1.3, u) * 0.85 : 0, rugido: suave(inv(tb + 1.2, tb + 1.5, u)) });
     return { p, rumo, xt, zt, sR, sT, vt, naFenda, tb };
   }
@@ -223,7 +226,6 @@ export async function construirTudo() {
   }
   MUNDO.e = { estado1, estado2, estado3 };
   // instantes marcados para o som (a fenda fecha os dentes ~1,15 s depois do bote começar; o rugido do esconderijo começa 0,35 s após agachar)
-  const tb2 = chega2 + 0.75;
   MUNDO.marcas = { fenda_chega: A2.t0 + chega2, fenda_estalo: A2.t0 + tb2 + 1.15, esconde_agacha: A3.t0 + chega3 + 0.45, esconde_rugido: A3.t0 + chega3 + 0.35, mordida_fecha: 10.24 };
 
   // ---------------------------------------------------------------------------------------------- planos
@@ -301,7 +303,7 @@ export async function construirTudo() {
     const tb = A2.t0 + e.tb, tr = t > tb + 0.55 ? 1.6 * Math.exp(-(t - tb - 0.55) * 3) : 0.15;
     camDosDois(H, T_.boca(), 2.4, { alt: 0.05, lado: 0.12, fov: 52, mira: 0.4, tremor: tr, t });
     lente({ foco: 1.5, abertura: 0.007, desfoque: 0.008, brilho: 0.3, ao: 0.9 });
-  }, { precisa: () => [H.pos('head'), H.pos('foot_l'), T_.boca()], efeito: u => ({ rebobina: u > 2.6 ? (u - 2.6) / 0.4 : 0 }) });
+  }, { precisa: () => [H.pos('head'), H.pos('pelvis'), T_.boca()], efeito: u => ({ rebobina: u > 2.6 ? (u - 2.6) / 0.4 : 0 }) });
   // R2 (21,5-22,5): volta no tempo de novo
   plano('R2 volta no tempo', 1.0, (u, t) => {
     if (u < 0.4) { const tt = lerp(21.5, 18.5, u / 0.4); MUNDO.planosPorNome['S8 fenda'].fn(tt - 18.5, tt); }
@@ -355,7 +357,8 @@ function limparLente() {
   const pts = [], M = new THREE.Matrix4(), cen = new THREE.Vector3(), sc = new THREE.Vector3(), q = new THREE.Quaternion(), cw = new THREE.Vector3();
   for (let t = 0; t < S.total; t += 0.2) {
     const p = acharPlano(t); atualizar(t); const c = cam.position.clone(); pts.push(c);
-    const alvo = p.precisa ? p.precisa()[0] : null; if (alvo) for (const f of [0.25, 0.5, 0.75]) pts.push(c.clone().lerp(alvo, f));
+    const pr = p.precisa ? p.precisa() : [], alvos = pr.slice(0, 2);
+    for (const alvo of alvos) for (const f of [0.2, 0.4, 0.6, 0.75, 0.87, 0.94]) pts.push(c.clone().lerp(alvo, f));
   }
   let tirados = 0;
   scene.traverse(o => {
