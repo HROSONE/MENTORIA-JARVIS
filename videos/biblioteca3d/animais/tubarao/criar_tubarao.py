@@ -134,8 +134,8 @@ MAND = [    # mandíbula (x, zc, meia-largura, alto, baixo): o topo encosta na l
     (3.84, -0.235, 0.290, 0.060, 0.065),             # o fundo atrás coincide com a garganta (sem "queixo duplo"); espessa o bastante
     (3.95, -0.228, 0.272, 0.058, 0.062),             # para não parecer um aro quando abre
     (4.08, -0.204, 0.222, 0.052, 0.057),
-    (4.20, -0.172, 0.152, 0.045, 0.050),
-    (4.29, -0.142, 0.078, 0.035, 0.038),
+    (4.20, -0.168, 0.152, 0.038, 0.044),             # borda da frente mais fina (sem "lábio" grosso)
+    (4.29, -0.140, 0.078, 0.027, 0.031),
     (4.33, -0.130, 0.024, 0.020, 0.022),
 ]
 corpo = loft('corpo', CORPO, N=64)
@@ -143,7 +143,7 @@ mand = loft('mandibula', [(x, zc, w, hT, hB, 0, 0) for x, zc, w, hT, hB in MAND]
 
 # nadadeiras
 nad = []
-nad.append(nadadeira('dorsal1', (2.92, 0, 0.36), (2.28, 0, 0.36), (-0.20, 0, 1), 0.66, ponta=0.10, enflech=0.38, falc=0.30, esp=0.10))
+nad.append(nadadeira('dorsal1', (2.94, 0, 0.36), (2.26, 0, 0.36), (-0.16, 0, 1), 0.74, ponta=0.10, enflech=0.30, falc=0.30, esp=0.10))     # alta e em pé
 for s_, l in ((1, 'l'), (-1, 'r')):
     nad.append(nadadeira('peitoral_' + l, (3.32, 0.27 * s_, -0.20), (2.86, 0.25 * s_, -0.23), (-0.30, 0.84 * s_, -0.40), 1.00, ponta=0.09, enflech=0.30, falc=0.32, esp=0.12))
     nad.append(nadadeira('pelvica_' + l, (1.86, 0.10 * s_, -0.22), (1.60, 0.08 * s_, -0.22), (-0.45, 0.55 * s_, -0.70), 0.32, ponta=0.18, enflech=0.35, falc=0.20, esp=0.10))
@@ -234,6 +234,8 @@ def colorir(o, mandibula=False):
     for s_ in (1, -1):                                                                                          # ponta preta embaixo da peitoral
         q = V - np.array([2.62, 0.27 * s_ + 0.84 * s_ * 0.95, -0.20 - 0.40 * 0.95]); ponta = np.maximum(ponta, suave(0.32, 0.12, np.linalg.norm(q, axis=1)) * (N[:, 2] < 0.2))
     ponta = np.maximum(ponta, suave(0.75, 0.68, V[:, 0]) * 0.55)                                                # bordo da cauda mais escuro
+    for s_ in (1, -1):                                                                                          # mancha preta na axila
+        q = V - np.array([2.98, 0.34 * s_, -0.30]); ponta = np.maximum(ponta, suave(0.10, 0.04, np.linalg.norm(q, axis=1)) * (N[:, 2] < 0.3))
     at = me.color_attributes.new('dorso', 'FLOAT_COLOR', 'POINT'); ap = me.color_attributes.new('ponta', 'FLOAT_COLOR', 'POINT')
     for i in range(len(V)): at.data[i].color = (dorso[i],) * 3 + (1,); ap.data[i].color = (ponta[i],) * 3 + (1,)
 colorir(pele)
@@ -260,14 +262,45 @@ def material_pele():
     cicF3 = Nn.new('ShaderNodeMath'); cicF3.operation = 'MULTIPLY'; cicF3.inputs[1].default_value = 0.5; L.new(cicF2.outputs[0], cicF3.inputs[0])
     c2 = Nn.new('ShaderNodeMix'); c2.data_type = 'RGBA'; L.new(cicF3.outputs[0], c2.inputs[0]); L.new(c1.outputs[2], c2.inputs[6]); c2.inputs[7].default_value = (0.55, 0.57, 0.58, 1)
     c3 = Nn.new('ShaderNodeMix'); c3.data_type = 'RGBA'; L.new(ap.outputs['Fac'], c3.inputs[0]); L.new(c2.outputs[2], c3.inputs[6]); c3.inputs[7].default_value = (0.012, 0.013, 0.015, 1)
-    L.new(c3.outputs[2], b.inputs['Base Color'])
+    # tom: cinza-chumbo puxando para o bronze em manchas largas (pigmento irregular, como nos animais vivos)
+    tom = Nn.new('ShaderNodeTexNoise'); tom.inputs['Scale'].default_value = 0.9; tom.inputs['Detail'].default_value = 3.0; L.new(tc.outputs['Object'], tom.inputs['Vector'])
+    tomR = Nn.new('ShaderNodeValToRGB'); tomR.color_ramp.elements[0].color = (0.92, 1.0, 1.08, 1); tomR.color_ramp.elements[1].color = (1.18, 1.05, 0.88, 1); L.new(tom.outputs['Fac'], tomR.inputs['Fac'])
+    tomF = Nn.new('ShaderNodeMath'); tomF.operation = 'MULTIPLY'; tomF.inputs[1].default_value = 0.7; L.new(at.outputs['Fac'], tomF.inputs[0])
+    c4 = Nn.new('ShaderNodeMix'); c4.data_type = 'RGBA'; c4.blend_type = 'MULTIPLY'; L.new(tomF.outputs[0], c4.inputs[0]); L.new(c3.outputs[2], c4.inputs[6]); L.new(tomR.outputs['Color'], c4.inputs[7])
+    # sardas escuras perto da divisa (onde o branco encontra o cinza)
+    sar = Nn.new('ShaderNodeTexVoronoi'); sar.inputs['Scale'].default_value = 22.0; sar.inputs['Randomness'].default_value = 1.0; L.new(tc.outputs['Object'], sar.inputs['Vector'])
+    sarR = Nn.new('ShaderNodeMapRange'); sarR.inputs['From Min'].default_value = 0.10; sarR.inputs['From Max'].default_value = 0.16; sarR.inputs['To Min'].default_value = 1.0; sarR.inputs['To Max'].default_value = 0.0
+    L.new(sar.outputs['Distance'], sarR.inputs['Value'])
+    faixaD = Nn.new('ShaderNodeMath'); faixaD.operation = 'PINGPONG'; faixaD.inputs[1].default_value = 0.5; L.new(at.outputs['Fac'], faixaD.inputs[0])
+    sarSel = Nn.new('ShaderNodeTexNoise'); sarSel.inputs['Scale'].default_value = 5.0; L.new(tc.outputs['Object'], sarSel.inputs['Vector'])
+    sarSR = Nn.new('ShaderNodeMapRange'); sarSR.inputs['From Min'].default_value = 0.55; sarSR.inputs['From Max'].default_value = 0.62; L.new(sarSel.outputs['Fac'], sarSR.inputs['Value'])
+    sarM = Nn.new('ShaderNodeMath'); sarM.operation = 'MULTIPLY'; L.new(sarR.outputs[0], sarM.inputs[0]); L.new(sarSR.outputs[0], sarM.inputs[1])
+    sarM2 = Nn.new('ShaderNodeMath'); sarM2.operation = 'MULTIPLY'; sarM2.inputs[1].default_value = 0.8; L.new(sarM.outputs[0], sarM2.inputs[0])
+    lado = Nn.new('ShaderNodeMapRange'); lado.inputs['From Min'].default_value = 0.0; lado.inputs['From Max'].default_value = 0.25; L.new(faixaD.outputs[0], lado.inputs['Value'])
+    sarM3 = Nn.new('ShaderNodeMath'); sarM3.operation = 'MULTIPLY'; L.new(sarM2.outputs[0], sarM3.inputs[0]); L.new(at.outputs['Fac'], sarM3.inputs[1])
+    c5 = Nn.new('ShaderNodeMix'); c5.data_type = 'RGBA'; L.new(sarM3.outputs[0], c5.inputs[0]); L.new(c4.outputs[2], c5.inputs[6]); c5.inputs[7].default_value = (0.02, 0.022, 0.026, 1)
+    # arranhões finos e claros (marcas de briga e de presas): ruído esticado vira riscos
+    mp_ = Nn.new('ShaderNodeMapping'); mp_.inputs['Scale'].default_value = (2.0, 26.0, 26.0); mp_.inputs['Rotation'].default_value = (0.3, 0.0, 0.5); L.new(tc.outputs['Object'], mp_.inputs['Vector'])
+    ris = Nn.new('ShaderNodeTexNoise'); ris.inputs['Scale'].default_value = 3.0; ris.inputs['Detail'].default_value = 0.0; L.new(mp_.outputs['Vector'], ris.inputs['Vector'])
+    risR = Nn.new('ShaderNodeMapRange'); risR.inputs['From Min'].default_value = 0.495; risR.inputs['From Max'].default_value = 0.5; risR.inputs['To Min'].default_value = 0.0; risR.inputs['To Max'].default_value = 1.0
+    risR2 = Nn.new('ShaderNodeMapRange'); risR2.inputs['From Min'].default_value = 0.5; risR2.inputs['From Max'].default_value = 0.505; risR2.inputs['To Min'].default_value = 1.0; risR2.inputs['To Max'].default_value = 0.0
+    L.new(ris.outputs['Fac'], risR.inputs['Value']); L.new(ris.outputs['Fac'], risR2.inputs['Value'])
+    risM = Nn.new('ShaderNodeMath'); risM.operation = 'MINIMUM'; L.new(risR.outputs[0], risM.inputs[0]); L.new(risR2.outputs[0], risM.inputs[1])
+    risSel = Nn.new('ShaderNodeTexNoise'); risSel.inputs['Scale'].default_value = 2.2; L.new(tc.outputs['Object'], risSel.inputs['Vector'])
+    risSR = Nn.new('ShaderNodeMapRange'); risSR.inputs['From Min'].default_value = 0.56; risSR.inputs['From Max'].default_value = 0.64; L.new(risSel.outputs['Fac'], risSR.inputs['Value'])
+    risF = Nn.new('ShaderNodeMath'); risF.operation = 'MULTIPLY'; L.new(risM.outputs[0], risF.inputs[0]); L.new(risSR.outputs[0], risF.inputs[1])
+    risF2 = Nn.new('ShaderNodeMath'); risF2.operation = 'MULTIPLY'; L.new(risF.outputs[0], risF2.inputs[0]); L.new(at.outputs['Fac'], risF2.inputs[1])
+    c6 = Nn.new('ShaderNodeMix'); c6.data_type = 'RGBA'; L.new(risF2.outputs[0], c6.inputs[0]); L.new(c5.outputs[2], c6.inputs[6]); c6.inputs[7].default_value = (0.42, 0.44, 0.45, 1)
+    L.new(c6.outputs[2], b.inputs['Base Color'])
     # dentículos dérmicos (lixa fina) + ondulações; pele molhada (verniz leve)
     den = Nn.new('ShaderNodeTexVoronoi'); den.inputs['Scale'].default_value = 900.0; L.new(tc.outputs['Object'], den.inputs['Vector'])
     ond = Nn.new('ShaderNodeTexNoise'); ond.inputs['Scale'].default_value = 14.0; ond.inputs['Detail'].default_value = 4.0; L.new(tc.outputs['Object'], ond.inputs['Vector'])
     alt = Nn.new('ShaderNodeMath'); alt.operation = 'MULTIPLY_ADD'; alt.inputs[1].default_value = 0.25; L.new(den.outputs['Distance'], alt.inputs[0]); L.new(ond.outputs['Fac'], alt.inputs[2])
     bump = Nn.new('ShaderNodeBump'); bump.inputs['Strength'].default_value = 0.18; bump.inputs['Distance'].default_value = 0.004; L.new(alt.outputs[0], bump.inputs['Height']); L.new(bump.outputs['Normal'], b.inputs['Normal'])
     rg = Nn.new('ShaderNodeMapRange'); rg.inputs['To Min'].default_value = 0.42; rg.inputs['To Max'].default_value = 0.30; L.new(ond.outputs['Fac'], rg.inputs['Value']); L.new(rg.outputs[0], b.inputs['Roughness'])
-    b.inputs['Specular IOR Level'].default_value = 0.5; b.inputs['Coat Weight'].default_value = 0.25; b.inputs['Coat Roughness'].default_value = 0.2
+    b.inputs['Specular IOR Level'].default_value = 0.5; b.inputs['Coat Weight'].default_value = 0.45; b.inputs['Coat Roughness'].default_value = 0.10
+    gota = Nn.new('ShaderNodeTexNoise'); gota.inputs['Scale'].default_value = 60.0; gota.inputs['Detail'].default_value = 2.0; L.new(tc.outputs['Object'], gota.inputs['Vector'])
+    bc = Nn.new('ShaderNodeBump'); bc.inputs['Strength'].default_value = 0.08; bc.inputs['Distance'].default_value = 0.002; L.new(gota.outputs['Fac'], bc.inputs['Height']); L.new(bc.outputs['Normal'], b.inputs['Coat Normal'])
     b.inputs['Subsurface Weight'].default_value = 0.02
     return m
 mp = material_pele(); pele.data.materials.append(mp)
@@ -278,14 +311,17 @@ def material_simples(nome, cor, rug=0.4, coat=0.0, sss=0.0):
     b.inputs['Base Color'].default_value = (*cor, 1); b.inputs['Roughness'].default_value = rug; b.inputs['Coat Weight'].default_value = coat
     b.inputs['Subsurface Weight'].default_value = sss; return m
 m_boca = material_simples('boca', (0.30, 0.055, 0.06), rug=0.35, coat=0.4, sss=0.15)
+m_gengiva = material_simples('gengiva', (0.62, 0.20, 0.21), rug=0.3, coat=0.5, sss=0.35)
 def pintar_boca(o, cima):
-    o.data.materials.append(m_boca); idx = len(o.data.materials) - 1
+    if 'boca' not in [m.name for m in o.data.materials]: o.data.materials.append(m_boca); o.data.materials.append(m_gengiva)
+    idx = [m.name for m in o.data.materials].index('boca'); idg = [m.name for m in o.data.materials].index('gengiva')
     for p in o.data.polygons:
         c = p.center; n = p.normal
         w_ = 0.92 * np.interp(c.x, [m[0] for m in MAND], [m[2] for m in MAND]) - 0.015; zl = linha_boca(min(c.x, 4.33)) - FENDA_Z
         if c.x < 3.835 or abs(c.y) > w_ or abs(c.z - zl) > 0.012: continue
-        if cima and n.z < -0.55: p.material_index = idx                                   # céu da boca
-        if not cima and n.z > 0.55: p.material_index = idx                                # assoalho da boca
+        gengiva = abs(c.y) > w_ - 0.05 or c.x > np.interp(abs(c.y), [0, w_], [4.27, 3.86]) - 0.04
+        if cima and n.z < -0.55: p.material_index = idg if gengiva else idx               # céu da boca / gengiva
+        if not cima and n.z > 0.55: p.material_index = idg if gengiva else idx            # assoalho da boca / gengiva
 pintar_boca(pele, True); pintar_boca(pele, False)
 
 # ------------------------------------------------------------------------------------------------ olhos, dentes, gengiva
@@ -296,7 +332,7 @@ m_olho = material_simples('olho', (0.004, 0.004, 0.005), rug=0.02, coat=1.0)
 olhos = []
 for s_, l in ((1, 'l'), (-1, 'r')):
     p, n = raio(pele, (4.13, 0.6 * s_, 0.10), (0, -s_, 0))
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.027, location=p - n * 0.012); o = bpy.context.object; o.name = 'olho_' + l
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.031, location=p - n * 0.014); o = bpy.context.object; o.name = 'olho_' + l
     o.scale = (1.0, 0.75, 0.85); o.data.materials.append(m_olho); bpy.ops.object.shade_smooth(); olhos.append(o)
 
 m_dente = material_simples('dente', (0.86, 0.83, 0.74), rug=0.22, coat=0.3, sss=0.1)
@@ -329,23 +365,23 @@ def arco_boca(t, cima):
     return x, y
 dentes_sup, dentes_inf = [], []
 for s_ in (1, -1):
-    for fila, recua, inclina in ((0, 0.0, 0.0), (1, 0.035, 0.9)):
-        n_ = 13 if fila == 0 else 11
+    for fila, recua, inclina in ((0, 0.0, 0.0), (1, 0.034, 0.75), (2, 0.062, 1.35)):         # 3ª fileira deitada: dentes de reposição
+        n_ = (13, 12, 10)[fila]
         for k in range(n_):
             t = (k + 0.5) / n_; x, y = arco_boca(t, True); y *= s_
-            tam = (1.0 - 0.55 * t ** 1.4) * (0.75 if fila else 1.0)
+            tam = (1.0 - 0.55 * t ** 1.4) * (1.0, 0.82, 0.62)[fila]
             # superior: na borda da cabeça (raio de baixo para cima)
-            p, nrm = raio(pele, (x - recua * 1.0, y * (1 - recua * 2), linha_boca(x - recua) - FENDA_Z), (0, 0, 1))
+            p, nrm = raio(pele, (x - recua * 1.0, y * 1.06 * (1 - recua * 2.2), linha_boca(x - recua) - FENDA_Z), (0, 0, 1))
             if p is not None:
                 para_fora = Vector((math.cos(math.atan2(y, x - 3.9)), 0, 0)); dentro = Vector((3.95 - x, -y, 0)).normalized()
                 cima_d = (Vector((0, 0, -1)) + dentro * inclina).normalized()
-                d_ = dente(f'dente_sup{fila}_{k}_{s_}', p + Vector((0, 0, 0.004)), cima_d, -dentro + Vector((0, 0, 0)), 0.044 * tam, 0.050 * tam)
+                d_ = dente(f'dente_sup{fila}_{k}_{s_}', p + Vector((0, 0, 0.006)), cima_d, -dentro, 0.054 * tam, 0.060 * tam)
                 dentes_sup.append(d_)
             # inferior: no topo da mandíbula (raio de cima para baixo), mais estreitos e pontudos
-            p, nrm = raio(pele, (x - 0.01 - recua, y * 0.96 * (1 - recua * 2), linha_boca(x - 0.01 - recua) - FENDA_Z), (0, 0, -1))
+            p, nrm = raio(pele, (x - 0.01 - recua, y * 1.02 * (1 - recua * 2.2), linha_boca(x - 0.01 - recua) - FENDA_Z), (0, 0, -1))
             if p is not None:
                 dentro = Vector((3.95 - x, -y, 0)).normalized(); cima_d = (Vector((0, 0, 1)) + dentro * (inclina + 0.12)).normalized()
-                d_ = dente(f'dente_inf{fila}_{k}_{s_}', p - Vector((0, 0, 0.004)), cima_d, -dentro, 0.030 * tam, 0.046 * tam, curva=0.1)
+                d_ = dente(f'dente_inf{fila}_{k}_{s_}', p - Vector((0, 0, 0.006)), cima_d, -dentro, 0.034 * tam, 0.058 * tam, curva=0.1)
                 dentes_inf.append(d_)
 print('DENTES', len(dentes_sup), len(dentes_inf))
 
