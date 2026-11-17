@@ -1,50 +1,38 @@
-// TUBARÃO-BRANCO no Three.js (GLB da biblioteca, feito no Blender: animais/tubarao/criar_tubarao.py --glb tubarao.glb).
-// Adulto de 4,5 m (metros). Olha para +X do próprio grupo, Y para cima, lado esquerdo em -Z; x = 0 na ponta da cauda, x = 4,5 na ponta do focinho,
-// o corpo fica centrado em y = 0 (não tem "chão": o grupo vai para a altura que a cena pedir).
-//   const T = await criarTubarao(); cena.add(T.grupo); T.posar({ fase, amp, abre, vira })
-// posar é função só dos parâmetros (a mesma chamada dá sempre a mesma pose; renderiza em qualquer ordem). É a mesma regra do posar() do Blender:
-//   fase  fase do nado em radianos (a onda do corpo anda para a cauda: nado tunniforme, a frente quase parada)   amp  1 = nado normal, 0 = reto
-//   abre  abertura da mandíbula em graus (padrão 6: em repouso a boca fica semiaberta; a cabeça sobe 0,28 grau por grau aberto na mordida)   vira  curva do corpo (+ para a esquerda)
-// Ossos: raiz, cabeca, coluna1..coluna8 (da frente para a cauda), mandibula, peitoral_l, peitoral_r. No GLB a boca está fechada (pose de modelagem).
+// TUBARÃO-BRANCO no Three.js: modelo pronto "Animated Swimming Great White Shark Loop" de LasquetiSpice (Sketchfab, licença CC BY 4.0,
+// crédito obrigatório: "Animated Swimming Great White Shark Loop" by LasquetiSpice, https://sketchfab.com/3d-models/animated-swimming-great-white-shark-loop-297ed35c6a5f43749b0ae189d991a3f1).
+// O arquivo veio com material specular-glossiness, convertido para metal/rugosidade (npx @gltf-transform/cli metalrough). Ele traz esqueleto
+// e 3 animações: 'Swimming' (laço de 2 s), 'Biting' (1 s) e 'Circling' (32 s, nadando em círculo).
+// Aqui o modelo é colocado no mesmo espaço do tubarão antigo da biblioteca: adulto de 4,5 m olhando para +X, Y para cima, x = 0 na ponta da
+// cauda e x = 4,5 no focinho, corpo centrado em y = 0 e z = 0.
+//   const T = await criarTubarao(); cena.add(T.grupo); T.posar({ t, clip: 'Swimming' })   // t em segundos; mesma chamada = mesma pose
+//   T.posar({ t, clip: 'Biting', mistura: 0.6 })                                             // mordida misturada ao nado (0..1)
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-const _a = new THREE.Vector3(), _q = new THREE.Quaternion();
-const rad = d => d * Math.PI / 180;
+export const COMPRIMENTO = 4.5;
 
-export async function criarTubarao({ url = new URL('./tubarao.glb', import.meta.url).href } = {}) {
+export async function criarTubarao({ url = new URL('./tubarao.glb', import.meta.url).href, comprimento = COMPRIMENTO } = {}) {
   const g = await new GLTFLoader().loadAsync(url);
-  const grupo = new THREE.Group(); grupo.name = 'tubarao'; grupo.add(g.scene);
-  const ossos = {}, malhas = [];
-  g.scene.traverse(o => {
-    if (o.isBone) ossos[o.name] = o;
-    if (o.isMesh) { o.castShadow = o.receiveShadow = true; o.frustumCulled = false; malhas.push(o); if (o.material?.map) o.material.map.anisotropy = 8; }
-  });
-  const repouso = {}; for (const k in ossos) repouso[k] = ossos[k].quaternion.clone();
-
-  /** gira o osso em torno de um eixo do MODELO (x frente, y cima, z direita), somando à pose atual */
-  function girar(nome, eixo, ang) {
-    const b = ossos[nome]; if (!b || !ang) return;
-    grupo.updateMatrixWorld(true);
-    const em = _a.set(eixo[0], eixo[1], eixo[2]).normalize().applyQuaternion(grupo.getWorldQuaternion(_q));
-    const qm = new THREE.Quaternion().setFromAxisAngle(em, ang), pw = b.parent.getWorldQuaternion(new THREE.Quaternion()), bw = b.getWorldQuaternion(new THREE.Quaternion());
-    b.quaternion.copy(pw.invert().multiply(qm.multiply(bw)));
-  }
-
-  function posar({ fase = 0, amp = 1, abre = 6, vira = 0 } = {}) {
-    for (const k in ossos) ossos[k].quaternion.copy(repouso[k]);
-    const n = 8;
-    for (let i = 0; i < n; i++) {                                              // onda lateral que cresce para a cauda (giro em torno do eixo vertical)
-      const k = (i + 1) / n;
-      girar('coluna' + (i + 1), [0, 1, 0], amp * (0.02 + 0.30 * Math.pow(k, 2.2)) * Math.sin(fase - 2.4 * k) + vira * 0.10);
-    }
-    girar('cabeca', [0, 0, 1], rad(0.28 * abre));                                // focinho sobe quando a boca abre
-    girar('cabeca', [0, 1, 0], -amp * 0.03 * Math.sin(fase) - vira * 0.15);       // a cabeça contrabalança a onda
-    girar('mandibula', [0, 0, -1], rad(abre));                                   // a mandíbula abre para baixo
-    grupo.updateMatrixWorld(true);
+  const malhas = [];
+  g.scene.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; o.frustumCulled = false; malhas.push(o); if (o.material?.map) o.material.map.anisotropy = 8; } });
+  // o original olha para +Z: gira para +X, escala para o comprimento e encosta a cauda em x = 0
+  const base = new THREE.Group(); base.add(g.scene); base.rotation.y = Math.PI / 2;
+  const grupo = new THREE.Group(); grupo.name = 'tubarao'; grupo.add(base);
+  const mix = new THREE.AnimationMixer(g.scene), clipes = Object.fromEntries(g.animations.map(a => [a.name, a]));
+  const acoes = Object.fromEntries(g.animations.map(a => [a.name, mix.clipAction(a)]));
+  // caixa da malha já deformada pelos ossos (no nado em t = 0): a caixa da geometria crua não vale para malha com esqueleto
+  const caixaPosada = () => { grupo.updateMatrixWorld(true); for (const m of malhas) if (m.isSkinnedMesh) m.skeleton.update(); for (const m of malhas) if (m.isSkinnedMesh) m.computeBoundingBox(); return new THREE.Box3().setFromObject(base); };
+  acoes.Swimming?.play(); mix.update(0);
+  const tam = caixaPosada().getSize(new THREE.Vector3()); base.scale.multiplyScalar(comprimento / tam.x);
+  const caixa = caixaPosada(), c = caixa.getCenter(new THREE.Vector3()); base.position.set(-caixa.min.x, -c.y, -c.z);
+  /** pose como função do tempo: clip principal no tempo t (em laço) e, opcional, mistura com o nado por baixo */
+  function posar({ t = 0, clip = 'Swimming', mistura = 1 } = {}) {
+    for (const k in acoes) { acoes[k].stop(); acoes[k].enabled = false; }
+    const usar = (nome, peso) => { const a = acoes[nome]; if (!a) return; a.enabled = true; a.setEffectiveWeight(peso); a.play(); a.time = t % clipes[nome].duration; };
+    if (clip !== 'Swimming' && mistura < 1) usar('Swimming', 1 - mistura);
+    usar(clip, clip === 'Swimming' ? 1 : mistura);
+    mix.update(0); grupo.updateMatrixWorld(true);
   }
   posar();
-  /** ponto da boca no mundo (a articulação da mandíbula 0,25 m à frente, na altura da fenda), para mirar a câmera ou a presa */
-  const boca = (alvo = new THREE.Vector3()) => { grupo.updateMatrixWorld(true); return alvo.copy(ossos.mandibula.getWorldPosition(new THREE.Vector3())).add(new THREE.Vector3(0.25, 0.07, 0).applyQuaternion(grupo.getWorldQuaternion(new THREE.Quaternion()))); };
-  return { grupo, ossos, malhas, posar, girar, boca };
+  return { grupo, malhas, posar, clipes: Object.keys(clipes), duracao: n => clipes[n]?.duration };
 }

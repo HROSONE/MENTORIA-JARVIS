@@ -8,7 +8,7 @@
 </head>
 <body>
 <script type="module">
-// Conferência do GLB do tubarão no Three.js: window.__vista('lado'|'ataque'|'cabeca'|'boca'|'baixo'|'topo'|'nado0'..'nado3') devolve um JPEG (data URL).
+// Conferência do GLB do tubarão no Three.js: window.__vista('lado'|'ataque'|'cabeca'|'baixo'|'topo'|'nado0'..'nado3') devolve um JPEG (data URL).
 // Rodar: node ver_tubarao.js pasta_de_saida lado,ataque,cabeca,boca
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -23,28 +23,21 @@ const sol = new THREE.DirectionalLight(0xd6f3ff, 2.6); sol.position.set(3, 9, 4)
 Object.assign(sol.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6, near: 1, far: 30 }); sol.target.position.set(2.3, 0, 0);
 scene.add(sol, sol.target, new THREE.HemisphereLight(0x8fd5d0, 0x0a2a30, 0.9));
 const cam = new THREE.PerspectiveCamera(40, W / H, 0.05, 100);
-const T = await criarTubarao(Q.get('glb') ? { url: new URL(Q.get('glb'), location.href).href } : {}); scene.add(T.grupo);
+const T = await criarTubarao(Q.get('glb') ? { url: new URL(Q.get('glb'), location.href).href } : {}); scene.add(T.grupo); window.__T = T; window.__THREE = THREE;
 // câmeras no espaço do modelo: x frente, y cima, z direita (as mesmas vistas das prévias do Blender, com y e z trocados)
 const VISTAS = {
-  lado:   { c: [2.4, 0.25, 6.6], a: [2.3, 0.05, 0], fov: 38, pose: { fase: 0.8, amp: 0.6 } },
-  ataque: { c: [6.6, -0.35, 1.9], a: [3.6, -0.05, -0.1], fov: 40, pose: { fase: 1.6, amp: 0.8, abre: 32, vira: 0.6 } },
-  cabeca: { c: [5.35, 0.30, 2.05], a: [3.95, 0, 0], fov: 32, pose: { fase: 1.2, amp: 0.3, abre: 3, vira: 0.1 } },
-  boca:   { c: [5.35, -0.32, 1.15], a: [4.05, -0.16, 0], fov: 38, pose: { fase: 1.6, amp: 0.4, abre: 32, vira: 0.2 } },
-  zoomolho: { c: [4.95, 0.28, 0.80], a: [4.20, 0.05, 0.05], fov: 24, pose: {} },
-  zoomboca: { c: [5.0, -0.12, 0.85], a: [4.20, -0.14, 0.10], fov: 24, pose: {} },
-  baixo:  { c: [3.2, -3.6, 2.6], a: [2.2, -0.1, 0], fov: 42, pose: { fase: 0.3, amp: 0.5 } },
-  topo:   { c: [2.25, 7.5, 0.0001], a: [2.25, 0, 0], fov: 36, pose: { fase: 0, amp: 0 } },
+  lado:   { c: [2.3, 0.25, 6.6], a: [2.3, 0.0, 0], fov: 38, pose: { t: 0.3 } },
+  ataque: { c: [6.6, -0.35, 1.9], a: [3.6, -0.05, -0.1], fov: 40, pose: { t: 0.5, clip: 'Biting' } },
+  cabeca: { c: [5.35, 0.30, 2.05], a: [3.95, 0, 0], fov: 32, pose: { t: 0.2 } },
+  baixo:  { c: [3.2, -3.6, 2.6], a: [2.2, -0.1, 0], fov: 42, pose: { t: 0.8 } },
+  topo:   { c: [2.25, 7.5, 0.0001], a: [2.25, 0, 0], fov: 36, pose: { t: 0 } },
 };
-for (let k = 0; k < 4; k++) VISTAS['nado' + k] = { c: [2.3, 6.6, 1.5], a: [2.3, 0, 0], fov: 34, pose: { fase: k * Math.PI / 2, amp: 1 } };
-const pele = T.malhas.find(m => m.name === 'tubarao_pele'), mat0 = { normalMap: pele.material.normalMap, clearcoat: pele.material.clearcoat, roughness: pele.material.roughness, map: pele.material.map };
-// opc: sem = lista de ajustes para achar a causa de um defeito: normal (tira o mapa de relevo), verniz (tira o clearcoat), mapa (cor lisa), rug=0.5 (rugosidade)
-window.__vista = (nome, opc = {}) => {
-  const v = VISTAS[nome], m = pele.material; T.posar(v.pose); cam.position.set(...v.c); cam.lookAt(...v.a); cam.fov = v.fov; cam.updateProjectionMatrix();
-  m.normalMap = opc.sem?.includes('normal') ? null : mat0.normalMap; m.clearcoat = opc.sem?.includes('verniz') ? 0 : (opc.verniz ?? mat0.clearcoat);
-  m.map = opc.sem?.includes('mapa') ? null : mat0.map; m.roughness = opc.rug ?? mat0.roughness; m.needsUpdate = true;
+for (let k = 0; k < 4; k++) VISTAS['nado' + k] = { c: [2.3, 6.6, 1.5], a: [2.3, 0, 0], fov: 34, pose: { t: k * 0.5 } };
+window.__vista = (nome) => {
+  const v = VISTAS[nome]; T.posar(v.pose); cam.position.set(...v.c); cam.lookAt(...v.a); cam.fov = v.fov; cam.updateProjectionMatrix();
   renderer.render(scene, cam); return renderer.domElement.toDataURL('image/jpeg', 0.92);
 };
-window.__info = () => ({ ossos: Object.keys(T.ossos), malhas: T.malhas.map(m => ({ nome: m.name, tris: Math.round((m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3), pele: !!m.isSkinnedMesh, mat: m.material.type, mapa: !!m.material.map, normal: !!m.material.normalMap, clearcoat: m.material.clearcoat })) });
+window.__info = () => ({ clipes: T.clipes, malhas: T.malhas.map(m => ({ nome: m.name, tris: Math.round((m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3), pele: !!m.isSkinnedMesh, mat: m.material.type, mapa: !!m.material.map, normal: !!m.material.normalMap, clearcoat: m.material.clearcoat })) });
 window.__ready = true;
 </script>
 </body>
