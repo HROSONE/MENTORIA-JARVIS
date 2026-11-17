@@ -60,7 +60,7 @@ function instanciar(pai, modelo, matrizes, { sombra = true } = {}) {
   }
 }
 
-export async function construirSelva(pai, renderer) {
+export async function construirSelva(pai, renderer, { claros = [] } = {}) {      // claros: zonas extras sem vegetação {x0, x1, z0, z1} (cada vídeo abre a sua clareira)
   const G = new THREE.Group(); G.name = 'selva'; pai.add(G);
   const R = mulberry32(17);
   // chão: terreno com estrada de terra, mato de folhas dos lados
@@ -83,7 +83,7 @@ export async function construirSelva(pai, renderer) {
   const sam = await modeloPH('fern_02'), fol = [await modeloPH('anthurium_botany_01'), await modeloPH('calathea_orbifolia_01'), await modeloPH('pachira_aquatica_01')];
   const arb = [await modeloPH('shrub_01', L), await modeloPH('shrub_04')], ped = [await modeloPH('rock_moss_set_01'), await modeloPH('rock_moss_set_02'), await modeloPH('boulder_01'), await modeloPH('rock_07')];
   const tronco = [await modeloPH('dead_tree_trunk_02'), await modeloPH('root_cluster_01', L)];
-  const livre = (x, z, folga) => Math.abs(z) > ESTRADA_LARG / 2 + folga && distTrilha(x, z) > 2.2 + folga && Math.hypot(x - FENDA.x - Math.cos(FENDA.giro) * 1.6, z - FENDA.z - Math.sin(FENDA.giro) * 1.6) > 6.2 && !CLAROS.some(c => x > c.x0 - folga && x < c.x1 + folga && z > c.z0 - folga && z < c.z1 + folga);
+  const livre = (x, z, folga) => Math.abs(z) > ESTRADA_LARG / 2 + folga && distTrilha(x, z) > 2.2 + folga && Math.hypot(x - FENDA.x - Math.cos(FENDA.giro) * 1.6, z - FENDA.z - Math.sin(FENDA.giro) * 1.6) > 6.2 && ![...CLAROS, ...claros].some(c => x > c.x0 - folga && x < c.x1 + folga && z > c.z0 - folga && z < c.z1 + folga);
   const M = (x, z, esc, giro, afunda = 0) => new THREE.Matrix4().compose(new THREE.Vector3(x, alturaChao(x, z) - afunda, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), giro), new THREE.Vector3(esc, esc, esc));
   const espalhar = (mods, n, rmin, rmax, esc, folga, xs = [-90, 140]) => {
     const por = mods.map(() => []);

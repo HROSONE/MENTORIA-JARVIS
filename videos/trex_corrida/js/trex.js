@@ -94,15 +94,15 @@ export async function criarTrex({ url = '../biblioteca3d/animais/trex/trex.glb' 
    * rugido 0..1 (cabeça sobe, boca abre 45°, tremor); mordida 0..1 (bote: cabeça desce para a frente, boca abre e fecha no fim);
    * mastigar 0..1 (cabeça erguida, mandíbula batendo); parado: 0..1 (1 = pés juntos, sem passo); t: tempo (tremores e respiração)
    */
-  function posar({ dist = 0, vel = 0, olhar = null, rugido = 0, mordida = 0, mastigar = 0, parado = 0, t = 0, chao = 0 } = {}) {
+  function posar({ dist = 0, vel = 0, olhar = null, rugido = 0, mordida = 0, mastigar = 0, parado = 0, t = 0, chao = 0, inclina = 0, abaixa = 0 } = {}) {   // inclina (rad) e abaixa (m): corpo para a frente e quadril mais baixo, para comer no chão
     for (const k in ossos) ossos[k].quaternion.copy(repouso[k]);
     ossos.quadril.position.y = raizY0;
     const ciclo = 2.8 + 0.42 * vel, fase = dist / ciclo, beta = clamp(0.62 - 0.03 * vel, 0.5, 0.65);
     const anda = (1 - parado) * clamp(vel / 1.2, 0, 1);
     // corpo: sobe e desce duas vezes por ciclo, balança de lado, inclina para a frente com a velocidade
     const bob = anda * (0.07 + 0.012 * vel) * Math.cos(4 * Math.PI * fase), lat = anda * 0.05 * Math.sin(2 * Math.PI * fase);
-    ossos.quadril.position.y += bob * 1.0;                                                  // (unidade do GLB = metro)
-    girar('quadril', [0, 0, 1], -0.04 * anda * Math.min(vel, 6) / 6 - 0.03 * mordida);     // tronco inclinado para a frente
+    ossos.quadril.position.y += bob * 1.0 - abaixa;                                                  // (unidade do GLB = metro)
+    girar('quadril', [0, 0, 1], -0.04 * anda * Math.min(vel, 6) / 6 - 0.03 * mordida - inclina);     // tronco inclinado para a frente
     girar('quadril', [1, 0, 0], lat * 0.6); girar('quadril', [0, 1, 0], 0.05 * anda * Math.sin(2 * Math.PI * fase));
     girar('coluna1', [0, 1, 0], -0.03 * anda * Math.sin(2 * Math.PI * fase));
     // respiração

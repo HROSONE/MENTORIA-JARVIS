@@ -12,3 +12,5 @@ Todo vídeo que usar um destes modelos precisa do crédito na descrição (texto
 Licença: https://creativecommons.org/licenses/by/4.0/
 Descartado: o "T-REX" de slang107123456789 (70 animações) é extraído do jogo Turok, apesar da etiqueta CC-BY: não usar.
 Para baixar de novo: API do Sketchfab com a chave da conta (`/v3/models/<id>/download`), formato glb.
+- **Edmontosaurus** — `edmontosaurus/edmontosaurus.glb`: "Dino Raul's Edmontosaurus 3" by Sammy the Citipati, licensed under CC BY 4.0
+  (https://sketchfab.com/3d-models/dino-rauls-edmontosaurus-3-521ee9021ac44ff1a75582cf7639fd81). Usado como carcaça no Short dos braços do T. rex.
