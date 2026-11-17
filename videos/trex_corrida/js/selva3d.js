@@ -12,7 +12,7 @@ export const FENDA = { x: 20.8, z: 9.4, giro: 0.6, meio: 1.6 };       // entre d
 // rochas do maratonista (lado -z): fileira de 3 matacões ao longo de x, face de trás em z ≈ -7,6; ele se agacha em ESCONDE_M.agacha (atrás da 1ª)
 export const ESCONDE_M = { x: 55.6, z: -6.2, agacha: { x: 53.4, z: -8.45 } };
 // zonas sem vegetação (o caminho dele atrás das rochas e o lugar da câmera do plano S11)
-const CLAROS = [{ x0: 46.5, x1: 58, z0: -13.5, z1: -3.2 }];
+const CLAROS = [{ x0: 46.5, x1: 58, z0: -17, z1: -3.2 }];
 
 export function alturaChao(x, z) {
   const d = Math.abs(z);
@@ -89,15 +89,18 @@ export async function construirSelva(pai, renderer) {
     const x = seg.x - tg.z * lado * d, z = seg.z + tg.x * lado * d; if (Math.abs(z) < ESTRADA_LARG / 2 + 2.6) continue; if (Math.hypot(x - FENDA.x - Math.cos(FENDA.giro) * 1.6, z - FENDA.z - Math.sin(FENDA.giro) * 1.6) < 5.5) continue; perto.push(M(x, z, 0.9 + R() * 0.5, R() * 6.283));
   }
   instanciar(G, arv[1], perto);
-  // a fenda: dois matacões grandes (~3 m de altura, 6 m de comprimento) com o comprimento ao longo de dirF, abertura ~0,8 m, topos inclinados um
-  // para o outro. O meio da fenda fica 1,6 m adiante de FENDA: a entrada (em FENDA - 1,55 dirF) coincide com o fim da trilha.
-  const rocha = await modeloPH('boulder_01');                                      // 1,27 (x) x 0,93 (y) x 1,83 (z) m, centro em x = -0,11
-  const escR = 3.4, dirF = new THREE.Vector3(Math.cos(FENDA.giro), 0, Math.sin(FENDA.giro)), lat = new THREE.Vector3(-dirF.z, 0, dirF.x);
+  // a fenda: duas paredes de rocha (rock_face_01 do Poly Haven: laje escaneada de 4,95 x 3,56 m, face voltada para +z) uma de frente para a outra,
+  // ao longo de dirF; o meio fica 1,6 m adiante de FENDA, então a entrada (FENDA - 1,25 dirF) cai no fim da trilha. (Dois matacões redondos
+  // davam uma abertura em funil e não uma fenda.)
+  const rocha = await modeloPH('boulder_01');                                      // (usado no esconderijo do maratonista)
+  const parede = await modeloPH('rock_face_01');
+  const escR = 1.15, dirF = new THREE.Vector3(Math.cos(FENDA.giro), 0, Math.sin(FENDA.giro)), lat = new THREE.Vector3(-dirF.z, 0, dirF.x);
   const meio = new THREE.Vector3(FENDA.x, 0, FENDA.z).addScaledVector(dirF, FENDA.meio);
   for (const s of [-1, 1]) {
-    const r = rocha.clone(), off = 0.4 + (1.27 / 2) * escR;
-    const q = new THREE.Quaternion().setFromAxisAngle(dirF, -s * 0.13).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2 - FENDA.giro + (s > 0 ? Math.PI : 0)));
-    const c = meio.clone().addScaledVector(lat, s * off); r.position.set(c.x, alturaChao(c.x, c.z) - 0.25, c.z); r.quaternion.copy(q); r.scale.setScalar(escR);
+    const r = parede.clone(), giro = Math.atan2(s * dirF.z, -s * dirF.x) + (FENDA.vira ? Math.PI : 0);    // face (+z) virada para o eixo
+    const c = meio.clone().addScaledVector(lat, s * 1.2); r.position.set(c.x, alturaChao(c.x, c.z) - 0.15, c.z); r.rotation.set(0, giro, 0); r.scale.setScalar(escR);
+    r.updateMatrixWorld(true); const bx = new THREE.Box3().setFromObject(r), cc = bx.getCenter(new THREE.Vector3());
+    r.position.addScaledVector(dirF, meio.clone().sub(cc).dot(dirF));                                      // centra a laje ao longo da fenda
     // o matacão é irregular: mede a superfície DE VERDADE com raios saindo do eixo da fenda (alturas 0,3-1,9 m, ao longo de -1,5..+4,5 m)
     // e desliza a pedra até a face ficar a 0,40 m do eixo (fenda de 0,8 m na altura do corpo)
     // (raio de FORA para dentro, faces dos dois lados: o último ponto atravessado é a face voltada para a fenda, mesmo se a pedra cruzar o eixo)

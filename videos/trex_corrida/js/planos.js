@@ -181,7 +181,7 @@ export async function construirTudo() {
   // tentativa 2: a trilha continua para dentro da fenda; quem corre para no fundo, o T. rex fica com a boca na entrada
   const dirF = V(Math.cos(FENDA.giro), 0, Math.sin(FENDA.giro));
   const curva2 = new THREE.CatmullRomCurve3([...TRILHA.map(([x, z]) => V(x, 0, z)), V(FENDA.x, 0, FENDA.z), V(FENDA.x, 0, FENDA.z).addScaledVector(dirF, 0.4)]);
-  const L2 = curva2.getLength(), ENTRADA = L2 - 1.95;            // arco onde fica a boca da fenda
+  const L2 = curva2.getLength(), ENTRADA = L2 - 1.65;            // arco onde fica a boca da fenda
   const ptArco = (s, alvo = V()) => s <= 0 ? alvo.set(TRILHA[0][0] + s, 0, TRILHA[0][1]) : curva2.getPointAt(Math.min(s / L2, 1), alvo);
   const tgArco = s => s <= 0 ? V(1, 0, 0) : curva2.getTangentAt(clamp(s / L2, 0, 1));
   const sR2 = u => softmin(A2.dR(u), L2 - 0.05, 0.5);
