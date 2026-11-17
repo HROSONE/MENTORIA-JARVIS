@@ -72,6 +72,12 @@ def montar_trilha(saida, eventos):
     PASSO_ESTRADA = golpes('1837', 3, comp=0.25) + golpes('0495', 3, comp=0.25, sem=4)
     PASSO_FOLHA = golpes('0137', 6, comp=0.3, sem=1)
     E = json.load(open(eventos)); P = {p['nome']: p for p in E['planos']}; total = max(p['t1'] for p in E['planos'])
+    # filtro físico: o tremor da captura cria fundos de passo falsos; no máximo um contato por pé a cada 0,25 s (gente) e 0,6 s (T. rex)
+    ult, bons = {}, []
+    for e in sorted(E['ev'], key=lambda e: e['t']):
+        k = (e['quem'], e['lado']); g = 0.6 if e['quem'] == 'T' else 0.25
+        if e['t'] - ult.get(k, -9) >= g: bons.append(e); ult[k] = e['t']
+    E['ev'] = bons
     m = Mesa(total + 0.05); E2 = E.get('marcas', {})
     t_ = lambda nome, d=0.0: P[nome]['t0'] + d
     # --- leito: mata (dois trechos longos, um de cada lado), pássaros somem depois do rugido
