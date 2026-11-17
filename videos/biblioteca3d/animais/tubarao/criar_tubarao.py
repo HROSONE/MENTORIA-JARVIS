@@ -367,19 +367,29 @@ for s_, l in ((1, 'l'), (-1, 'r')):
     osso('peitoral_' + l, (3.05, 0.30 * s_, -0.22), (2.75, 1.10 * s_, -0.62), 'coluna1', False)
 bpy.ops.object.mode_set(mode='OBJECT')
 for o in bpy.context.view_layer.objects: o.select_set(False)
-pele.select_set(True); arm.select_set(True); bpy.context.view_layer.objects.active = arm; bpy.ops.object.parent_set(type='ARMATURE_AUTO')
-if not any(len(v.groups) for v in pele.data.vertices[:3000]):
-    bpy.ops.object.parent_set(type='ARMATURE_ENVELOPE'); print('PESOS: envelope')
-# cabeça: acima da fenda tudo é crânio (o focinho não estica); abaixo, a mandíbula manda, misturando nos cantos da boca e na garganta
-gC, gM = pele.vertex_groups['cabeca'], pele.vertex_groups['mandibula']
+pele.select_set(True); arm.select_set(True); bpy.context.view_layer.objects.active = arm; bpy.ops.object.parent_set(type='ARMATURE_NAME')
+# pesos por posição ao longo da coluna (o cálculo automático falha com a fenda da boca e rasgava o corpo): cada vértebra pesa como um
+# "chapéu" centrado no seu meio, misturando com as vizinhas; peitorais pelo quanto o ponto sai do corpo; cabeça e mandíbula pela fenda
+grupos = {b.name: pele.vertex_groups.get(b.name) or pele.vertex_groups.new(name=b.name) for b in ad.bones}
+meios = [(f'coluna{i + 1}', (COLUNA[i] + COLUNA[i + 1]) / 2, (COLUNA[i] - COLUNA[i + 1])) for i in range(len(COLUNA) - 1)]
+larg_x = lambda x: float(np.interp(x, [c[0] for c in CORPO], [c[2] for c in CORPO]))
 for v in pele.data.vertices:
-    c = v.co
-    if c.x < 3.62: continue
-    zl = linha_boca(min(c.x, 4.33)) - FENDA_Z
-    km = 0.0 if c.z > zl else float(suave(3.70, 3.90, c.x)) * float(suave(zl + 0.002, zl - 0.03, c.z) if c.x < 3.86 else 1.0)
-    for g_ in list(v.groups): pele.vertex_groups[g_.group].remove([v.index])
-    if km < 1: gC.add([v.index], 1 - km, 'REPLACE')
-    if km > 0: gM.add([v.index], km, 'REPLACE')
+    c = v.co; w = {}
+    for nome, m, L in meios:
+        h = max(0.0, 1 - abs(c.x - m) / L)
+        if h > 0: w[nome] = h
+    kc = float(suave(3.40, 3.85, c.x))                                                     # a cabeça assume na frente das guelras
+    tot = sum(w.values()) or 1.0; w = {k: x / tot * (1 - kc) for k, x in w.items()}
+    if kc > 0: w['cabeca'] = kc
+    if 2.3 < c.x < 3.6 and c.z < 0.05:                                                    # peitorais
+        kp = float(suave(larg_x(c.x) - 0.02, larg_x(c.x) + 0.14, abs(c.y)))
+        if kp > 0: w = {k: x * (1 - kp) for k, x in w.items()}; w['peitoral_' + ('l' if c.y > 0 else 'r')] = kp
+    if c.x > 3.62:                                                                        # boca: abaixo da fenda manda a mandíbula
+        zl = linha_boca(min(c.x, 4.33)) - FENDA_Z
+        km = 0.0 if c.z > zl else float(suave(3.70, 3.90, c.x)) * (float(suave(zl + 0.002, zl - 0.03, c.z)) if c.x < 3.86 else 1.0)
+        if km > 0: w = {k: x * (1 - km) for k, x in w.items()}; w['mandibula'] = km
+    for k, x in w.items():
+        if x > 1e-4: grupos[k].add([v.index], x, 'REPLACE')
 # cabeça rígida na frente (o focinho não dobra); peças presas a ossos
 def prender(o, nome_osso):
     mw = o.matrix_world.copy(); o.parent = arm; o.parent_type = 'BONE'; o.parent_bone = nome_osso
