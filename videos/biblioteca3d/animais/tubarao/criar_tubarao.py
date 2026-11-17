@@ -381,8 +381,8 @@ for v in pele.data.vertices:
     kc = float(suave(3.40, 3.85, c.x))                                                     # a cabeça assume na frente das guelras
     tot = sum(w.values()) or 1.0; w = {k: x / tot * (1 - kc) for k, x in w.items()}
     if kc > 0: w['cabeca'] = kc
-    if 2.3 < c.x < 3.6 and c.z < 0.05:                                                    # peitorais
-        kp = float(suave(larg_x(c.x) - 0.02, larg_x(c.x) + 0.14, abs(c.y)))
+    if 2.2 < c.x < 3.7 and c.z < 0.10:                                                    # peitorais (janela com bordas suaves: sem vinco)
+        kp = float(suave(larg_x(c.x) - 0.02, larg_x(c.x) + 0.14, abs(c.y))) * float(suave(2.2, 2.45, c.x) * suave(3.7, 3.45, c.x) * suave(0.10, -0.05, c.z))
         if kp > 0: w = {k: x * (1 - kp) for k, x in w.items()}; w['peitoral_' + ('l' if c.y > 0 else 'r')] = kp
     if c.x > 3.62:                                                                        # boca: abaixo da fenda manda a mandíbula
         zl = linha_boca(min(c.x, 4.33)) - FENDA_Z
