@@ -341,8 +341,8 @@ def material_pele():
     dorso = at.outputs['Fac']
     # base: branco -> cinza -> cinza-marrom escuro, com manchas largas e um tom que vai do azulado ao bronze
     rampa = no('ShaderNodeValToRGB'); cr = rampa.color_ramp
-    cr.elements[0].position = 0.0; cr.elements[0].color = (0.80, 0.81, 0.79, 1); cr.elements[1].position = 1.0; cr.elements[1].color = (0.074, 0.071, 0.064, 1)
-    e = cr.elements.new(0.5); e.color = (0.20, 0.20, 0.19, 1)
+    cr.elements[0].position = 0.0; cr.elements[0].color = (0.80, 0.81, 0.79, 1); cr.elements[1].position = 1.0; cr.elements[1].color = (0.046, 0.044, 0.040, 1)
+    e = cr.elements.new(0.5); e.color = (0.15, 0.15, 0.14, 1)
     lig(dorso, rampa.inputs['Fac'])
     mancha = no('ShaderNodeTexNoise', in_Scale=2.6, in_Detail=6.0); lig(obj, mancha.inputs['Vector'])
     cor = mistura(1.0, rampa.outputs['Color'], mapa(mancha.outputs['Fac'], 0.35, 0.65, 0.78, 1.10), 'MULTIPLY')
@@ -382,7 +382,7 @@ def material_pele():
     alt = no('ShaderNodeMath', operation='MULTIPLY_ADD', in_1=0.25); lig(den.outputs['Distance'], alt.inputs[0]); lig(ond.outputs['Fac'], alt.inputs[2])
     bump = no('ShaderNodeBump', in_Strength=0.18, in_Distance=0.004); lig(conta('SUBTRACT', alt.outputs[0], conta('MULTIPLY', escuras, 0.5)), bump.inputs['Height']); lig(bump.outputs['Normal'], b.inputs['Normal'])
     lig(mapa(ond.outputs['Fac'], 0.0, 1.0, 0.42, 0.30), b.inputs['Roughness'])
-    b.inputs['Specular IOR Level'].default_value = 0.5; b.inputs['Coat Weight'].default_value = 0.45; b.inputs['Coat Roughness'].default_value = 0.10
+    b.inputs['Specular IOR Level'].default_value = 0.5; b.inputs['Coat Weight'].default_value = 0.28; b.inputs['Coat Roughness'].default_value = 0.16
     gota = no('ShaderNodeTexNoise', in_Scale=60.0, in_Detail=2.0); lig(obj, gota.inputs['Vector'])
     bc = no('ShaderNodeBump', in_Strength=0.08, in_Distance=0.002); lig(gota.outputs['Fac'], bc.inputs['Height']); lig(bc.outputs['Normal'], b.inputs['Coat Normal'])
     b.inputs['Subsurface Weight'].default_value = 0.02
@@ -560,21 +560,21 @@ def padrao_luz(sp, escalas, larguras, fundo, uniao=False):
     mul = ln.nodes.new('ShaderNodeMath'); mul.operation = 'MAXIMUM' if uniao else 'MULTIPLY'; ln.links.new(saidas[0], mul.inputs[0]); ln.links.new(saidas[1], mul.inputs[1])
     ln.links.new(mul.outputs[0], em.inputs['Strength'])
 
-RAIOS_W = float(arg('raios', 200000))
+RAIOS_W = float(arg('raios', 150000))
 def mundo_agua():
     w = bpy.data.worlds.new('agua'); cena.world = w; w.use_nodes = True; nt = w.node_tree; Nn = nt.nodes; L = nt.links
     tc = Nn.new('ShaderNodeTexCoord'); sep = Nn.new('ShaderNodeSeparateXYZ'); L.new(tc.outputs['Generated'], sep.inputs['Vector'])
     rampa = Nn.new('ShaderNodeValToRGB'); cr = rampa.color_ramp
     cr.elements[0].position = 0.30; cr.elements[0].color = (0.004, 0.030, 0.032, 1); cr.elements[1].position = 0.80; cr.elements[1].color = (0.10, 0.36, 0.34, 1)
     L.new(sep.outputs['Z'], rampa.inputs['Fac']); L.new(rampa.outputs['Color'], Nn['Background'].inputs['Color']); Nn['Background'].inputs['Strength'].default_value = 0.95
-    sd = bpy.data.lights.new('sol', 'SUN'); sd.energy = 2.6; sd.color = (0.80, 0.95, 1.0); sd.angle = math.radians(6)
+    sd = bpy.data.lights.new('sol', 'SUN'); sd.energy = 1.8; sd.color = (0.80, 0.95, 1.0); sd.angle = math.radians(6)
     so = bpy.data.objects.new('sol', sd); cena.collection.objects.link(so); so.rotation_euler = (math.radians(12), math.radians(-8), 0)
     # cáusticas sobre o tubarão: manchas de luz moderadas (como as da foto no dorso)
-    sp = bpy.data.lights.new('causticas', 'SPOT'); sp.energy = 7000; sp.spot_size = math.radians(55); sp.color = (0.80, 1.0, 0.95)
+    sp = bpy.data.lights.new('causticas', 'SPOT'); sp.energy = 4500; sp.spot_size = math.radians(55); sp.color = (0.80, 1.0, 0.95)
     padrao_luz(sp, (9.0, 17.0), (0.035, 0.025), 0.85)
     spo = bpy.data.objects.new('causticas', sp); cena.collection.objects.link(spo); spo.location = (1.6, 1.5, 7.0); spo.rotation_euler = (math.radians(-12), math.radians(-8), 0)
     # segundo projetor de manchas, de outro ângulo: as duas redes se cruzam e quebram as faixas paralelas (como a luz na superfície do mar)
-    sp2 = bpy.data.lights.new('causticas2', 'SPOT'); sp2.energy = 6000; sp2.spot_size = math.radians(55); sp2.color = (0.80, 1.0, 0.95)
+    sp2 = bpy.data.lights.new('causticas2', 'SPOT'); sp2.energy = 4000; sp2.spot_size = math.radians(55); sp2.color = (0.80, 1.0, 0.95)
     padrao_luz(sp2, (6.0, 12.0), (0.040, 0.030), 0.85)
     spo2 = bpy.data.objects.new('causticas2', sp2); cena.collection.objects.link(spo2); spo2.location = (4.6, -2.2, 6.5); spo2.rotation_euler = (math.radians(16), math.radians(24), math.radians(35))
     # água: volume verde-azulado (profundidade e perda de contraste com a distância)
