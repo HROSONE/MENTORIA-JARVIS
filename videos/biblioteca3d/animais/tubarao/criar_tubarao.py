@@ -505,7 +505,7 @@ def prender(o, nome_osso):
     bpy.context.view_layer.update(); o.matrix_world = mw
 for d_ in dentes_inf: prender(d_, 'mandibula')
 for d_ in dentes_sup + olhos: prender(d_, 'cabeca')
-m_garg = material_simples('garganta', (0.11, 0.018, 0.022), rug=0.45, coat=0.3, sss=0.2)
+m_garg = material_simples('garganta', (0.035, 0.006, 0.008), rug=0.5, coat=0.2, sss=0.1)
 def boca_interna():
     bm = bmesh.new(); cima, baixo = [], []
     xs = np.linspace(X_COM + 0.02, 4.24, 9); mx, mw = [m[0] for m in MAND], [m[2] for m in MAND]
@@ -639,7 +639,7 @@ if PREVIA:
     if 'flanco' in VISTAS:
         posar(fase=0.8, amp=0.3, abre=0); render('flanco', (3.05, -3.1, 0.15), (3.05, 0.0, 0.0), lente=45, larg=LARG, alt=int(LARG * 0.75))
     if 'boca' in VISTAS:
-        posar(fase=1.6, amp=0.4, abre=ABRE or 32, vira=0.2); render('boca', (5.35, -1.15, -0.32), (4.05, 0.0, -0.16), lente=42, dof=2.8, fill=[((4.95, -0.55, -0.10), 18, 0.12)])
+        posar(fase=1.6, amp=0.4, abre=ABRE or 32, vira=0.2); render('boca', (5.35, -1.15, -0.32), (4.05, 0.0, -0.16), lente=42, dof=2.8, fill=[((4.95, -0.55, -0.10), 9, 0.12)])
     if 'baixo' in VISTAS:
         posar(fase=0.3, amp=0.5, abre=0); render('baixo', (3.2, -2.6, -3.6), (2.2, 0, -0.1), lente=28)
     if 'topo' in VISTAS:
