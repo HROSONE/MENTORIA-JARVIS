@@ -62,3 +62,38 @@ para baixar tudo de novo: `python3 baixar.py lista`. Formato de cada linha: `tip
 `modelo rock_07 1k`
 `modelo rock_face_01 1k`
 `modelo mountainside 1k`
+
+## Versões leves e LOD (geradas no Blender a partir do `_1k`; também não vão para o git)
+O `modelo/` inteiro é ignorado pelo git (`videos/.gitignore`): depois de baixar de novo com `python3 baixar.py lista`, refazer as versões abaixo. As árvores do Poly Haven têm
+milhões de triângulos: para espalhar muitas cópias (`trex_corrida/js/selva3d.js`) o canal usa o `_leve.glb` (com textura) e, para as cópias distantes, o `_lod.glb` (só a geometria).
+```
+blender -b --python decimar.py -- modelo/<id>/<id>_1k.gltf modelo/<id>/<id>_leve.glb <razão>
+blender -b --python gerar_lod.py -- modelo/ <id>:leve:<alvo>        # ou <id>:1k:<alvo> quando não há leve
+```
+Triângulos medidos nos arquivos que o canal usou (a decimação chega perto do alvo, não exatamente nele):
+
+| modelo | `_1k` | `_leve` (razão do `decimar.py`) | `_lod` |
+|---|---|---|---|
+| jacaranda_tree | 3863832 | 77276 (0,02) | 8000 |
+| island_tree_01 | 1599403 | 47982 (0,03) | 6000 |
+| island_tree_02 | 1072213 | 26805 (0,025) | — |
+| island_tree_03 | 2085320 | 52133 (0,025) | 6000 |
+| tree_small_02 | 2062487 | 61874 (0,03) | 6000 |
+| root_cluster_01 | 225261 | 33789 (0,15) | 3999 |
+| shrub_01 | 156012 | 31201 (0,2) | 4000 |
+| shrub_02 | 27254 | 8174 (0,3) | — |
+| dead_tree_trunk | 101802 | 10179 (0,1) | — |
+| namaqualand_boulder_02 | 97964 | 7837 (0,08) | — |
+| namaqualand_boulder_05 | 89618 | 7169 (0,08) | — |
+| anthurium_botany_01 | 67152 | — | 4996 |
+| boulder_01 | 66122 | — | 26614 |
+| calathea_orbifolia_01 | 16688 | — | 2996 |
+| dead_tree_trunk_02 | 83128 | — | 4000 |
+| fern_02 | 6232 | — | 2495 |
+| pachira_aquatica_01 | 76914 | — | 5994 |
+| rock_07 | 14844 | — | 3000 |
+| rock_moss_set_01 | 63127 | — | 4996 |
+| rock_moss_set_02 | 57647 | — | 4992 |
+| shrub_04 | 27327 | — | 3999 |
+
+A fonte exata de cada `_lod` (leve ou 1k) não ficou registrada: ao refazer, use `leve` quando existir e `1k` nos demais.

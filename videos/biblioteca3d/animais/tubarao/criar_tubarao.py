@@ -545,6 +545,95 @@ def posar(fase=0.0, amp=1.0, abre=0.0, vira=0.0):
     m_.rotation_axis_angle = (math.radians(abre), *eixo_local)
     bpy.context.view_layer.update()
 
+# ------------------------------------------------------------------------------------------------ GLB para o Three.js
+# uso: blender -b --python criar_tubarao.py -- --glb tubarao.glb [--res 4096] [--res_normal 2048] [--tris 140000] [--suavizar 10] [--texdir pasta]
+# Pose de repouso (boca fechada, corpo reto), com o esqueleto e os pesos do rig acima: raiz, cabeca, coluna1-8, mandibula, peitoral_l/r.
+# O glTF não leva os nós procedurais do material: a pele detalhada (voxel de 7 mm) é copiada, simplificada e desdobrada, e recebe a cor (inclui o
+# interior da boca) e o relevo (guelras, órbita, lábios, ondulações) assados da detalhada. Dentes juntos por osso (dentes_sup na cabeça, dentes_inf
+# na mandíbula), olhos presos à cabeça e interior da boca com os pesos cabeça/mandíbula (a membrana estica quando a boca abre).
+if GLB:
+    import tempfile
+    RES, ALVO = int(arg('res', 4096)), float(arg('tris', 140000)); RES_N = int(arg('res_normal', 2048))                # cor em 4096 (~0,8 mm por texel), relevo em 2048 (quase liso)
+    TEXD = arg('texdir') or tempfile.mkdtemp(prefix='tubarao_tex_')
+    os.makedirs(TEXD, exist_ok=True)
+    def ativo(o, *sel):
+        for x in list(bpy.context.selected_objects): x.select_set(False)
+        for x in sel: x.select_set(True)
+        o.select_set(True); bpy.context.view_layer.objects.active = o
+    bpy.context.view_layer.update()
+    alta = pele
+    # cópia leve: sem modificadores, sem atributos de cor (só servem à pele procedural), sem material; mantém os grupos de vértices (pesos dos ossos)
+    baixa = alta.copy(); baixa.data = alta.data.copy(); baixa.name = 'tubarao_pele'; cena.collection.objects.link(baixa)
+    for m_ in list(baixa.modifiers): baixa.modifiers.remove(m_)
+    baixa.parent = None
+    for nm_ in [a_.name for a_ in baixa.data.color_attributes]: baixa.data.color_attributes.remove(baixa.data.color_attributes[nm_])     # por nome: as referências antigas ficam inválidas a cada remoção
+    baixa.data.materials.clear()
+    tris0 = sum(len(p.vertices) - 2 for p in baixa.data.polygons)
+    ativo(baixa); d_ = baixa.modifiers.new('dec', 'DECIMATE'); d_.ratio = min(1.0, ALVO / tris0); d_.use_collapse_triangulate = True; bpy.ops.object.modifier_apply(modifier=d_.name)
+    bpy.ops.object.shade_smooth()
+    tris1 = sum(len(p.vertices) - 2 for p in baixa.data.polygons); print('DECIMADO', tris0, '->', tris1, 'triângulos')
+    # a simplificação deixa os vértices com ruído de ~0,1 mm que o brilho do verniz revela como faixas no corpo: suaviza a malha leve, menos onde há
+    # relevo de verdade (guelras, lábios e fenda da boca, órbitas, narinas), que continua como está (o relevo fino volta pelo mapa normal)
+    V0 = np.array([v.co[:] for v in baixa.data.vertices]); x0, y0, z0 = V0[:, 0], V0[:, 1], V0[:, 2]; prot = np.zeros(len(V0))
+    for xm, alt_, topo_ in FENDAS:
+        prot = np.maximum(prot, suave(xm - 0.08, xm - 0.04, x0) * suave(xm + 0.10, xm + 0.06, x0) * suave(topo_ - alt_ - 0.05, topo_ - alt_, z0) * suave(topo_ + 0.05, topo_, z0) * suave(0.12, 0.18, np.abs(y0)))
+    zl_ = -0.215 + 0.36 * np.maximum(0.0, np.minimum(x0, FRENTE_BOCA) - 3.88) ** 1.25                          # linha da boca em cada vértice
+    prot = np.maximum(prot, suave(3.70, 3.85, x0) * suave(zl_ + 0.10, zl_ + 0.05, z0) * suave(zl_ - 0.25, zl_ - 0.15, z0))
+    for s_ in (1, -1):
+        for c_, r_ in (((OLHOS[s_][0][:] if OLHOS[s_][0] is not None else (9, 9, 9)), 0.12), ((4.33, 0.085 * s_, -0.070), 0.09)):
+            prot = np.maximum(prot, suave(r_, r_ * 0.6, np.linalg.norm(V0 - np.array(c_), axis=1)))
+    vg_ = baixa.vertex_groups.new(name='suave')
+    for i_, w_ in enumerate(1.0 - prot): vg_.add([i_], float(w_), 'REPLACE')
+    sm_ = baixa.modifiers.new('suave', 'SMOOTH'); sm_.factor = 0.5; sm_.iterations = int(arg('suavizar', 10)); sm_.vertex_group = 'suave'; bpy.ops.object.modifier_apply(modifier=sm_.name)
+    baixa.vertex_groups.remove(baixa.vertex_groups['suave']); print('SUAVIZADO; vértices protegidos', int((prot > 0.5).sum()), 'de', len(V0))        # por nome: a referência antiga fica inválida
+    ativo(baixa); bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.remove_doubles(threshold=0.0002); bpy.ops.mesh.dissolve_degenerate(threshold=0.0005)               # tira vértices colados e faces degeneradas da simplificação
+    bpy.ops.uv.smart_project(angle_limit=math.radians(72), margin_method='FRACTION', island_margin=0.002)
+    bpy.ops.uv.select_all(action='SELECT'); bpy.ops.uv.pack_islands(rotate=True, rotate_method='ANY', margin_method='FRACTION', margin=0.002, shape_method='CONCAVE')       # ilhas grandes e diagonais: empacotar girando melhora o aproveitamento
+    bpy.ops.object.mode_set(mode='OBJECT')
+    # assa a cor e o relevo da detalhada para a leve (a cor aproveita os atributos e as coordenadas de objeto da detalhada)
+    tmp = bpy.data.materials.new('_assar'); tmp.use_nodes = True; baixa.data.materials.append(tmp); imgs = {}
+    cena.render.engine = 'CYCLES'; cena.cycles.samples = int(arg('amostras_assar', 24)); cena.cycles.device = 'CPU'; cena.cycles.use_denoising = False
+    for tipo, sufixo, cor_ in (('DIFFUSE', 'cor', True), ('NORMAL', 'normal', False)):
+        if tipo == 'NORMAL':                                                       # dentículos (voronoi de 0,9 mm) não cabem em textura de 2 mm: ficam só as ondulações e as cicatrizes
+            for n_ in mp.node_tree.nodes:
+                if n_.type == 'TEX_VORONOI' and abs(n_.inputs['Scale'].default_value - 900.0) < 1e-3:
+                    for o_ in n_.outputs:
+                        for l_ in list(o_.links): mp.node_tree.links.remove(l_)
+        res_ = RES if cor_ else RES_N
+        img = bpy.data.images.new(f'tubarao_{sufixo}', res_, res_, alpha=False)
+        if not cor_: img.colorspace_settings.name = 'Non-Color'
+        n = tmp.node_tree.nodes.new('ShaderNodeTexImage'); n.image = img; tmp.node_tree.nodes.active = n
+        ativo(baixa, alta)
+        bpy.ops.object.bake(type=tipo, pass_filter={'COLOR'} if tipo == 'DIFFUSE' else set(), use_selected_to_active=True, cage_extrusion=0.02, max_ray_distance=0.06, margin=12 * res_ // 2048, margin_type='ADJACENT_FACES', normal_space='TANGENT')           # (faces minúsculas não têm texel: a borda vem das faces vizinhas na malha, não do texel mais próximo no atlas)
+        img.filepath_raw = os.path.join(TEXD, f'tubarao_{sufixo}.png'); img.file_format = 'PNG'; img.save(); imgs[sufixo] = img
+        tmp.node_tree.nodes.remove(n); print('ASSADO', sufixo, img.filepath_raw)
+    mg = bpy.data.materials.new('pele_tubarao_glb'); mg.use_nodes = True; nt_ = mg.node_tree; b_ = nt_.nodes['Principled BSDF']
+    tc_ = nt_.nodes.new('ShaderNodeTexImage'); tc_.image = imgs['cor']; nt_.links.new(tc_.outputs['Color'], b_.inputs['Base Color'])
+    tn_ = nt_.nodes.new('ShaderNodeTexImage'); tn_.image = imgs['normal']; nm_ = nt_.nodes.new('ShaderNodeNormalMap'); nt_.links.new(tn_.outputs['Color'], nm_.inputs['Color']); nt_.links.new(nm_.outputs['Normal'], b_.inputs['Normal'])
+    b_.inputs['Roughness'].default_value = 0.46; b_.inputs['Specular IOR Level'].default_value = 0.5; b_.inputs['Coat Weight'].default_value = 0.10; b_.inputs['Coat Roughness'].default_value = 0.30     # pele úmida sem aspecto de plástico
+    baixa.data.materials.clear(); baixa.data.materials.append(mg)
+    bpy.data.objects.remove(alta, do_unlink=True)                                    # a detalhada não vai no arquivo
+    baixa.parent = arm; ma_ = baixa.modifiers.new('arm', 'ARMATURE'); ma_.object = arm
+    # dentes: um objeto por mandíbula (200+ peças viravam 200+ desenhos no Three.js)
+    def juntar(lista, nome):
+        for x in list(bpy.context.selected_objects): x.select_set(False)
+        for o in lista: o.select_set(True)
+        bpy.context.view_layer.objects.active = lista[0]; bpy.ops.object.join(); o = bpy.context.view_layer.objects.active; o.name = nome; o.data.name = nome; return o
+    bpy.context.view_layer.update()
+    d_cima, d_baixo = juntar(dentes_sup, 'dentes_sup'), juntar(dentes_inf, 'dentes_inf')
+    # interior da boca: aplica a subdivisão (o glTF não leva modificadores) e volta o esqueleto
+    ativo(boca); boca.modifiers.remove(boca.modifiers['arm']); bpy.ops.object.modifier_apply(modifier='sub')
+    mb_ = boca.modifiers.new('arm', 'ARMATURE'); mb_.object = arm
+    for x in bpy.context.view_layer.objects: x.select_set(False)
+    arm.select_set(True)
+    for o in arm.children_recursive: o.select_set(True)
+    bpy.context.view_layer.objects.active = arm
+    print('EXPORTA', sorted(o.name for o in arm.children_recursive), 'ossos', len(ad.bones))
+    bpy.ops.export_scene.gltf(filepath=os.path.abspath(GLB), export_format='GLB', use_selection=True, export_image_format='JPEG', export_jpeg_quality=88, export_skins=True, export_animations=False)
+    print('GLB', os.path.abspath(GLB), 'ossos', len(ad.bones), 'triângulos da pele', tris1, 'MB', round(os.path.getsize(GLB) / 1e6, 2))
+    sys.exit(0)
+
 # ------------------------------------------------------------------------------------------------ prévias (debaixo d'água)
 def padrao_luz(sp, escalas, larguras, fundo, uniao=False):
     # projetor com padrão de linhas (rede de células distorcida por ruído): cada linha vira uma cortina de luz que desce na água
