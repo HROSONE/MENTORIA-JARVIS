@@ -169,7 +169,7 @@ r = cena.render; r.engine = 'CYCLES'; r.resolution_x, r.resolution_y, r.resoluti
 cena.frame_start, cena.frame_end = inicio, inicio + N - 1
 cy = cena.cycles; cy.device = 'GPU' if GPU else 'CPU'
 cy.samples = 96 if QUAL == 'cinema' else 32; cy.adaptive_threshold = 0.015 if QUAL == 'cinema' else 0.04
-cy.use_denoising = True; cy.denoiser = 'OPTIX' if GPU else 'OPENIMAGEDENOISE'
+cy.use_denoising = True; cy.denoiser = 'OPENIMAGEDENOISE'          # (o denoiser do OptiX não funciona no driver do Colab)
 cy.max_bounces, cy.diffuse_bounces, cy.glossy_bounces, cy.transmission_bounces, cy.volume_bounces, cy.transparent_max_bounces = 6, 3, 3, 6, 0, 32
 cy.caustics_reflective = cy.caustics_refractive = False; cy.sample_clamp_indirect = 8.0; cy.blur_glossy = 1.0
 r.use_motion_blur = True; r.motion_blur_shutter = 0.5

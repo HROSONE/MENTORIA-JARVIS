@@ -11,6 +11,7 @@ ate = int(sys.argv[sys.argv.index('--ate') + 1]) if '--ate' in sys.argv else Non
 quadros = sorted(f for f in os.listdir(pasta) if f.startswith('f') and f.endswith('.jpg'))
 if ate: quadros = quadros[:ate]
 N = len(quadros)
+if N == 0: sys.exit(f'Nenhum quadro em {pasta}: o render não gerou imagens (veja a mensagem de erro da célula do render).')
 
 # janelas de volta no tempo: os planos "R..." da linha do tempo (gravados em eventos.json pelo eventos.js)
 planos = json.load(open(os.path.join(AQUI, 'eventos.json')))['planos']

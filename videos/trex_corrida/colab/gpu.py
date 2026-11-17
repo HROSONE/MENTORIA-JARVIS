@@ -11,4 +11,9 @@ for tipo in ('OPTIX', 'CUDA'):
             print('GPU:', tipo, [d.name for d in dev]); break
     except Exception as e: print('sem', tipo, e)
 c = bpy.context.scene.cycles; c.device = 'GPU'
-c.denoiser = 'OPTIX' if p.compute_device_type == 'OPTIX' else 'OPENIMAGEDENOISE'
+# limpeza de ruído: OpenImageDenoise (também na GPU). O denoiser do OptiX depende de uma biblioteca que o driver do Colab não traz
+# ("Failed to create OptiX denoiser") e, quando falha, o render inteiro para.
+c.denoiser = 'OPENIMAGEDENOISE'
+try: c.denoising_use_gpu = True
+except Exception: pass
+print('LIMPEZA DE RUÍDO:', c.denoiser)
