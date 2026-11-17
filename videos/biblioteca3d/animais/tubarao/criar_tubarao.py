@@ -341,7 +341,7 @@ def material_pele():
     dorso = at.outputs['Fac']
     # base: branco -> cinza -> cinza-marrom escuro, com manchas largas e um tom que vai do azulado ao bronze
     rampa = no('ShaderNodeValToRGB'); cr = rampa.color_ramp
-    cr.elements[0].position = 0.0; cr.elements[0].color = (0.80, 0.81, 0.79, 1); cr.elements[1].position = 1.0; cr.elements[1].color = (0.046, 0.044, 0.040, 1)
+    cr.elements[0].position = 0.0; cr.elements[0].color = (0.80, 0.81, 0.79, 1); cr.elements[1].position = 1.0; cr.elements[1].color = (0.038, 0.037, 0.034, 1)
     e = cr.elements.new(0.5); e.color = (0.15, 0.15, 0.14, 1)
     lig(dorso, rampa.inputs['Fac'])
     mancha = no('ShaderNodeTexNoise', in_Scale=2.6, in_Detail=6.0); lig(obj, mancha.inputs['Vector'])
@@ -634,6 +634,9 @@ if PREVIA:
         for w_ in [float(x) for x in arg('raios_lista', '120000,240000,480000').split(',')]:
             RAIOS_LUZ.energy = w_; posar(fase=2.3, amp=0.55, abre=2.5, vira=-0.3)
             render(f'raios_{int(w_ / 1000)}k', (3.55, 4.15, -1.05), (2.30, 0.0, -0.05), lente=26, larg=LARG, alt=int(LARG * 0.75))
+    if 'nado' in VISTAS:                                                         # 4 fases da onda do corpo, vista de cima (para ver o movimento do nado)
+        for k_, fase_ in enumerate((0.0, 1.57, 3.14, 4.71)):
+            posar(fase=fase_, amp=1.0, abre=0); render(f'nado_{k_}', (2.3, -1.5, 6.6), (2.3, 0.0, 0.0), lente=30, larg=int(LARG * 0.6), alt=int(LARG * 0.4))
     if 'cabeca' in VISTAS:
         posar(fase=1.2, amp=0.3, abre=3, vira=0.1); render('cabeca', (5.35, -2.05, 0.30), (3.95, 0.0, 0.0), lente=48, larg=LARG, alt=int(LARG * 0.75))
     if 'flanco' in VISTAS:
