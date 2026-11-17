@@ -371,17 +371,17 @@ for s_ in (1, -1):
             t = (k + 0.5) / n_; x, y = arco_boca(t, True); y *= s_
             tam = (1.0 - 0.55 * t ** 1.4) * (1.0, 0.82, 0.62)[fila]
             # superior: na borda da cabeça (raio de baixo para cima)
-            p, nrm = raio(pele, (x - recua * 1.0, y * 1.06 * (1 - recua * 2.2), linha_boca(x - recua) - FENDA_Z), (0, 0, 1))
+            p, nrm = raio(pele, (x - recua * 1.0, y * 1.09 * (1 - recua * 2.2), linha_boca(x - recua) - FENDA_Z), (0, 0, 1))
             if p is not None:
                 para_fora = Vector((math.cos(math.atan2(y, x - 3.9)), 0, 0)); dentro = Vector((3.95 - x, -y, 0)).normalized()
                 cima_d = (Vector((0, 0, -1)) + dentro * inclina).normalized()
                 d_ = dente(f'dente_sup{fila}_{k}_{s_}', p + Vector((0, 0, 0.006)), cima_d, -dentro, 0.054 * tam, 0.060 * tam)
                 dentes_sup.append(d_)
             # inferior: no topo da mandíbula (raio de cima para baixo), mais estreitos e pontudos
-            p, nrm = raio(pele, (x - 0.01 - recua, y * 1.02 * (1 - recua * 2.2), linha_boca(x - 0.01 - recua) - FENDA_Z), (0, 0, -1))
+            p, nrm = raio(pele, (x - 0.01 - recua, y * 1.08 * (1 - recua * 2.2), linha_boca(x - 0.01 - recua) - FENDA_Z), (0, 0, -1))
             if p is not None:
                 dentro = Vector((3.95 - x, -y, 0)).normalized(); cima_d = (Vector((0, 0, 1)) + dentro * (inclina + 0.12)).normalized()
-                d_ = dente(f'dente_inf{fila}_{k}_{s_}', p - Vector((0, 0, 0.006)), cima_d, -dentro, 0.034 * tam, 0.058 * tam, curva=0.1)
+                d_ = dente(f'dente_inf{fila}_{k}_{s_}', p - Vector((0, 0, 0.006)), cima_d, -dentro, 0.036 * tam, 0.068 * tam, curva=0.1)
                 dentes_inf.append(d_)
 print('DENTES', len(dentes_sup), len(dentes_inf))
 
