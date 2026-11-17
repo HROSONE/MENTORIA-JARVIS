@@ -132,7 +132,7 @@ function sTempo(t) {
   s += lay(.3, `<rect x="-300" y="1010" width="1700" height="1700" fill="url(#sandW)"/>` + ondulacoes(1050, 1900, 18, 9));
   const dia_ = (((p % 1) + 1) % 1), luzDia = dia_ < .5 ? Math.sin(Math.PI * dia_ / .5) : 0;
   const mound = `<g transform="translate(${f1(540 + px)},${f1(1340 + py)})"><ellipse cx="0" cy="22" rx="300" ry="38" fill="#07102A" opacity=".3"/><path d="M-290 30 C-240 -30 -120 -76 0 -78 C130 -76 240 -30 290 30Z" fill="url(#sandLip)"/><path d="M-250 8 C-190 -44 -90 -70 0 -72 C90 -70 180 -44 250 8" fill="none" stroke="#F2F6FF" stroke-width="5" opacity=".6" stroke-linecap="round"/>${tremor > 0 ? `<path d="M-30 -74 L-12 -40 L-34 -20 M18 -76 L30 -48 L12 -26" stroke="#4B5F96" stroke-width="4" fill="none" opacity="${op(tremor / 3)}" stroke-linecap="round"/>` : ''}</g>`;
-  const estaca = `<g transform="translate(760,1370)"><rect x="-16" y="-330" width="32" height="360" rx="6" fill="#7A5A3A"/><path d="M-16 30 L0 70 L16 30Z" fill="#7A5A3A"/><rect x="-16" y="-330" width="9" height="360" fill="#B28E64" opacity=".6"/>${tagMundo(0, -300, dia, t)}</g>`;
+  const estaca = `<g transform="translate(760,1370)"><rect x="-16" y="-330" width="32" height="360" rx="6" fill="#7A5A3A"/><path d="M-16 30 L0 70 L16 30Z" fill="#7A5A3A"/><rect x="-16" y="-330" width="9" height="360" fill="#B28E64" opacity=".6"/><g transform="translate(0,-356)"><rect x="-88" y="-38" width="176" height="76" rx="8" fill="#2A3F6B" stroke="#E8DDB8" stroke-width="3"/><text x="0" y="6" font-size="34" fill="#F4EBCB" text-anchor="middle">HRYZ</text><text x="0" y="28" font-size="14" fill="#BFD0F0" text-anchor="middle" letter-spacing="2">ANIMATION</text></g>${tagMundo(0, -300, dia, t)}</g>`;
   s += lay(1, mound + estaca);
   s += `<rect width="1080" height="1920" fill="#FFB060" opacity="${op(.1 * (1 - Math.abs(dia_ - .5) / .5) * (dia_ > .25 ? 1 : 0))}"/>`;
   return s + VIG(.5) + GRAINV(t);
@@ -386,7 +386,7 @@ function sFervePre(tf, q) {
 const FN = { ferve: sFerve, semMae: sSemMae, cava: sCava, ovos: sOvos, cobre: sCobre, tempo: sTempo, juntos: sJuntos, bussola: sBussola, luz: sLuz, agua: sAgua, milPontos: sMilPontos, anos: sAnos, igual: sIgual };
 
 /* ===================== transições entre os planos: rebobinar e chicotes ===================== */
-const CORTES_WHIP = [[8.3, 'v'], [9.9, 'h'], [11.9, 'v'], [16.1, 'v'], [19.9, 'v'], [21.35, 'h'], [23.3, 'v'], [26.4, 'v'], [28.3, 'h']];
+const CORTES_WHIP = [[6.6, 'v'], [8.3, 'v'], [9.9, 'h'], [11.9, 'v'], [16.1, 'v'], [19.9, 'v'], [21.35, 'h'], [23.3, 'v'], [26.4, 'v'], [28.3, 'h']];
 function POS(t, body) {
   if (t > 3.9 && t < 4.3) {                                                      // volta no tempo: cor lavada, borrão horizontal e riscos de fita
     const q = (t - 3.9) / .4, pico = Math.sin(Math.PI * q), id = nid('rw');
