@@ -78,7 +78,9 @@ export async function construirSelva(pai, renderer) {
   espalhar([sam], 900, 4.6, 40, [1.6, 3.0], 1.6);                         // samambaias gigantes
   espalhar(fol, 500, 4.4, 35, [1.2, 2.4], 1.5);                           // folhagens tropicais
   espalhar(arb, 260, 4.6, 45, [1.0, 2.0], 1.6);                           // arbustos
-  espalhar(ped, 120, 4.0, 40, [0.8, 2.4], 1.2);                           // rochas com musgo
+  // os conjuntos de rochas do Poly Haven têm ~6 m de largura (várias pedras num modelo): perto da estrada só pedras soltas; os conjuntos, longe
+  espalhar([ped[2], ped[3]], 90, 4.0, 40, [0.8, 2.0], 1.2);               // pedras soltas com musgo
+  espalhar([ped[0], ped[1]], 40, 11, 40, [0.8, 1.4], 4.0);                // conjuntos de pedras, recuados
   espalhar(tronco, 30, 6, 30, [1.0, 1.6], 2.5);
   // a trilha da tentativa 2 fica cercada de árvores próximas (ele passa entre elas; o T. rex trava)
   const perto = [];

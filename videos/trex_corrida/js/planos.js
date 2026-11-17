@@ -42,7 +42,7 @@ function relogio() {                                             // relógio de 
   const G = new THREE.Group();
   const caixa = new THREE.Mesh(new THREE.BoxGeometry(0.044, 0.012, 0.040), new THREE.MeshStandardMaterial({ color: 0x111214, roughness: 0.4 })); G.add(caixa);
   const tela_ = new THREE.Mesh(new THREE.PlaneGeometry(0.036, 0.032), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false })); tela_.rotation.x = -Math.PI / 2; tela_.position.y = 0.0065; G.add(tela_);
-  const pul = new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.008, 6, 20), new THREE.MeshStandardMaterial({ color: 0x1a1c20, roughness: 0.7 })); pul.rotation.y = Math.PI / 2; pul.scale.set(1, 1.25, 1); pul.position.y = -0.026; G.add(pul);
+  const pul = new THREE.Mesh(new THREE.TorusGeometry(0.031, 0.0042, 6, 28), new THREE.MeshStandardMaterial({ color: 0x1a1c20, roughness: 0.7 })); pul.rotation.y = Math.PI / 2; pul.scale.set(0.75, 1, 1); pul.position.y = -0.024; G.add(pul);
   let ult = null;
   G.userData.mostrar = kmh => {
     const v = Math.round(kmh); if (v === ult) return; ult = v;
@@ -79,7 +79,7 @@ export async function construirTudo() {
   const Mt = await criarLucasReal({ url: URL_REAL('maratonista') }); scene.add(Mt.grupo);
   const corrida = await carregarMocap('../biblioteca3d/mocap/cmu/09_05.json');     // corrida (ciclo sem emenda: quadros 8-31)
   const medo = await carregarMocap('../biblioteca3d/mocap/cmu/79_73.json');        // em pé, assustado (antes de disparar)
-  const agacha = await carregarMocap('../biblioteca3d/mocap/cmu/77_09.json');      // abaixa para desviar: agachado de 4,0 a 6,0 s (esconderijo)
+  const agacha = await carregarMocap('../biblioteca3d/mocap/cmu/127_31.json');     // corre e se abaixa para passar por baixo: agachado de verdade de 1,3 a 2,9 s
   // direção da corrida na captura (para virar o ator para onde ele corre)
   const a0 = corrida.pos(8 / 30, 'root', V()), a1 = corrida.pos(31 / 30, 'root', V()); const RUMO_CLIP = Math.atan2(a1.z - a0.z, a1.x - a0.x);
   aplicarMocap(H, corrida, 8 / 30);                                              // calcula a escala da captura para este corpo
@@ -120,7 +120,8 @@ export async function construirTudo() {
       return { c: corrida, tc: 8 / 30 + fase * (23 / 30), th: RUMO_CLIP };
     },
     medo: u => { const tc = 1.0 + u; return { c: medo, tc, th: frenteClip(medo, tc) }; },
-    agachar: u => { const tc = u < 0.8 ? 3.3 + u : 4.1 + 1.7 * (0.5 - 0.5 * Math.cos(Math.PI * clamp((u - 0.8) / 4))); return { c: agacha, tc, th: frenteClip(agacha, tc) }; },
+    // desce em 0,6 s e fica agachado mudando o peso devagar (o trecho agachado da captura, em câmera lenta, indo e voltando)
+    agachar: u => { const tc = u < 0.6 ? 0.7 + u : 2.1 - 0.8 * Math.cos((u - 0.6) * 0.9); return { c: agacha, tc, th: frenteClip(agacha, tc) }; },
   };
   /** posa o ator com a ação `a` (e mistura para `b` com peso k), quadril em (x, z), corpo virado para `rumo` (rad, no plano xz) */
   function atuar(A, x, z, rumo, a, b = null, k = 0) {
@@ -163,7 +164,7 @@ export async function construirTudo() {
   const derivada = (f, u, h = 1 / 120) => (f(u + h) - f(u - h)) / (2 * h);
   function estado1(t) {                                              // tentativa 1, tempo absoluto: na reta, ele é pego
     const dR = A1.dR(t), dT = A1.dT(t), xr = A1.x0 + dR, xt = A1.tx0 + dT, vr = A1.vR(t), vt = A1.vT(t);
-    const mord = inv(9.2, 10.45, t), comido = t > 10.25;
+    const mord = inv(9.2, 10.45, t), comido = t > 10.3;
     H.grupo.visible = !comido; Mt.grupo.visible = false;
     const k = suave(inv(2.25, 2.7, t));                              // de "parado com medo" para a corrida
     atuar(H, xr, 0, 0, acao.medo(t - 1.5), acao.correr(dR, vr), k);
@@ -193,7 +194,7 @@ export async function construirTudo() {
     const xt = pb.x - Math.cos(rumoT) * BOCA_X, zt = pb.z - Math.sin(rumoT) * BOCA_X;
     H.grupo.visible = true; Mt.grupo.visible = false; ten.visible = false;
     const ua = u - chega2, k = suave(ua / 0.45), naFenda = ua > 0;
-    atuar(H, p.x, p.z, lerp(rumo, FENDA.giro, k), acao.correr(sR, vr), acao.agachar(Math.max(0, ua)), k);
+    atuar(H, p.x, p.z, lerp(rumo, FENDA.giro, k), acao.correr(sR, vr), acao.medo(0.4 + Math.max(0, ua)), k);
     viver(H, t, { olhaTras: u > 2.3 && u < 3.3 ? 0.7 * suave(inv(2.3, 2.6, u)) * (1 - inv(3.0, 3.3, u)) : naFenda ? 0.9 * suave(inv(0.5, 1.0, ua)) : 0, ofegante: naFenda ? 1 : 0.6 });
     H.rosto({ esforco: 0.8, boca: naFenda ? 0.45 + 0.25 * Math.sin(t * 7) : 0.4 });
     rel.userData.mostrar(vr * 3.6);
@@ -247,7 +248,7 @@ export async function construirTudo() {
   // S2 (1,6-3,2): ele de frente (plano médio), olhando para trás, grita e dispara para a lente; o T. rex atrás, fora de foco
   plano('S2 grito', 1.6, (u, t) => {
     estado1(t); const c = H.pos('head'); ilumina(c);
-    const d = cameraFrente(V(c.x, c.y - 0.25, c.z), 3.1, 0.0, Math.PI * 0.11, 40, { olhaY: 0.2, tremor: 0.4, t });
+    const d = cameraFrente(V(c.x, c.y - 0.25, c.z), 3.1, -0.05, -Math.PI * 0.035, 40, { olhaY: 0.35, tremor: 0.4, t });
     lente({ foco: d, abertura: 0.012, desfoque: 0.012, brilho: 0.3, ao: 0.8 });
   }, { precisa: () => [H.pos('head'), H.pos('spine_01'), T_.pontos()[0]] });
   // S3 (3,2-8,0): aberto de frente, câmera recuando na velocidade dele; o T. rex inteiro atrás
@@ -284,7 +285,7 @@ export async function construirTudo() {
   plano('S7 mata', 4.3, (u, t) => {
     const e = estado2(t); const c = H.pos('spine_03'); ilumina(c);
     const sc = Math.min(e.sR + 6.5, L2 + 1.45), pc = sc <= L2 ? ptArco(sc) : ptArco(L2).addScaledVector(dirF, sc - L2); pc.y = alturaChao(pc.x, pc.z) + (sc > L2 - 0.5 ? 0.95 : 1.55);
-    const d = camEm(pc, V(c.x, c.y + 0.9, c.z), 46, { tremor: 0.4 + tremorPisada(e.sT, e.vt, 0.7), t });
+    const dc = pc.distanceTo(c), d = camEm(pc, V(c.x, c.y + 0.9 * clamp((dc - 2.5) / 3), c.z), 46, { tremor: 0.4 + tremorPisada(e.sT, e.vt, 0.7), t });
     lente({ foco: d, abertura: 0.004, brilho: 0.35, ao: 0.85 });
   }, { precisa: () => [...corpoH(H), T_.boca(), T_.pontos()[0]] });
   // S8 (18,5-21,5): dentro da fenda, de frente para ele agachado; atrás dele a boca bate na entrada e não cabe
@@ -310,7 +311,7 @@ export async function construirTudo() {
   plano('S9r relogio', 1.3, (u, t) => {
     estado3(t); Mt.grupo.updateMatrixWorld(true); const rp = relM.getWorldPosition(V()), q = relM.getWorldQuaternion(new THREE.Quaternion());
     const n = V(0, 1, 0).applyQuaternion(q), d = V(1, 0, 0).applyQuaternion(q);              // normal do visor e direção do antebraço
-    cam.position.copy(rp).addScaledVector(n, 0.20).addScaledVector(d, -0.07); cam.up.copy(d); cam.lookAt(rp);
+    const cimaTexto = V(0, 0, -1).applyQuaternion(q); cam.position.copy(rp).addScaledVector(n, 0.20).addScaledVector(cimaTexto, -0.06); cam.up.copy(cimaTexto); cam.lookAt(rp);
     if (cam.fov !== 38) { cam.fov = 38; cam.updateProjectionMatrix(); }
     ilumina(rp); lente({ foco: cam.position.distanceTo(rp), abertura: 0.02, desfoque: 0.014, brilho: 0.4, ao: 0.6 });
   }, { precisa: () => [relM.getWorldPosition(V())] });
