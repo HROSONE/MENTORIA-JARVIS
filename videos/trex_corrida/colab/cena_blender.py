@@ -11,7 +11,7 @@ from mathutils import Matrix, Quaternion, Vector
 A = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 def arg(n, d=None):
     return A[A.index('--' + n) + 1] if '--' + n in A else d
-DADOS, PH, SAIDA = arg('dados'), arg('ph'), arg('saida', 'cena.blend')
+DADOS, PH, SAIDA = os.path.abspath(arg('dados')), os.path.abspath(arg('ph')), arg('saida', 'cena.blend')      # (absolutos: o .blend salvo em outra pasta continua achando as imagens)
 QUAL, LARG, ALT, GPU = arg('qualidade', 'cinema'), int(arg('larg', 1080)), int(arg('alt', 1920)), '--gpu' in A
 QUADROS = arg('quadros', os.path.join(os.path.dirname(os.path.abspath(SAIDA)), 'quadros'))
 FPS = 30
@@ -157,7 +157,9 @@ fn = ct.nodes.new('CompositorNodeMath'); fn.operation = 'SUBTRACT'; ct.links.new
 # o céu (névoa = 1, sem objeto) fica sem névoa: máscara 0 a partir de 98% da profundidade
 mc = ct.nodes.new('CompositorNodeMath'); mc.operation = 'SUBTRACT'; mc.inputs[0].default_value = 0.98; ct.links.new(rl.outputs['Mist'], mc.inputs[1])
 mc2 = mat('MULTIPLY', mc.outputs[0], v=50.0); mc2n = ct.nodes.new('CompositorNodeMath'); mc2n.operation = 'MINIMUM'; mc2n.use_clamp = True; ct.links.new(mc2, mc2n.inputs[0]); mc2n.inputs[1].default_value = 1.0
-fator = mat('MULTIPLY', fn.outputs[0], mc2n.outputs[0])
+# o céu é uma foto de floresta: recebe 65% da névoa (sem isso as moitas enevoadas ficavam recortadas contra um fundo escuro e nítido)
+mascara = mat('ADD', mat('MULTIPLY', mc2n.outputs[0], v=0.35), v=0.65)
+fator = mat('MULTIPLY', fn.outputs[0], mascara)
 mix = ct.nodes.new('CompositorNodeMixRGB'); ct.links.new(fator, mix.inputs[0]); ct.links.new(rl.outputs['Image'], mix.inputs[1])
 mix.inputs[2].default_value = (*srgb_lin(amb['nevoa']['cor']), 1.0)
 ct.links.new(mix.outputs[0], out.inputs['Image'])
