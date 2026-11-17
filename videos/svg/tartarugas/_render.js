@@ -15,8 +15,9 @@ function frame(t) {
   D = []; uid = 0;
   const sh = shotAt(t);
   let body = FN[sh[0]](t);
+  if (typeof POS === 'function') body = POS(t, body);
   for (const c of SH.slice(1)) if (t >= c[1] && t < c[1] + .07 && FLASH.includes(c[0])) body += `<rect width="1080" height="1920" fill="#fff" opacity="${op(.18 * (1 - (t - c[1]) / .07))}"/>`;
-  defsEl.innerHTML = STATIC + EXTRA + (typeof EXTRA2 !== 'undefined' ? EXTRA2 : '') + D.join('');
+  defsEl.innerHTML = STATIC + EXTRA + (typeof EXTRA2 !== 'undefined' ? EXTRA2 : '') + (typeof EXTRA3 !== 'undefined' ? EXTRA3 : '') + (typeof EXTRA4 !== 'undefined' ? EXTRA4 : '') + (typeof EXTRA5 !== 'undefined' ? EXTRA5 : '') + (typeof EXTRA6 !== 'undefined' ? EXTRA6 : '') + D.join('');
   root.innerHTML = body;
 }
 const params = new URLSearchParams(location.search);
