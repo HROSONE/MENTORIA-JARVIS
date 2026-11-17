@@ -208,7 +208,7 @@ esculpir(pele, detalhes_cabeca)
 # e na frente); atrás de x 3,84 a pele continua inteira: são os cantos da boca, que esticam quando a mandíbula abre
 FENDA_Z = 0.0045                                                                  # o meio da fenda fica 4,5 mm abaixo da linha da boca
 def fenda_boca():
-    xs = np.linspace(X_COM, FRENTE_BOCA + 0.035, 40); ys = np.linspace(-0.52, 0.52, 41); V, F = [], []
+    xs = np.linspace(X_COM, FRENTE_BOCA + 0.16, 60); ys = np.linspace(-0.52, 0.52, 41); V, F = [], []
     for z_off in (+0.0045, -0.0045):
         for x in xs:
             for y in ys: V.append((x, y, linha_boca(min(x, FRENTE_BOCA)) - FENDA_Z + z_off))
@@ -495,7 +495,7 @@ for v in pele.data.vertices:
     if c.x > X_COM - 0.22:                                                                # boca: abaixo da fenda manda a mandíbula
         zl = linha_boca(min(c.x, FRENTE_BOCA)) - FENDA_Z
         km = 0.0 if c.z > zl else float(suave(X_COM - 0.14, X_COM + 0.06, c.x)) * (float(suave(zl + 0.002, zl - 0.03, c.z)) if c.x < X_COM + 0.02 else 1.0)
-        km *= float(suave(FRENTE_BOCA + 0.05, FRENTE_BOCA + 0.01, c.x))
+        km *= float(suave(FRENTE_BOCA + 0.17, FRENTE_BOCA + 0.12, c.x))
         if km > 0: w = {k: x * (1 - km) for k, x in w.items()}; w['mandibula'] = km
     for k, x in w.items():
         if x > 1e-4: grupos[k].add([v.index], x, 'REPLACE')
@@ -566,7 +566,7 @@ def mundo_agua():
     tc = Nn.new('ShaderNodeTexCoord'); sep = Nn.new('ShaderNodeSeparateXYZ'); L.new(tc.outputs['Generated'], sep.inputs['Vector'])
     rampa = Nn.new('ShaderNodeValToRGB'); cr = rampa.color_ramp
     cr.elements[0].position = 0.30; cr.elements[0].color = (0.004, 0.030, 0.032, 1); cr.elements[1].position = 0.80; cr.elements[1].color = (0.10, 0.36, 0.34, 1)
-    L.new(sep.outputs['Z'], rampa.inputs['Fac']); L.new(rampa.outputs['Color'], Nn['Background'].inputs['Color']); Nn['Background'].inputs['Strength'].default_value = 0.95
+    L.new(sep.outputs['Z'], rampa.inputs['Fac']); L.new(rampa.outputs['Color'], Nn['Background'].inputs['Color']); Nn['Background'].inputs['Strength'].default_value = 0.62
     sd = bpy.data.lights.new('sol', 'SUN'); sd.energy = 1.8; sd.color = (0.80, 0.95, 1.0); sd.angle = math.radians(6)
     so = bpy.data.objects.new('sol', sd); cena.collection.objects.link(so); so.rotation_euler = (math.radians(12), math.radians(-8), 0)
     # cáusticas sobre o tubarão: manchas de luz moderadas (como as da foto no dorso)
@@ -612,7 +612,7 @@ def render(nome, cam_pos, alvo, lente=45, larg=LARG, alt=None, dof=None, fill=No
     cena.camera = co; r = cena.render; r.engine = 'CYCLES'; r.resolution_x, r.resolution_y = larg, alt
     cena.cycles.samples = AMOSTRAS; cena.cycles.use_denoising = True; cena.cycles.device = 'CPU'
     cena.cycles.volume_step_rate = 4.0; cena.cycles.volume_max_steps = 256
-    cena.view_settings.exposure = -0.35
+    cena.view_settings.exposure = -0.45
     try: cena.view_settings.view_transform = 'AgX'; cena.view_settings.look = 'AgX - Medium High Contrast'
     except Exception: pass
     luzes = []
