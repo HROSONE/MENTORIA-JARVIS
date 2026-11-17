@@ -218,6 +218,55 @@ bpy.context.view_layer.objects.active = pele; pele.select_set(True); bpy.ops.obj
 bpy.data.objects.remove(fenda, do_unlink=True)
 print('FENDA da boca cortada; faces', len(pele.data.polygons))
 
+# contorno real da boca no plano (onde o corte encontra a pele): pontos do lado +y, da frente (meio) até a comissura
+def medir_contorno():
+    V = np.array([v.co[:] for v in pele.data.vertices]); zl = np.array([linha_boca(min(x, 4.33)) - FENDA_Z for x in V[:, 0]])
+    piso = (V[:, 0] > 3.83) & (np.abs(V[:, 2] - (zl - 0.0045)) < 0.0012)
+    P = V[piso][:, :2]; P = P[P[:, 1] >= 0]
+    ang = np.arctan2(P[:, 1], P[:, 0] - 3.80); r = np.hypot(P[:, 0] - 3.80, P[:, 1])
+    bins = np.linspace(0, ang.max(), 70); pts = []
+    for a0, a1 in zip(bins, bins[1:]):
+        m_ = (ang >= a0) & (ang < a1)
+        if m_.any(): k = np.argmax(r * m_ - (~m_) * 9); pts.append(P[k])
+    pts = np.array(pts); pts = pts[pts[:, 0] > 3.88]                               # até a comissura
+    pts[0, 1] = 0.0
+    seg = np.r_[0, np.cumsum(np.linalg.norm(np.diff(pts, axis=0), axis=1))]
+    return pts, seg
+CONT, CONT_S = medir_contorno()
+def dist_contorno(xy):
+    """distância (no plano) de cada ponto até o contorno da boca (dos dois lados)"""
+    C = np.vstack([CONT, CONT * np.array([1, -1])]); d = np.linalg.norm(xy[:, None, :] - C[None, :, :], axis=2); return d.min(1)
+def ponto_contorno(t, s_, dentro):
+    """ponto do contorno a uma fração t do comprimento (0 = meio da frente, 1 = comissura), recuado `dentro` m para o interior"""
+    L = CONT_S[-1] * t; i = min(np.searchsorted(CONT_S, L), len(CONT) - 1); i0 = max(i - 1, 0)
+    a_ = (L - CONT_S[i0]) / max(CONT_S[i] - CONT_S[i0], 1e-6); p = CONT[i0] * (1 - a_) + CONT[i] * a_
+    tg = CONT[min(i + 1, len(CONT) - 1)] - CONT[max(i - 1, 0)]; tg /= np.linalg.norm(tg) + 1e-9
+    nrm = np.array([tg[1], -tg[0]])                                                # para dentro da boca
+    if np.dot(nrm, np.array([3.95, 0]) - p) < 0: nrm = -nrm
+    q = p + nrm * dentro; return np.array([q[0], q[1] * s_]), np.array([-nrm[0], -nrm[1] * s_])
+print('CONTORNO da boca', len(CONT), 'pontos, comprimento', round(float(CONT_S[-1]), 3))
+
+# escultura da boca por dentro: a borda fica como crista (onde os dentes nascem), o meio afunda (assoalho e céu da boca), língua no fundo
+me = pele.data; V = np.array([v.co[:] for v in me.vertices]); zl = np.array([linha_boca(min(x, 4.33)) - FENDA_Z for x in V[:, 0]])
+piso = (V[:, 0] > 3.83) & (np.abs(V[:, 2] - (zl - 0.0045)) < 0.0012); teto = (V[:, 0] > 3.83) & (np.abs(V[:, 2] - (zl + 0.0045)) < 0.0012)
+d = np.zeros(len(V)); sel = piso | teto; d[sel] = dist_contorno(V[sel][:, :2])
+fundo = suave(0.020, 0.075, d) * (0.65 + 0.35 * suave(4.26, 3.95, V[:, 0])) * suave(4.33, 4.24, V[:, 0])
+lingua = 0.030 * np.exp(-((V[:, 0] - 3.98) / 0.09) ** 2 - (V[:, 1] / 0.10) ** 2)
+dz = np.where(piso, -0.070 * fundo + lingua * fundo, 0.0) + np.where(teto, 0.050 * fundo, 0.0)
+# lábios: a pele de fora, logo abaixo e logo acima da fenda, recolhe ~1,5 cm (a crista de gengiva com os dentes fica saliente sobre o lábio;
+# com a boca fechada as pontas dos dentes de baixo aparecem, como no tubarão-branco). Só a pele perto do contorno da boca.
+fora_ = ~sel & (V[:, 0] > 3.86) & (np.abs(V[:, 2] - zl) < 0.05)
+dfc = np.full(len(V), 9.0); dfc[fora_] = dist_contorno(V[fora_][:, :2])
+perto = fora_ & (dfc < 0.03)
+abaixo = np.clip((zl - V[:, 2]), 0, None); acima = np.clip((V[:, 2] - zl), 0, None)
+dz += np.where(perto & (V[:, 2] < zl), -0.015 * np.exp(-(abaixo / 0.014) ** 2), 0.0)
+dz += np.where(perto & (V[:, 2] > zl), 0.010 * np.exp(-(acima / 0.012) ** 2), 0.0)
+sel = sel | perto
+for i in np.nonzero(sel)[0]: me.vertices[i].co.z += dz[i]
+me.update()
+dentro_ = piso | teto
+DIST_BOCA = dict(zip(np.nonzero(dentro_)[0].tolist(), d[dentro_].tolist()))
+
 # ------------------------------------------------------------------------------------------------ cor: contra-sombreamento com divisa irregular, ventre branco, pontas pretas nas peitorais
 def colorir(o, mandibula=False):
     me = o.data; V = np.array([v.co[:] for v in me.vertices]); N = np.array([v.normal[:] for v in me.vertices])
@@ -310,18 +359,17 @@ def material_simples(nome, cor, rug=0.4, coat=0.0, sss=0.0):
     m = bpy.data.materials.new(nome); m.use_nodes = True; b = m.node_tree.nodes['Principled BSDF']
     b.inputs['Base Color'].default_value = (*cor, 1); b.inputs['Roughness'].default_value = rug; b.inputs['Coat Weight'].default_value = coat
     b.inputs['Subsurface Weight'].default_value = sss; return m
-m_boca = material_simples('boca', (0.30, 0.055, 0.06), rug=0.35, coat=0.4, sss=0.15)
-m_gengiva = material_simples('gengiva', (0.62, 0.20, 0.21), rug=0.3, coat=0.5, sss=0.35)
+m_boca = material_simples('boca', (0.42, 0.085, 0.09), rug=0.35, coat=0.4, sss=0.25)
+m_gengiva = material_simples('gengiva', (0.74, 0.30, 0.30), rug=0.3, coat=0.5, sss=0.4)
 def pintar_boca(o, cima):
     if 'boca' not in [m.name for m in o.data.materials]: o.data.materials.append(m_boca); o.data.materials.append(m_gengiva)
     idx = [m.name for m in o.data.materials].index('boca'); idg = [m.name for m in o.data.materials].index('gengiva')
     for p in o.data.polygons:
-        c = p.center; n = p.normal
-        w_ = 0.92 * np.interp(c.x, [m[0] for m in MAND], [m[2] for m in MAND]) - 0.015; zl = linha_boca(min(c.x, 4.33)) - FENDA_Z
-        if c.x < 3.835 or abs(c.y) > w_ or abs(c.z - zl) > 0.012: continue
-        gengiva = abs(c.y) > w_ - 0.05 or c.x > np.interp(abs(c.y), [0, w_], [4.27, 3.86]) - 0.04
-        if cima and n.z < -0.55: p.material_index = idg if gengiva else idx               # céu da boca / gengiva
-        if not cima and n.z > 0.55: p.material_index = idg if gengiva else idx            # assoalho da boca / gengiva
+        vs = [DIST_BOCA.get(i) for i in p.vertices]
+        if any(v is None for v in vs): continue
+        n = p.normal; dm = sum(vs) / len(vs)
+        if (cima and n.z < 0.2) or (not cima and n.z > -0.2):
+            p.material_index = idg if dm < 0.055 else idx                                     # gengiva na crista e na encosta, fundo escuro
 pintar_boca(pele, True); pintar_boca(pele, False)
 
 # ------------------------------------------------------------------------------------------------ olhos, dentes, gengiva
@@ -358,31 +406,23 @@ def dente(nome, base, cima, frente, larg, alt, esp=0.006, curva=0.25):
     for i in range(n): F.append((i, (i + 1) % n, n + (i + 1) % n, n + i))
     o = malha(nome, V, F); o.data.materials.append(m_dente); return o
 
-def arco_boca(t, cima):
-    """ponto da borda da boca: t = 0 no meio da frente, 1 na comissura (de um lado); devolve (x, y, z) para s=+1"""
-    x = 4.27 - 0.40 * t ** 1.6; w_ = np.interp(x, [m[0] for m in MAND], [m[2] for m in MAND]) * 0.86
-    y = w_ * (0.15 + 0.85 * t ** 0.8) if t > 0 else 0.0
-    return x, y
 dentes_sup, dentes_inf = [], []
 for s_ in (1, -1):
-    for fila, recua, inclina in ((0, 0.0, 0.0), (1, 0.034, 0.75), (2, 0.062, 1.35)):         # 3ª fileira deitada: dentes de reposição
+    for fila, recua, inclina in ((0, 0.016, 0.0), (1, 0.036, 0.75), (2, 0.054, 1.35)):        # 3ª fileira deitada: dentes de reposição
         n_ = (13, 12, 10)[fila]
         for k in range(n_):
-            t = (k + 0.5) / n_; x, y = arco_boca(t, True); y *= s_
+            t = (k + 0.5) / n_ * 0.97; (x, y), fora = ponto_contorno(t, s_, recua)
             tam = (1.0 - 0.55 * t ** 1.4) * (1.0, 0.82, 0.62)[fila]
-            # superior: na borda da cabeça (raio de baixo para cima)
-            p, nrm = raio(pele, (x - recua * 1.0, y * 1.09 * (1 - recua * 2.2), linha_boca(x - recua) - FENDA_Z), (0, 0, 1))
+            fora3 = Vector((fora[0], fora[1], 0)).normalized(); dentro = -fora3
+            z0 = linha_boca(min(x, 4.33)) - FENDA_Z
+            p, nrm = raio(pele, (x, y, z0), (0, 0, 1))                                    # crista de cima (raio de dentro da fenda)
             if p is not None:
-                para_fora = Vector((math.cos(math.atan2(y, x - 3.9)), 0, 0)); dentro = Vector((3.95 - x, -y, 0)).normalized()
                 cima_d = (Vector((0, 0, -1)) + dentro * inclina).normalized()
-                d_ = dente(f'dente_sup{fila}_{k}_{s_}', p + Vector((0, 0, 0.006)), cima_d, -dentro, 0.054 * tam, 0.060 * tam)
-                dentes_sup.append(d_)
-            # inferior: no topo da mandíbula (raio de cima para baixo), mais estreitos e pontudos
-            p, nrm = raio(pele, (x - 0.01 - recua, y * 1.08 * (1 - recua * 2.2), linha_boca(x - 0.01 - recua) - FENDA_Z), (0, 0, -1))
+                dentes_sup.append(dente(f'dente_sup{fila}_{k}_{s_}', p + Vector((0, 0, 0.008)), cima_d, fora3, 0.054 * tam, 0.062 * tam))
+            p, nrm = raio(pele, (x - 0.008, y, z0), (0, 0, -1))                           # crista de baixo
             if p is not None:
-                dentro = Vector((3.95 - x, -y, 0)).normalized(); cima_d = (Vector((0, 0, 1)) + dentro * (inclina + 0.12)).normalized()
-                d_ = dente(f'dente_inf{fila}_{k}_{s_}', p - Vector((0, 0, 0.006)), cima_d, -dentro, 0.036 * tam, 0.068 * tam, curva=0.1)
-                dentes_inf.append(d_)
+                cima_d = (Vector((0, 0, 1)) + dentro * (inclina + 0.12)).normalized()
+                dentes_inf.append(dente(f'dente_inf{fila}_{k}_{s_}', p - Vector((0, 0, 0.008)), cima_d, fora3, 0.036 * tam, 0.068 * tam, curva=0.1))
 print('DENTES', len(dentes_sup), len(dentes_inf))
 
 # ------------------------------------------------------------------------------------------------ esqueleto (nadar, abrir a boca, peitorais)
@@ -432,15 +472,15 @@ def prender(o, nome_osso):
     bpy.context.view_layer.update(); o.matrix_world = mw
 for d_ in dentes_inf: prender(d_, 'mandibula')
 for d_ in dentes_sup + olhos: prender(d_, 'cabeca')
-m_garg = material_simples('garganta', (0.20, 0.035, 0.04), rug=0.4, coat=0.3, sss=0.2)
+m_garg = material_simples('garganta', (0.11, 0.018, 0.022), rug=0.45, coat=0.3, sss=0.2)
 def boca_interna():
     bm = bmesh.new(); cima, baixo = [], []
     xs = np.linspace(3.86, 4.24, 9); mx, mw = [m[0] for m in MAND], [m[2] for m in MAND]
     topo_mand = lambda x: float(np.interp(x, mx, [m[1] + m[3] for m in MAND]))
     for x in xs:
         w = float(np.interp(x, mx, mw))
-        cima.append([bm.verts.new((x, s_ * w * 0.84, linha_boca(x) + 0.01)) for s_ in (1, -1)])
-        baixo.append([bm.verts.new((x, s_ * w * 0.80, topo_mand(x) - 0.01)) for s_ in (1, -1)])
+        cima.append([bm.verts.new((x, s_ * w * 0.86, linha_boca(x) + 0.01)) for s_ in (1, -1)])
+        baixo.append([bm.verts.new((x, s_ * w * 0.84, topo_mand(x) - 0.01)) for s_ in (1, -1)])
     for i in range(len(xs) - 1):
         for k in (0, 1): bm.faces.new((cima[i][k], cima[i + 1][k], baixo[i + 1][k], baixo[i][k]))     # bochechas por dentro
     bm.faces.new((cima[0][0], baixo[0][0], baixo[0][1], cima[0][1]))                                    # fundo da garganta
