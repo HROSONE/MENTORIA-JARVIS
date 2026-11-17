@@ -407,12 +407,19 @@ export function eventosSom(dt = 1 / 120) {
   for (let t = 0; t < S.total; t += dt) {
     const p = acharPlano(t); if (p.id.startsWith('R')) { for (const k in ant) delete ant[k]; continue; }
     atualizar(t); cam.updateMatrixWorld(true);
+    // contato = fundo do passo: o pé parou de descer e começa a subir, depois de ter subido de verdade (não depende de onde fica o "chão" da captura)
     for (const [k, pos, lim] of pes()) {
-      const chao = alturaChao(pos.x, pos.z), h = pos.y - chao, a = ant[k];
-      if (a && a.h > lim && h <= lim && a.livre > 0.12) {
-        v.copy(pos).project(cam); ev.push({ t: +t.toFixed(3), quem: k[0], lado: k[1], dist: +pos.distanceTo(cam.position).toFixed(2), pan: +Math.max(-1, Math.min(1, v.x)).toFixed(2), visivel: Math.abs(v.x) < 1 && Math.abs(v.y) < 1 && v.z < 1, plano: p.id });
-      }
-      ant[k] = { h, livre: h > lim ? (a ? a.livre : 0) + dt : 0 };
+      const h = pos.y - alturaChao(pos.x, pos.z), a = ant[k];
+      if (a) {
+        if (a.desce && h > a.h + 1e-4 && a.pico - a.h > lim && a.h < 0.35 + 2 * lim) {
+          v.copy(a.pos).project(cam);
+          ev.push({ t: +(t - dt).toFixed(3), quem: k[0], lado: k[1], dist: +a.pos.distanceTo(cam.position).toFixed(2), pan: +Math.max(-1, Math.min(1, v.x)).toFixed(2), visivel: Math.abs(v.x) < 1 && Math.abs(v.y) < 1 && v.z < 1, plano: p.id });
+          a.pico = h;
+        }
+        a.desce = h < a.h - 1e-4 ? true : h > a.h + 1e-4 ? false : a.desce; a.pico = Math.max(a.pico, h); if (!a.desce && h > a.h) a.pico = Math.max(a.pico, h);
+        if (a.desce === false && h < a.pico - 0.5) a.pico = h;
+        a.h = h; a.pos = pos.clone();
+      } else ant[k] = { h, pico: h, desce: false, pos: pos.clone() };
     }
   }
   return ev;
