@@ -85,7 +85,7 @@ export async function construirSelva(pai, renderer) {
   // a trilha da tentativa 2 fica cercada de árvores próximas (ele passa entre elas; o T. rex trava)
   const perto = [];
   for (let i = 0; i < 26; i++) {
-    const u = R(), seg = curva.getPointAt(0.25 + 0.7 * u), tg = curva.getTangentAt(0.25 + 0.7 * u), lado = R() < 0.5 ? -1 : 1, d = 2.1 + R() * 1.6;
+    const u = R(), seg = curva.getPointAt(0.25 + 0.7 * u), tg = curva.getTangentAt(0.25 + 0.7 * u), lado = R() < 0.5 ? -1 : 1, d = 3.0 + R() * 1.6;     // (a 2,1 m a copa entrava na frente da câmera da trilha)
     const x = seg.x - tg.z * lado * d, z = seg.z + tg.x * lado * d; if (Math.abs(z) < ESTRADA_LARG / 2 + 2.6) continue; if (Math.hypot(x - FENDA.x - Math.cos(FENDA.giro) * 1.6, z - FENDA.z - Math.sin(FENDA.giro) * 1.6) < 5.5) continue; perto.push(M(x, z, 0.9 + R() * 0.5, R() * 6.283));
   }
   instanciar(G, arv[1], perto);
@@ -98,8 +98,19 @@ export async function construirSelva(pai, renderer) {
     const r = rocha.clone(), off = 0.4 + (1.27 / 2) * escR;
     const q = new THREE.Quaternion().setFromAxisAngle(dirF, -s * 0.13).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2 - FENDA.giro + (s > 0 ? Math.PI : 0)));
     const c = meio.clone().addScaledVector(lat, s * off); r.position.set(c.x, alturaChao(c.x, c.z) - 0.25, c.z); r.quaternion.copy(q); r.scale.setScalar(escR);
-    r.updateMatrixWorld(true); const bx = new THREE.Box3().setFromObject(r), cc = bx.getCenter(new THREE.Vector3());
-    const err = cc.clone().sub(c); err.y = 0; const ao_lado = err.dot(lat); r.position.addScaledVector(lat, -ao_lado);   // corrige o centro deslocado do modelo
+    // o matacão é irregular: mede a superfície DE VERDADE com raios saindo do eixo da fenda (alturas 0,3-1,9 m, ao longo de -1,5..+4,5 m)
+    // e desliza a pedra até a face ficar a 0,40 m do eixo (fenda de 0,8 m na altura do corpo)
+    // (raio de FORA para dentro, faces dos dois lados: o último ponto atravessado é a face voltada para a fenda, mesmo se a pedra cruzar o eixo)
+    r.updateMatrixWorld(true); const rc = new THREE.Raycaster(), lados = []; let dmin = Infinity;
+    r.traverse(o => { if (o.isMesh) { lados.push([o.material, o.material.side]); o.material.side = THREE.DoubleSide; } });
+    for (let ao = -1.5; ao <= 4.5; ao += 0.5) for (let h = 0.3; h <= 1.9; h += 0.4) {
+      const o = new THREE.Vector3(FENDA.x, alturaChao(FENDA.x, FENDA.z) + h, FENDA.z).addScaledVector(dirF, ao).addScaledVector(lat, s * 9);
+      rc.set(o, lat.clone().multiplyScalar(-s)); rc.far = 18; const hits = rc.intersectObject(r, true);
+      if (hits.length) { const ultimo = hits[hits.length - 1]; dmin = Math.min(dmin, 9 - ultimo.distance); }
+    }
+    for (const [m, sd] of lados) m.side = sd;
+    if (dmin < Infinity) { r.position.addScaledVector(lat, s * (0.40 - dmin)); r.updateMatrixWorld(true); }
+    FENDA.medida = FENDA.medida || []; FENDA.medida.push(+dmin.toFixed(2));
     G.add(r);
   }
   // esconderijo do maratonista: rochas altas

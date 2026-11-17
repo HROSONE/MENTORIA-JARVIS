@@ -42,7 +42,7 @@ function relogio() {                                             // relógio de 
   const G = new THREE.Group();
   const caixa = new THREE.Mesh(new THREE.BoxGeometry(0.044, 0.012, 0.040), new THREE.MeshStandardMaterial({ color: 0x111214, roughness: 0.4 })); G.add(caixa);
   const tela_ = new THREE.Mesh(new THREE.PlaneGeometry(0.036, 0.032), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false })); tela_.rotation.x = -Math.PI / 2; tela_.position.y = 0.0065; G.add(tela_);
-  const pul = new THREE.Mesh(new THREE.TorusGeometry(0.031, 0.0042, 6, 28), new THREE.MeshStandardMaterial({ color: 0x1a1c20, roughness: 0.7 })); pul.rotation.y = Math.PI / 2; pul.scale.set(0.75, 1, 1); pul.position.y = -0.024; G.add(pul);
+  const pul = new THREE.Mesh(new THREE.TorusGeometry(0.031, 0.0042, 6, 28), new THREE.MeshStandardMaterial({ color: 0x1a1c20, roughness: 0.7 })); pul.rotation.y = Math.PI / 2; pul.scale.set(0.8, 0.8, 1); pul.position.y = -0.031; G.add(pul);
   let ult = null;
   G.userData.mostrar = kmh => {
     const v = Math.round(kmh); if (v === ult) return; ult = v;
@@ -173,7 +173,7 @@ export async function construirTudo() {
     else H.rosto({ esforco: 0.7, boca: 0.35 + 0.2 * Math.sin(t * 8) + 0.4 * inv(9.2, 9.6, t) });
     rel.userData.mostrar(vr * 3.6);
     const rug = suave(inv(0.0, 0.35, t)) * (1 - suave(inv(1.35, 1.75, t)));
-    const olhar = comido ? V(xt + 14, 5.5, 0) : H.pos('head');
+    const olhar = comido ? V(xt + 16, 2.6, 0) : H.pos('head');
     trexEm(xt, 0, 0, dT, vt, t, { olhar, rugido: rug, mordida: comido ? 0 : mord, mastigar: comido ? clamp((t - 10.35) / 0.3) : 0 });
     ten.visible = t > 11.2; if (ten.visible) { const u = t - 11.2, y = Math.max(0.03, 3.1 - 4.9 * u * u), b = Math.max(0, u - 0.8); ten.position.set(xt + BOCA_X - 0.3 + u * 0.5, y + 0.12 * Math.abs(Math.sin(b * 9)) * Math.exp(-b * 5), 0.35); ten.rotation.set(Math.min(u, 0.8) * 6, 0.6, Math.min(u, 0.8) * 4); }
     return { xr, xt, vr, vt, dT };
@@ -236,6 +236,13 @@ export async function construirTudo() {
     if (tremor) { cam.position.y += tremor * 0.04 * ruido(t * 40, 1); cam.rotateX(tremor * 0.010 * ruido(t * 37, 2)); cam.rotateZ(tremor * 0.008 * ruido(t * 33, 3)); }
     return pos.distanceTo(olha);
   }
+  /** a regra do dono em código: câmera na linha "T. rex -> protagonista", além do protagonista (ele de frente, o T. rex atrás dele);
+   *  lado desloca um pouco para o T. rex aparecer por cima do ombro; mira (0..1) puxa o olhar da câmera do rosto dele para o T. rex */
+  function camDosDois(A, alvoT, dist, { alt = 0, lado = 0.4, fov = 42, mira = 0.3, tremor = 0, t = 0 } = {}) {
+    const h = A.pos('head'), d = h.clone().sub(alvoT); d.y = 0; d.normalize(); const l = V(-d.z, 0, d.x);
+    const p = h.clone().addScaledVector(d, dist).addScaledVector(l, lado); p.y = h.y + alt;
+    return camEm(p, h.clone().lerp(alvoT, mira), fov, { tremor, t });
+  }
   const corpoH = A => [A.pos('head'), A.pos('foot_l'), A.pos('foot_r'), A.pos('hand_l'), A.pos('hand_r')];
   const cabecaT = () => [T_.boca(), T_.pontos()[0]];
 
@@ -284,7 +291,7 @@ export async function construirTudo() {
   // S7 (14,2-18,5): de frente na trilha (câmera sobre a própria trilha, à frente dele); o T. rex atrás, travando entre as árvores
   plano('S7 mata', 4.3, (u, t) => {
     const e = estado2(t); const c = H.pos('spine_03'); ilumina(c);
-    const sc = Math.min(e.sR + 6.5, L2 + 1.45), pc = sc <= L2 ? ptArco(sc) : ptArco(L2).addScaledVector(dirF, sc - L2); pc.y = alturaChao(pc.x, pc.z) + (sc > L2 - 0.5 ? 0.95 : 1.55);
+    const sc = Math.min(e.sR + 6.5, L2 + 2.4), pc = sc <= L2 ? ptArco(sc) : ptArco(L2).addScaledVector(dirF, sc - L2); pc.y = alturaChao(pc.x, pc.z) + 1.7;   // termina onde o S8 começa
     const dc = pc.distanceTo(c), d = camEm(pc, V(c.x, c.y + 0.9 * clamp((dc - 2.5) / 3), c.z), 46, { tremor: 0.4 + tremorPisada(e.sT, e.vt, 0.7), t });
     lente({ foco: d, abertura: 0.004, brilho: 0.35, ao: 0.85 });
   }, { precisa: () => [...corpoH(H), T_.boca(), T_.pontos()[0]] });
@@ -292,8 +299,7 @@ export async function construirTudo() {
   plano('S8 fenda', 3.0, (u, t) => {
     const e = estado2(t); const fundo = V(FENDA.x, 0, FENDA.z).addScaledVector(dirF, 1.85); ilumina(V(FENDA.x, 1, FENDA.z));
     const tb = A2.t0 + e.tb, tr = t > tb + 0.55 ? 1.6 * Math.exp(-(t - tb - 0.55) * 3) : 0.15;
-    const alvo = V(FENDA.x, 0, FENDA.z).addScaledVector(dirF, -1.6); alvo.y = 1.35;
-    camEm(V(fundo.x, 0.85, fundo.z), alvo, 52, { tremor: tr, t });
+    camDosDois(H, T_.boca(), 2.4, { alt: 0.05, lado: 0.12, fov: 52, mira: 0.4, tremor: tr, t });
     lente({ foco: 1.5, abertura: 0.007, desfoque: 0.008, brilho: 0.3, ao: 0.9 });
   }, { precisa: () => [H.pos('head'), H.pos('foot_l'), T_.boca()], efeito: u => ({ rebobina: u > 2.6 ? (u - 2.6) / 0.4 : 0 }) });
   // R2 (21,5-22,5): volta no tempo de novo
@@ -318,19 +324,19 @@ export async function construirTudo() {
   // S9b (25,9-27,5): baixo, 3/4 de frente, câmera rente ao chão: os pés passam, o T. rex ao fundo
   plano('S9b passada', 1.6, (u, t) => {
     const e = estado3(t); const c = Mt.pos('pelvis'); ilumina(c);
-    const d = cameraFrente(V(c.x, 0.3, c.z), 5.0, 0.0, Math.PI * 0.16, 44, { olhaY: 1.6, tremor: 0.3 + tremorPisada(e.dT, e.vt, 0.5), t });
+    const d = camDosDois(Mt, T_.boca(), 4.6, { alt: -1.35, lado: 0.7, fov: 46, mira: 0.3, tremor: 0.3 + tremorPisada(e.dT, e.vt, 0.5), t });
     lente({ foco: d, abertura: 0.005, brilho: 0.3, ao: 0.8 });
   }, { precisa: () => [...corpoH(Mt), T_.boca()] });
   // S10 (27,5-31,5): close; ele olha para trás: o T. rex continua lá, na mesma distância (ele não cansa, mas o bicho também não)
   plano('S10 nao cansa', 4.0, (u, t) => {
     const e = estado3(t); const c = Mt.pos('head'); ilumina(c);
-    const d = cameraFrente(V(c.x, c.y - 0.2, c.z), lerp(3.4, 2.8, suave(u / 4)), 0.05, Math.PI * 0.09, 40, { olhaY: 0.7, tremor: 0.35, t });
+    const d = camDosDois(Mt, T_.boca(), lerp(3.4, 2.8, suave(u / 4)), { alt: -0.1, lado: 0.35, fov: 40, mira: 0.25, tremor: 0.35, t });
     lente({ foco: d, abertura: 0.010, desfoque: 0.010, brilho: 0.3, ao: 0.8 });
   }, { precisa: () => [Mt.pos('head'), T_.boca()] });
   // S11 (31,5-34,5): atrás das rochas: ele vem correndo para a lente e se agacha; o T. rex para na estrada, procura e ruge por cima das pedras
   plano('S11 esconde', 3.0, (u, t) => {
     estado3(t); const ag = ESCONDE_M.agacha; ilumina(V(ag.x, 1, ag.z));
-    camEm(V(ag.x - 0.6, 0.95, ag.z - 4.0), V(ag.x + 0.2, 1.75, ag.z + 3), 44, { tremor: 0.25, t });
+    camDosDois(Mt, T_.boca(), 4.6, { alt: 0.55, lado: 0.5, fov: 46, mira: 0.45, tremor: 0.25, t });
     lente({ foco: 4.0, abertura: 0.005, brilho: 0.3, ao: 0.85 });
   }, { precisa: () => [Mt.pos('head'), T_.boca(), T_.pontos()[0]] });
   // S12 (34,5-36): o instante ANTES do primeiro quadro (boca fechada, respira, cabeça se armando): o último quadro emenda no rugido do quadro 0 (laço)

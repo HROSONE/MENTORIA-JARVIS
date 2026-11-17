@@ -9,7 +9,7 @@
 <body>
 <script type="module">
 // Protocolo do projeto: window.__total (s), window.__frame(t, { jpeg, subs }) -> dataURL, window.__planos, window.__enquadramento() (conferência 9:16).
-import { desenharTela, capturar } from './js/motor.js';
+import { desenharTela, capturar, cam } from './js/motor.js';
 import { construirTudo, atualizar, efeitos, acharPlano, verificarEnquadramento, eventosSom, marcas } from './js/planos.js';
 const Q = new URLSearchParams(location.search);
 const S = await construirTudo();
@@ -24,6 +24,8 @@ window.__efeitos = t => efeitos(t);
 window.__enquadramento = () => verificarEnquadramento();
 window.__eventosSom = () => eventosSom();
 window.__marcas = () => marcas();
+// vista livre para conferir o cenário (ex.: de cima da fenda): posa a cena no instante t e desenha de uma câmera qualquer
+window.__vista = (t, pos, alvo, fov = 50) => capturar(() => { atualizar(t); cam.position.set(...pos); cam.up.set(0, 1, 0); cam.lookAt(...alvo); cam.fov = fov; cam.updateProjectionMatrix(); desenharTela(); }, t, { subs: 1, jpeg: 0.88 });
 if (Q.has('t')) desenhar(+Q.get('t'));
 window.__ready = true;
 </script>
