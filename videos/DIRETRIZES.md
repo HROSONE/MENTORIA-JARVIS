@@ -140,6 +140,13 @@ Complementa o `ESTILO.md`. Ler antes de começar qualquer vídeo novo.
 - Som: `sfx_<nome>.py` usando a mesa `biblioteca3d/sons/mesa.py` (gravações BigSoundBank em `biblioteca3d/sons/bsb` + Kenney; camadas, espaço, pan, limitador e checagens).
 - Stills: `shotf.js`; folhas: `sheet.py` (vertical) e `sheet169b.py` (16:9).
 
+## 9b. Custo de render em Three.js sem placa de vídeo (17/11, T. rex corrida)
+
+- **Medir antes de prometer tempo.** O Chromium aqui renderiza por CPU (SwiftShader, 4 núcleos). Com a mata (~2000 plantas instanciadas, 58 milhões de triângulos por passe) um quadro de 720×1280 levava ~57 s: os pós (AO, desfoque, brilho) somavam só ~4 s; **93% do custo era a vegetação**, desenhada 4 vezes por quadro (sombra, imagem, normais do AO, profundidade do desfoque). Perfil: abrir a página uma vez e medir o mesmo quadro ligando e desligando partes (`?ao=0 &dof=0 &sombra=0 &msaa=0 &corte=0 &lod=0 &dofrapido=0`).
+- `InstancedMesh` com `frustumCulled = false` processa **todas** as cópias em **todos** os passes. A solução está em `trex_corrida/js/corte.js` (copiar para outro vídeo com mata): a cada quadro, só ficam as cópias que cruzam o campo de visão (ou cuja sombra cai nele), as distantes (> 45 m) trocam para o modelo leve (`biblioteca3d/polyhaven/gerar_lod.py` gera `<id>_lod.glb`, só geometria; o material é o do modelo cheio, achado pelo nome), nada passa de 100 m (a névoa exp² já engoliu) e só entra no mapa de sombra o que cai na janela da câmera da luz. O desfoque lê a profundidade que o AO já desenhou (um passe a menos). Resultado: **~57 s → ~7 s por quadro** (540×960), imagem quase idêntica (diferença média 0,5/255 sem o modelo leve; o modelo leve só deixa os tufos distantes um pouco mais "em blocos").
+- Os modelos `_lod.glb` ficam fora do git (a pasta `modelo/` é baixada): rodar `gerar_lod.py` de novo ao clonar (comando no cabeçalho do script e em `trex_corrida/roteiro.md`).
+- Não prometer ganho de GPU para Three.js sem ter testado: o Blender/Cycles no Colab (T4) levou ~3 h para 1080 quadros de 720p e chegou com defeitos; o caminho local com o corte acima custa bem menos.
+
 
 ## Antes de criar um vídeo: checar a biblioteca (obrigatório)
 1. Ler `biblioteca3d/INVENTARIO.md` (cidade, veículos, personagens, módulos de cena e som já feitos).

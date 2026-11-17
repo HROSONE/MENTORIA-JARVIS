@@ -61,3 +61,10 @@ Todo plano passa por um verificador antes do render: o contorno do protagonista 
 - **T. rex:** esqueleto (coluna, pescoço, cabeça, mandíbula, cauda, pernas, braços); andar rápido com os pés presos no chão, corpo balançando e cauda contrabalançando; rugido e mordida com a mandíbula.
 - **Protagonista:** personagem realista novo (adulto, roupa de trilha, mochila, relógio) e a versão maratonista (regata, short, número HRYZ); corrida, olhar para trás, se espremer na fenda, com captura de movimento real (CMU) e a camada de vida.
 - **Efeitos:** poeira e terra nas pisadas, tremor de câmera, galhos e folhas voando, volta no tempo.
+
+## Como renderizar (Three.js, sem placa de vídeo)
+1. Uma vez por clone: gerar os modelos leves das plantas (a pasta `modelo/` não vai para o git):
+   `blender -b --python ../biblioteca3d/polyhaven/gerar_lod.py -- $PWD/../biblioteca3d/polyhaven/modelo jacaranda_tree:leve:8000 island_tree_01:leve:6000 island_tree_03:leve:6000 tree_small_02:leve:6000 fern_02:1k:2500 anthurium_botany_01:1k:5000 calathea_orbifolia_01:1k:3000 pachira_aquatica_01:1k:6000 shrub_01:leve:4000 shrub_04:1k:4000 rock_moss_set_01:1k:5000 rock_moss_set_02:1k:5000 boulder_01:1k:4000 rock_07:1k:3000 dead_tree_trunk_02:1k:4000 root_cluster_01:leve:4000`
+2. Quadros: `node render.js --trabalhadores 2 --saida <pasta>` (pula os quadros que já existem: se o ambiente reiniciar, é só rodar de novo).
+3. Som: `python3 sfx_trex.py sfx_trex.wav`; montagem: `python3 montar.py <pasta> sfx_trex.wav saida.mp4` (nunca commitar o MP4).
+4. Custo e interruptores de teste (`?corte=0 &lod=0 &dofrapido=0 &ao=0 &dof=0 &sombra=0 &msaa=0`): ver `videos/DIRETRIZES.md`, seção 9b.

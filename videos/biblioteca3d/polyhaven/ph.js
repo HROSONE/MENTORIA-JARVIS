@@ -24,8 +24,9 @@ export function materialPH(id, { res = '2k', rep = [1, 1], ao = true, normal = 1
   return m;
 }
 /** modelo glTF (clonado a cada chamada); sombras ligadas */
-export async function modeloPH(id, { res = '1k', sombra = true, leve = false } = {}) {
-  const url = leve ? `${BASE}modelo/${id}/${id}_leve.glb` : `${BASE}modelo/${id}/${id}_${res}.gltf`;            // leve: versão simplificada por decimar.py (para muitas cópias)
+export async function modeloPH(id, { res = '1k', sombra = true, leve = false, lod = false } = {}) {
+  // leve: versão simplificada por decimar.py (para muitas cópias). lod: só a geometria bem mais simples (gerar_lod.py), para as cópias distantes
+  const url = lod ? `${BASE}modelo/${id}/${id}_lod.glb` : leve ? `${BASE}modelo/${id}/${id}_leve.glb` : `${BASE}modelo/${id}/${id}_${res}.gltf`;
   if (!cacheMod.has(url)) cacheMod.set(url, new GLTFLoader().loadAsync(url));
   const g = (await cacheMod.get(url)).scene.clone(true);
   g.userData.ph = id;                                                     // (para exportar: o Blender usa o modelo original pelo id)

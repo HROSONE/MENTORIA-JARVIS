@@ -37,6 +37,17 @@ if (Q.get('ao') !== '0') composer.addPass(passAO);
 composer.addPass(passBrilho);
 if (Q.get('dof') !== '0') composer.addPass(passFoco);
 composer.addPass(new OutputPass());
+// O desfoque de profundidade de campo usava um passe a mais só para desenhar a profundidade da cena (a vegetação inteira de novo). O passe do AO já
+// desenhou exatamente essa profundidade (mesma câmera, mesmos objetos, mesmo material de substituição): o desfoque lê dela (?dofrapido=0 volta ao passe próprio).
+if (Q.get('dofrapido') !== '0' && Q.get('ao') !== '0' && Q.get('dof') !== '0') {
+  passFoco.materialBokeh.defines.DEPTH_PACKING = 0; passFoco.materialBokeh.needsUpdate = true;
+  passFoco.uniforms.tDepth.value = passAO.depthTexture;
+  passFoco.render = function (renderer, writeBuffer, readBuffer) {
+    this.uniforms.tColor.value = readBuffer.texture; this.uniforms.nearClip.value = this.camera.near; this.uniforms.farClip.value = this.camera.far;
+    if (!passAO.enabled) this.uniforms.aperture.value = 0;                                      // (sem o passe do AO a profundidade não é nova: não desfoca)
+    if (this.renderToScreen) { renderer.setRenderTarget(null); this.fsQuad.render(renderer); } else { renderer.setRenderTarget(writeBuffer); renderer.clear(); this.fsQuad.render(renderer); }
+  };
+}
 
 /** lente do plano: foco (m até o assunto), abertura (0 = tudo nítido; 0.002-0.02 cinema), brilho (força do bloom), limiar */
 export function lente({ foco = 3, abertura = 0, desfoque = 0.010, brilho = 0.35, limiar = 0.85, raioBrilho = 0.55, ao = 0.85 } = {}) {

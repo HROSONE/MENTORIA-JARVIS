@@ -8,7 +8,8 @@ import { clamp, lerp, suave, inv, ruido } from './util.js';
 import { criarLucasReal, URL_REAL } from './lucasreal.js';
 import { carregarMocap, aplicarMocap, misturarClipes, vida } from './mocap.js';
 import { criarTrex } from './trex.js';
-import { construirSelva, alturaChao, TRILHA, FENDA, ESCONDE_M } from './selva3d.js';
+import { construirSelva, alturaChao, TRILHA, FENDA, ESCONDE_M, INSTANCIAS } from './selva3d.js';
+import { prepararCorte, cortar } from './corte.js';
 import { criarFumaca } from './poeira.js';
 
 export const S = { planos: [], total: 0 };
@@ -346,6 +347,7 @@ export async function construirTudo() {
   plano('S12 laco', 1.5, (u, t) => MUNDO.planosPorNome['S1 rugido'].fn(u - 1.5, u - 1.5), { precisa: () => [T_.boca(), T_.pontos()[0]] });
   MUNDO.planosPorNome = Object.fromEntries(S.planos.map(p => [p.id, p]));
   S.limpos = MUNDO.limpos = limparLente();
+  prepararCorte(INSTANCIAS);                                              // (a partir daqui cada quadro só desenha as cópias que a câmera vê, com modelo leve ao longe; ver corte.js)
   return S;
 }
 
@@ -375,7 +377,10 @@ function limparLente() {
   return tirados;
 }
 
-export function atualizar(t) { const p = acharPlano(t); p.fn(clamp(t - p.t0, 0, p.dur), t, p); scene.updateMatrixWorld(true); }
+export function atualizar(t) {
+  const p = acharPlano(t); p.fn(clamp(t - p.t0, 0, p.dur), t, p); scene.updateMatrixWorld(true);
+  const sol = MUNDO && MUNDO.selva && MUNDO.selva.sol; if (sol && Q.get('corte') !== '0') cortar(cam, sol);
+}
 export const marcas = () => MUNDO.marcas;
 export function efeitos(t) { const p = acharPlano(t), u = t - p.t0; return p.efeito ? p.efeito(u, t) : {}; }
 

@@ -2,7 +2,7 @@
 // estrada para dentro da mata até uma FENDA estreita entre duas rochas (tentativa 2) e um grupo de rochas mais adiante (esconderijo do maratonista).
 // Tudo CC0 do Poly Haven (versões leves das árvores por decimar.py), espalhado por instâncias com semente fixa. Y para cima; estrada em z = 0.
 import * as THREE from 'three';
-import { materialPH, modeloPH, hdriPH } from '../../biblioteca3d/polyhaven/ph.js';
+import { materialPH, modeloPH as modeloPHbase, hdriPH } from '../../biblioteca3d/polyhaven/ph.js';
 import { mulberry32, clamp } from './util.js';
 
 export const ESTRADA_LARG = 4.2;
@@ -28,19 +28,36 @@ function distTrilha(x, z) {
   return m;
 }
 
-/** registro das cópias (para exportar a cena para o Blender): id do modelo do Poly Haven, matrizes de cada cópia e as malhas instanciadas */
+/**
+ * Registro das cópias (para o corte por quadro, js/corte.js, e para exportar a cena). Cada modelo vira TRÊS conjuntos de InstancedMesh com as mesmas
+ * matrizes de base: `ims` (com sombra: só entra o que cai na janela do mapa de sombra do sol), `imsM` (sem sombra: o resto do que a câmera vê, de perto)
+ * e `imsL` (modelo leve, sem sombra: o que está longe). Sem o corte (?corte=0) só `ims` desenha, todas as cópias, como antes.
+ */
 export const INSTANCIAS = [];
+const Qs = new URLSearchParams(location.search);
 function instanciar(pai, modelo, matrizes, { sombra = true } = {}) {
-  INSTANCIAS.push({ id: modelo.userData.ph, matrizes: matrizes.map(m => m.clone()), ims: [] });
+  const N = matrizes.length, reg = { id: modelo.userData.ph, matrizes: matrizes.map(m => m.clone()), ims: [], imsM: [], imsL: [], esfera: null };
+  INSTANCIAS.push(reg);
   modelo.updateMatrixWorld(true);
+  const esf = new THREE.Box3().setFromObject(modelo).getBoundingSphere(new THREE.Sphere()); reg.esfera = { c: esf.center.clone(), r: esf.radius };
+  const mats = {};
+  const fazer = (geo, mat, rel, cast, contar = N) => {
+    const im = new THREE.InstancedMesh(geo, mat, N); matrizes.forEach((M, i) => im.setMatrixAt(i, M.clone().multiply(rel)));
+    im.castShadow = cast; im.receiveShadow = true; im.frustumCulled = false; im.count = contar; pai.add(im); return im;
+  };
   modelo.traverse(o => {
     if (!o.isMesh) return;
-    const im = new THREE.InstancedMesh(o.geometry, o.material, matrizes.length); const rel = o.matrixWorld.clone();
-    matrizes.forEach((M, i) => im.setMatrixAt(i, M.clone().multiply(rel)));
-    im.castShadow = sombra; im.receiveShadow = true; im.frustumCulled = false;
     if (o.material.transparent || o.material.alphaTest) { o.material.alphaTest = Math.max(o.material.alphaTest || 0, 0.45); o.material.transparent = false; o.material.side = THREE.DoubleSide; }
-    pai.add(im); INSTANCIAS[INSTANCIAS.length - 1].ims.push(im);
+    mats[o.material.name] = o.material; const rel = o.matrixWorld.clone();
+    reg.ims.push(fazer(o.geometry, o.material, rel, sombra)); reg.imsM.push(fazer(o.geometry, o.material, rel, false, 0));
   });
+  const lod = modelo.userData.lod;
+  if (lod && Qs.get('lod') !== '0') {                                              // o modelo leve usa os MESMOS materiais (pelo nome): nada de textura em dobro
+    lod.updateMatrixWorld(true);
+    const prims = []; lod.traverse(o => { if (o.isMesh) prims.push(o); });
+    if (prims.length && prims.every(o => mats[o.material.name])) for (const o of prims) reg.imsL.push(fazer(o.geometry, mats[o.material.name], o.matrixWorld.clone(), false, 0));
+    else console.warn('LOD sem material correspondente em ' + reg.id + ': sem modelo leve');
+  }
 }
 
 export async function construirSelva(pai, renderer) {
@@ -59,7 +76,8 @@ export async function construirSelva(pai, renderer) {
   const pts = TRILHA.map(([x, z]) => new THREE.Vector3(x, 0, z)); const curva = new THREE.CatmullRomCurve3(pts);
   // (a trilha é o corredor sem vegetação; o tubo achatado que marcava o chão parecia uma laje e saiu)
 
-  // assets
+  // assets (cada modelo leva anexado o seu modelo leve para as cópias distantes: userData.lod)
+  const modeloPH = async (id, opc) => { const m = await modeloPHbase(id, opc); if (Qs.get('lod') !== '0') m.userData.lod = await modeloPHbase(id, { lod: true }).catch(() => null); return m; };
   const L = { leve: true };
   const arv = [await modeloPH('jacaranda_tree', L), await modeloPH('island_tree_01', L), await modeloPH('island_tree_03', L), await modeloPH('tree_small_02', L)];
   const sam = await modeloPH('fern_02'), fol = [await modeloPH('anthurium_botany_01'), await modeloPH('calathea_orbifolia_01'), await modeloPH('pachira_aquatica_01')];
