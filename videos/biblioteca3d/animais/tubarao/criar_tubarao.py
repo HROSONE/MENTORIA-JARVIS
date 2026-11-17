@@ -110,33 +110,34 @@ def suave(a, b, x): x = np.clip((x - a) / (b - a), 0, 1); return x * x * (3 - 2 
 
 # ------------------------------------------------------------------------------------------------ corpo
 # boca: a cabeça termina embaixo na linha da boca (x >= 3,86) e a mandíbula (separada) completa o queixo
-def linha_boca(x): return -0.215 + 0.30 * max(0.0, x - 3.88) ** 1.25            # da comissura (x 3,88) sobe até a ponta (x 4,30)
+FRENTE_BOCA = 4.27                                                               # a boca termina bem atrás da ponta do focinho (4,50)
+def linha_boca(x): return -0.215 + 0.36 * max(0.0, x - 3.88) ** 1.25            # da comissura (x 3,88) sobe até a frente da boca
 CORPO = [   # x, zc, meia-largura, alto, baixo, afina em cima, afina embaixo
     (0.74, 0.02, 0.050, 0.120, 0.110, 0.2, 0.2),
     (0.86, 0.01, 0.105, 0.085, 0.085, 0.0, 0.0),     # pedúnculo achatado (quilha lateral)
     (1.00, 0.00, 0.125, 0.105, 0.100, 0.1, 0.0),
     (1.20, 0.00, 0.175, 0.185, 0.155, 0.2, 0.0),
     (1.55, 0.00, 0.270, 0.300, 0.240, 0.25, 0.05),
-    (1.95, 0.00, 0.370, 0.405, 0.335, 0.25, 0.05),
-    (2.35, 0.00, 0.445, 0.470, 0.400, 0.22, 0.05),
-    (2.75, 0.00, 0.480, 0.500, 0.440, 0.2, 0.05),
-    (3.15, 0.00, 0.475, 0.485, 0.430, 0.15, 0.05),
-    (3.50, 0.00, 0.445, 0.440, 0.385, 0.12, 0.05),
-    (3.80, 0.00, 0.395, 0.375, 0.300, 0.10, 0.05),
-    (3.95, 0.01, 0.330, 0.315, 0.215, 0.08, 0.10),   # daqui para a frente o "baixo" é a linha da boca; focinho cônico
-    (4.10, 0.02, 0.255, 0.245, 0.185, 0.06, 0.12),
-    (4.25, 0.03, 0.165, 0.165, 0.135, 0.05, 0.12),
-    (4.38, 0.035, 0.085, 0.090, 0.070, 0.0, 0.1),
-    (4.46, 0.035, 0.032, 0.036, 0.030, 0.0, 0.0),
-    (4.50, 0.035, 0.006, 0.006, 0.006, 0.0, 0.0),
+    (1.95, 0.00, 0.380, 0.420, 0.380, 0.25, 0.05),   # robusto como o animal real: a barriga desce e o dorso sobe na 1ª dorsal
+    (2.35, 0.00, 0.460, 0.500, 0.470, 0.22, 0.04),
+    (2.75, 0.00, 0.495, 0.530, 0.515, 0.2, 0.04),
+    (3.15, 0.00, 0.485, 0.505, 0.490, 0.15, 0.04),
+    (3.50, 0.00, 0.450, 0.450, 0.420, 0.12, 0.05),
+    (3.80, 0.00, 0.400, 0.405, 0.300, 0.10, 0.05),   # cabeça mais alta (no animal real a cabeça é grande)
+    (3.95, 0.01, 0.335, 0.350, 0.215, 0.08, 0.10),   # daqui para a frente o "baixo" é a linha da boca; focinho cônico
+    (4.10, 0.02, 0.260, 0.272, 0.185, 0.06, 0.12),
+    (4.25, 0.03, 0.170, 0.185, 0.135, 0.05, 0.12),
+    (4.38, 0.015, 0.094, 0.100, 0.095, 0.0, 0.05),   # focinho cônico cheio por baixo também (não "bico de pato")
+    (4.46, 0.010, 0.058, 0.060, 0.058, 0.0, 0.0),    # ponta arredondada
+    (4.50, 0.008, 0.020, 0.022, 0.020, 0.0, 0.0),
 ]
 MAND = [    # mandíbula (x, zc, meia-largura, alto, baixo): o topo encosta na linha da boca, o queixo arredondado embaixo
     (3.84, -0.235, 0.290, 0.060, 0.065),             # o fundo atrás coincide com a garganta (sem "queixo duplo"); espessa o bastante
     (3.95, -0.228, 0.272, 0.058, 0.062),             # para não parecer um aro quando abre
-    (4.08, -0.204, 0.222, 0.052, 0.057),
-    (4.20, -0.168, 0.152, 0.038, 0.044),             # borda da frente mais fina (sem "lábio" grosso)
-    (4.29, -0.140, 0.078, 0.027, 0.031),
-    (4.33, -0.130, 0.024, 0.020, 0.022),
+    (4.08, -0.198, 0.210, 0.050, 0.055),             # a frente da mandíbula afina e recua (boca em arco, não uma caixa)
+    (4.18, -0.160, 0.135, 0.036, 0.042),
+    (4.24, -0.128, 0.068, 0.026, 0.030),
+    (4.275, -0.115, 0.020, 0.016, 0.018),
 ]
 corpo = loft('corpo', CORPO, N=64)
 mand = loft('mandibula', [(x, zc, w, hT, hB, 0, 0) for x, zc, w, hT, hB in MAND], N=48, expo=2.4)
@@ -145,13 +146,13 @@ mand = loft('mandibula', [(x, zc, w, hT, hB, 0, 0) for x, zc, w, hT, hB in MAND]
 nad = []
 nad.append(nadadeira('dorsal1', (2.94, 0, 0.36), (2.26, 0, 0.36), (-0.16, 0, 1), 0.74, ponta=0.10, enflech=0.30, falc=0.30, esp=0.10))     # alta e em pé
 for s_, l in ((1, 'l'), (-1, 'r')):
-    nad.append(nadadeira('peitoral_' + l, (3.32, 0.27 * s_, -0.20), (2.86, 0.25 * s_, -0.23), (-0.30, 0.84 * s_, -0.40), 1.00, ponta=0.09, enflech=0.30, falc=0.32, esp=0.12))
+    nad.append(nadadeira('peitoral_' + l, (3.36, 0.27 * s_, -0.22), (2.80, 0.25 * s_, -0.26), (-0.40, 0.62 * s_, -0.68), 1.08, ponta=0.10, enflech=0.28, falc=0.28, esp=0.12))   # grandes, caídas para baixo e para trás
     nad.append(nadadeira('pelvica_' + l, (1.86, 0.10 * s_, -0.22), (1.60, 0.08 * s_, -0.22), (-0.45, 0.55 * s_, -0.70), 0.32, ponta=0.18, enflech=0.35, falc=0.20, esp=0.10))
     nad.append(nadadeira('quilha_' + l, (1.10, 0.08 * s_, 0.0), (0.78, 0.07 * s_, 0.0), (-0.05, 1.0 * s_, 0.0), 0.05, ponta=0.6, enflech=0.0, falc=0.0, esp=0.18, arredonda=0.6))
 nad.append(nadadeira('dorsal2', (1.13, 0, 0.08), (0.99, 0, 0.08), (-0.30, 0, 1), 0.12, ponta=0.25, enflech=0.4, falc=0.25))
 nad.append(nadadeira('anal', (1.09, 0, -0.07), (0.97, 0, -0.07), (-0.30, 0, -1), 0.11, ponta=0.25, enflech=0.4, falc=0.25))
-nad.append(nadadeira('caudal_sup', (0.93, 0, 0.03), (0.64, 0, 0.03), (-0.58, 0, 0.81), 1.08, ponta=0.07, enflech=0.22, falc=0.40, esp=0.10))
-nad.append(nadadeira('caudal_inf', (0.91, 0, -0.02), (0.66, 0, 0.0), (-0.52, 0, -0.85), 0.94, ponta=0.07, enflech=0.22, falc=0.40, esp=0.10))
+nad.append(nadadeira('caudal_sup', (0.95, 0, 0.03), (0.58, 0, 0.03), (-0.58, 0, 0.81), 1.00, ponta=0.12, enflech=0.22, falc=0.30, esp=0.10))      # lóbulos largos
+nad.append(nadadeira('caudal_inf', (0.93, 0, -0.02), (0.60, 0, 0.0), (-0.52, 0, -0.85), 0.90, ponta=0.12, enflech=0.22, falc=0.30, esp=0.10))
 pele = unir([corpo, mand] + nad, 'tubarao', voxel=0.0085)
 print('CORPO faces', len(pele.data.polygons))
 
@@ -194,10 +195,10 @@ esculpir(pele, detalhes_cabeca)
 # e na frente); atrás de x 3,84 a pele continua inteira: são os cantos da boca, que esticam quando a mandíbula abre
 FENDA_Z = 0.0045                                                                  # o meio da fenda fica 4,5 mm abaixo da linha da boca
 def fenda_boca():
-    xs = np.linspace(3.84, 4.40, 40); ys = np.linspace(-0.52, 0.52, 41); V, F = [], []
+    xs = np.linspace(3.84, FRENTE_BOCA + 0.035, 40); ys = np.linspace(-0.52, 0.52, 41); V, F = [], []
     for z_off in (+0.0045, -0.0045):
         for x in xs:
-            for y in ys: V.append((x, y, linha_boca(min(x, 4.33)) - FENDA_Z + z_off))
+            for y in ys: V.append((x, y, linha_boca(min(x, FRENTE_BOCA)) - FENDA_Z + z_off))
     nx, ny = len(xs), len(ys); idx = lambda c, i, j: c * nx * ny + i * ny + j
     for i in range(nx - 1):
         for j in range(ny - 1):
@@ -220,7 +221,7 @@ print('FENDA da boca cortada; faces', len(pele.data.polygons))
 
 # contorno real da boca no plano (onde o corte encontra a pele): pontos do lado +y, da frente (meio) até a comissura
 def medir_contorno():
-    V = np.array([v.co[:] for v in pele.data.vertices]); zl = np.array([linha_boca(min(x, 4.33)) - FENDA_Z for x in V[:, 0]])
+    V = np.array([v.co[:] for v in pele.data.vertices]); zl = np.array([linha_boca(min(x, FRENTE_BOCA)) - FENDA_Z for x in V[:, 0]])
     piso = (V[:, 0] > 3.83) & (np.abs(V[:, 2] - (zl - 0.0045)) < 0.0012)
     P = V[piso][:, :2]; P = P[P[:, 1] >= 0]
     ang = np.arctan2(P[:, 1], P[:, 0] - 3.80); r = np.hypot(P[:, 0] - 3.80, P[:, 1])
@@ -247,10 +248,10 @@ def ponto_contorno(t, s_, dentro):
 print('CONTORNO da boca', len(CONT), 'pontos, comprimento', round(float(CONT_S[-1]), 3))
 
 # escultura da boca por dentro: a borda fica como crista (onde os dentes nascem), o meio afunda (assoalho e céu da boca), língua no fundo
-me = pele.data; V = np.array([v.co[:] for v in me.vertices]); zl = np.array([linha_boca(min(x, 4.33)) - FENDA_Z for x in V[:, 0]])
+me = pele.data; V = np.array([v.co[:] for v in me.vertices]); zl = np.array([linha_boca(min(x, FRENTE_BOCA)) - FENDA_Z for x in V[:, 0]])
 piso = (V[:, 0] > 3.83) & (np.abs(V[:, 2] - (zl - 0.0045)) < 0.0012); teto = (V[:, 0] > 3.83) & (np.abs(V[:, 2] - (zl + 0.0045)) < 0.0012)
 d = np.zeros(len(V)); sel = piso | teto; d[sel] = dist_contorno(V[sel][:, :2])
-fundo = suave(0.020, 0.075, d) * (0.65 + 0.35 * suave(4.26, 3.95, V[:, 0])) * suave(4.33, 4.24, V[:, 0])
+fundo = suave(0.020, 0.075, d) * (0.65 + 0.35 * suave(4.26, 3.95, V[:, 0])) * suave(FRENTE_BOCA, FRENTE_BOCA - 0.09, V[:, 0])
 lingua = 0.030 * np.exp(-((V[:, 0] - 3.98) / 0.09) ** 2 - (V[:, 1] / 0.10) ** 2)
 dz = np.where(piso, -0.070 * fundo + lingua * fundo, 0.0) + np.where(teto, 0.050 * fundo, 0.0)
 # lábios: a pele de fora, logo abaixo e logo acima da fenda, recolhe ~1,5 cm (a crista de gengiva com os dentes fica saliente sobre o lábio;
@@ -293,8 +294,8 @@ def material_pele():
     m = bpy.data.materials.new('pele_tubarao'); m.use_nodes = True; nt = m.node_tree; Nn = nt.nodes; L = nt.links; b = Nn['Principled BSDF']
     tc = Nn.new('ShaderNodeTexCoord'); at = Nn.new('ShaderNodeAttribute'); at.attribute_name = 'dorso'; ap = Nn.new('ShaderNodeAttribute'); ap.attribute_name = 'ponta'
     rampa = Nn.new('ShaderNodeValToRGB'); cr = rampa.color_ramp
-    cr.elements[0].position = 0.0; cr.elements[0].color = (0.78, 0.79, 0.77, 1); cr.elements[1].position = 1.0; cr.elements[1].color = (0.030, 0.038, 0.046, 1)
-    e = cr.elements.new(0.5); e.color = (0.16, 0.18, 0.20, 1)
+    cr.elements[0].position = 0.0; cr.elements[0].color = (0.78, 0.79, 0.77, 1); cr.elements[1].position = 1.0; cr.elements[1].color = (0.058, 0.060, 0.060, 1)
+    e = cr.elements.new(0.5); e.color = (0.16, 0.165, 0.165, 1)
     L.new(at.outputs['Fac'], rampa.inputs['Fac'])
     mancha = Nn.new('ShaderNodeTexNoise'); mancha.inputs['Scale'].default_value = 3.0; mancha.inputs['Detail'].default_value = 6.0; L.new(tc.outputs['Object'], mancha.inputs['Vector'])
     mR = Nn.new('ShaderNodeMapRange'); mR.inputs['From Min'].default_value = 0.35; mR.inputs['From Max'].default_value = 0.65; mR.inputs['To Min'].default_value = 0.82; mR.inputs['To Max'].default_value = 1.08
@@ -336,10 +337,10 @@ def material_pele():
     L.new(ris.outputs['Fac'], risR.inputs['Value']); L.new(ris.outputs['Fac'], risR2.inputs['Value'])
     risM = Nn.new('ShaderNodeMath'); risM.operation = 'MINIMUM'; L.new(risR.outputs[0], risM.inputs[0]); L.new(risR2.outputs[0], risM.inputs[1])
     risSel = Nn.new('ShaderNodeTexNoise'); risSel.inputs['Scale'].default_value = 2.2; L.new(tc.outputs['Object'], risSel.inputs['Vector'])
-    risSR = Nn.new('ShaderNodeMapRange'); risSR.inputs['From Min'].default_value = 0.56; risSR.inputs['From Max'].default_value = 0.64; L.new(risSel.outputs['Fac'], risSR.inputs['Value'])
+    risSR = Nn.new('ShaderNodeMapRange'); risSR.inputs['From Min'].default_value = 0.50; risSR.inputs['From Max'].default_value = 0.58; L.new(risSel.outputs['Fac'], risSR.inputs['Value'])
     risF = Nn.new('ShaderNodeMath'); risF.operation = 'MULTIPLY'; L.new(risM.outputs[0], risF.inputs[0]); L.new(risSR.outputs[0], risF.inputs[1])
-    risF2 = Nn.new('ShaderNodeMath'); risF2.operation = 'MULTIPLY'; L.new(risF.outputs[0], risF2.inputs[0]); L.new(at.outputs['Fac'], risF2.inputs[1])
-    c6 = Nn.new('ShaderNodeMix'); c6.data_type = 'RGBA'; L.new(risF2.outputs[0], c6.inputs[0]); L.new(c5.outputs[2], c6.inputs[6]); c6.inputs[7].default_value = (0.42, 0.44, 0.45, 1)
+    risF2 = Nn.new('ShaderNodeMath'); risF2.operation = 'MULTIPLY'; risF2.inputs[1].default_value = 0.85; L.new(risF.outputs[0], risF2.inputs[0])
+    c6 = Nn.new('ShaderNodeMix'); c6.data_type = 'RGBA'; L.new(risF2.outputs[0], c6.inputs[0]); L.new(c5.outputs[2], c6.inputs[6]); c6.inputs[7].default_value = (0.025, 0.026, 0.028, 1)
     L.new(c6.outputs[2], b.inputs['Base Color'])
     # dentículos dérmicos (lixa fina) + ondulações; pele molhada (verniz leve)
     den = Nn.new('ShaderNodeTexVoronoi'); den.inputs['Scale'].default_value = 900.0; L.new(tc.outputs['Object'], den.inputs['Vector'])
@@ -414,7 +415,7 @@ for s_ in (1, -1):
             t = (k + 0.5) / n_ * 0.97; (x, y), fora = ponto_contorno(t, s_, recua)
             tam = (1.0 - 0.55 * t ** 1.4) * (1.0, 0.82, 0.62)[fila]
             fora3 = Vector((fora[0], fora[1], 0)).normalized(); dentro = -fora3
-            z0 = linha_boca(min(x, 4.33)) - FENDA_Z
+            z0 = linha_boca(min(x, FRENTE_BOCA)) - FENDA_Z
             p, nrm = raio(pele, (x, y, z0), (0, 0, 1))                                    # crista de cima (raio de dentro da fenda)
             if p is not None:
                 cima_d = (Vector((0, 0, -1)) + dentro * inclina).normalized()
@@ -461,7 +462,7 @@ for v in pele.data.vertices:
         kp = float(suave(larg_x(c.x) - 0.02, larg_x(c.x) + 0.14, abs(c.y))) * float(suave(2.2, 2.45, c.x) * suave(3.7, 3.45, c.x) * suave(0.10, -0.05, c.z))
         if kp > 0: w = {k: x * (1 - kp) for k, x in w.items()}; w['peitoral_' + ('l' if c.y > 0 else 'r')] = kp
     if c.x > 3.62:                                                                        # boca: abaixo da fenda manda a mandíbula
-        zl = linha_boca(min(c.x, 4.33)) - FENDA_Z
+        zl = linha_boca(min(c.x, FRENTE_BOCA)) - FENDA_Z
         km = 0.0 if c.z > zl else float(suave(3.70, 3.90, c.x)) * (float(suave(zl + 0.002, zl - 0.03, c.z)) if c.x < 3.86 else 1.0)
         if km > 0: w = {k: x * (1 - km) for k, x in w.items()}; w['mandibula'] = km
     for k, x in w.items():
@@ -517,12 +518,12 @@ def mundo_agua():
     w = bpy.data.worlds.new('agua'); cena.world = w; w.use_nodes = True; nt = w.node_tree; Nn = nt.nodes; L = nt.links
     tc = Nn.new('ShaderNodeTexCoord'); sep = Nn.new('ShaderNodeSeparateXYZ'); L.new(tc.outputs['Generated'], sep.inputs['Vector'])
     rampa = Nn.new('ShaderNodeValToRGB'); cr = rampa.color_ramp
-    cr.elements[0].position = 0.35; cr.elements[0].color = (0.002, 0.012, 0.02, 1); cr.elements[1].position = 0.75; cr.elements[1].color = (0.06, 0.24, 0.34, 1)
-    L.new(sep.outputs['Z'], rampa.inputs['Fac']); L.new(rampa.outputs['Color'], Nn['Background'].inputs['Color']); Nn['Background'].inputs['Strength'].default_value = 1.2
-    sd = bpy.data.lights.new('sol', 'SUN'); sd.energy = 3.5; sd.color = (0.80, 0.95, 1.0); sd.angle = math.radians(6)
+    cr.elements[0].position = 0.30; cr.elements[0].color = (0.004, 0.030, 0.032, 1); cr.elements[1].position = 0.80; cr.elements[1].color = (0.10, 0.36, 0.34, 1)
+    L.new(sep.outputs['Z'], rampa.inputs['Fac']); L.new(rampa.outputs['Color'], Nn['Background'].inputs['Color']); Nn['Background'].inputs['Strength'].default_value = 0.95
+    sd = bpy.data.lights.new('sol', 'SUN'); sd.energy = 2.6; sd.color = (0.80, 0.95, 1.0); sd.angle = math.radians(6)
     so = bpy.data.objects.new('sol', sd); cena.collection.objects.link(so); so.rotation_euler = (math.radians(12), math.radians(-8), 0)
     # cáusticas: projetor de manchas de luz (padrão de ondas) vindo de cima
-    sp = bpy.data.lights.new('causticas', 'SPOT'); sp.energy = 9000; sp.spot_size = math.radians(70); sp.color = (0.75, 0.95, 1.0); sp.use_nodes = True
+    sp = bpy.data.lights.new('causticas', 'SPOT'); sp.energy = 11000; sp.spot_size = math.radians(55); sp.color = (0.80, 1.0, 0.95); sp.use_nodes = True
     # duas redes de células DISTORCIDAS por ruído (a superfície ondulando): linhas de luz finas e irregulares, não uma grade de hexágonos
     ln = sp.node_tree; nc = ln.nodes.new('ShaderNodeTexCoord')
     rd = ln.nodes.new('ShaderNodeTexNoise'); rd.inputs['Scale'].default_value = 2.5; rd.inputs['Detail'].default_value = 3.0; ln.links.new(nc.outputs['Normal'], rd.inputs['Vector'])
@@ -531,16 +532,16 @@ def mundo_agua():
     em = ln.nodes['Emission']; saidas = []
     for esc_, larg_ in ((9.0, 0.035), (17.0, 0.025)):
         v = ln.nodes.new('ShaderNodeTexVoronoi'); v.feature = 'DISTANCE_TO_EDGE'; v.inputs['Scale'].default_value = esc_; ln.links.new(desl.outputs[0], v.inputs['Vector'])
-        vr = ln.nodes.new('ShaderNodeMapRange'); vr.inputs['From Min'].default_value = 0.0; vr.inputs['From Max'].default_value = larg_; vr.inputs['To Min'].default_value = 1.3; vr.inputs['To Max'].default_value = 0.7
+        vr = ln.nodes.new('ShaderNodeMapRange'); vr.inputs['From Min'].default_value = 0.0; vr.inputs['From Max'].default_value = larg_; vr.inputs['To Min'].default_value = 1.18; vr.inputs['To Max'].default_value = 0.85
         ln.links.new(v.outputs['Distance'], vr.inputs['Value']); saidas.append(vr.outputs[0])
     mul = ln.nodes.new('ShaderNodeMath'); mul.operation = 'MULTIPLY'; ln.links.new(saidas[0], mul.inputs[0]); ln.links.new(saidas[1], mul.inputs[1])
     ln.links.new(mul.outputs[0], em.inputs['Strength'])
-    spo = bpy.data.objects.new('causticas', sp); cena.collection.objects.link(spo); spo.location = (2.6, 0.5, 7.0)
+    spo = bpy.data.objects.new('causticas', sp); cena.collection.objects.link(spo); spo.location = (1.6, 1.5, 7.0); spo.rotation_euler = (math.radians(-12), math.radians(-8), 0)   # raios descendo em diagonal
     # água: volume azulado leve (profundidade e perda de contraste com a distância)
     bpy.ops.mesh.primitive_cube_add(size=60, location=(2.5, 0, 0)); cubo = bpy.context.object; cubo.name = 'agua'
     mv = bpy.data.materials.new('agua'); mv.use_nodes = True; nt2 = mv.node_tree; nt2.nodes.remove(nt2.nodes['Principled BSDF'])
-    vol = nt2.nodes.new('ShaderNodeVolumePrincipled'); vol.inputs['Color'].default_value = (0.16, 0.44, 0.55, 1); vol.inputs['Density'].default_value = 0.022; vol.inputs['Anisotropy'].default_value = 0.6
-    vol.inputs['Absorption Color'].default_value = (0.55, 0.85, 0.92, 1)
+    vol = nt2.nodes.new('ShaderNodeVolumePrincipled'); vol.inputs['Color'].default_value = (0.24, 0.56, 0.50, 1); vol.inputs['Density'].default_value = 0.030; vol.inputs['Anisotropy'].default_value = 0.6
+    vol.inputs['Absorption Color'].default_value = (0.55, 0.88, 0.82, 1)
     nt2.links.new(vol.outputs['Volume'], nt2.nodes['Material Output'].inputs['Volume']); cubo.data.materials.append(mv)
     # partículas em suspensão (plâncton/sujeira) perto da câmera
     bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.004); grao = bpy.context.object; grao.name = 'grao'
@@ -558,6 +559,7 @@ def render(nome, cam_pos, alvo, lente=45, larg=LARG, alt=None, dof=None):
     cena.camera = co; r = cena.render; r.engine = 'CYCLES'; r.resolution_x, r.resolution_y = larg, alt
     cena.cycles.samples = AMOSTRAS; cena.cycles.use_denoising = True; cena.cycles.device = 'CPU'
     cena.cycles.volume_step_rate = 4.0; cena.cycles.volume_max_steps = 256
+    cena.view_settings.exposure = -0.35
     try: cena.view_settings.view_transform = 'AgX'; cena.view_settings.look = 'AgX - Medium High Contrast'
     except Exception: pass
     r.filepath = os.path.join(PREVIA, f'tubarao_{nome}.png'); bpy.ops.render.render(write_still=True); print('PREVIA', nome)
@@ -568,6 +570,8 @@ if PREVIA:
         posar(fase=0.8, amp=0.6, abre=0); render('lado', (2.4, -6.6, 0.25), (2.3, 0, 0.05), lente=35, dof=None)
     if 'ataque' in VISTAS:
         posar(fase=1.6, amp=0.8, abre=ABRE or 32, vira=0.6); render('ataque', (6.6, -1.9, -0.35), (3.6, 0.1, -0.05), lente=40, dof=4.0)
+    if 'foto' in VISTAS:
+        posar(fase=2.3, amp=0.55, abre=2.5, vira=-0.3); render('foto', (3.55, 4.15, -1.05), (2.30, 0.0, -0.05), lente=26, larg=LARG, alt=int(LARG * 0.75))
     if 'boca' in VISTAS:
         posar(fase=1.6, amp=0.4, abre=ABRE or 32, vira=0.2); render('boca', (5.35, -1.15, -0.32), (4.05, 0.0, -0.16), lente=42, dof=2.8)
     if 'baixo' in VISTAS:
