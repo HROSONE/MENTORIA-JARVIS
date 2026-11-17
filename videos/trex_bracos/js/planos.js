@@ -155,7 +155,7 @@ export async function construirTudo() {
     braco(M.REX, { ergue: -0.15 - 0.55 * recua, dobra: -0.2 - 0.9 * recua });
     const mao = W(M.REX, 'mao_l'); ilumina(mao);
     const fecha = u > TB + 0.8 ? Math.exp(-(u - (TB + 0.8)) * 9) : 0;
-    const pos = L(4.3, 1.05, -2.5), d = camEm(pos, mao.clone().add(V(0.35, 0.15, -0.6)), 50, { tremor: 2.2 * fecha, t: t0 + u });
+    const pos = L(4.6, 0.95, -1.9), d = camEm(pos, mao.clone().add(V(0.35, 0.15, -0.6)), 54, { tremor: 2.2 * fecha, t: t0 + u });   // (perto do braço: a cabeça de B não passa na frente da lente na volta do bote)
     lente({ foco: d, abertura: 0.010, desfoque: 0.012, brilho: 0.12, limiar: 0.95, ao: 0.8 });
   }
   plano('P1 mordida', 2.4, (u, t) => closeMordida(u, t), { precisa: () => [W(M.REX, 'mao_l'), M.B.boca()] });
