@@ -200,7 +200,7 @@ def detalhes_cabeca(V, N):
     # textura grossa da pele (ondulações musculares leves) e "poros" de Lorenzini no focinho
     d += 0.0016 * fbm3(V, 6.0, 3, sem=4)
     focinho = suave(4.05, 4.25, V[:, 0])
-    d += -0.0016 * focinho * (ruido3(V, 90.0, sem=9) > 0.55)
+    d += -0.0007 * focinho * (ruido3(V, 90.0, sem=9) > 0.55)
     return d
 esculpir(pele, detalhes_cabeca)
 
@@ -360,6 +360,7 @@ def material_pele():
     r2 = riscos((10.0, 10.0, 1.6), (0.9, 0.2, 0.4), 0.012, 3.0, 0.57, 0.63, dist=0.7)         # curtos e tortos (cabeça)
     r3 = riscos((1.8, 13.0, 13.0), (0.0, 0.7, 1.2), 0.010, 2.4, 0.56, 0.62)                  # diagonais
     escuras = conta('MAXIMUM', conta('MULTIPLY', r1, 0.80), conta('MAXIMUM', conta('MULTIPLY', r2, am.outputs['Fac']), conta('MULTIPLY', r3, 0.70)))
+    escuras = conta('MULTIPLY', escuras, conta('ADD', conta('MULTIPLY', dorso, 0.80), 0.20))                # no branco só 20% das marcas
     cor = mistura(escuras, cor, (0.018, 0.017, 0.017, 1.0))
     p1 = riscos((3.5, 20.0, 20.0), (0.5, 0.3, 0.2), 0.004, 1.8, 0.58, 0.66)                  # cicatrizes claras, só no dorso
     cor = mistura(conta('MULTIPLY', conta('MULTIPLY', p1, dorso), 0.5), cor, (0.46, 0.47, 0.47, 1.0))
