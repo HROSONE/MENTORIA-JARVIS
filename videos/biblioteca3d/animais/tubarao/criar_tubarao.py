@@ -2,8 +2,11 @@
 # Adulto de 4,5 m (maturidade ~4,5-5 m; máximo registrado ~6,4 m, discutido: FishBase sp. 751). Forma clássica: focinho cônico, corpo
 # fusiforme robusto (altura máxima ~21% do comprimento), 1ª dorsal triangular, peitorais longas e falcadas, cauda em meia-lua quase
 # simétrica com quilha lateral no pedúnculo, 5 fendas branquiais longas, olho preto, dorso cinza e ventre branco com divisa irregular,
-# ponta preta embaixo das peitorais (Florida Museum, "White shark"). Proporções das nadadeiras aproximadas de ilustrações científicas
-# da espécie (não há tabela única publicada); a caudal cresce menos que o corpo nos adultos (Lingham-Soliar 2005).
+# ponta preta embaixo das peitorais (Florida Museum, "White shark"). Proporções pela tabela do canal, em % do
+# comprimento total (CT = 4,5 m, do focinho à ponta do lobo de cima da cauda): olho 6,25%, boca de 7% a 13,5%, guelras de 18% a 23,5% (a 1ª
+# a mais longa, 7,5%), peitorais com inserção em 24%, 19,5% de borda de ataque, 40° para trás e diedro de -12°, 1ª dorsal de 31,5% a 42,5%
+# com 12% de altura, pélvicas em 52%, 2ª dorsal em 63,5%, anal em 65,5%, fosseta pré-caudal em 79%, lobo de cima até 100% a 39° e o de baixo
+# até 93,5% a 37°; altura máxima 21%, largura máxima 17,5% em ~33%, pedúnculo com 3,8% de altura. Conferir: blender -b --python medir_tubarao.py -- tubarao.glb
 #
 # Corpo por seções (loft) ao longo de X; nadadeiras com perfil de asa (NACA 00xx) e mandíbula unidas ao corpo por remesh de voxel; a fenda
 # da boca é cortada na pele (os cantos ficam ligados) e o osso da mandíbula abre esticando a pele, como num rig de cinema; dentes triangulares em fileiras; guelras e sulcos esculpidos na malha; cor por atributo (contra-sombreamento) + shader de pele.
@@ -110,28 +113,33 @@ def suave(a, b, x): x = np.clip((x - a) / (b - a), 0, 1); return x * x * (3 - 2 
 
 # ------------------------------------------------------------------------------------------------ corpo
 # boca: a cabeça termina embaixo na linha da boca (x >= 3,86) e a mandíbula (separada) completa o queixo
-X_COM = 3.98                                                                     # canto da boca (a foto: fica por volta da metade da cabeça, bem antes das guelras)
-FRENTE_BOCA = 4.27                                                               # a boca termina bem atrás da ponta do focinho (4,50)
-def linha_boca(x): return -0.215 + 0.36 * max(0.0, x - 3.88) ** 1.25            # da comissura (x 3,88) sobe até a frente da boca
-CORPO = [   # x, zc, meia-largura, alto, baixo, afina em cima, afina embaixo
+DB = -0.086                                                                      # boca deslocada para trás: frente em 7% do CT (x 4,185), cantos em 13,5% (x 3,894)
+X_COM = 3.98 + DB                                                                     # canto da boca (a foto: fica por volta da metade da cabeça, bem antes das guelras)
+FRENTE_BOCA = 4.27 + DB                                                               # a boca termina bem atrás da ponta do focinho (4,50)
+def linha_boca(x): return -0.215 + 0.36 * max(0.0, x - (3.88 + DB)) ** 1.25            # da comissura (x 3,88) sobe até a frente da boca
+CORPO = [   # x, zc, meia-largura, alto, baixo, afina em cima, afina embaixo. Proporções em % do comprimento total (CT = 4,5 m, do focinho
+            # à ponta do lobo de cima da cauda), pela tabela do canal: altura máx. 21% (0,945 m) na 1ª dorsal, largura máx. 17,5% (0,79 m) em 34%,
+            # pedúnculo 3,8% de altura e ~5,5% de largura com as quilhas; cabeça mais larga que alta no focinho; atrás de 55% mais alta que larga
     (0.74, 0.02, 0.050, 0.120, 0.110, 0.2, 0.2),
-    (0.86, 0.01, 0.105, 0.085, 0.085, 0.0, 0.0),     # pedúnculo achatado (quilha lateral)
-    (1.00, 0.00, 0.125, 0.105, 0.100, 0.1, 0.0),
-    (1.20, 0.00, 0.175, 0.185, 0.155, 0.2, 0.0),
-    (1.55, 0.00, 0.270, 0.300, 0.240, 0.25, 0.05),
-    (1.95, 0.00, 0.380, 0.420, 0.380, 0.25, 0.05),   # robusto como o animal real: a barriga desce e o dorso sobe na 1ª dorsal
-    (2.35, 0.00, 0.460, 0.500, 0.470, 0.22, 0.04),
-    (2.75, 0.00, 0.495, 0.530, 0.515, 0.2, 0.04),
-    (3.15, 0.00, 0.485, 0.505, 0.490, 0.15, 0.04),
-    (3.50, 0.00, 0.450, 0.450, 0.420, 0.12, 0.05),
-    (3.80, 0.00, 0.400, 0.405, 0.300, 0.10, 0.05),   # cabeça mais alta (no animal real a cabeça é grande)
-    (3.95, 0.01, 0.335, 0.350, 0.290, 0.08, 0.10),   # cabeça funda: a mandíbula faz o fundo e o lábio de cima desce pela lateral até a linha da boca
-    (4.10, 0.02, 0.265, 0.272, 0.250, 0.06, 0.12),
-    (4.25, 0.03, 0.175, 0.185, 0.180, 0.05, 0.12),
-    (4.38, 0.015, 0.094, 0.100, 0.095, 0.0, 0.05),   # focinho cônico cheio por baixo também (não "bico de pato")
-    (4.46, 0.010, 0.058, 0.060, 0.058, 0.0, 0.0),    # ponta arredondada
-    (4.50, 0.008, 0.020, 0.022, 0.020, 0.0, 0.0),
+    (0.86, 0.01, 0.122, 0.085, 0.085, 0.0, 0.0),     # pedúnculo achatado (quilha lateral)
+    (1.00, 0.00, 0.125, 0.100, 0.095, 0.1, 0.0),
+    (1.20, 0.00, 0.138, 0.165, 0.145, 0.2, 0.0),
+    (1.55, 0.00, 0.205, 0.265, 0.235, 0.25, 0.05),
+    (1.95, 0.00, 0.290, 0.380, 0.350, 0.25, 0.05),
+    (2.35, 0.00, 0.350, 0.455, 0.430, 0.22, 0.04),
+    (2.75, 0.00, 0.392, 0.490, 0.455, 0.2, 0.04),
+    (3.05, 0.00, 0.395, 0.490, 0.455, 0.17, 0.04),   # largura máxima (34% do CT), logo atrás da 5ª guelra
+    (3.35, 0.00, 0.382, 0.465, 0.430, 0.13, 0.05),
+    (3.60, 0.00, 0.375, 0.430, 0.380, 0.11, 0.05),
+    (3.80, 0.00, 0.355, 0.395, 0.296, 0.10, 0.05),
+    (3.95, 0.01, 0.325, 0.345, 0.261, 0.08, 0.10),   # cabeça funda: a mandíbula faz o fundo e o lábio de cima desce pela lateral até a linha da boca
+    (4.10, 0.02, 0.285, 0.265, 0.204, 0.06, 0.12),   # o fundo da cabeça recua junto com a boca: focinho mais longo à frente dela
+    (4.25, 0.03, 0.205, 0.175, 0.134, 0.05, 0.12),
+    (4.38, 0.015, 0.118, 0.092, 0.078, 0.0, 0.05),   # focinho cônico, mais largo que alto (arco parabólico visto de cima)
+    (4.46, 0.010, 0.076, 0.055, 0.050, 0.0, 0.0),    # ponta arredondada
+    (4.50, 0.008, 0.030, 0.020, 0.018, 0.0, 0.0),
 ]
+
 MAND = [    # mandíbula (x, zc, meia-largura, alto, baixo): o topo encosta na linha da boca, o queixo arredondado embaixo
     (3.84, -0.235, 0.290, 0.060, 0.065),             # o fundo atrás coincide com a garganta (sem "queixo duplo"); espessa o bastante
     (3.95, -0.228, 0.272, 0.058, 0.062),             # para não parecer um aro quando abre
@@ -140,27 +148,41 @@ MAND = [    # mandíbula (x, zc, meia-largura, alto, baixo): o topo encosta na l
     (4.24, -0.128, 0.068, 0.026, 0.030),
     (4.275, -0.115, 0.020, 0.016, 0.018),
 ]
+MAND = [(x + DB, zc, w, hT, hB) for x, zc, w, hT, hB in MAND]
 corpo = loft('corpo', CORPO, N=64)
 mand = loft('mandibula', [(x, zc, w, hT, hB, 0, 0) for x, zc, w, hT, hB in MAND], N=48, expo=2.4)
 
 # nadadeiras
 nad = []
-nad.append(nadadeira('dorsal1', (2.94, 0, 0.36), (2.26, 0, 0.36), (-0.16, 0, 1), 0.68, ponta=0.10, enflech=0.30, falc=0.30, esp=0.10))     # alta e em pé
+import math as _m
+def direcao(atras, abaixo=0.0, lado=0):
+    """direção da borda de ataque: 'atras' graus a partir do eixo de lado (0 = para fora, 90 = para trás), 'abaixo' graus abaixo do horizontal"""
+    a, b = _m.radians(atras), _m.radians(abaixo); return (-_m.sin(a) * _m.cos(b), lado * _m.cos(a) * _m.cos(b), -_m.sin(b))
+# 1ª dorsal: base de 31,5% a 42,5% do CT (x 3,08 a 2,59), altura 12% (0,54 m) acima do dorso, borda de ataque a 50° do eixo
+nad.append(nadadeira('dorsal1', (3.083, 0, 0.36), (2.588, 0, 0.36), (-0.16, 0, 1), 0.752, ponta=0.10, enflech=0.538, falc=0.32, esp=0.10))
+PEIT = {}
 for s_, l in ((1, 'l'), (-1, 'r')):
-    nad.append(nadadeira('peitoral_' + l, (3.36, 0.27 * s_, -0.22), (2.80, 0.25 * s_, -0.26), (-0.40, 0.62 * s_, -0.68), 1.08, ponta=0.10, enflech=0.28, falc=0.28, esp=0.12))   # grandes, caídas para baixo e para trás
-    nad.append(nadadeira('pelvica_' + l, (1.86, 0.10 * s_, -0.22), (1.60, 0.08 * s_, -0.22), (-0.45, 0.55 * s_, -0.70), 0.32, ponta=0.18, enflech=0.35, falc=0.20, esp=0.10))
-    nad.append(nadadeira('quilha_' + l, (1.10, 0.08 * s_, 0.0), (0.78, 0.07 * s_, 0.0), (-0.05, 1.0 * s_, 0.0), 0.05, ponta=0.6, enflech=0.0, falc=0.0, esp=0.18, arredonda=0.6))
-nad.append(nadadeira('dorsal2', (1.13, 0, 0.08), (0.99, 0, 0.08), (-0.30, 0, 1), 0.12, ponta=0.25, enflech=0.4, falc=0.25))
-nad.append(nadadeira('anal', (1.09, 0, -0.07), (0.97, 0, -0.07), (-0.30, 0, -1), 0.11, ponta=0.25, enflech=0.4, falc=0.25))
-nad.append(nadadeira('caudal_sup', (0.95, 0, 0.03), (0.58, 0, 0.03), (-0.58, 0, 0.81), 1.00, ponta=0.12, enflech=0.22, falc=0.30, esp=0.10))      # lóbulos largos
-nad.append(nadadeira('caudal_inf', (0.93, 0, -0.02), (0.60, 0, 0.0), (-0.52, 0, -0.85), 0.90, ponta=0.12, enflech=0.22, falc=0.30, esp=0.10))
+    # peitorais: inserção em 24% (x 3,42), borda de ataque de 19,5% do CT (0,88 m), 40° para trás e diedro de -12° (para baixo)
+    d_p = direcao(40, 12, s_); PEIT[s_] = (np.array((3.42, 0.27 * s_, -0.22)) + 0.88 * np.array(d_p))
+    nad.append(nadadeira('peitoral_' + l, (3.42, 0.27 * s_, -0.22), (2.82, 0.25 * s_, -0.26), d_p, 0.88, ponta=0.12, enflech=0.0, falc=0.18, esp=0.12))
+    # pélvicas: inserção em 52% (x 2,16), borda de ataque de ~6,8% do CT
+    nad.append(nadadeira('pelvica_' + l, (2.16, 0.12 * s_, -0.30), (1.92, 0.10 * s_, -0.30), (-0.45, 0.55 * s_, -0.70), 0.29, ponta=0.18, enflech=0.35, falc=0.20, esp=0.10))
+    nad.append(nadadeira('quilha_' + l, (1.10, 0.08 * s_, 0.0), (0.78, 0.07 * s_, 0.0), (-0.05, 1.0 * s_, 0.0), 0.06, ponta=0.6, enflech=0.0, falc=0.0, esp=0.18, arredonda=0.6))
+# 2ª dorsal em 63,5% (x 1,64), altura 2,75%; anal em 65,5% (x 1,55), altura 2,5%: pequenas, a anal um pouco atrás da 2ª dorsal
+nad.append(nadadeira('dorsal2', (1.643, 0, 0.22), (1.50, 0, 0.22), (-0.30, 0, 1), 0.232, ponta=0.25, enflech=0.4, falc=0.25))
+nad.append(nadadeira('anal', (1.553, 0, -0.15), (1.42, 0, -0.15), (-0.30, 0, -1), 0.233, ponta=0.25, enflech=0.4, falc=0.25))
+# cauda em meia-lua quase simétrica: fosseta pré-caudal em 79% (x 0,945); lobo de cima até 100% do CT (x 0) a 39° do eixo, o de baixo até
+# 93,5% (x 0,29) a 37° (a varredura 'enflech' de 0,22 rad gira a borda de ataque 12,6° em direção ao eixo)
+nad.append(nadadeira('caudal_sup', (0.945, 0, 0.03), (0.58, 0, 0.03), (-0.621, 0, 0.784), 1.188, ponta=0.10, enflech=0.22, falc=0.30, esp=0.10))
+nad.append(nadadeira('caudal_inf', (0.93, 0, -0.02), (0.60, 0, 0.0), (-0.648, 0, -0.762), 0.779, ponta=0.12, enflech=0.22, falc=0.30, esp=0.10))
 pele = unir([corpo, mand] + nad, 'tubarao', voxel=0.0070)
 print('CORPO faces', len(pele.data.polygons))
 
 def raio(o, origem, direcao):
     inv = o.matrix_world.inverted(); ok, loc, nrm, _ = o.ray_cast(inv @ Vector(origem), (inv.to_3x3() @ Vector(direcao)).normalized())
     return (o.matrix_world @ loc, (o.matrix_world.to_3x3() @ nrm).normalized()) if ok else (None, None)
-OLHOS = {s_: raio(pele, (4.20, 0.6 * s_, 0.05), (0, -s_, 0)) for s_ in (1, -1)}          # onde fica cada olho (medido antes de esculpir a órbita)
+NARINAS = {s_: tuple(raio(pele, (4.34, 0.095 * s_, -0.6), (0, 0, 1))[0]) for s_ in (1, -1)}   # na pele de baixo do focinho
+OLHOS = {s_: raio(pele, (4.215, 0.6 * s_, 0.05), (0, -s_, 0)) for s_ in (1, -1)}          # onde fica cada olho (medido antes de esculpir a órbita)
 
 # ------------------------------------------------------------------------------------------------ escultura: fendas branquiais, sulco da boca, narinas, quilha
 def esculpir(o, fn):
@@ -168,7 +190,7 @@ def esculpir(o, fn):
     d = fn(V, N); V2 = V + N * d[:, None]
     for i, v in enumerate(me.vertices): v.co = V2[i]
     me.update()
-FENDAS = [(3.66, 0.37, 0.17), (3.60, 0.39, 0.18), (3.54, 0.40, 0.18), (3.48, 0.38, 0.17), (3.42, 0.30, 0.12)]   # (x no meio, altura, topo z)
+FENDAS = [(3.69, 0.34, 0.17), (3.627, 0.325, 0.165), (3.565, 0.31, 0.16), (3.503, 0.29, 0.15), (3.445, 0.255, 0.12)]   # (x no meio, altura, topo z)
 def fendas(V, N):
     d = np.zeros(len(V)); lado = np.abs(V[:, 1]) > 0.18
     for xm, alt, topo in FENDAS:
@@ -184,7 +206,7 @@ def detalhes_cabeca(V, N):
     d = np.zeros(len(V))
     # narinas: duas fendas oblíquas embaixo do focinho
     for s_ in (1, -1):
-        p = np.array([4.33, 0.085 * s_, -0.070]); q = V - p; u = q[:, 0] * 0.85 + q[:, 2] * 0.53; w_ = -q[:, 0] * 0.53 + q[:, 2] * 0.85
+        p = np.array(NARINAS[s_]); q = V - p; u = q[:, 0] * 0.85 + q[:, 2] * 0.53; w_ = -q[:, 0] * 0.53 + q[:, 2] * 0.85
         d += -0.012 * np.exp(-(u / 0.022) ** 2 - (w_ / 0.006) ** 2 - (q[:, 1] / 0.04) ** 2)
     # sulco labial: dobra na comissura da boca
     for s_ in (1, -1):
@@ -195,8 +217,8 @@ def detalhes_cabeca(V, N):
         p = OLHOS[s_][0]
         if p is None: continue
         q = V - np.array(p[:]); r = np.linalg.norm(q, axis=1); lado_ = (np.sign(V[:, 1]) == s_)
-        d += lado_ * (-0.008 * np.exp(-(r / 0.038) ** 2) + 0.0028 * np.exp(-((r - 0.056) / 0.014) ** 2))
-        d += lado_ * 0.0040 * np.exp(-((q[:, 2] - 0.045) / 0.017) ** 2 - (q[:, 0] / 0.055) ** 2)
+        d += lado_ * (-0.007 * np.exp(-(r / 0.027) ** 2) + 0.0026 * np.exp(-((r - 0.039) / 0.010) ** 2))
+        d += lado_ * 0.0036 * np.exp(-((q[:, 2] - 0.034) / 0.013) ** 2 - (q[:, 0] / 0.045) ** 2)
     # textura grossa da pele (ondulações musculares leves) e "poros" de Lorenzini no focinho
     d += 0.0016 * fbm3(V, 6.0, 3, sem=4)
     focinho = suave(4.05, 4.25, V[:, 0])
@@ -237,7 +259,7 @@ def medir_contorno():
     V = np.array([v.co[:] for v in pele.data.vertices]); zl = np.array([linha_boca(min(x, FRENTE_BOCA)) - FENDA_Z for x in V[:, 0]])
     piso = (V[:, 0] > X_COM - 0.01) & (np.abs(V[:, 2] - (zl - 0.0045)) < 0.0012)
     P = V[piso][:, :2]; P = P[P[:, 1] >= 0]
-    ang = np.arctan2(P[:, 1], P[:, 0] - 3.80); r = np.hypot(P[:, 0] - 3.80, P[:, 1])
+    ang = np.arctan2(P[:, 1], P[:, 0] - (3.80 + DB)); r = np.hypot(P[:, 0] - (3.80 + DB), P[:, 1])
     bins = np.linspace(0, ang.max(), 70); pts = []
     for a0, a1 in zip(bins, bins[1:]):
         m_ = (ang >= a0) & (ang < a1)
@@ -264,7 +286,7 @@ print('CONTORNO da boca', len(CONT), 'pontos, comprimento', round(float(CONT_S[-
 me = pele.data; V = np.array([v.co[:] for v in me.vertices]); zl = np.array([linha_boca(min(x, FRENTE_BOCA)) - FENDA_Z for x in V[:, 0]])
 piso = (V[:, 0] > X_COM - 0.01) & (np.abs(V[:, 2] - (zl - 0.0045)) < 0.0012); teto = (V[:, 0] > X_COM - 0.01) & (np.abs(V[:, 2] - (zl + 0.0045)) < 0.0012)
 d = np.zeros(len(V)); sel = piso | teto; d[sel] = dist_contorno(V[sel][:, :2])
-fundo = suave(0.020, 0.075, d) * (0.65 + 0.35 * suave(4.26, X_COM + 0.07, V[:, 0])) * suave(FRENTE_BOCA, FRENTE_BOCA - 0.09, V[:, 0])
+fundo = suave(0.020, 0.075, d) * (0.65 + 0.35 * suave(4.26 + DB, X_COM + 0.07, V[:, 0])) * suave(FRENTE_BOCA, FRENTE_BOCA - 0.09, V[:, 0])
 lingua = 0.030 * np.exp(-((V[:, 0] - (X_COM + 0.10)) / 0.07) ** 2 - (V[:, 1] / 0.10) ** 2)
 dz = np.where(piso, -0.070 * fundo + lingua * fundo, 0.0) + np.where(teto, 0.050 * fundo, 0.0)
 # lábios: a pele de fora, logo abaixo e logo acima da fenda, recolhe ~1,5 cm (a crista de gengiva com os dentes fica saliente sobre o lábio;
@@ -293,16 +315,21 @@ def colorir(o):
     parche = suave(0.20, 0.40, fbm3(V * np.array([1.0, 1.0, 1.4]), 4.0, 3, sem=21)); lingua = suave(0.20, 0.40, fbm3(V * np.array([1.0, 1.0, 1.4]), 4.0, 3, sem=22))
     dorso = np.where(V[:, 2] > divisa, dorso * (1 - 0.7 * parche * perto), 1 - (1 - dorso) * (1 - 0.6 * lingua * perto))   # manchas brancas sobem, línguas cinza descem
     larg = np.interp(V[:, 0], [c[0] for c in CORPO], [c[2] for c in CORPO]); alto_x = np.interp(V[:, 0], [c[0] for c in CORPO], [c[1] + c[3] for c in CORPO])
-    wpe = suave(larg, larg + 0.06, np.abs(V[:, 1])) * suave(0.05, -0.05, V[:, 2]) * suave(2.2, 2.5, V[:, 0]) * suave(3.7, 3.45, V[:, 0])    # peitorais (peso suave, sem corte serrilhado)
+    # largura do corpo na altura de cada vértice (mesma superelipse do loft): o que sai dela é nadadeira
+    cx = [c[0] for c in CORPO]; ip = lambda k: np.interp(V[:, 0], cx, [c[k] for c in CORPO])
+    zc_, hT_, hB_, aT_, aB_ = ip(1), ip(3), ip(4), ip(5), ip(6); cima_ = V[:, 2] > zc_
+    sn = np.clip(np.abs(V[:, 2] - zc_) / np.where(cima_, hT_, hB_), 0, 1) ** (2.25 / 2); cs = np.sqrt(np.clip(1 - sn * sn, 0, 1))
+    y_corpo = larg * cs ** (2 / 2.25) * (1 - np.where(cima_, aT_, aB_) * sn)
+    wpe = suave(y_corpo + 0.004, y_corpo + 0.04, np.abs(V[:, 1])) * suave(0.05, -0.05, V[:, 2]) * suave(2.2, 2.5, V[:, 0]) * suave(3.7, 3.45, V[:, 0])    # peitorais (peso suave, sem corte serrilhado)
     dorso = dorso * (1 - wpe) + wpe * suave(-0.25, 0.25, N[:, 2])                                              # em cima cinza, embaixo branco
     dorso = np.where((V[:, 2] > alto_x + 0.025) & (np.abs(V[:, 1]) < 0.12), 1.0, dorso)                          # dorsais: cinza escuro
     dorso = np.where((V[:, 0] < 0.98) & ((np.abs(V[:, 2]) > 0.13) | (V[:, 0] < 0.78)), np.maximum(dorso, 0.93), dorso)   # cauda escura
     ponta = np.zeros(len(V))
     for s_ in (1, -1):                                                                                          # ponta preta embaixo da peitoral
-        q = V - np.array([2.62, 0.27 * s_ + 0.84 * s_ * 0.95, -0.20 - 0.40 * 0.95]); ponta = np.maximum(ponta, suave(0.32, 0.12, np.linalg.norm(q, axis=1)) * (N[:, 2] < 0.2))
+        q = V - PEIT[s_]; ponta = np.maximum(ponta, suave(0.28, 0.10, np.linalg.norm(q, axis=1)) * (N[:, 2] < 0.2))
     ponta = np.maximum(ponta, suave(0.75, 0.68, V[:, 0]) * 0.55)                                                # bordo da cauda mais escuro
     for s_ in (1, -1):                                                                                          # mancha preta na axila
-        q = V - np.array([2.98, 0.34 * s_, -0.30]); ponta = np.maximum(ponta, suave(0.10, 0.04, np.linalg.norm(q, axis=1)) * (N[:, 2] < 0.3))
+        q = V - np.array([2.86, 0.26 * s_, -0.30]); ponta = np.maximum(ponta, suave(0.06, 0.025, np.linalg.norm(q, axis=1)) * (N[:, 2] < -0.1))   # mancha preta na axila, escondida embaixo da peitoral
     marcas = 0.30 + 0.70 * suave(2.6, 4.2, V[:, 0])                                                             # cicatrizes: mais na cabeça
     um = np.ones(len(V))
     for nome, arr in (('dorso', dorso), ('ponta', ponta), ('perto', perto), ('marcas', marcas)):
@@ -411,8 +438,8 @@ pintar_boca(pele, True); pintar_boca(pele, False)
 m_olho = material_simples('olho', (0.004, 0.004, 0.005), rug=0.02, coat=1.0)
 olhos = []
 for s_, l in ((1, 'l'), (-1, 'r')):
-    p, n = raio(pele, (4.20, 0.6 * s_, 0.05), (0, -s_, 0))
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.0245, location=p - n * 0.012); o = bpy.context.object; o.name = 'olho_' + l
+    p, n = raio(pele, (4.215, 0.6 * s_, 0.05), (0, -s_, 0))
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.0240, location=p - n * 0.012); o = bpy.context.object; o.name = 'olho_' + l
     o.scale = (1.0, 0.8, 1.0); o.data.materials.append(m_olho); bpy.ops.object.shade_smooth(); olhos.append(o)
 
 m_dente = material_simples('dente', (0.86, 0.83, 0.74), rug=0.22, coat=0.3, sss=0.1)
@@ -465,14 +492,14 @@ def osso(nome, a, b, pai=None, liga=True):
     if pai: e.parent = ad.edit_bones[pai]; e.use_connect = liga and (Vector(a) - ad.edit_bones[pai].tail).length < 1e-4
     return e
 osso('raiz', (3.0, 0, 0), (3.0, 0, 0.3))
-COLUNA = [3.60, 3.05, 2.55, 2.05, 1.60, 1.20, 0.92, 0.62, 0.20]
+COLUNA = [3.60, 3.05, 2.55, 2.05, 1.60, 1.20, 0.92, 0.55, 0.05]
 osso('cabeca', (3.60, 0, 0.02), (4.45, 0, 0.04), 'raiz', False)
 prev = 'raiz'
 for i in range(len(COLUNA) - 1):
     nome = f'coluna{i + 1}'; osso(nome, (COLUNA[i], 0, 0.0), (COLUNA[i + 1], 0, 0.0), prev, i > 0); prev = nome
-osso('mandibula', (3.86, 0, -0.22), (4.30, 0, -0.15), 'cabeca', False)
+osso('mandibula', (3.86 + DB, 0, -0.22), (4.30 + DB, 0, -0.15), 'cabeca', False)
 for s_, l in ((1, 'l'), (-1, 'r')):
-    osso('peitoral_' + l, (3.05, 0.30 * s_, -0.22), (2.75, 1.10 * s_, -0.62), 'coluna1', False)
+    osso('peitoral_' + l, (3.25, 0.30 * s_, -0.22), tuple(np.array((3.25, 0.30 * s_, -0.22)) + 0.75 * np.array(direcao(40, 12, s_))), 'coluna1', False)
 bpy.ops.object.mode_set(mode='OBJECT')
 for o in bpy.context.view_layer.objects: o.select_set(False)
 pele.select_set(True); arm.select_set(True); bpy.context.view_layer.objects.active = arm; bpy.ops.object.parent_set(type='ARMATURE_NAME')
@@ -508,7 +535,7 @@ for d_ in dentes_sup + olhos: prender(d_, 'cabeca')
 m_garg = material_simples('garganta', (0.035, 0.006, 0.008), rug=0.5, coat=0.2, sss=0.1)
 def boca_interna():
     bm = bmesh.new(); cima, baixo = [], []
-    xs = np.linspace(X_COM + 0.02, 4.24, 9); mx, mw = [m[0] for m in MAND], [m[2] for m in MAND]
+    xs = np.linspace(X_COM + 0.02, 4.24 + DB, 9); mx, mw = [m[0] for m in MAND], [m[2] for m in MAND]
     topo_mand = lambda x: float(np.interp(x, mx, [m[1] + m[3] for m in MAND]))
     for x in xs:
         w = float(np.interp(x, mx, mw))
@@ -577,10 +604,10 @@ if GLB:
     V0 = np.array([v.co[:] for v in baixa.data.vertices]); x0, y0, z0 = V0[:, 0], V0[:, 1], V0[:, 2]; prot = np.zeros(len(V0))
     for xm, alt_, topo_ in FENDAS:
         prot = np.maximum(prot, suave(xm - 0.08, xm - 0.04, x0) * suave(xm + 0.10, xm + 0.06, x0) * suave(topo_ - alt_ - 0.05, topo_ - alt_, z0) * suave(topo_ + 0.05, topo_, z0) * suave(0.12, 0.18, np.abs(y0)))
-    zl_ = -0.215 + 0.36 * np.maximum(0.0, np.minimum(x0, FRENTE_BOCA) - 3.88) ** 1.25                          # linha da boca em cada vértice
-    prot = np.maximum(prot, suave(3.70, 3.85, x0) * suave(zl_ + 0.10, zl_ + 0.05, z0) * suave(zl_ - 0.25, zl_ - 0.15, z0))
+    zl_ = -0.215 + 0.36 * np.maximum(0.0, np.minimum(x0, FRENTE_BOCA) - (3.88 + DB)) ** 1.25                          # linha da boca em cada vértice
+    prot = np.maximum(prot, suave(3.70 + DB, 3.85 + DB, x0) * suave(zl_ + 0.10, zl_ + 0.05, z0) * suave(zl_ - 0.25, zl_ - 0.15, z0))
     for s_ in (1, -1):
-        for c_, r_ in (((OLHOS[s_][0][:] if OLHOS[s_][0] is not None else (9, 9, 9)), 0.12), ((4.33, 0.085 * s_, -0.070), 0.09)):
+        for c_, r_ in (((OLHOS[s_][0][:] if OLHOS[s_][0] is not None else (9, 9, 9)), 0.12), (NARINAS[s_], 0.09)):
             prot = np.maximum(prot, suave(r_, r_ * 0.6, np.linalg.norm(V0 - np.array(c_), axis=1)))
     vg_ = baixa.vertex_groups.new(name='suave')
     for i_, w_ in enumerate(1.0 - prot): vg_.add([i_], float(w_), 'REPLACE')
@@ -714,7 +741,7 @@ def render(nome, cam_pos, alvo, lente=45, larg=LARG, alt=None, dof=None, fill=No
 if PREVIA:
     os.makedirs(PREVIA, exist_ok=True); mundo_agua()
     if 'lado' in VISTAS:
-        posar(fase=0.8, amp=0.6, abre=0); render('lado', (2.4, -6.6, 0.25), (2.3, 0, 0.05), lente=35, dof=None)
+        posar(fase=0.8, amp=0.6, abre=6); render('lado', (2.4, -6.6, 0.25), (2.3, 0, 0.05), lente=35, dof=None)
     if 'ataque' in VISTAS:
         posar(fase=1.6, amp=0.8, abre=ABRE or 32, vira=0.6); render('ataque', (6.6, -1.9, -0.35), (3.6, 0.1, -0.05), lente=40, dof=4.0)
     if 'foto' in VISTAS:

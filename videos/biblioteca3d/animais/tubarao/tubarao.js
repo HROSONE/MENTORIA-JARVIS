@@ -4,8 +4,8 @@
 //   const T = await criarTubarao(); cena.add(T.grupo); T.posar({ fase, amp, abre, vira })
 // posar é função só dos parâmetros (a mesma chamada dá sempre a mesma pose; renderiza em qualquer ordem). É a mesma regra do posar() do Blender:
 //   fase  fase do nado em radianos (a onda do corpo anda para a cauda: nado tunniforme, a frente quase parada)   amp  1 = nado normal, 0 = reto
-//   abre  abertura da mandíbula em graus (a cabeça sobe 0,28 grau por grau aberto, o focinho levanta na mordida)   vira  curva do corpo (+ para a esquerda)
-// Ossos: raiz, cabeca, coluna1..coluna8 (da frente para a cauda), mandibula, peitoral_l, peitoral_r. Boca fechada em repouso.
+//   abre  abertura da mandíbula em graus (padrão 6: em repouso a boca fica semiaberta; a cabeça sobe 0,28 grau por grau aberto na mordida)   vira  curva do corpo (+ para a esquerda)
+// Ossos: raiz, cabeca, coluna1..coluna8 (da frente para a cauda), mandibula, peitoral_l, peitoral_r. No GLB a boca está fechada (pose de modelagem).
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
@@ -31,7 +31,7 @@ export async function criarTubarao({ url = new URL('./tubarao.glb', import.meta.
     b.quaternion.copy(pw.invert().multiply(qm.multiply(bw)));
   }
 
-  function posar({ fase = 0, amp = 1, abre = 0, vira = 0 } = {}) {
+  function posar({ fase = 0, amp = 1, abre = 6, vira = 0 } = {}) {
     for (const k in ossos) ossos[k].quaternion.copy(repouso[k]);
     const n = 8;
     for (let i = 0; i < n; i++) {                                              // onda lateral que cresce para a cauda (giro em torno do eixo vertical)
