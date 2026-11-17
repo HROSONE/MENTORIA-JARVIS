@@ -559,7 +559,7 @@ def padrao_luz(sp, escalas, larguras, fundo, uniao=False):
     mul = ln.nodes.new('ShaderNodeMath'); mul.operation = 'MAXIMUM' if uniao else 'MULTIPLY'; ln.links.new(saidas[0], mul.inputs[0]); ln.links.new(saidas[1], mul.inputs[1])
     ln.links.new(mul.outputs[0], em.inputs['Strength'])
 
-RAIOS_W = float(arg('raios', 70000))
+RAIOS_W = float(arg('raios', 200000))
 def mundo_agua():
     w = bpy.data.worlds.new('agua'); cena.world = w; w.use_nodes = True; nt = w.node_tree; Nn = nt.nodes; L = nt.links
     tc = Nn.new('ShaderNodeTexCoord'); sep = Nn.new('ShaderNodeSeparateXYZ'); L.new(tc.outputs['Generated'], sep.inputs['Vector'])
@@ -580,10 +580,10 @@ def mundo_agua():
     nt2.links.new(vol.outputs['Volume'], nt2.nodes['Material Output'].inputs['Volume']); cubo.data.materials.append(mv)
     # raios de sol: outro projetor, bem forte, de cima, que só ilumina o volume da água (light linking): aparecem as cortinas de luz
     # na água sem estourar a pele do tubarão (que continua com a luz do sol e das cáusticas)
-    sr = bpy.data.lights.new('raios', 'SPOT'); sr.energy = RAIOS_W; sr.spot_size = math.radians(58); sr.spot_blend = 0.7; sr.color = (0.85, 1.0, 0.92); sr.shadow_soft_size = 0.2
-    padrao_luz(sr, (10.0, 26.0), (0.028, 0.040), 0.0, uniao=True)
+    sr = bpy.data.lights.new('raios', 'SPOT'); sr.energy = RAIOS_W; sr.spot_size = math.radians(54); sr.spot_blend = 0.8; sr.color = (0.85, 1.0, 0.92); sr.shadow_soft_size = 0.2
+    padrao_luz(sr, (3.2, 7.5), (0.085, 0.060), 0.0, uniao=True)
     globals()['RAIOS_LUZ'] = sr
-    sro = bpy.data.objects.new('raios', sr); cena.collection.objects.link(sro); sro.location = (2.2, 0.8, 11.0); sro.rotation_euler = (math.radians(-6), math.radians(-5), 0)
+    sro = bpy.data.objects.new('raios', sr); cena.collection.objects.link(sro); sro.location = (2.2, 1.0, 9.0); sro.rotation_euler = (math.radians(-8), math.radians(-6), 0)
     col_a = bpy.data.collections.new('so_agua'); cena.collection.children.link(col_a); col_a.objects.link(cubo)
     try: sro.light_linking.receiver_collection = col_a; print('LIGHT LINKING ok: os raios só iluminam a água')
     except Exception as e_: print('AVISO: light linking indisponível:', e_)
@@ -626,7 +626,7 @@ if PREVIA:
     if 'foto' in VISTAS:
         posar(fase=2.3, amp=0.55, abre=2.5, vira=-0.3); render('foto', (3.55, 4.15, -1.05), (2.30, 0.0, -0.05), lente=26, larg=LARG, alt=int(LARG * 0.75))
     if 'raios' in VISTAS:                                                         # teste de intensidade dos raios: mesma vista da foto, várias potências
-        for w_ in [float(x) for x in arg('raios_lista', '30000,70000,140000').split(',')]:
+        for w_ in [float(x) for x in arg('raios_lista', '120000,240000,480000').split(',')]:
             RAIOS_LUZ.energy = w_; posar(fase=2.3, amp=0.55, abre=2.5, vira=-0.3)
             render(f'raios_{int(w_ / 1000)}k', (3.55, 4.15, -1.05), (2.30, 0.0, -0.05), lente=26, larg=LARG, alt=int(LARG * 0.75))
     if 'cabeca' in VISTAS:
