@@ -81,7 +81,7 @@ def montar_trilha(saida, eventos):
     m = Mesa(total + 0.05); E2 = E.get('marcas', {})
     t_ = lambda nome, d=0.0: P[nome]['t0'] + d
     # --- leito: mata (dois trechos longos, um de cada lado), pássaros somem depois do rugido
-    m.por(camada('2749', 20, None, 1.0, alvo=-20), 0, -11, ate=total, laco=True, pan=-0.2, ataque=0.3, soltura=0.3)
+    m.por(camada('2749', 20, None, 1.0, alvo=-20, lp=6000), 0, -11, ate=total, laco=True, pan=-0.2, ataque=0.3, soltura=0.3)     # (lp: o leito tinha uma faixa de agudos > 8 kHz que nunca cai = chiado)
     m.por(camada('0100', 3, None, 1.0, alvo=-20), 0, -14, ate=total, laco=True, pan=0.25, ataque=0.3, soltura=0.3)
     # --- passos e pisadas, lidos da animação
     for e in E['ev']:
