@@ -31,4 +31,4 @@ Título: **O nariz do Carlos fugiu 👃 (ficção)**.
 | P8 laço | o fim que é o começo | plano médio igual ao P1 | normal | o saleiro cruza o quadro; tremidinha | dourada | as orelhas saem, volta ao começo |
 
 ## Arquivos
-`cenas.js` (planos), `quadros.js` (render, usa `../feijao/carlos.js`).
+`cenas.js` (planos), `quadros.js` (render, usa `../feijao/carlos.js`), `sfx_nariz.py` (som: espirro Sneeze.ogg CC0 do Commons; o resto do BigSoundBank CC0). Média −24 dB.

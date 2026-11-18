@@ -129,7 +129,8 @@ function cabecaC(o = {}) {
   // orelhas
   const orelha = ld => volP(`M${ld * 128},-150 C${ld * 168},-176 ${ld * 178},-104 ${ld * 140},-90 C${ld * 132},-88 ${ld * 126},-96 ${ld * 124},-104 Z`, C.pele, C.peleSomb, C.peleLuz, { ds: 10, dl: 3, sw: 5 }) +
     `<path d="M${ld * 138},-138 C${ld * 156},-140 ${ld * 158},-112 ${ld * 140},-106" fill="none" stroke="${C.peleSomb}" stroke-width="5" stroke-linecap="round"/>`;
-  s += orelha(-1) + orelha(1);
+  if (!o.semOrelhas) s += orelha(-1) + orelha(1);
+  else for (const ld of [-1, 1]) s += `<ellipse cx="${ld * 132}" cy="-122" rx="7" ry="14" fill="${C.boca}" opacity=".8"/>`;
   // rosto
   const ROSTO = 'M0,0 C-92,0 -136,-48 -138,-128 C-140,-212 -80,-262 0,-262 C80,-262 140,-212 138,-128 C136,-48 92,0 0,0 Z';
   const bk = 0.6 + 0.4 * bochecha, bx = 66 + 18 * bochecha, br = 36 + 16 * bochecha;
@@ -224,6 +225,14 @@ function narizSolto(x, y, esc = 1, ang = 0, { pernas = 0, passo = 0, dir = 1, su
   return `<g transform="translate(${q1(x)},${q1(y)}) rotate(${q1(ang)}) scale(${q1(esc * dir * 100) / 100},${q1(esc * 100) / 100}) translate(0,105)">${s}</g>`;
 }
 
+/** orelha solta (bate como asa): centro (x,y), escala, ld = -1 esquerda / 1 direita, bate 0..1 */
+function orelhaSolta(x, y, esc = 1, ld = 1, bate = 0) {
+  const d = `M${ld * 128},-150 C${ld * 168},-176 ${ld * 178},-104 ${ld * 140},-90 C${ld * 132},-88 ${ld * 126},-96 ${ld * 124},-104 Z`;
+  const sx = 0.35 + 0.65 * Math.abs(Math.cos(bate * Math.PI * 2));
+  return `<g transform="translate(${q1(x)},${q1(y)}) scale(${q1(esc * sx * 100) / 100},${q1(esc * 100) / 100}) translate(${-ld * 150},125)">` +
+    volP(d, C.pele, C.peleSomb, C.peleLuz, { ds: 10, dl: 3, sw: 5 }) + `<path d="M${ld * 138},-138 C${ld * 156},-140 ${ld * 158},-112 ${ld * 140},-106" fill="none" stroke="${C.peleSomb}" stroke-width="5" stroke-linecap="round"/></g>`;
+}
+
 /** Carlos inteiro. Devolve { svg, pts } com pontos no espaço da cena */
 function carlos(o = {}) {
   const { x = 0, y = 0, esc = 1, t = 0, bracoE = {}, bracoD = {}, maoE = 'aberta', maoD = 'aberta', planta = 0, raiz = 0, inclina = 0, corpoY = 0, naMao = '', passo = null } = o;
@@ -269,7 +278,7 @@ function carlos(o = {}) {
     return { svg: g, mao: [Hh[0] + Math.cos(a2) * 26 * ld, Hh[1] + Math.sin(a2) * 26] };
   };
   const bE = braco(-1, bracoE, maoE), bD = braco(1, bracoD, maoD);
-  if (o.soBracos) return { svg: `<g transform="translate(${q1(x)},${q1(y)}) scale(${esc})"><g transform="translate(0,${q1(corpoY)})">${bE.svg}${naMao ? `<g transform="translate(${q1(bD.mao[0])},${q1(bD.mao[1])})">${naMao}</g>` : ''}${bD.svg}</g></g>`, pts: {} };
+  if (o.soBracos) return { svg: `<g transform="translate(${q1(x)},${q1(y)}) scale(${esc})"><g transform="translate(0,${q1(corpoY)})">${o.soBracos === 'D' ? '' : bE.svg}${naMao ? `<g transform="translate(${q1(bD.mao[0])},${q1(bD.mao[1])})">${naMao}</g>` : ''}${bD.svg}</g></g>`, pts: {} };
   const cab = `<g transform="translate(0,${q1(-392 + resp * .5)}) rotate(${q1(inclina)})">${cabecaC(o)}</g>`;
   s += `<g transform="translate(0,${q1(corpoY)})">${corpo}${cab}${bE.svg}${naMao ? `<g transform="translate(${q1(bD.mao[0])},${q1(bD.mao[1])})">${naMao}</g>` : ''}${bD.svg}</g>`;
   const P = p => [x + p[0] * esc, y + (p[1] + corpoY) * esc];
@@ -277,4 +286,4 @@ function carlos(o = {}) {
     pts: { maoE: P(bE.mao), maoD: P(bD.mao), boca: P([0, -432]), orelha: P([170, -520]), cabeca: P([0, -560]), topo: P([0, -654]), nariz: P([0, -470]) } };
   } finally { Object.assign(C, C0); }
 }
-if (typeof module !== 'undefined') module.exports = { carlos, cabecaC, maoC, narizSolto, DEFS_C, C, folha, caule, ramo, muda, vagem, feijao, gavinha, volP, volT };
+if (typeof module !== 'undefined') module.exports = { carlos, cabecaC, maoC, narizSolto, orelhaSolta, DEFS_C, C, folha, caule, ramo, muda, vagem, feijao, gavinha, volP, volT };
