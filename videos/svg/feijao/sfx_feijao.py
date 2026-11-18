@@ -20,9 +20,9 @@ def cresce(m, t, dur, db=-12, pan=0.0):  # a planta crescendo: galhos estalando 
     n = max(2, int(dur / 0.09))
     for k in range(n): m.por(g[k % 8], t + k * dur / n, db - (k % 3) * 2, vel=1.4, lp=6000, pan=pan + (k % 2 - .5) * .4)
 def gulp(m, t, db=-4, vel=1.0):
-    m.por(CM('Swallowing_gulp.ogg'), t, db, vel=vel, lp=8000)
+    m.por(CM('Swallowing_gulp.ogg'), t - 0.12, db, vel=vel, lp=8000, espaco='quarto')
 def bocejo(m, t, db=-10, vel=1.0):
-    if existe('Yawning_1.ogg'): m.por(camada(CM('Yawning_1.ogg'), 0, 2.4, vel, alvo=-20, lp=7000), t, db, ataque=0.05, soltura=0.3, espaco='sala')
+    if existe('Yawning_1.ogg'): m.por(camada(CM('Yawning_1.ogg'), 2.9, 1.4, vel, alvo=-20, lp=7000), t + 0.1, db, ataque=0.05, soltura=0.3, espaco='sala')
 def espelho(m, t0):                    # P1 / P8: banheiro de manhã, o broto aparece
     m.por(camada('1880', 30, 3.2, 1.0, alvo=-20, lp=4200), t0, -24, ataque=0.2, soltura=0.4)
     plim(m, t0 + 0.55); cresce(m, t0 + 0.55, 0.25, db=-14, pan=-0.3)
@@ -43,7 +43,8 @@ def montar(saida):
     for k in range(6): m.por('1301', P['P3'] + 0.9 + k * 0.16, -18, ini=2 + k * 0.4, dur=0.25, vel=0.6, lp=3000)   # o talo esticando (rangido grave)
     m.por('1300', P['P3'] + 1.9, -6, vel=1.2); m.por('1800', P['P3'] + 1.92, -10, vel=1.5, lp=7000)            # solta e volta
     m.evento(P['P3'] + 2.0, [('2453', -8, {'lp': 2500, 'vel': 1.4}), ('1408', -12, {'atraso': 0.01})], espaco='quarto')  # o tapa na testa
-    if existe('Sneeze.ogg'): m.por(CM('Sneeze.ogg'), P['P3'] + 2.35, -4, lp=9000, espaco='quarto')
+    m.por(camada('2195', 4.0, 0.6, 1.15, alvo=-20, lp=6000), P['P3'] + 2.35, -12, ataque=0.25, soltura=0.05)   # o "ah… ah…" (puxando o ar)
+    if existe('Sneeze.ogg'): m.por(CM('Sneeze.ogg'), P['P3'] + 2.85, -2, lp=9000, espaco='quarto')
     m.por('1800', P['P3'] + 2.97, -10, vel=0.9, lp=7000); cresce(m, P['P3'] + 2.97, 0.3, db=-12)
     for k in range(6): m.por('2454', P['P3'] + 3.05 + k * 0.03, -24 - k, vel=2.0, lp=5000, pan=(k % 3 - 1) * 0.5)    # as folhas grudando no vidro
     # P4 rua: carros, assobio não (sem música); os ramos crescendo debaixo do chapéu; o pombo
@@ -52,7 +53,7 @@ def montar(saida):
     for k in range(8): m.por(pe[k % 8], P['P4'] + 0.15 + k * 0.29, -16, lp=3500, pan=-0.3 + k * 0.06)
     cresce(m, P['P4'] + 0.4, 1.8, db=-15, pan=0.0)
     m.por('2893', P['P4'] + 2.1, -10, lp=6000, pan=(0.8, 0.0))              # o pombo chega batendo asas
-    if existe('Dove_cooing.ogg'): m.por(camada(CM('Dove_cooing.ogg'), 0.5, 1.4, 1.0, alvo=-20, lp=6000), P['P4'] + 2.8, -10, ataque=0.05, soltura=0.2)
+    if existe('Dove_cooing.ogg'): m.por(camada(CM('Dove_cooing.ogg'), 1.2, 1.4, 1.0, alvo=-20, lp=6000), P['P4'] + 2.8, -10, ataque=0.05, soltura=0.2)
     for k in range(4): m.por('1300', P['P4'] + 2.85 + k * 0.22, -16, vel=1.8, lp=7000)       # as bicadas
     m.por('2891', P['P4'] + 3.55, -10, lp=6000, pan=(0.0, -0.9))            # vai embora com a vagem
     # P5 chuva → sol → FUUU

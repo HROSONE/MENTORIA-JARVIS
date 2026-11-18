@@ -32,4 +32,8 @@ Título: **Engoliu um feijão 🌱 (ficção)**.
 | P8 laço | o fim que é o começo | igual ao P1 (mesma composição, outro homem) | normal | mesmo push-in | manhã | o último quadro casa com o primeiro |
 
 ## Arquivos
-`carlos.js` (personagem com volume, a planta em estágios por `planta` 0..1, raízes por `raiz`), `cenas.js` (planos), `quadros.js` (render), `folha_carlos.js` (folha de design).
+`carlos.js` (personagem com volume, a planta em estágios por `planta` 0..1, raízes por `raiz`), `cenas.js` (planos), `quadros.js` (render), `folha_carlos.js` (folha de design), `sfx_feijao.py` (som).
+Montar: `node quadros.js pasta` → `python3 sfx_feijao.py som.wav` → `ffmpeg -framerate 30 -i pasta/f%05d.jpg -i som.wav ... saida.mp4`.
+
+## Som
+Gravações reais: BigSoundBank (CC0) em `biblioteca3d/sons/bsb` (galhos estalando = a planta crescendo, chuva, vento, rua, grilos, asas) e Wikimedia Commons em `biblioteca3d/sons/commons`: bocejo (Yawning_1, domínio público), gole (Swallowing_gulp, domínio público), espirro (Sneeze, CC0), pombo (Dove_cooing, domínio público). Média −23,7 dB.
