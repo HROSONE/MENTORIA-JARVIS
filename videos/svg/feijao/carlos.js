@@ -84,11 +84,11 @@ function gavinha(x, y, ang, esc = 1) {
   return `<g transform="translate(${q1(x)},${q1(y)}) rotate(${q1(ang)}) scale(${q1(esc * 100) / 100})"><path d="${d}" fill="none" stroke="${C.contorno}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${C.caule}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></g>`;
 }
 /** muda (o brotinho clássico: caule + dois cotilédones) saindo de (x,y) inclinada ang (0 = para cima), k = crescimento */
-function muda(x, y, ang, k, t = 0, sem = 0) {
+function muda(x, y, ang, k, t = 0, sem = 0, estica = 1) {
   if (k <= 0.01) return '';
-  const bal = Math.sin(t * 3.1 + sem) * 7 * k, h = 26 + 62 * k;
+  const bal = Math.sin(t * 3.1 + sem) * 7 * k / estica, h = (26 + 62 * k) * estica;
   const cot = lado => `<g transform="translate(0,${-h}) rotate(${q1(lado * (58 - 10 * k))}) scale(${q1(.4 + .6 * k)})"><g transform="scale(${lado},1)"><path d="M0,0 C18,-14 26,-46 4,-58 C-16,-50 -16,-16 0,0 Z" fill="url(#cFolG)" stroke="${C.contorno}" stroke-width="4" stroke-linejoin="round"/><path d="M0,-4 L3,-46" stroke="${C.folhaSomb}" stroke-width="2.5"/></g></g>`;
-  return `<g transform="translate(${q1(x)},${q1(y)}) rotate(${q1(ang + bal)})">${caule([[0, 0], [5, -h * .4], [-4, -h * .75], [0, -h]], 6 + 3 * k)}${cot(-1)}${cot(1)}</g>`;
+  return `<g transform="translate(${q1(x)},${q1(y)}) rotate(${q1(ang + bal)})">${caule([[0, 0], [5, -h * .4], [-4, -h * .75], [0, -h]], (6 + 3 * k) / Math.sqrt(estica))}${cot(-1)}${cot(1)}</g>`;
 }
 /** vagem pendurada em (x,y), ângulo, escala */
 function vagem(x, y, ang = 90, esc = 1, t = 0) {
@@ -113,7 +113,8 @@ function feijao(x, y, r = 20, ang = 0) {
 /** cabeça em coordenadas locais: (0,0) = base do queixo, topo em y ~ -262 */
 function cabecaC(o = {}) {
   const { olhos = 'abertos', olho = [0, 0], boca = 'sorriso', sobr = 0, piscar = 0, planta = 0, t = 0, bochecha = 0, suor = 0, mudaAng = 64, mudaEsc = 1 } = o;
-  const kM = clC(planta / 0.22), kN = clC((planta - 0.22) / 0.2), kT = clC((planta - 0.4) / 0.25), kV = clC((planta - 0.62) / 0.3);
+  const kM = o.kM ?? clC(planta / 0.22), kN = o.kN ?? clC((planta - 0.22) / 0.2), kT = o.kT ?? clC((planta - 0.4) / 0.25), kV = o.kV ?? clC((planta - 0.62) / 0.3), kO = o.kO ?? kN;
+  const { mudaEstica = 1, chapeu = null, semBigode = false } = o;
   let s = '', tras = '';
   // ramos do topo (atrás da cabeça, saindo da careca)
   if (kT > 0) {
@@ -174,14 +175,21 @@ function cabecaC(o = {}) {
     extra: '<ellipse cx="-14" cy="-120" rx="9" ry="13" fill="#fff" opacity=".5"/>' });
   s += `<ellipse cx="-14" cy="-72" rx="6" ry="4" fill="${C.boca}" opacity=".7"/><ellipse cx="14" cy="-72" rx="6" ry="4" fill="${C.boca}" opacity=".7"/>`;
   // folhinhas saindo das narinas
-  if (kN > 0) s += folha(-16, -72, -150 + Math.sin(t * 3) * 6, 0.42 * kN) + folha(16, -72, 150 - Math.sin(t * 3.4) * 6, 0.38 * kN);
+  if (kN > 0) s += folha(-16, -72, -160 + Math.sin(t * 3) * 6, 0.8 * kN) + folha(16, -72, 160 - Math.sin(t * 3.4) * 6, 0.75 * kN);
   // bigode (vassourinha)
-  s += volP('M0,-64 C-14,-74 -46,-76 -78,-58 C-84,-48 -70,-40 -58,-46 C-40,-42 -18,-46 0,-54 C18,-46 40,-42 58,-46 C70,-40 84,-48 78,-58 C46,-76 14,-74 0,-64 Z', C.cabelo, '#140A04', C.cabeloLuz, { ds: 6, dl: 3, sw: 4 });
+  if (!semBigode) s += volP('M0,-64 C-14,-74 -46,-76 -78,-58 C-84,-48 -70,-40 -58,-46 C-40,-42 -18,-46 0,-54 C18,-46 40,-42 58,-46 C70,-40 84,-48 78,-58 C46,-76 14,-74 0,-64 Z', C.cabelo, '#140A04', C.cabeloLuz, { ds: 6, dl: 3, sw: 4 });
   if (suor > 0) s += `<path d="M120,-196 C108,-176 112,-160 124,-160 C136,-160 138,-176 120,-196 Z" fill="#9FD8FF" stroke="${C.contorno}" stroke-width="4" opacity="${q1(suor)}"/>`;
   // a muda que sai da orelha direita (a primeira coisa) e os ramos que vêm depois
-  s += `<g transform="translate(160,-128) scale(${mudaEsc})">${muda(0, 0, mudaAng, kM * (1 - kT * .4), t, 1)}</g>`;
-  if (kN > 0) { const P = ramo(166, -126, -10, 170 * kN, -0.7); s += caule(P, 6 + 3 * kN); for (let j = 2; j < P.length; j += 2) s += folha(P[j][0], P[j][1], j % 4 ? -10 : 150, 0.55 * kN, Math.sin(t * 3 + j) * 6); s += gavinha(P[6][0], P[6][1], -60, kN); if (kV > 0) s += vagem(P[4][0], P[4][1], 80, 0.7 * kV, t); }
+  s += `<g transform="translate(160,-128) scale(${mudaEsc})">${muda(0, 0, mudaAng, kM * (1 - kT * .4), t, 1, mudaEstica)}</g>`;
+  if (kO > 0) { const P = ramo(166, -126, -10, 170 * kO, -0.7); s += caule(P, 6 + 3 * kO); for (let j = 2; j < P.length; j += 2) s += folha(P[j][0], P[j][1], j % 4 ? -10 : 150, 0.55 * kO, Math.sin(t * 3 + j) * 6); s += gavinha(P[6][0], P[6][1], -60, kO); if (kV > 0) s += vagem(P[4][0], P[4][1], 80, 0.7 * kV, t); }
   if (kT > 0) { const P = ramo(-166, -126, 190, 150 * kT, 0.7); s += caule(P, 6 + 3 * kT); for (let j = 2; j < P.length; j += 2) s += folha(P[j][0], P[j][1], j % 4 ? 10 : -150, 0.55 * kT, Math.sin(t * 3 + j) * 6); if (kV > 0) s += vagem(P[4][0], P[4][1], 100, 0.65 * kV, t); }
+  if (chapeu !== null) {
+    const lv = chapeu, bal = lv > 5 ? Math.sin(t * 2.6) * 6 * Math.min(1, lv / 80) : 0;
+    s += `<g transform="translate(0,${q1(-236 - lv)}) rotate(${q1(bal)})">` +
+      volP('M-170,-6 C-150,-26 150,-26 170,-6 C150,14 -150,14 -170,-6 Z', '#4A3B57', '#2A2033', '#7A6A8C', { ds: 8, dl: 3 }) +
+      volP('M-104,-10 C-110,-80 -84,-130 -40,-132 C-20,-118 20,-118 40,-132 C84,-130 110,-80 104,-10 C60,0 -60,0 -104,-10 Z', '#4A3B57', '#2A2033', '#7A6A8C', { ds: 14, dl: 4,
+        extra: '<rect x="-120" y="-44" width="240" height="30" fill="#C7463C"/>' }) + '</g>';
+  }
   return tras + s;
 }
 
@@ -198,9 +206,11 @@ function maoC(x, y, ang, tipo = 'aberta', ld = 1) {
 
 /** Carlos inteiro. Devolve { svg, pts } com pontos no espaço da cena */
 function carlos(o = {}) {
-  const { x = 0, y = 0, esc = 1, t = 0, bracoE = {}, bracoD = {}, maoE = 'aberta', maoD = 'aberta', planta = 0, raiz = 0, inclina = 0, corpoY = 0, naMao = '' } = o;
+  const { x = 0, y = 0, esc = 1, t = 0, bracoE = {}, bracoD = {}, maoE = 'aberta', maoD = 'aberta', planta = 0, raiz = 0, inclina = 0, corpoY = 0, naMao = '', passo = null } = o;
   _cid = o.idBase || 0;
-  const resp = Math.sin(t * 2.4) * 3, kC = clC((planta - 0.55) / 0.35);
+  const C0 = { ...C }; if (o.cores) Object.assign(C, o.cores);
+  try {
+  const resp = Math.sin(t * 2.4) * 3, kC = o.kC ?? clC((planta - 0.55) / 0.35);
   let s = `<ellipse cx="0" cy="4" rx="${q1(130 + 80 * raiz)}" ry="20" fill="#000" opacity=".22" filter="url(#cBlur)"/>`;
   // raízes (as pernas viram raiz)
   if (raiz > 0.01) for (let i = 0; i < 9; i++) {
@@ -209,7 +219,8 @@ function carlos(o = {}) {
   }
   // pernas
   for (const ld of [-1, 1]) {
-    if (raiz < 0.9) s += `<g transform="translate(${ld * 52},0)" opacity="${q1(1 - raiz)}">` + volT('M0,-150 L0,-36', 58, C.calca, C.calcaSomb, C.calcaLuz, { ds: 14, dl: 4 }) +
+    const lev = passo === null ? 0 : Math.max(0, Math.sin(passo * Math.PI * 2 + (ld > 0 ? Math.PI : 0))) * 34;
+    if (raiz < 0.9) s += `<g transform="translate(${ld * 52},${q1(-lev)})" opacity="${q1(1 - raiz)}">` + volT('M0,-150 L0,-36', 58, C.calca, C.calcaSomb, C.calcaLuz, { ds: 14, dl: 4 }) +
       volP(`M${ld * -30},-40 L${ld * 26},-40 C${ld * 66},-40 ${ld * 74},-10 ${ld * 66},0 L${ld * -34},0 C${ld * -40},-14 ${ld * -38},-34 ${ld * -30},-40 Z`, C.sapato, '#120A06', '#6A4C3A', { ds: 8, dl: 3 }) + '</g>';
   }
   // corpo (pera) com a camisa
@@ -227,7 +238,7 @@ function carlos(o = {}) {
   }
   // braços: ombro em (±92, -362)
   const braco = (ld, b, tipo) => {
-    const { ombro = 8, cotovelo = 12 } = b, S = [ld * 92, -362 + resp * .3], L1 = 104, L2 = 96;
+    const { ombro = 8, cotovelo = 12, k = 1 } = b, S = [ld * 92, -362 + resp * .3], L1 = 104 * k, L2 = 96 * k;
     const a1 = (90 - ombro) * Math.PI / 180, E = [S[0] + Math.cos(a1) * L1 * ld, S[1] + Math.sin(a1) * L1];
     const a2 = (90 - ombro - cotovelo) * Math.PI / 180, Hh = [E[0] + Math.cos(a2) * L2 * ld, E[1] + Math.sin(a2) * L2];
     const d = `M${q1(S[0])},${q1(S[1])} Q${q1(E[0])},${q1(E[1])} ${q1((E[0] + Hh[0]) / 2)},${q1((E[1] + Hh[1]) / 2)} L${q1(Hh[0])},${q1(Hh[1])}`;
@@ -238,10 +249,12 @@ function carlos(o = {}) {
     return { svg: g, mao: [Hh[0] + Math.cos(a2) * 26 * ld, Hh[1] + Math.sin(a2) * 26] };
   };
   const bE = braco(-1, bracoE, maoE), bD = braco(1, bracoD, maoD);
+  if (o.soBracos) return { svg: `<g transform="translate(${q1(x)},${q1(y)}) scale(${esc})"><g transform="translate(0,${q1(corpoY)})">${bE.svg}${naMao ? `<g transform="translate(${q1(bD.mao[0])},${q1(bD.mao[1])})">${naMao}</g>` : ''}${bD.svg}</g></g>`, pts: {} };
   const cab = `<g transform="translate(0,${q1(-392 + resp * .5)}) rotate(${q1(inclina)})">${cabecaC(o)}</g>`;
   s += `<g transform="translate(0,${q1(corpoY)})">${corpo}${cab}${bE.svg}${naMao ? `<g transform="translate(${q1(bD.mao[0])},${q1(bD.mao[1])})">${naMao}</g>` : ''}${bD.svg}</g>`;
   const P = p => [x + p[0] * esc, y + (p[1] + corpoY) * esc];
   return { svg: `<g transform="translate(${q1(x)},${q1(y)}) scale(${esc})">${s}</g>`,
-    pts: { maoE: P(bE.mao), maoD: P(bD.mao), boca: P([0, -432]), orelha: P([170, -520]), cabeca: P([0, -560]), topo: P([0, -654]) } };
+    pts: { maoE: P(bE.mao), maoD: P(bD.mao), boca: P([0, -432]), orelha: P([170, -520]), cabeca: P([0, -560]), topo: P([0, -654]), nariz: P([0, -470]) } };
+  } finally { Object.assign(C, C0); }
 }
-if (typeof module !== 'undefined') module.exports = { carlos, cabecaC, DEFS_C, C, folha, caule, ramo, muda, vagem, feijao, gavinha, volP, volT };
+if (typeof module !== 'undefined') module.exports = { carlos, cabecaC, maoC, DEFS_C, C, folha, caule, ramo, muda, vagem, feijao, gavinha, volP, volT };
