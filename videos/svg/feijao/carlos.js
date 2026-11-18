@@ -170,10 +170,13 @@ function cabecaC(o = {}) {
     mastiga: `<path d="M-30,-40 Q0,${q1(-26 + Math.sin(t * 18) * 8)} 30,-40" stroke="${C.contorno}" stroke-width="6" fill="none" stroke-linecap="round"/>`,
   };
   s += BOCAS[boca] || BOCAS.sorriso;
-  // nariz de batata
+  // nariz de batata (ou o buraco onde ele ficava)
+  if (o.semNariz) s += `<ellipse cx="0" cy="-100" rx="30" ry="22" fill="${C.peleSomb}" opacity=".55"/><ellipse cx="-11" cy="-98" rx="7" ry="9" fill="${C.boca}"/><ellipse cx="11" cy="-98" rx="7" ry="9" fill="${C.boca}"/>`;
+  else {
   s += volP('M0,-150 C-24,-150 -28,-118 -40,-104 C-56,-86 -38,-62 -14,-68 C-6,-60 6,-60 14,-68 C38,-62 56,-86 40,-104 C28,-118 24,-150 0,-150 Z', C.pele, C.peleSomb, C.peleLuz, { ds: 14, dl: 4, sw: 5,
     extra: '<ellipse cx="-14" cy="-120" rx="9" ry="13" fill="#fff" opacity=".5"/>' });
-  s += `<ellipse cx="-14" cy="-72" rx="6" ry="4" fill="${C.boca}" opacity=".7"/><ellipse cx="14" cy="-72" rx="6" ry="4" fill="${C.boca}" opacity=".7"/>`;
+    s += `<ellipse cx="-14" cy="-72" rx="6" ry="4" fill="${C.boca}" opacity=".7"/><ellipse cx="14" cy="-72" rx="6" ry="4" fill="${C.boca}" opacity=".7"/>`;
+  }
   // folhinhas saindo das narinas
   if (kN > 0) s += folha(-16, -72, -160 + Math.sin(t * 3) * 6, 0.8 * kN) + folha(16, -72, 160 - Math.sin(t * 3.4) * 6, 0.75 * kN);
   // bigode (vassourinha)
@@ -202,6 +205,23 @@ function maoC(x, y, ang, tipo = 'aberta', ld = 1) {
   if (tipo === 'aponta') dedos = dedo(8, 24, 12, 62);
   const pol = `<path d="M${-22 * ld},2 C${-36 * ld},4 ${-40 * ld},18 ${-30 * ld},24" fill="none" stroke="${C.contorno}" stroke-width="15" stroke-linecap="round"/><path d="M${-22 * ld},2 C${-36 * ld},4 ${-40 * ld},18 ${-30 * ld},24" fill="none" stroke="${C.pele}" stroke-width="8" stroke-linecap="round"/>`;
   return `<g transform="translate(${q1(x)},${q1(y)}) rotate(${q1(ang)})">${dedos}${pol}${volP(pal, C.pele, C.peleSomb, C.peleLuz, { ds: 8, dl: 3, sw: 5 })}</g>`;
+}
+
+/** o nariz solto: centro (x,y), escala, ângulo; pernas 0..1 (perninhas aparecendo), passo = fase da corrida, dir = 1 corre para a direita */
+const NARIZ_D = 'M0,-150 C-24,-150 -28,-118 -40,-104 C-56,-86 -38,-62 -14,-68 C-6,-60 6,-60 14,-68 C38,-62 56,-86 40,-104 C28,-118 24,-150 0,-150 Z';
+function narizSolto(x, y, esc = 1, ang = 0, { pernas = 0, passo = 0, dir = 1, suor = 0 } = {}) {
+  let s = '';
+  if (pernas > 0.01) for (const ld of [-1, 1]) {
+    const a = Math.sin(passo * Math.PI * 2 + (ld > 0 ? Math.PI : 0)) * 35 * pernas, L = 46 * pernas;
+    const jx = ld * 14 + Math.sin(a / 57.3) * L * 0.5, jy = -66 + L * 0.5, px = ld * 14 + Math.sin(a / 57.3) * L, py = -66 + L * Math.cos(a / 57.3);
+    const d = `M${ld * 14},-70 L${q1(jx)},${q1(jy)} L${q1(px)},${q1(py)}`;
+    s += `<path d="${d}" fill="none" stroke="${C.contorno}" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${C.pele}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>` +
+      `<ellipse cx="${q1(px + 8 * dir)}" cy="${q1(py + 2)}" rx="${q1(13 * pernas)}" ry="${q1(7 * pernas)}" fill="${C.sapato}" stroke="${C.contorno}" stroke-width="3"/>`;
+  }
+  s += volP(NARIZ_D, C.pele, C.peleSomb, C.peleLuz, { ds: 14, dl: 4, sw: 5, extra: '<ellipse cx="-14" cy="-120" rx="9" ry="13" fill="#fff" opacity=".5"/>' });
+  s += `<ellipse cx="-14" cy="-72" rx="6" ry="4" fill="${C.boca}" opacity=".7"/><ellipse cx="14" cy="-72" rx="6" ry="4" fill="${C.boca}" opacity=".7"/>`;
+  if (suor > 0) s += `<path d="M34,-140 C26,-126 28,-114 37,-114 C46,-114 46,-126 34,-140 Z" fill="#9FD8FF" stroke="${C.contorno}" stroke-width="3" opacity="${q1(suor)}"/>`;
+  return `<g transform="translate(${q1(x)},${q1(y)}) rotate(${q1(ang)}) scale(${q1(esc * dir * 100) / 100},${q1(esc * 100) / 100}) translate(0,105)">${s}</g>`;
 }
 
 /** Carlos inteiro. Devolve { svg, pts } com pontos no espaço da cena */
@@ -257,4 +277,4 @@ function carlos(o = {}) {
     pts: { maoE: P(bE.mao), maoD: P(bD.mao), boca: P([0, -432]), orelha: P([170, -520]), cabeca: P([0, -560]), topo: P([0, -654]), nariz: P([0, -470]) } };
   } finally { Object.assign(C, C0); }
 }
-if (typeof module !== 'undefined') module.exports = { carlos, cabecaC, maoC, DEFS_C, C, folha, caule, ramo, muda, vagem, feijao, gavinha, volP, volT };
+if (typeof module !== 'undefined') module.exports = { carlos, cabecaC, maoC, narizSolto, DEFS_C, C, folha, caule, ramo, muda, vagem, feijao, gavinha, volP, volT };
