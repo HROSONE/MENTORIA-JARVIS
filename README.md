@@ -1,12 +1,15 @@
-# MENTORIA-JARVIS · Estúdio Hryz Animation
+# MENTORIA-JARVIS · Hryz City & Estúdio Hryz Animation
 
-Repositório que reúne a landing page da **Mentoria Jarvis OS** na raiz e o **estúdio programático de animações 2D (SVG) e 3D (Three.js)** do canal **Hryz Animation** em `videos/`.
+Repositório publicado na Vercel com o jogo de mundo aberto 3D **Hryz City** na raiz (`index.html`), o **estúdio programático de animações 2D (SVG) e 3D (Three.js)** do canal **Hryz Animation** em `videos/` e a landing page da **Mentoria Jarvis OS** preservada em `mentoria.html`.
 
 ## Estrutura do repositório
 
 ```text
 .
-├── index.html                  # Landing page da Mentoria Jarvis OS (Tailwind + Alpine.js)
+├── index.html                  # Hryz City — Jogo 3D de mundo aberto (página inicial na Vercel)
+├── jogo/                       # Motor do jogo (cidade.js, jogo.js: andar, dirigir P71/carros, dia/noite, chuva, minimapa)
+├── mentoria.html               # Landing page da Mentoria Jarvis OS (Tailwind + Alpine.js)
+├── vercel.json                 # Headers de MIME/cache para modelos .glb e previews na Vercel
 ├── CLAUDE.md                   # Regras obrigatórias de criação e direção de vídeo
 ├── roteiro_homem_do_soluco.md  # Roteiro histórico na raiz (versões de produção ficam em videos/)
 └── videos/                     # Estúdio de produção de vídeos (Shorts 9:16 e longos 16:9)
