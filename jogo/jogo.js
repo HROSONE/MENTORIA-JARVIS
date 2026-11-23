@@ -107,6 +107,37 @@ class SomJogo {
   }
 }
 
+const QUALIDADES = {
+  leve: {
+    id: 'leve', rotulo: 'Leve',
+    pixelRatio: 1.0,
+    sombras: false, sombraRaio: 38,
+    sombraPrincipal: false, sombraDetalhe: false,
+    viewDist: 165, camFar: 210, fogNear: 80, fogFar: 200,
+    npcsMax: 0, npcDist: 40, trafegoMax: 10,
+    rainN: 300, minimapInterval: 0.125,
+  },
+  medio: {
+    id: 'medio', rotulo: 'Médio',
+    pixelRatio: 1.0,
+    sombras: true, sombraRaio: 46,
+    sombraPrincipal: true, sombraDetalhe: false,
+    viewDist: 250, camFar: 320, fogNear: 125, fogFar: 300,
+    npcsMax: 3, npcDist: 55, trafegoMax: 14,
+    rainN: 550, minimapInterval: 0.083,
+  },
+  alto: {
+    id: 'alto', rotulo: 'Alto',
+    pixelRatio: 1.5,
+    sombras: true, sombraRaio: 65,
+    sombraPrincipal: true, sombraDetalhe: true,
+    viewDist: 440, camFar: 540, fogNear: 200, fogFar: 510,
+    npcsMax: 8, npcDist: 95, trafegoMax: 24,
+    rainN: 900, minimapInterval: 0.05,
+  },
+};
+const ORDEM_QUAL = ['leve', 'medio', 'alto'];
+
 // ====================================================================================================
 // Inicialização principal do jogo
 // ====================================================================================================
@@ -125,6 +156,7 @@ export async function iniciarJogo() {
   const elToast = $('toast');
   const elScore = $('hud-score');
   const elMaxVel = $('hud-maxvel');
+  const elFps = $('hud-fps');
   const elAlvoNome = $('hud-alvo');
   const elMinimap = $('minimap');
   const mmCtx = elMinimap.getContext('2d');
@@ -142,63 +174,83 @@ export async function iniciarJogo() {
     toastTimer = setTimeout(() => elToast.classList.remove('visivel'), 2600);
   }
 
-  // ---- Renderer e Cena
+  // ---- Renderer, Qualidade e Cena
   const Q = new URLSearchParams(location.search);
   let ehNoite = Q.has('noite');
   let ehChuva = Q.has('chuva');
 
+  const qParam = (Q.get('qualidade') || '').toLowerCase();
+  let qSalva = '';
+  try { qSalva = localStorage.getItem('hryz_qualidade') || ''; } catch (_) {}
+  let qualAtual = QUALIDADES[qParam] || QUALIDADES[qSalva] || QUALIDADES.medio;
+
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, qualAtual.pixelRatio));
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = ehNoite ? 1.15 : 1.04;
   document.body.prepend(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(56, innerWidth / innerHeight, 0.25, 950);
+  const camera = new THREE.PerspectiveCamera(56, innerWidth / innerHeight, 0.25, qualAtual.camFar);
 
   const hemi = new THREE.HemisphereLight(0xffffff, 0x8fa3b5, 1.45);
   scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xfff4e0, 2.6);
-  sun.castShadow = true;
+  sun.castShadow = qualAtual.sombras;
   sun.shadow.mapSize.set(1024, 1024);
   sun.shadow.bias = -0.0005;
   sun.shadow.normalBias = 0.05;
-  const SR = 65;
-  Object.assign(sun.shadow.camera, { left: -SR, right: SR, top: SR, bottom: -SR, near: 1, far: 300 });
+  const SR = qualAtual.sombraRaio;
+  Object.assign(sun.shadow.camera, { left: -SR, right: SR, top: SR, bottom: -SR, near: 1, far: 260 });
   scene.add(sun, sun.target);
 
-  const envDia = criarAmbiente(renderer, {
-    sol: [-0.55, 0.72, 0.45], zenite: [0.22, 0.48, 0.88], horizonte: [0.76, 0.89, 0.96], chao: [0.28, 0.34, 0.26],
-  });
-  const envNoite = criarAmbiente(renderer, {
-    sol: [0.45, 0.55, -0.55], zenite: [0.03, 0.06, 0.14], horizonte: [0.08, 0.13, 0.24], chao: [0.04, 0.05, 0.08],
-    paineis: [
-      { pos: [12, 8, 6], w: 12, h: 2, cor: [1.0, 0.86, 0.55], k: 2.2 },
-      { pos: [-12, 8, -6], w: 12, h: 2, cor: [0.4, 0.65, 1.0], k: 1.8 },
-    ],
-  });
+  let envDia = null;
+  let envNoite = null;
+  function obterAmbiente(noite) {
+    if (noite) {
+      if (!envNoite) {
+        envNoite = criarAmbiente(renderer, {
+          sol: [0.45, 0.55, -0.55], zenite: [0.03, 0.06, 0.14], horizonte: [0.08, 0.13, 0.24], chao: [0.04, 0.05, 0.08],
+          paineis: [
+            { pos: [12, 8, 6], w: 12, h: 2, cor: [1.0, 0.86, 0.55], k: 2.2 },
+            { pos: [-12, 8, -6], w: 12, h: 2, cor: [0.4, 0.65, 1.0], k: 1.8 },
+          ],
+        });
+      }
+      return envNoite;
+    }
+    if (!envDia) {
+      envDia = criarAmbiente(renderer, {
+        sol: [-0.55, 0.72, 0.45], zenite: [0.22, 0.48, 0.88], horizonte: [0.76, 0.89, 0.96], chao: [0.28, 0.34, 0.26],
+      });
+    }
+    return envDia;
+  }
 
   function atualizarProgresso(frac, texto) {
     elBarra.style.width = `${Math.round(Math.min(1, frac) * 100)}%`;
     elTextoCarga.textContent = texto;
   }
 
-  // ---- Construir Cidade Hryz
+  // ---- Construir Cidade Hryz (otimizada em malhas mescladas + InstancedMesh por setores)
   atualizarProgresso(0.05, 'Carregando Cidade Hryz…');
   const cidade = await construirCidade({
     scene,
     noiteInicial: ehNoite,
+    qualidadeInicial: qualAtual,
     onProgresso: (f, txt) => atualizarProgresso(0.05 + f * 0.72, txt),
   });
 
   function aplicarClima() {
     const fundo = ehNoite ? 0x091124 : (ehChuva ? 0x7c92a6 : 0xb8dff5);
     scene.background = new THREE.Color(fundo);
-    scene.fog = new THREE.Fog(fundo, ehChuva ? 120 : 220, ehChuva ? 520 : 820);
-    scene.environment = ehNoite ? envNoite : envDia;
+    const fNear = ehChuva ? Math.min(qualAtual.fogNear, 85) : qualAtual.fogNear;
+    const fFar = ehChuva ? Math.min(qualAtual.fogFar, 260) : qualAtual.fogFar;
+    scene.fog = new THREE.Fog(fundo, fNear, fFar);
+    scene.environment = obterAmbiente(ehNoite);
     renderer.toneMappingExposure = ehNoite ? 1.18 : (ehChuva ? 0.98 : 1.05);
 
     hemi.color.setHex(ehNoite ? 0x5c77b8 : (ehChuva ? 0x9fb2c4 : 0xffffff));
@@ -208,12 +260,7 @@ export async function iniciarJogo() {
     sun.intensity = ehNoite ? 0.95 : (ehChuva ? 1.4 : 2.6);
 
     cidade.alternarNoite(ehNoite);
-    cidade.kit.ambiente({
-      molhado: ehChuva ? 0.92 : 0,
-      chuva: ehChuva ? 1 : 0,
-      ceuTopo: ehNoite ? '#0b1530' : (ehChuva ? '#5c6f82' : '#4a8fe7'),
-      ceuHorizonte: ehNoite ? '#1d2c52' : (ehChuva ? '#8ea0b2' : '#cbe6f7'),
-    });
+    cidade.alternarChuva(ehChuva);
 
     for (const v of veiculos) {
       if (v.api?.farois) v.api.farois(v.farois || ehNoite);
@@ -236,6 +283,7 @@ export async function iniciarJogo() {
     });
   }
   rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+  rainGeo.setDrawRange(0, qualAtual.rainN * 2);
   const rainLines = new THREE.LineSegments(
     rainGeo,
     new THREE.LineBasicMaterial({ color: 0xcbe4ff, transparent: true, opacity: 0.42 })
@@ -289,7 +337,7 @@ export async function iniciarJogo() {
       const g = await glbLoader.loadAsync(`${BASE_BIB}/veiculos/${f.arq}.glb`);
       const o = g.scene;
       o.scale.setScalar(ESCALA_VEICULO);
-      o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+      o.traverse(m => { if (m.isMesh) { m.castShadow = qualAtual.sombraPrincipal; m.receiveShadow = true; } });
       o.position.set(f.x, 0, f.z);
       o.rotation.y = f.ry;
       scene.add(o);
@@ -329,7 +377,7 @@ export async function iniciarJogo() {
         inst = await Corredor.carregar(def.url);
         if (def.tipo === 'silhueta') inst.silhueta();
       }
-      inst.obj.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+      inst.obj.traverse(m => { if (m.isMesh) { m.castShadow = qualAtual.sombraDetalhe; m.receiveShadow = true; } });
       inst.obj.visible = false;
       scene.add(inst.obj);
       cachePers.set(def.id, { inst, def });
@@ -491,11 +539,51 @@ export async function iniciarJogo() {
     mostrarToast(`Teleportado para: ${pt.nome}`);
   }
 
+  function aplicarQualidade(id, avisar = false) {
+    const q = QUALIDADES[id] || QUALIDADES.medio;
+    qualAtual = q;
+    try { localStorage.setItem('hryz_qualidade', q.id); } catch (_) {}
+
+    renderer.setPixelRatio(Math.min(devicePixelRatio, q.pixelRatio));
+    renderer.setSize(innerWidth, innerHeight);
+    camera.far = q.camFar;
+    camera.updateProjectionMatrix();
+
+    sun.castShadow = q.sombras;
+    const sr = q.sombraRaio;
+    sun.shadow.camera.left = -sr;
+    sun.shadow.camera.right = sr;
+    sun.shadow.camera.top = sr;
+    sun.shadow.camera.bottom = -sr;
+    sun.shadow.camera.updateProjectionMatrix();
+
+    for (const v of veiculos) {
+      if (!v.api) v.obj.traverse(m => { if (m.isMesh) m.castShadow = q.sombraPrincipal; });
+    }
+    for (const entry of cachePers.values()) {
+      entry.inst.obj.traverse(m => { if (m.isMesh) m.castShadow = q.sombraDetalhe; });
+    }
+
+    rainGeo.setDrawRange(0, Math.min(RAIN_N, q.rainN) * 2);
+    cidade.aplicarQualidade(q);
+    aplicarClima();
+
+    const btnQ = $('btn-qualidade');
+    if (btnQ) btnQ.textContent = `⚡ ${q.rotulo}`;
+    if (avisar) mostrarToast(`Qualidade: ${q.rotulo}${q.id === 'leve' ? ' (Máximo FPS)' : ''}`);
+  }
+
+  function ciclarQualidade() {
+    const i = ORDEM_QUAL.indexOf(qualAtual.id);
+    aplicarQualidade(ORDEM_QUAL[(i + 1) % ORDEM_QUAL.length], true);
+  }
+
   addEventListener('keydown', e => {
     const code = e.code;
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) e.preventDefault();
     if (!teclas.has(code)) {
       if (code === 'KeyE') entrarOuSairVeiculo();
+      else if (code === 'KeyQ') ciclarQualidade();
       else if (code === 'KeyN') { ehNoite = !ehNoite; aplicarClima(); mostrarToast(ehNoite ? 'Modo Noite ativado' : 'Modo Dia ativado'); }
       else if (code === 'KeyR') { ehChuva = !ehChuva; rainLines.visible = ehChuva; aplicarClima(); mostrarToast(ehChuva ? 'Chuva e pista molhada' : 'Tempo limpo'); }
       else if (code === 'KeyV') { camModo = (camModo + 1) % 3; mostrarToast(['Câmera: 3ª Pessoa', 'Câmera: Capô / 1ª Pessoa', 'Câmera: Aérea (Drone)'][camModo]); }
@@ -539,6 +627,7 @@ export async function iniciarJogo() {
   }, { passive: true });
 
   // Botões da HUD
+  $('btn-qualidade').onclick = ciclarQualidade;
   $('btn-noite').onclick = () => { ehNoite = !ehNoite; aplicarClima(); };
   $('btn-chuva').onclick = () => { ehChuva = !ehChuva; rainLines.visible = ehChuva; aplicarClima(); };
   $('btn-cam').onclick = () => { camModo = (camModo + 1) % 3; mostrarToast(['Câmera: 3ª Pessoa', 'Câmera: Capô / 1ª Pessoa', 'Câmera: Aérea'][camModo]); };
@@ -661,8 +750,8 @@ export async function iniciarJogo() {
     mmCtx.restore();
   }
 
-  // ---- Aplicar clima inicial & esconder tela de carga
-  aplicarClima();
+  // ---- Aplicar qualidade + clima inicial & esconder tela de carga
+  aplicarQualidade(qualAtual.id, false);
   atualizarHudModo();
   atualizarProgresso(1, 'Cidade pronta!');
   setTimeout(() => elTelaCarga.classList.add('oculto'), 220);
@@ -672,6 +761,10 @@ export async function iniciarJogo() {
   const alvoCam = new THREE.Vector3();
   const posCamDesejada = new THREE.Vector3();
   let tTotal = 0;
+  let minimapTimer = 1;
+  let fpsQuadros = 0;
+  let fpsAcum = 0;
+  let fpsAtual = 60;
 
   function anguloDiff(a, b) {
     let d = (b - a + Math.PI) % (Math.PI * 2) - Math.PI;
@@ -679,6 +772,7 @@ export async function iniciarJogo() {
   }
 
   addEventListener('resize', () => {
+    renderer.setPixelRatio(Math.min(devicePixelRatio, qualAtual.pixelRatio));
     renderer.setSize(innerWidth, innerHeight);
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
@@ -690,7 +784,18 @@ export async function iniciarJogo() {
     tTotal += dt;
     tempoSemMouse += dt;
 
-    cidade.atualizar(dt, tTotal);
+    // Medidor de FPS (atualizado a cada 0,5 s)
+    fpsQuadros++;
+    fpsAcum += dt;
+    if (fpsAcum >= 0.5) {
+      fpsAtual = Math.round(fpsQuadros / fpsAcum);
+      if (elFps) {
+        elFps.textContent = `${fpsAtual} FPS`;
+        elFps.style.color = fpsAtual >= 45 ? '#4ade80' : (fpsAtual >= 25 ? '#facc15' : '#f87171');
+      }
+      fpsQuadros = 0;
+      fpsAcum = 0;
+    }
 
     // Atualiza luzes da viatura P71 (mesmo quando você está a pé!)
     for (const v of veiculos) {
@@ -827,6 +932,9 @@ export async function iniciarJogo() {
       }
     }
 
+    // Atualiza setores visíveis, trânsito e NPCs próximos ao jogador
+    cidade.atualizar(dt, tTotal, focoX, focoZ);
+
     // ---- Som contínuo
     som.atualizar(tTotal, {
       dirigindo: !!jogador.veiculo,
@@ -851,7 +959,8 @@ export async function iniciarJogo() {
     // ---- Chuva 3D acompanha o jogador
     if (ehChuva) {
       const arr = rainGeo.attributes.position.array;
-      for (let i = 0; i < RAIN_N; i++) {
+      const nChuva = Math.min(RAIN_N, qualAtual.rainN);
+      for (let i = 0; i < nChuva; i++) {
         const s = rainSeeds[i];
         s.y -= s.vel * dt;
         if (s.y < 0) s.y += 28;
@@ -890,16 +999,22 @@ export async function iniciarJogo() {
       camera.lookAt(focoX, 0, focoZ);
     }
 
-    // ---- Sombra dinâmica segue o jogador
-    sun.target.position.set(focoX, 0, focoZ);
-    sun.position.set(
-      focoX + (ehNoite ? 55 : -75),
-      ehNoite ? 110 : 130,
-      focoZ + (ehNoite ? -65 : 60)
-    );
+    // ---- Sombra dinâmica segue o jogador (somente quando sombras estão ligadas)
+    if (qualAtual.sombras) {
+      sun.target.position.set(focoX, 0, focoZ);
+      sun.position.set(
+        focoX + (ehNoite ? 55 : -75),
+        ehNoite ? 110 : 130,
+        focoZ + (ehNoite ? -65 : 60)
+      );
+    }
 
-    // ---- Minimapa + Render
-    desenharMinimapa(focoX, focoZ, focoYaw);
+    // ---- Minimapa (atualizado em frequência reduzida) + Render
+    minimapTimer += dt;
+    if (minimapTimer >= qualAtual.minimapInterval) {
+      minimapTimer = 0;
+      desenharMinimapa(focoX, focoZ, focoYaw);
+    }
     renderer.render(scene, camera);
   }
 
@@ -913,7 +1028,18 @@ export async function iniciarJogo() {
     entrar: () => { entrarOuSairVeiculo(); snapCam = true; },
     teleportar: id => { const pt = PONTOS_TELEPORTE.find(p => p.id === id); if (pt) teleportar(pt); },
     noite: v => { ehNoite = v; aplicarClima(); },
+    chuva: v => { ehChuva = v; rainLines.visible = ehChuva; aplicarClima(); },
+    qualidade: id => aplicarQualidade(id, false),
     sirene: v => { if (jogador.veiculo?.ehPolicia) { jogador.veiculo.sirene = v; $('btn-sirene').classList.toggle('ativo', v); } },
+    stats: () => ({
+      fps: fpsAtual,
+      qualidade: qualAtual.id,
+      calls: renderer.info.render.calls,
+      triangles: renderer.info.render.triangles,
+      geometries: renderer.info.memory.geometries,
+      textures: renderer.info.memory.textures,
+      ...cidade.getStats(),
+    }),
   };
   passo(0.016);
   loop();
