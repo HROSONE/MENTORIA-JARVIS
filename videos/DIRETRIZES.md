@@ -127,7 +127,7 @@ Complementa o `ESTILO.md`. Ler antes de começar qualquer vídeo novo.
 ## Antes de criar um vídeo: checar a biblioteca (obrigatório)
 1. Ler `biblioteca3d/INVENTARIO.md` (cidade, veículos, personagens, módulos de cena e som já feitos).
 2. Listar o que o roteiro precisa (cenário, paisagem, personagens, objetos, efeitos) e marcar, item por item, **o que já existe** e o que falta.
-3. **Reutilizar** o que existe (copiar a pasta `js/` do Short mais parecido e trocar só o mundo e as cenas); criar do zero **só o que falta**.
+3. **Reutilizar** o que existe: use o núcleo compartilhado em `videos/core/` (`motor.js`, `util.js`, `harness.js`, `render.js`, `quadros.js`, `tiro.js`, `montar.sh` — veja `videos/core/README.md`) e os módulos da `biblioteca3d/`, criando do zero **só o que falta** (mundo, planos e efeitos específicos).
 4. Fazer a **decupagem como diretor de cinema** (tamanho do plano, ângulo, lente, movimento com motivo, luz e transição de cada plano; regras em `ESTILO.md`, seção "Direção de cena") e mostrar ao dono do canal junto com essa lista, antes de renderizar.
 5. Ao terminar, **registrar no inventário** tudo o que foi criado de novo (e salvar modelos `.glb` na biblioteca), para o próximo vídeo.
 6. Personagem pedido pelo dono ("camisa vermelha, calça azul") se acha no inventário; se o modelo existente não tem esqueleto, avisar e usar o mais próximo animado, repintado.

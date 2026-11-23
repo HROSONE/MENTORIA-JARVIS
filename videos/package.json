@@ -1,15 +1,15 @@
 {
-  "name": "scratchpad",
+  "name": "hryz-animation-videos",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Estúdio programático de animações 2D (SVG) e 3D (Three.js) do canal Hryz Animation.",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "setup:browser": "npx playwright install chromium",
+    "serve": "python3 -m http.server 8777",
+    "render": "node core/render.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "three": "^0.160.0"
+    "playwright": "^1.49.0",
+    "three": "0.160.0"
   }
 }

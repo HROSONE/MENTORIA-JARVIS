@@ -1,0 +1,7 @@
+# Dependências opcionais para geradores de malhas/personagens 3D e processamento de imagem
+-r requirements.txt
+opencv-python>=4.9
+scikit-image>=0.22
+trimesh>=4.0
+fast-simplification>=0.1
+rembg>=2.0
