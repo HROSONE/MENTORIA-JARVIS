@@ -1,9 +1,9 @@
-// Construtor ultra-otimizado da Cidade Hryz para tempo real (60 FPS):
+// Construtor ultra-leve da Cidade Hryz para 60 FPS mesmo em PCs fracos / vídeo integrado:
 // - Kit sem shaders offline de vídeo (detalhe: false)
-// - Mesclagem de geometria (mergeGeometries com vertexColors) de ~93% das malhas do kit por setor de 110 m
-// - InstancedMesh para peças texturizadas (casas Drummy, carros estacionados, letreiros)
-// - Culling exato por AABB de setor + matrixAutoUpdate = false em tudo que é estático
-// - Halos noturnos em 1 única draw call (THREE.Points)
+// - Mesclagem de ~95% das malhas do kit (incluindo semáforos!) por setor de 110 m com vertexColors
+// - Materiais MeshLambertMaterial em Leve/Médio (zero PBR/IBL por pixel) e MeshStandardMaterial no Alto
+// - Separação de camada base vs props decorativos (cercas, móveis, carros estacionados) para modo Leve ultra-rápido
+// - Culling exato por AABB de setor + matrixAutoUpdate = false + halos noturnos em 1 draw call (THREE.Points)
 // - NPCs carregados em segundo plano sob demanda e animados apenas quando próximos do jogador
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -57,28 +57,36 @@ const SOMBRA_DETALHE = new Set([
   'muro', 'muro-portao', 'guarita',
 ]);
 
+// Peças decorativas pesadas em triângulos que ficam ocultas no modo Leve (visíveis em Médio/Alto)
+const PROPS_DECOR = new Set([
+  'grade-ferro', 'cerca-madeira', 'cerca-madeira-portao',
+  'banco-praca', 'mesa-redonda', 'mesa-piquenique', 'cadeira-plastica',
+  'hidrante', 'hidrante-amarelo',
+  'placa-velocidade-40', 'placa-proibido-estacionar', 'placa-pedestres', 'placa-pare',
+]);
+
 function nivelSombraPeca(nome) {
   if (SOMBRA_PRINCIPAL.has(nome)) return 'principal';
   if (SOMBRA_DETALHE.has(nome)) return 'detalhe';
   return 'nunca';
 }
 
-// Prepara uma cópia não-indexada de `geo` com apenas (position, normal, color) já transformada em mundo
-function prepararGeoMesclavel(srcGeo, worldMat, mat) {
+const SEM_FORTE = { vermelho: new THREE.Color(0xff2a22), amarelo: new THREE.Color(0xffc61a), verde: new THREE.Color(0x27e05a) };
+const SEM_FRACA = { vermelho: new THREE.Color(0x4b1311), amarelo: new THREE.Color(0x4a3a0a), verde: new THREE.Color(0x0d3a1b) };
+
+// Prepara cópia não-indexada de `geo` com (position, normal, color) em espaço de mundo
+function prepararGeoMesclavel(srcGeo, worldMat, corOverride) {
   const g = srcGeo.index ? srcGeo.toNonIndexed() : srcGeo.clone();
-  // Remove atributos extras para compatibilidade total no mergeGeometries
   for (const attr of Object.keys(g.attributes)) {
-    if (attr !== 'position' && attr !== 'normal' && attr !== 'color') {
-      g.deleteAttribute(attr);
-    }
+    if (attr !== 'position' && attr !== 'normal' && attr !== 'color') g.deleteAttribute(attr);
   }
   g.applyMatrix4(worldMat);
   if (!g.attributes.normal) g.computeVertexNormals();
 
   const count = g.attributes.position.count;
-  const cr = mat.color ? mat.color.r : 1;
-  const cg = mat.color ? mat.color.g : 1;
-  const cb = mat.color ? mat.color.b : 1;
+  const cr = corOverride ? corOverride.r : 1;
+  const cg = corOverride ? corOverride.g : 1;
+  const cb = corOverride ? corOverride.b : 1;
 
   const prevCor = g.attributes.color;
   const cores = new Float32Array(count * 3);
@@ -127,7 +135,6 @@ export async function construirCidade({
   qualidadeInicial = null,
   onProgresso = () => {},
 }) {
-  // detalhe: false desliga os shaders procedurais de render de vídeo (fbm4/Voronoi por pixel)
   const kit = await Kit.carregar(undefined, { detalhe: false });
   const mundo = new THREE.Group();
   mundo.name = 'CidadeHryz';
@@ -135,26 +142,38 @@ export async function construirCidade({
   mundo.updateMatrix();
   scene.add(mundo);
 
-  const colisores = []; // { minX, maxX, minZ, maxZ }
+  const colisores = [];
 
-  // Materiais compartilhados para os baldes mesclados (vertexColors)
-  const MAT_BALDE = {
+  // Materiais Lambert (5x mais rápidos por pixel em Leve/Médio) e PBR (Alto)
+  const MAT_LAMBERT = {
+    fosco:   new THREE.MeshLambertMaterial({ vertexColors: true }),
+    metal:   new THREE.MeshLambertMaterial({ vertexColors: true }),
+    asfalto: new THREE.MeshLambertMaterial({ vertexColors: true }),
+    luz:     new THREE.MeshLambertMaterial({ vertexColors: true }),
+    vidro:   new THREE.MeshLambertMaterial({ vertexColors: true }),
+    semaforoLuz: new THREE.MeshBasicMaterial({ vertexColors: true }),
+  };
+  const MAT_PBR = {
     fosco:   new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.84, metalness: 0.04 }),
     metal:   new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.34, metalness: 0.62 }),
     asfalto: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.88, metalness: 0.02 }),
     luz:     new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4,  metalness: 0.0 }),
     vidro:   new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.22, metalness: 0.25 }),
+    semaforoLuz: new THREE.MeshBasicMaterial({ vertexColors: true }),
   };
 
   const matsLetreiro = new Set();
+  let estadoNoite = noiteInicial;
+  let estadoChuva = false;
 
   function aplicarEstadoLuzes(ligada) {
-    MAT_BALDE.luz.emissive.setHex(ligada ? 0xffd98a : 0x000000);
-    MAT_BALDE.luz.emissiveIntensity = ligada ? 1.65 : 0;
-
-    MAT_BALDE.vidro.emissive.setHex(ligada ? 0xffc866 : 0x000000);
-    MAT_BALDE.vidro.emissiveIntensity = ligada ? 1.15 : 0;
-
+    estadoNoite = ligada;
+    for (const M of [MAT_LAMBERT, MAT_PBR]) {
+      M.luz.emissive.setHex(ligada ? 0xffd98a : 0x000000);
+      M.luz.emissiveIntensity = ligada ? 1.5 : 0;
+      M.vidro.emissive.setHex(ligada ? 0xffc866 : 0x000000);
+      M.vidro.emissiveIntensity = ligada ? 1.15 : 0;
+    }
     for (const mat of matsLetreiro) {
       mat.emissive.setHex(ligada ? 0xffffff : 0x000000);
       mat.emissiveIntensity = ligada ? 0.9 : 0;
@@ -162,16 +181,14 @@ export async function construirCidade({
   }
 
   function alternarChuva(molhado) {
-    MAT_BALDE.asfalto.roughness = molhado ? 0.24 : 0.88;
-    MAT_BALDE.asfalto.color.setHex(molhado ? 0xa6aeb8 : 0xffffff);
+    estadoChuva = molhado;
+    MAT_LAMBERT.asfalto.color.setHex(molhado ? 0xa0a8b2 : 0xffffff);
+    MAT_PBR.asfalto.color.setHex(molhado ? 0xa6aeb8 : 0xffffff);
+    MAT_PBR.asfalto.roughness = molhado ? 0.24 : 0.88;
   }
 
-  // Chão base de grama leve
-  const chaoMat = new THREE.MeshStandardMaterial({
-    color: noiteInicial ? 0x2c4a2a : 0x6fa94c,
-    roughness: 0.94,
-    metalness: 0,
-  });
+  // Chão base de grama (Lambert — custo quase zero!)
+  const chaoMat = new THREE.MeshLambertMaterial({ color: noiteInicial ? 0x2c4a2a : 0x6fa94c });
   const chao = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), chaoMat);
   chao.rotation.x = -Math.PI / 2;
   chao.position.set(300, -0.03, 300);
@@ -180,7 +197,7 @@ export async function construirCidade({
   chao.updateMatrix();
   scene.add(chao);
 
-  // ---- Carregador e cache de templates (cada GLB é baixado UMA única vez)
+  // ---- Carregador e cache de templates (cada GLB baixado 1 vez)
   const loader = new GLTFLoader();
   const templatePromises = new Map();
   const templates = new Map();
@@ -191,7 +208,7 @@ export async function construirCidade({
         if (!mat.emissiveMap) { mat.emissiveMap = mat.map; mat.needsUpdate = true; }
         matsLetreiro.add(mat);
       }
-      return null; // vai para InstancedMesh (preserva textura/transparência)
+      return null;
     }
     if (/^Luz(_\d+)?$/.test(name)) return 'luz';
     if (/^VidroLuz(_\d+)?$/.test(name)) return 'vidro';
@@ -209,9 +226,26 @@ export async function construirCidade({
       const localMatrix = m.matrixWorld.clone();
       const detPos = localMatrix.determinant() > 0;
       const balde = detPos ? classificarSub(m.name || '', mat) : null;
+      // Para peças texturizadas (Drummy / Kenney), prepara versão Lambert leve para modo Leve
+      let matLeve = mat;
+      if (!balde && mat && !Array.isArray(mat) && mat.isMeshStandardMaterial) {
+        matLeve = new THREE.MeshLambertMaterial({
+          color: mat.color ? mat.color.clone() : 0xffffff,
+          map: mat.map || null,
+          transparent: mat.transparent,
+          opacity: mat.opacity,
+          alphaTest: mat.alphaTest,
+          side: mat.side,
+        });
+        if (mat.emissiveMap) {
+          matLeve.emissiveMap = mat.emissiveMap;
+          matsLetreiro.add(matLeve);
+        }
+      }
       subs.push({
         geometry: m.geometry,
         material: mat,
+        matLeve,
         localMatrix,
         name: m.name || '',
         balde,
@@ -252,7 +286,6 @@ export async function construirCidade({
   }
 
   const itensEstaticos = [];
-  const semaforosLista = [];
   const avioesParados = [];
   const trafegoDefs = [];
 
@@ -265,46 +298,44 @@ export async function construirCidade({
     colisor = SOLIDOS.has(nome),
     folga = nome === 'muro' ? 0.15 : 0.45,
     sombra = nivelSombraPeca(nome),
+    decor = PROPS_DECOR.has(nome),
+    semaforo = null,
   } = {}) {
     const key = solicitarTemplateKit(nome);
-    itensEstaticos.push({ key, x, y, z, ang, escala, halo, colisor, folga, sombra, recebeSombra: true });
+    itensEstaticos.push({ key, x, y, z, ang, escala, halo, colisor, folga, sombra, decor, semaforo, recebeSombra: true });
   }
 
   const OCUPADO = new Set();
   function ladrilho(nome, gx, gz, rot = 0, lados = null) {
     OCUPADO.add(gx + ',' + gz);
-    const key = solicitarTemplateKit(nome);
-    if (lados) rot = kit.rotacaoPara(nome, lados);
+    // Troca gramados de 1.8k–3.2k triângulos por grama leve na camada base e mantém florido só como decor
+    const ehFlor = (nome === 'gramado-flores' || nome === 'gramado-detalhado');
+    const nomeBase = ehFlor ? 'chao-grama' : nome;
+    const key = solicitarTemplateKit(nomeBase);
+    if (lados) rot = kit.rotacaoPara(nomeBase, lados);
     itensEstaticos.push({
       key,
       x: gx * TILE, y: 0, z: gz * TILE,
       ang: rot * Math.PI / 2,
-      escala: 1,
-      halo: false,
-      colisor: false,
-      folga: 0,
-      sombra: 'nunca',
-      recebeSombra: true,
+      escala: 1, halo: false, colisor: false, folga: 0,
+      sombra: 'nunca', decor: false, semaforo: null, recebeSombra: true,
     });
   }
 
-  function modelo(url, x, z, ang = 0, y = CALCADA, escala = 1, { colisor = false, sombra = 'detalhe' } = {}) {
+  function modelo(url, x, z, ang = 0, y = CALCADA, escala = 1, { colisor = false, sombra = 'detalhe', decor = false } = {}) {
     const key = solicitarTemplateGlb(url);
     itensEstaticos.push({
-      key,
-      x, y, z, ang, escala,
-      halo: false,
-      colisor,
-      folga: 0.4,
-      sombra,
-      recebeSombra: true,
+      key, x, y, z, ang, escala,
+      halo: false, colisor, folga: 0.4, sombra, decor, semaforo: null, recebeSombra: true,
     });
   }
 
-  const CARROS = ['sedan', 'sedan-sports', 'hatchback-sports', 'suv', 'suv-luxury', 'taxi', 'van', 'police', 'delivery'];
-  const PESADOS = ['truck', 'truck-flat', 'delivery', 'delivery-flat', 'van', 'garbage-truck'];
+  // 3 tipos de carros estacionados decorativos (reduz 3x os InstancedMeshes)
+  const CARROS_ESTAC = ['sedan', 'suv', 'taxi'];
+  const CARROS_TRAF = ['sedan', 'sedan-sports', 'suv', 'taxi', 'van', 'delivery'];
+  const PESADOS = ['truck', 'delivery', 'van'];
   const carro = (nome, x, z, ry, y = 0) =>
-    modelo(`${BASE_BIB}/veiculos/${nome}.glb`, x, z, ry, y, ESCALA_VEICULO, { colisor: false, sombra: 'detalhe' });
+    modelo(`${BASE_BIB}/veiculos/${nome}.glb`, x, z, ry, y, ESCALA_VEICULO, { colisor: false, sombra: 'detalhe', decor: true });
 
   // ====================================================================================================
   // 1. Rede de Ruas
@@ -361,7 +392,8 @@ export async function construirCidade({
     if (t.nome === 'rua-cruzamento' && gx >= 9 && gx <= 27 && gz >= 8 && gz <= 20) {
       const ns = (gx + gz) % 2 ? 'vermelho' : 'verde', lo = ns === 'verde' ? 'vermelho' : 'verde';
       for (const [x, z, a, e] of [[4.7, 4.7, 0, ns], [-4.7, -4.7, Math.PI, ns], [-4.7, 4.7, -Math.PI / 2, lo], [4.7, -4.7, Math.PI / 2, lo]]) {
-        semaforosLista.push({ gx, gz, x, z, a, e });
+        // Semáforo entra direto na mesclagem do setor (0 draw calls extras!)
+        colocar('semaforo-apagado', gx * TILE + x, gz * TILE + z, a, CALCADA, { colisor: false, sombra: 'nunca', semaforo: e });
       }
     }
     if (t.nome === 'rua-t' && R() < 0.5) {
@@ -377,13 +409,13 @@ export async function construirCidade({
   }
   colocar('placa-rua-hryz', 9 * TILE + 4.8, 14 * TILE + 4.8, Math.PI / 4);
 
-  // Carros estacionados em algumas ruas
+  // Carros estacionados (camada decorativa)
   for (const [c, t] of Object.entries(TIPO)) {
     const [gx, gz] = c.split(',').map(Number);
     if (t.nome !== 'rua-reta' || gz === 14 || R() > 0.14) continue;
     const vert = t.l.includes('N'), sentido = R() < 0.5 ? 1 : -1;
     const p = kit.naPista(gx, gz, vert ? 0 : 1, sentido, (R() - 0.5) * 6);
-    carro(escolha(CARROS), p.x, p.z, p.ry);
+    carro(escolha(CARROS_ESTAC), p.x, p.z, p.ry);
   }
 
   // ====================================================================================================
@@ -395,12 +427,12 @@ export async function construirCidade({
   function piso(gx0, gx1, gz0, gz1, nome) {
     for (let gx = gx0; gx <= gx1; gx++) for (let gz = gz0; gz <= gz1; gz++) if (livre(gx, gz)) PISOS.push([nome, gx, gz]);
   }
-  const ARVORES = ['arvore-redonda', 'arvore-frondosa', 'arvore-ipe-amarelo', 'arvore-ipe-rosa', 'arvore-pinheiro', 'arvore-cipreste'];
+  const ARVORES = ['arvore-redonda', 'arvore-ipe-amarelo', 'arvore-ipe-rosa', 'arvore-pinheiro', 'arvore-cipreste'];
   const arvore = (x, z, esc = 0.85 + R() * 0.3) => colocar(escolha(ARVORES), x, z, R() * 6.28, CALCADA, { escala: esc, colisor: false });
   const CASAS_KIT = ['casa-simples', 'casa-sobrado', 'casa-moderna', 'casa-colonial'];
   const CERCAS = ['cerca-madeira-portao', 'muro-portao', 'grade-ferro', 'cerca-madeira'];
-  // 6 variantes variadas de casas Drummy (economiza ~4 MB de download e reduz draw calls em 60%)
-  const CASAS_DRUMMY = ['casa2-a', 'casa2-c', 'casa3-b', 'casa4-a', 'casa5-c', 'casa6-b'];
+  // 3 modelos variados de casas Drummy (menos download e 5x menos InstancedMeshes!)
+  const CASAS_DRUMMY = ['casa2-a', 'casa3-b', 'casa5-c'];
   const casaDrummy = () => `${BASE_BIB}/casas/${escolha(CASAS_DRUMMY)}.glb`;
 
   function bairro(c, r, estilo) {
@@ -413,16 +445,16 @@ export async function construirCidade({
       if (!livre(gx, gz)) continue;
       const x = gx * TILE, z = gz * TILE, fx = Math.sin(ang), fz = Math.cos(ang);
       const drummy = estilo === 'drummy' || (estilo === 'misto' && R() < 0.5);
-      if (drummy) modelo(casaDrummy(), x, z, ang, CALCADA, 1, { colisor: true, sombra: 'principal' });
+      if (drummy) modelo(casaDrummy(), x, z, ang, CALCADA, 1, { colisor: true, sombra: 'principal', decor: false });
       else {
         colocar(escolha(CASAS_KIT), x, z, ang);
-        colocar(escolha(CERCAS), x + fx * 5.85, z + fz * 5.85, ang, CALCADA, { colisor: false });
+        colocar(escolha(CERCAS), x + fx * 5.85, z + fz * 5.85, ang, CALCADA, { colisor: false, decor: true });
       }
-      if (R() < 0.6) arvore(x - fz * 4.6 + fx * 4.2, z + fx * 4.6 + fz * 4.2, 0.7 + R() * 0.2);
+      if (R() < 0.45) arvore(x - fz * 4.6 + fx * 4.2, z + fx * 4.6 + fz * 4.2, 0.7 + R() * 0.2);
     }
     for (let gx = q.x0 + 1; gx < q.x1; gx++) for (let gz = q.z0 + 1; gz < q.z1; gz++) {
       if (!livre(gx, gz)) continue;
-      arvore(gx * TILE + (R() - 0.5) * 8, gz * TILE + (R() - 0.5) * 8);
+      if (R() < 0.65) arvore(gx * TILE + (R() - 0.5) * 8, gz * TILE + (R() - 0.5) * 8);
     }
   }
 
@@ -494,7 +526,7 @@ export async function construirCidade({
     colocar('supermercado', 12 * 18, 12 * 3.5, Math.PI);
     for (let gx = q.x0; gx <= q.x1; gx++) for (const gz of [6, 7]) {
       ladrilho('estacionamento', gx, gz, gz === 6 ? 2 : 0);
-      for (const bx of [-4.5, -1.5, 1.5, 4.5]) if (R() < 0.45) carro(escolha(CARROS), gx * TILE + bx, gz * TILE + (gz === 6 ? 3.5 : -3.5), gz === 6 ? 0 : Math.PI, CALCADA);
+      for (const bx of [-4.5, -1.5, 1.5, 4.5]) if (R() < 0.4) carro(escolha(CARROS_ESTAC), gx * TILE + bx, gz * TILE + (gz === 6 ? 3.5 : -3.5), gz === 6 ? 0 : Math.PI, CALCADA);
     }
   }
   // Prédios residenciais (quadra 3,0)
@@ -527,8 +559,8 @@ export async function construirCidade({
       if (!livre(gx, gz)) continue;
       if (gz === q.z0 + 2) {
         ladrilho('estacionamento', gx, gz, 0);
-        if (R() < 0.45) carro(escolha(CARROS), gx * TILE + escolha([-4.5, -1.5, 1.5, 4.5]), gz * TILE - 3.5, Math.PI, CALCADA);
-      } else if (R() < 0.4) arvore(gx * TILE, gz * TILE, 0.7);
+        if (R() < 0.4) carro(escolha(CARROS_ESTAC), gx * TILE + escolha([-4.5, -1.5, 1.5, 4.5]), gz * TILE - 3.5, Math.PI, CALCADA);
+      } else if (R() < 0.35) arvore(gx * TILE, gz * TILE, 0.7);
     }
   }
   // Condomínio de prédios (quadra 0,2)
@@ -552,12 +584,12 @@ export async function construirCidade({
     for (let gx = 22; gx <= 26; gx++) {
       for (const [gz, ang] of [[25, 0], [27, Math.PI]]) {
         if (gx === 22) continue;
-        modelo(casaDrummy(), gx * TILE, gz * TILE, ang, CALCADA, 1, { colisor: true, sombra: 'principal' });
+        modelo(casaDrummy(), gx * TILE, gz * TILE, ang, CALCADA, 1, { colisor: true, sombra: 'principal', decor: false });
         arvore(gx * TILE + 4.5, gz * TILE + (ang ? 4.2 : -4.2), 0.7);
       }
     }
     for (let gx = 23; gx <= 26; gx++) for (const gz of [29, 31]) {
-      modelo(casaDrummy(), gx * TILE, gz * TILE, gz === 29 ? Math.PI : 0, CALCADA, 1, { colisor: true, sombra: 'principal' });
+      modelo(casaDrummy(), gx * TILE, gz * TILE, gz === 29 ? Math.PI : 0, CALCADA, 1, { colisor: true, sombra: 'principal', decor: false });
     }
     colocar('piscina', 24.5 * TILE, 23 * TILE, 0);
     for (const gx of [22, 26]) for (const gz of [23, 24]) arvore(gx * TILE, gz * TILE);
@@ -572,8 +604,8 @@ export async function construirCidade({
     colocar('campo-futebol', 29.5 * TILE, 8.5 * TILE, Math.PI / 2, 0, { colisor: false, sombra: 'nunca' });
     for (let gx = 28; gx <= 31; gx++) for (let gz = 6; gz <= 11; gz++) OCUPADO.add(k(gx, gz));
     for (let gz = 3; gz <= 13; gz++) {
-      if (R() < 0.85) arvore(32 * TILE + (R() - 0.5) * 4, gz * TILE + (R() - 0.5) * 4);
-      if ((gz < 6 || gz > 11) && R() < 0.85) for (let gx = 28; gx <= 31; gx++) if (R() < 0.35) arvore(gx * TILE + (R() - 0.5) * 6, gz * TILE + (R() - 0.5) * 6);
+      if (R() < 0.7) arvore(32 * TILE + (R() - 0.5) * 4, gz * TILE + (R() - 0.5) * 4);
+      if ((gz < 6 || gz > 11) && R() < 0.7) for (let gx = 28; gx <= 31; gx++) if (R() < 0.3) arvore(gx * TILE + (R() - 0.5) * 6, gz * TILE + (R() - 0.5) * 6);
     }
     for (const gz of [3, 13]) for (let gx = 29; gx <= 31; gx++) colocar('banco-praca', gx * TILE, gz * TILE + (gz === 3 ? 2 : -2), gz === 3 ? 0 : Math.PI);
     colocar('mesa-piquenique', 28 * TILE + 2, 3 * TILE + 2, 0.4);
@@ -592,10 +624,10 @@ export async function construirCidade({
   colocar('placa-rodovia-cidade', RX - 17.6, -2 * TILE, Math.PI, CALCADA);
   colocar('placa-rodovia-saida', RX - 17.6, 30 * TILE, Math.PI, CALCADA);
 
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 20; i++) {
     const faixa = escolha([[-5.75, 1, 20], [-9.25, 1, 26], [-12.75, 1, 15], [5.75, -1, 20], [9.25, -1, 26], [12.75, -1, 15]]);
     const [lx, sent, vel] = faixa;
-    const nome = Math.abs(lx) > 12 ? escolha(PESADOS) : escolha(CARROS);
+    const nome = Math.abs(lx) > 12 ? escolha(PESADOS) : escolha(CARROS_TRAF);
     const z0 = -260 + R() * 980;
     const url = `${BASE_BIB}/veiculos/${nome}.glb`;
     solicitarTemplateGlb(url);
@@ -608,7 +640,7 @@ export async function construirCidade({
   const TX = 15 * TILE, TZ = 441, AP = TZ + 42, TAXI = 519, PISTA = 567;
   for (let gx = 9; gx <= 21; gx++) {
     ladrilho('estacionamento', gx, 33, 0);
-    for (const bx of [-4.5, -1.5, 1.5, 4.5]) if (R() < 0.5) carro(escolha(CARROS), gx * TILE + bx, 33 * TILE - 3.5, Math.PI, CALCADA);
+    for (const bx of [-4.5, -1.5, 1.5, 4.5]) if (R() < 0.4) carro(escolha(CARROS_ESTAC), gx * TILE + bx, 33 * TILE - 3.5, Math.PI, CALCADA);
   }
   colocar('terminal-aeroporto', TX, TZ, Math.PI, CALCADA, { halo: true });
   for (const dx of [-48, 0, 48]) colocar('patio-posicao', TX + dx, AP, 0, 0);
@@ -635,11 +667,10 @@ export async function construirCidade({
   colocar('estadio-futebol', 40.5 * TILE, 7 * TILE, 0, 0, { colisor: true, folga: 1.5, sombra: 'principal' });
   for (let gz = 3; gz <= 11; gz++) {
     ladrilho('estacionamento', 34, gz, 1);
-    for (const bz of [-4.5, -1.5, 1.5, 4.5]) if (R() < 0.5) carro(escolha(CARROS), 34 * TILE + 3.5, gz * TILE + bz, -Math.PI / 2, CALCADA);
+    for (const bz of [-4.5, -1.5, 1.5, 4.5]) if (R() < 0.4) carro(escolha(CARROS_ESTAC), 34 * TILE + 3.5, gz * TILE + bz, -Math.PI / 2, CALCADA);
   }
   for (let gx = 36; gx <= 46; gx += 2) colocar('arvore-palmeira', gx * TILE, 1 * TILE - 1.5, R() * 6);
 
-  // Pisos restantes das quadras
   for (const [nome, gx, gz] of PISOS) if (!OCUPADO.has(k(gx, gz))) ladrilho(nome, gx, gz);
 
   // ====================================================================================================
@@ -651,16 +682,14 @@ export async function construirCidade({
   listaPromessas.forEach(p => p.then(() => {
     carregados++;
     if (carregados % 4 === 0 || carregados === totalTpls) {
-      onProgresso((carregados / totalTpls) * 0.85, `Baixando modelos da cidade (${carregados}/${totalTpls})…`);
+      onProgresso((carregados / totalTpls) * 0.85, `Baixando modelos (${carregados}/${totalTpls})…`);
     }
   }));
   await Promise.all(listaPromessas);
-  onProgresso(0.90, 'Mesclando malhas por setor (ultra leve)…');
+  onProgresso(0.90, 'Mesclando cidade em malhas ultra-leves…');
 
   // ====================================================================================================
-  // 7. Construir Setores (Chunks de 110 m):
-  //    - ~93% das sub-malhas (cores sólidas do kit) são mescladas em ~5 draw calls por setor!
-  //    - ~7% (texturas/transparência: casas Drummy, carros, letreiros) viram InstancedMesh!
+  // 7. Construir Setores (Chunks de 110 m) com camada Base + camada Decorativa
   // ====================================================================================================
   const chunksMap = new Map();
   function obterChunk(x, z) {
@@ -673,12 +702,17 @@ export async function construirCidade({
       group.name = 'Chunk_' + ck;
       group.matrixAutoUpdate = false;
       group.updateMatrix();
+      const decorGroup = new THREE.Group();
+      decorGroup.name = 'Decor_' + ck;
+      decorGroup.matrixAutoUpdate = false;
+      decorGroup.updateMatrix();
+      group.add(decorGroup);
       mundo.add(group);
       ch = {
-        ck, group,
+        ck, group, decorGroup,
         minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity,
-        mesclas: new Map(), // `${balde}#${sombra}` -> { balde, sombra, geos: BufferGeometry[] }
-        instancias: new Map(), // `${key}#${si}#${sombra}` -> { sub, sombra, recebeSombra, matrices: Matrix4[] }
+        mesclas: new Map(),
+        instancias: new Map(),
       };
       chunksMap.set(ck, ch);
     }
@@ -730,26 +764,39 @@ export async function construirCidade({
     }
 
     const ch = obterChunk(item.x, item.z);
+    const dTag = item.decor ? '1' : '0';
+
     for (let si = 0; si < tpl.subs.length; si++) {
       const sub = tpl.subs[si];
       tmpWorldMat.multiplyMatrices(tmpInstMat, sub.localMatrix);
 
-      if (sub.balde) {
-        // Mescla em malha única por (balde, nivelSombra) dentro do setor
-        const sTag = (sub.balde === 'asfalto' || sub.balde === 'luz' || sub.balde === 'vidro') ? 'nunca' : item.sombra;
-        const mKey = `${sub.balde}#${sTag}`;
+      let balde = sub.balde;
+      let corOverride = sub.material?.color || null;
+
+      // Semáforo mesclado diretamente com cor ligada/apagada da lente!
+      if (item.semaforo && sub.name.startsWith('Luz_')) {
+        const corNome = sub.name.slice(4).toLowerCase();
+        if (corNome in SEM_FORTE) {
+          const ativa = corNome === item.semaforo;
+          corOverride = ativa ? SEM_FORTE[corNome] : SEM_FRACA[corNome];
+          balde = ativa ? 'semaforoLuz' : 'fosco';
+        }
+      }
+
+      if (balde) {
+        const sTag = (balde === 'asfalto' || balde === 'luz' || balde === 'vidro' || balde === 'semaforoLuz') ? 'nunca' : item.sombra;
+        const mKey = `${dTag}#${balde}#${sTag}`;
         let bucket = ch.mesclas.get(mKey);
         if (!bucket) {
-          bucket = { balde: sub.balde, sombra: sTag, geos: [] };
+          bucket = { decor: item.decor, balde, sombra: sTag, geos: [] };
           ch.mesclas.set(mKey, bucket);
         }
-        bucket.geos.push(prepararGeoMesclavel(sub.geometry, tmpWorldMat, sub.material));
+        bucket.geos.push(prepararGeoMesclavel(sub.geometry, tmpWorldMat, corOverride));
       } else {
-        // Sub-malha texturizada ou transparente -> InstancedMesh
-        const bKey = `${item.key}#${si}#${item.sombra}`;
+        const bKey = `${dTag}#${item.key}#${si}#${item.sombra}`;
         let batch = ch.instancias.get(bKey);
         if (!batch) {
-          batch = { sub, sombra: item.sombra, recebeSombra: item.recebeSombra, matrices: [] };
+          batch = { decor: item.decor, sub, sombra: item.sombra, recebeSombra: item.recebeSombra, matrices: [] };
           ch.instancias.set(bKey, batch);
         }
         batch.matrices.push(tmpWorldMat.clone());
@@ -757,26 +804,16 @@ export async function construirCidade({
     }
   }
 
-  // Semáforos no centro (poucas unidades com cor individual)
-  for (const s of semaforosLista) {
-    const o = await kit.prop('semaforo-apagado', s.gx, s.gz, s.x, s.z, { rotY: s.a });
-    kit.semaforoEstado(o, s.e);
-    o.traverse(m => {
-      if (m.isMesh) { m.castShadow = false; m.receiveShadow = false; }
-      m.matrixAutoUpdate = false;
-      m.updateMatrix();
-    });
-    obterChunk(s.gx * TILE + s.x, s.gz * TILE + s.z).group.add(o);
-  }
-
-  // Aviões parados no aeroporto + jato voando
-  const RODA = new THREE.MeshStandardMaterial({ color: 0x1d1f23, roughness: 0.8 });
-  const PERNA = new THREE.MeshStandardMaterial({ color: 0xb8bec6, metalness: 0.5, roughness: 0.4 });
-  const GEO_PERNA = new THREE.CylinderGeometry(0.18, 0.18, 4.2, 8);
-  const GEO_RODA = new THREE.CylinderGeometry(0.62, 0.62, 0.42, 12);
+  // Aviões parados + jato voando
+  const RODA = new THREE.MeshLambertMaterial({ color: 0x1d1f23 });
+  const PERNA = new THREE.MeshLambertMaterial({ color: 0xb8bec6 });
+  const GEO_PERNA = new THREE.CylinderGeometry(0.18, 0.18, 4.2, 6);
+  const GEO_RODA = new THREE.CylinderGeometry(0.62, 0.62, 0.42, 10);
   const tplJato = templates.get('glb:' + URL_JATO);
   const malhasSombraPrincipal = [];
   const malhasSombraDetalhe = [];
+  const malhasMescladas = []; // { mesh, balde }
+  const malhasInstanciadas = []; // { inst, matPbr, matLeve }
 
   function montarAviaoObj({ x, y, z, ang, rodas = true }) {
     const g = new THREE.Group();
@@ -817,7 +854,7 @@ export async function construirCidade({
   const jatoVoando = montarAviaoObj({ x: 120, y: YA, z: PISTA - 4, ang: Math.PI / 2, rodas: false });
   mundo.add(jatoVoando);
 
-  // Materializa as malhas mescladas e InstancedMeshes de cada setor
+  // Materializa malhas mescladas e InstancedMeshes de cada setor
   const chunks = [];
   for (const ch of chunksMap.values()) {
     for (const bucket of ch.mesclas.values()) {
@@ -826,12 +863,13 @@ export async function construirCidade({
       for (let i = 0; i < bucket.geos.length; i++) bucket.geos[i].dispose();
       if (!merged) continue;
       merged.computeBoundingSphere();
-      const mesh = new THREE.Mesh(merged, MAT_BALDE[bucket.balde]);
+      const mesh = new THREE.Mesh(merged, MAT_LAMBERT[bucket.balde]);
       mesh.receiveShadow = true;
       mesh.castShadow = false;
       mesh.matrixAutoUpdate = false;
       mesh.updateMatrix();
-      ch.group.add(mesh);
+      (bucket.decor ? ch.decorGroup : ch.group).add(mesh);
+      malhasMescladas.push({ mesh, balde: bucket.balde });
 
       if (bucket.sombra === 'principal') malhasSombraPrincipal.push(mesh);
       else if (bucket.sombra === 'detalhe') malhasSombraDetalhe.push(mesh);
@@ -840,7 +878,7 @@ export async function construirCidade({
 
     for (const batch of ch.instancias.values()) {
       const count = batch.matrices.length;
-      const inst = new THREE.InstancedMesh(batch.sub.geometry, batch.sub.material, count);
+      const inst = new THREE.InstancedMesh(batch.sub.geometry, batch.sub.matLeve, count);
       for (let i = 0; i < count; i++) inst.setMatrixAt(i, batch.matrices[i]);
       inst.instanceMatrix.needsUpdate = true;
       inst.computeBoundingSphere();
@@ -849,22 +887,23 @@ export async function construirCidade({
       inst.castShadow = false;
       inst.matrixAutoUpdate = false;
       inst.updateMatrix();
-      ch.group.add(inst);
+      (batch.decor ? ch.decorGroup : ch.group).add(inst);
+      malhasInstanciadas.push({ inst, matPbr: batch.sub.material, matLeve: batch.sub.matLeve });
 
       if (batch.sombra === 'principal') malhasSombraPrincipal.push(inst);
       else if (batch.sombra === 'detalhe') malhasSombraDetalhe.push(inst);
     }
     ch.instancias.clear();
 
-    // AABB exata do setor (com pequena folga de 16 m para peças na borda do lote)
     chunks.push({
       group: ch.group,
-      minX: ch.minX - 16, maxX: ch.maxX + 16,
-      minZ: ch.minZ - 16, maxZ: ch.maxZ + 16,
+      decorGroup: ch.decorGroup,
+      minX: ch.minX - 14, maxX: ch.maxX + 14,
+      minZ: ch.minZ - 14, maxZ: ch.maxZ + 14,
     });
   }
 
-  // Halos noturnos em 1 única draw call (THREE.Points)
+  // Halos noturnos em 1 única draw call
   let halosPoints = null;
   if (haloCoords.length) {
     const hGeo = new THREE.BufferGeometry();
@@ -894,7 +933,7 @@ export async function construirCidade({
     o.scale.setScalar(ESCALA_VEICULO);
     o.position.set(td.x, 0, td.z);
     o.rotation.y = td.ry;
-    o.traverse(m => { if (m.isMesh) { m.castShadow = false; m.receiveShadow = true; } });
+    o.traverse(m => { if (m.isMesh) { m.castShadow = false; m.receiveShadow = false; } });
     mundo.add(o);
     trafego.push({ o, x: td.x, sent: td.sent, vel: td.vel, min: -280, max: 760 });
   }
@@ -903,12 +942,14 @@ export async function construirCidade({
   // 8. Qualidade dinâmica e NPCs em segundo plano
   // ====================================================================================================
   let cfgQual = qualidadeInicial || {
-    viewDist: 250,
-    sombraPrincipal: true,
+    viewDist: 125,
+    pbr: false,
+    mostrarDecor: false,
+    sombraPrincipal: false,
     sombraDetalhe: false,
-    npcsMax: 3,
-    npcDist: 55,
-    trafegoMax: 14,
+    npcsMax: 0,
+    npcDist: 40,
+    trafegoMax: 8,
   };
 
   const npcs = [];
@@ -945,12 +986,12 @@ export async function construirCidade({
   let ultCullX = 1e9, ultCullZ = 1e9;
   let chunksVisiveis = chunks.length;
 
-  // Culling por distância exata até a AABB de cada setor (sem raio inflado)
   function atualizarChunks(fx, fz, forcar = false) {
     if (!forcar && (fx - ultCullX) * (fx - ultCullX) + (fz - ultCullZ) * (fz - ultCullZ) < 64) return;
     ultCullX = fx;
     ultCullZ = fz;
     const vd2 = cfgQual.viewDist * cfgQual.viewDist;
+    const showDec = !!cfgQual.mostrarDecor;
     let vis = 0;
     for (let i = 0; i < chunks.length; i++) {
       const ch = chunks[i];
@@ -958,6 +999,7 @@ export async function construirCidade({
       const dz = fz < ch.minZ ? ch.minZ - fz : (fz > ch.maxZ ? fz - ch.maxZ : 0);
       const mostrar = (dx * dx + dz * dz) <= vd2;
       ch.group.visible = mostrar;
+      ch.decorGroup.visible = mostrar && showDec;
       if (mostrar) vis++;
     }
     chunksVisiveis = vis;
@@ -965,18 +1007,27 @@ export async function construirCidade({
 
   function aplicarQualidade(q) {
     cfgQual = { ...cfgQual, ...q };
+    const mats = cfgQual.pbr ? MAT_PBR : MAT_LAMBERT;
+    for (let i = 0; i < malhasMescladas.length; i++) {
+      const m = malhasMescladas[i];
+      m.mesh.material = mats[m.balde];
+    }
+    for (let i = 0; i < malhasInstanciadas.length; i++) {
+      const it = malhasInstanciadas[i];
+      it.inst.material = cfgQual.pbr ? it.matPbr : it.matLeve;
+    }
     for (let i = 0; i < malhasSombraPrincipal.length; i++) malhasSombraPrincipal[i].castShadow = !!cfgQual.sombraPrincipal;
     for (let i = 0; i < malhasSombraDetalhe.length; i++) malhasSombraDetalhe[i].castShadow = !!cfgQual.sombraDetalhe;
-    for (let i = 0; i < trafego.length; i++) {
-      trafego[i].o.visible = i < cfgQual.trafegoMax;
-    }
+    for (let i = 0; i < trafego.length; i++) trafego[i].o.visible = i < cfgQual.trafegoMax;
+    aplicarEstadoLuzes(estadoNoite);
+    alternarChuva(estadoChuva);
     atualizarChunks(ultCullX === 1e9 ? 146 : ultCullX, ultCullZ === 1e9 ? 166 : ultCullZ, true);
     garantirNpcs(cfgQual.npcsMax);
   }
 
   aplicarEstadoLuzes(noiteInicial);
   aplicarQualidade(cfgQual);
-  onProgresso(1, 'Cidade otimizada pronta!');
+  onProgresso(1, 'Cidade pronta!');
 
   function alternarNoite(ligada) {
     chaoMat.color.setHex(ligada ? 0x2c4a2a : 0x6fa94c);
