@@ -15,8 +15,8 @@
 </script>
 <style>
   :root {
-    --bg-glass: rgba(10, 15, 28, 0.72);
-    --border-glass: rgba(148, 163, 184, 0.22);
+    --bg-glass: rgba(10, 15, 28, 0.86);
+    --border-glass: rgba(148, 163, 184, 0.24);
     --accent: #38bdf8;
     --gold: #facc15;
     --danger: #ef4444;
@@ -43,14 +43,12 @@
   #barra-carga { height: 100%; width: 4%; background: linear-gradient(90deg, #38bdf8, #818cf8); transition: width 0.2s ease; }
   #texto-carga { font-size: 13px; color: #cbd5e1; }
 
-  /* HUD geral */
+  /* HUD geral (sem backdrop-filter para não pesar no compositor sobre o WebGL) */
   .glass {
     background: var(--bg-glass);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--border-glass);
     border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.34);
   }
 
   /* Topo esquerdo: Minimapa + Missão */
@@ -61,9 +59,10 @@
   .mm-box { padding: 6px; width: 164px; }
   #minimap { width: 150px; height: 150px; border-radius: 8px; display: block; border: 1px solid rgba(255,255,255,0.12); }
   .mm-legenda { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); padding: 4px 2px 0; }
-  .stats-row { display: flex; gap: 6px; }
+  .stats-row { display: flex; gap: 6px; flex-wrap: wrap; }
   .pill { padding: 5px 10px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
   .pill .dot-gold { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+  #hud-fps { color: #4ade80; font-variant-numeric: tabular-nums; }
   #hud-alvo-box { padding: 6px 10px; font-size: 12px; max-width: 210px; }
   #hud-alvo-box .rot { font-size: 10px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--gold); font-weight: 700; }
   #hud-alvo { font-weight: 700; color: #fff; }
@@ -75,8 +74,6 @@
   }
   .btn-hud, #select-teleporte {
     background: var(--bg-glass);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--border-glass);
     color: var(--text);
     border-radius: 10px;
@@ -201,6 +198,7 @@
     <div class="stats-row">
       <div class="glass pill"><span class="dot-gold"></span><span id="hud-score">0 pts</span></div>
       <div class="glass pill">🏎️ <span id="hud-maxvel">0 km/h</span></div>
+      <div class="glass pill"><span id="hud-fps">-- FPS</span></div>
     </div>
   </div>
 
@@ -210,6 +208,7 @@
       <option value="">🗺️ Ir para…</option>
     </select>
     <button class="btn-hud oculto" id="btn-sirene" title="Sirene / Giroflex (L)">🚨 Sirene</button>
+    <button class="btn-hud" id="btn-qualidade" title="Qualidade gráfica: Leve / Médio / Alto (Q)">⚡ Médio</button>
     <button class="btn-hud" id="btn-noite" title="Alternar Dia/Noite (N)">🌙 Noite</button>
     <button class="btn-hud" id="btn-chuva" title="Alternar Chuva (R)">🌧️ Chuva</button>
     <button class="btn-hud" id="btn-cam" title="Trocar Câmera (V)">🎥 Câmera</button>
@@ -261,6 +260,7 @@
         <kbd>F</kbd><span>Faróis do carro</span>
         <kbd>V</kbd><span>Alternar câmera (3ª pessoa / Capô / Aérea)</span>
         <kbd>C</kbd><span>Trocar personagem jogável</span>
+        <kbd>Q</kbd><span>Alternar qualidade gráfica (Leve / Médio / Alto)</span>
         <kbd>N / R</kbd><span>Alternar Dia/Noite e Chuva/Pista molhada</span>
         <kbd>Mouse</kbd><span>Arrastar para girar câmera · Roda para zoom</span>
       </div>
