@@ -1,10 +1,23 @@
+# Dependências e caches
 node_modules/
+**/__pycache__/
+*.log
+
+# Saídas de renderização e capturas temporárias (qualquer projeto)
+**/quadros/
+**/frames/
+**/fr/
+**/shots/
 *.mp4
 *.wav
 *.mp3
 *.jpg
+*.jpeg
 *.png
-# páginas finais geradas pelos scripts build_*.py (têm modelos e áudio embutidos)
+# Manter texturas/paletas PNG da biblioteca 3D versionáveis
+!biblioteca3d/**/*.png
+
+# Páginas finais geradas pelos scripts build_*.py (têm modelos e áudio embutidos)
 stick/botoes.html
 stick/altura.html
 stick/portal.html
@@ -30,7 +43,6 @@ svg/alcatraz3/alca4.html
 svg/cavalo/cavalo.html
 svg/elnino/elnino.html
 svg/chave/chave.html
-__pycache__/
 svg/lagarta/lagarta.html
 svg/pipoca/pipoca.html
 svg/nasce_raio/nasce_raio.html
@@ -40,5 +52,3 @@ svg/terremoto_carro/cena_cratera.html
 svg/terremoto_carro/cena_ponte.html
 svg/cabra/cabra.html
 svg/cabra/dev.html
-mestres_gravidade/quadros/
-chuva_peixes/quadros/

@@ -34,8 +34,8 @@ Regra do canal: **antes de modelar qualquer coisa, procure aqui.** Se já existe
 - `corredor` (silhueta e colorido, `biblioteca3d/personagens/corredor`); `teen/teen.glb` (garoto de camisa vermelha, **sem esqueleto**: só pose fixa); `assets/RobotExpressive.glb` (robô CC0).
 - Repintar com `ator.pintar({M_<material>: cor})` (ex.: `jovem_a` de camisa vermelha e calça azul). Novos personagens: `biblioteca3d/personagens/elenco/gerador/` (`personagens*.py`, `gerar.py`).
 
-## Módulos de cena reutilizáveis (copiar a pasta `js/` de um Short e trocar só `mundo.js`/`cenas.js`)
-- **Motor e câmera:** `motor.js`, `base.js`, `util.js`, `atores.js` (IK de braço, sentar, olhar), `lote.js` (caixas fundidas e sacos de areia), render: `render.js`, `render_tempos.js`, `render_folha.js`, `montar.sh`.
+## Módulos de cena reutilizáveis (importar o núcleo de `videos/core/` e criar só `mundo.js`/`planos.js`)
+- **Núcleo compartilhado (`videos/core/`, ver `core/README.md`):** `core/motor.js` (`criarMotor`, `glb`, `clonarGLB`, `Rajada`, `tremor`, `capturar`), `core/util.js`, `core/harness.js`, `core/render.js`, `core/quadros.js`, `core/tiro.js` e `core/montar.sh` (acabamentos `bloom`, `padrao` e `vivo`). Complementos por cena: `atores.js` (IK de braço, sentar, olhar), `lote.js` (caixas fundidas e sacos de areia).
 - **Efeitos de guerra:** `sono_militar/js/fx.js` (explosões, mísseis, caças, rastros, holofotes, fogueiras, pulso de luz).
 - **Ondas de choque e multidão instanciada:** `todos_pulando/js/mundo.js` (anéis, parede de ar, cúpula; multidões da África, Brasil e China).
 - **Espaço e escala:** Terra (inteira, empurrada, amassada), átomo, estrelas — `todos_pulando/js/mundo.js`.
