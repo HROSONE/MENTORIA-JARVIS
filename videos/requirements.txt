@@ -1,0 +1,5 @@
+# Dependências Python principais (efeitos sonoros SFX, folhas de contato e montagem)
+numpy>=1.26
+scipy>=1.11
+Pillow>=10.0
+soundfile>=0.12

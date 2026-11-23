@@ -1,0 +1,23 @@
+# Normalização de fim de linha para arquivos de texto
+* text=auto eol=lf
+*.sh text eol=lf
+
+# Ativos binários (evita conversão de fim de linha e diffs textuais)
+*.glb binary
+*.gltf binary
+*.fbx binary
+*.obj binary
+*.webp binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ttf binary
+*.otf binary
+*.woff2 binary
+
+# Nota sobre Git LFS:
+# O repositório já acumula ~200 MB em modelos .glb/.fbx. Caso queira migrar
+# esses binários para Git LFS no futuro (em uma janela coordenada, pois reescreve
+# histórico), execute localmente com git-lfs instalado:
+#   git lfs install
+#   git lfs migrate import --include="*.glb,*.fbx" --everything
