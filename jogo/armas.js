@@ -118,6 +118,7 @@ export class Armas {
     // corpo: o peito e os ombros
     pers.updateWorldMatrix(true, true);
     const peito = osso('Peito'), ombroD = osso('BracoD'), ombroE = osso('BracoE');
+    if (!peito || !ombroD || !ombroE || !osso('MaoD') || !osso('MaoE')) { m.raiz.visible = false; return; }   // personagem sem esqueleto (ex.: o ultra-leve)
     const P = peito.getWorldPosition(V()), OD = ombroD.getWorldPosition(V()), OE = ombroE.getWorldPosition(V());
     const frente = mira.clone().sub(P).setY(0).normalize(), cima = new THREE.Vector3(0, 1, 0), direita = new THREE.Vector3().crossVectors(frente, cima).normalize();
     // onde a arma fica (posição do cabo), e a direção do cano

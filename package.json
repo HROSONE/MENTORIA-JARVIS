@@ -1,0 +1,10 @@
+{
+  "name": "hryz-city",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hryz City (Jogo 3D de mundo aberto) e Estúdio Hryz Animation",
+  "scripts": {
+    "dev": "node jogo/dev.mjs",
+    "start": "node jogo/dev.mjs"
+  }
+}

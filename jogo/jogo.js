@@ -8,7 +8,8 @@ import { TILE, CALCADA, ESCALA_VEICULO } from '../videos/biblioteca3d/cidade/kit
 import { Personagem } from '../videos/biblioteca3d/personagens/elenco/elenco.js';
 import { Corredor } from '../videos/biblioteca3d/personagens/corredor/corredor.js';
 import { criarViatura, criarAmbiente } from '../videos/biblioteca3d/veiculos/policia/viatura.js';
-import { construirCidade, PONTOS_TELEPORTE } from './cidade.js';
+import { construirCidade, PONTOS_TELEPORTE, SELVA_INFO } from './cidade.js';
+import { criarTrex } from './trex.js';
 import { Armas } from './armas.js';
 
 const BASE_BIB = './videos/biblioteca3d';
@@ -24,6 +25,7 @@ const PERSONAGENS_DEF = [
 
 const CHECKPOINTS = [
   { nome: 'Praça Central',      x: 216, z: 168 },
+  { nome: '🦖 Selva do T. rex', x: 510, z: 280 },
   { nome: 'Rotatória Central',  x: 252, z: 222 },
   { nome: 'Entrada da Rodovia', x: 18,  z: 96  },
   { nome: 'Reta da Rodovia',    x: 18,  z: 360 },
@@ -34,7 +36,7 @@ const CHECKPOINTS = [
 ];
 
 // ====================================================================================================
-// Áudio procedural leve (WebAudio): motor, sirene P71, porta e checkpoint
+// Áudio procedural leve (WebAudio): motor, sirene P71, porta, checkpoint e rugido do T. rex
 // ====================================================================================================
 class SomJogo {
   constructor() {
@@ -107,38 +109,505 @@ class SomJogo {
     o.connect(g); g.connect(this.ctx.destination);
     o.start(now); o.stop(now + 0.13);
   }
+  tocarRugidoTrex(intensidade = 1) {
+    if (!this.ctx || this.mudo) return;
+    const now = this.ctx.currentTime;
+    const dur = 1.35;
+    const vol = Math.max(0.02, Math.min(1, intensidade)) * 0.22;
+
+    // Camada grave gutural (sawtooth modulado)
+    const o1 = this.ctx.createOscillator();
+    const o2 = this.ctx.createOscillator();
+    const filt = this.ctx.createBiquadFilter();
+    const g = this.ctx.createGain();
+    o1.type = 'sawtooth';
+    o2.type = 'triangle';
+    o1.frequency.setValueAtTime(142, now);
+    o1.frequency.exponentialRampToValueAtTime(86, now + 0.35);
+    o1.frequency.exponentialRampToValueAtTime(48, now + dur);
+    o2.frequency.setValueAtTime(71, now);
+    o2.frequency.exponentialRampToValueAtTime(34, now + dur);
+
+    filt.type = 'lowpass';
+    filt.frequency.setValueAtTime(480, now);
+    filt.frequency.exponentialRampToValueAtTime(160, now + dur);
+    filt.Q.value = 3.2;
+
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(vol, now + 0.12);
+    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    o1.connect(filt); o2.connect(filt); filt.connect(g); g.connect(this.ctx.destination);
+    o1.start(now); o2.start(now);
+    o1.stop(now + dur + 0.04); o2.stop(now + dur + 0.04);
+  }
 }
 
 const QUALIDADES = {
   leve: {
     id: 'leve', rotulo: 'Leve',
-    pixelRatio: 1.0,
-    sombras: false, sombraRaio: 38,
+    pixelRatio: 0.75,
+    pbr: false, mostrarDecor: false,
+    viaturaCompleta: false, personagemCompleto: false,
+    sombras: false, sombraRaio: 36,
     sombraPrincipal: false, sombraDetalhe: false,
-    viewDist: 165, camFar: 210, fogNear: 80, fogFar: 200,
-    npcsMax: 0, npcDist: 40, trafegoMax: 10,
-    rainN: 300, minimapInterval: 0.125,
+    viewDist: 120, camFar: 165, fogNear: 55, fogFar: 155,
+    npcsMax: 0, npcDist: 40, trafegoMax: 8,
+    rainN: 220, minimapInterval: 0.16,
   },
   medio: {
     id: 'medio', rotulo: 'Médio',
     pixelRatio: 1.0,
-    sombras: true, sombraRaio: 46,
+    pbr: false, mostrarDecor: true,
+    viaturaCompleta: true, personagemCompleto: true,
+    sombras: true, sombraRaio: 44,
     sombraPrincipal: true, sombraDetalhe: false,
-    viewDist: 250, camFar: 320, fogNear: 125, fogFar: 300,
-    npcsMax: 3, npcDist: 55, trafegoMax: 14,
-    rainN: 550, minimapInterval: 0.083,
+    viewDist: 210, camFar: 270, fogNear: 110, fogFar: 255,
+    npcsMax: 2, npcDist: 50, trafegoMax: 14,
+    rainN: 500, minimapInterval: 0.083,
   },
   alto: {
     id: 'alto', rotulo: 'Alto',
     pixelRatio: 1.5,
+    pbr: true, mostrarDecor: true,
+    viaturaCompleta: true, personagemCompleto: true,
     sombras: true, sombraRaio: 65,
     sombraPrincipal: true, sombraDetalhe: true,
-    viewDist: 440, camFar: 540, fogNear: 200, fogFar: 510,
-    npcsMax: 8, npcDist: 95, trafegoMax: 24,
+    viewDist: 420, camFar: 520, fogNear: 190, fogFar: 490,
+    npcsMax: 8, npcDist: 95, trafegoMax: 20,
     rainN: 900, minimapInterval: 0.05,
   },
 };
 const ORDEM_QUAL = ['leve', 'medio', 'alto'];
+
+// Sombra de contato radial leve (evita que personagem/objetos pareçam flutuando mesmo com shadowMap desligado!)
+let _texSombraBlob = null;
+function obterTexSombraBlob() {
+  if (_texSombraBlob) return _texSombraBlob;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 4, 32, 32, 30);
+  gr.addColorStop(0, 'rgba(0,0,0,0.48)');
+  gr.addColorStop(0.55, 'rgba(0,0,0,0.22)');
+  gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  _texSombraBlob = new THREE.CanvasTexture(c);
+  return _texSombraBlob;
+}
+
+// Céu leve com gradiente, sol/lua e horizonte suave (1 draw call, < 0,1 ms!)
+function criarCeuLeve() {
+  const mat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    depthWrite: false,
+    fog: false,
+    uniforms: {
+      uTopo: { value: new THREE.Color(0x2867c7) },
+      uHor:  { value: new THREE.Color(0xbce0f7) },
+      uChao: { value: new THREE.Color(0x526b5c) },
+      uSolDir: { value: new THREE.Vector3(-0.55, 0.58, 0.45).normalize() },
+      uSolCor: { value: new THREE.Color(0xfff5d6) },
+      uSolForca: { value: 1.0 },
+    },
+    vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `
+      varying vec3 vD;
+      uniform vec3 uTopo, uHor, uChao, uSolDir, uSolCor;
+      uniform float uSolForca;
+      void main() {
+        vec3 d = normalize(vD);
+        float h = d.y;
+        vec3 c = h >= 0.0
+          ? mix(uHor, uTopo, pow(clamp(h, 0.0, 1.0), 0.58))
+          : mix(uHor, uChao, clamp(-h * 4.0, 0.0, 1.0));
+        if (h > -0.02 && uSolForca > 0.01) {
+          float s = max(dot(d, uSolDir), 0.0);
+          c += uSolCor * (pow(s, 18.0) * 0.25 + pow(s, 360.0) * 1.8) * uSolForca;
+        }
+        gl_FragColor = vec4(c, 1.0);
+      }
+    `,
+  });
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 10), mat);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = -10;
+  return {
+    mesh,
+    definir({ noite, chuva }) {
+      if (noite) {
+        mat.uniforms.uTopo.value.setHex(0x060b1c);
+        mat.uniforms.uHor.value.setHex(0x162447);
+        mat.uniforms.uChao.value.setHex(0x080d1a);
+        mat.uniforms.uSolDir.value.set(0.45, 0.52, -0.55).normalize();
+        mat.uniforms.uSolCor.value.setHex(0xcbdcff);
+        mat.uniforms.uSolForca.value = 0.55;
+      } else if (chuva) {
+        mat.uniforms.uTopo.value.setHex(0x4c6073);
+        mat.uniforms.uHor.value.setHex(0x8fa3b5);
+        mat.uniforms.uChao.value.setHex(0x4a5966);
+        mat.uniforms.uSolForca.value = 0.08;
+      } else {
+        mat.uniforms.uTopo.value.setHex(0x2867c7);
+        mat.uniforms.uHor.value.setHex(0xbce0f7);
+        mat.uniforms.uChao.value.setHex(0x526b5c);
+        mat.uniforms.uSolDir.value.set(-0.55, 0.58, 0.45).normalize();
+        mat.uniforms.uSolCor.value.setHex(0xfff5d6);
+        mat.uniforms.uSolForca.value = 1.0;
+      }
+    },
+  };
+}
+
+// Pool leve de fumaça de pneu para drift (16 partículas recicladas, zero alocação por frame)
+function criarFumacaDrift(scene) {
+  const N = 16;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 2, 32, 32, 30);
+  gr.addColorStop(0, 'rgba(235,240,248,0.65)');
+  gr.addColorStop(0.5, 'rgba(210,220,232,0.30)');
+  gr.addColorStop(1, 'rgba(200,210,225,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c);
+
+  const pool = [];
+  for (let i = 0; i < N; i++) {
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false });
+    const sp = new THREE.Sprite(mat);
+    sp.visible = false;
+    scene.add(sp);
+    pool.push({ sp, mat, vida: 0, maxVida: 0.6, vx: 0, vy: 0, vz: 0 });
+  }
+  let idx = 0, cooldown = 0;
+  return {
+    emitir(x, z, ry, dt) {
+      cooldown -= dt;
+      if (cooldown > 0) return;
+      cooldown = 0.045;
+      for (const lado of [-0.72, 0.72]) {
+        const p = pool[idx++ % N];
+        const rx = x - Math.sin(ry) * 1.45 + Math.cos(ry) * lado;
+        const rz = z - Math.cos(ry) * 1.45 - Math.sin(ry) * lado;
+        p.sp.position.set(rx, 0.28, rz);
+        p.sp.scale.setScalar(0.65);
+        p.sp.visible = true;
+        p.vida = 0.52;
+        p.maxVida = 0.52;
+        p.vx = (Math.random() - 0.5) * 0.8;
+        p.vy = 0.9 + Math.random() * 0.5;
+        p.vz = (Math.random() - 0.5) * 0.8;
+      }
+    },
+    atualizar(dt) {
+      for (let i = 0; i < N; i++) {
+        const p = pool[i];
+        if (p.vida <= 0) continue;
+        p.vida -= dt;
+        if (p.vida <= 0) { p.sp.visible = false; continue; }
+        const u = 1 - p.vida / p.maxVida;
+        p.sp.position.x += p.vx * dt;
+        p.sp.position.y += p.vy * dt;
+        p.sp.position.z += p.vz * dt;
+        p.sp.scale.setScalar(0.65 + u * 1.85);
+        p.mat.opacity = (1 - u) * 0.55;
+      }
+    },
+  };
+}
+
+// Personagem policial estilizado e arredondado (~520 triângulos, zero skinning de GPU, com sombra no chão!)
+function criarPersonagemLeve() {
+  const g = new THREE.Group();
+  g.name = 'PolicialLeve';
+
+  const mCamisa = new THREE.MeshLambertMaterial({ color: 0x1f3d73 });
+  const mColete = new THREE.MeshLambertMaterial({ color: 0x132038 });
+  const mCalca  = new THREE.MeshLambertMaterial({ color: 0x101a2e });
+  const mPele   = new THREE.MeshLambertMaterial({ color: 0xe8bc9e });
+  const mCabelo = new THREE.MeshLambertMaterial({ color: 0x261d18 });
+  const mPreto  = new THREE.MeshLambertMaterial({ color: 0x14171e });
+  const mOuro   = new THREE.MeshPhongMaterial({ color: 0xfacc15, shininess: 90, specular: 0xfff0a0 });
+  const mOculos = new THREE.MeshPhongMaterial({ color: 0x0b0f18, shininess: 120, specular: 0x6688aa });
+
+  // Sombra de contato macia nos pés (nunca parece flutuando!)
+  const sombra = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.15, 1.15),
+    new THREE.MeshBasicMaterial({ map: obterTexSombraBlob(), transparent: true, depthWrite: false })
+  );
+  sombra.rotation.x = -Math.PI / 2;
+  sombra.position.y = 0.025;
+  g.add(sombra);
+
+  const corpo = new THREE.Group();
+  g.add(corpo);
+
+  // Tronco com ombros arredondados + colete tático + gravata + cinto + distintivo
+  const tronco = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.17, 0.56, 10), mCamisa);
+  tronco.scale.set(1.18, 1, 0.72);
+  tronco.position.y = 1.08;
+  corpo.add(tronco);
+
+  const colete = new THREE.Mesh(new THREE.CylinderGeometry(0.225, 0.19, 0.42, 10), mColete);
+  colete.scale.set(1.16, 1, 0.78);
+  colete.position.y = 1.07;
+  corpo.add(colete);
+
+  const cinto = new THREE.Mesh(new THREE.CylinderGeometry(0.195, 0.195, 0.075, 10), mPreto);
+  cinto.scale.set(1.15, 1, 0.78);
+  cinto.position.y = 0.81;
+  corpo.add(cinto);
+
+  const fivela = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.03), mOuro);
+  fivela.position.set(0, 0.81, 0.155);
+  corpo.add(fivela);
+
+  const distintivo = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.015, 6), mOuro);
+  distintivo.rotation.x = Math.PI / 2;
+  distintivo.position.set(0.11, 1.19, 0.165);
+  corpo.add(distintivo);
+
+  const pescoco = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.075, 0.11, 8), mPele);
+  pescoco.position.y = 1.40;
+  corpo.add(pescoco);
+
+  // Cabeça arredondada, cabelo, óculos escuros e quepe policial detalhado
+  const cabeca = new THREE.Mesh(new THREE.SphereGeometry(0.145, 12, 10), mPele);
+  cabeca.scale.set(0.95, 1.08, 0.98);
+  cabeca.position.y = 1.56;
+  corpo.add(cabeca);
+
+  const cabelo = new THREE.Mesh(new THREE.SphereGeometry(0.148, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), mCabelo);
+  cabelo.position.set(0, 1.57, -0.015);
+  corpo.add(cabelo);
+
+  const oculos = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.055, 0.04), mOculos);
+  oculos.position.set(0, 1.57, 0.13);
+  corpo.add(oculos);
+
+  const quepeBase = new THREE.Mesh(new THREE.CylinderGeometry(0.165, 0.148, 0.09, 12), mCamisa);
+  quepeBase.position.set(0, 1.70, -0.005);
+  corpo.add(quepeBase);
+  const quepeFaixa = new THREE.Mesh(new THREE.CylinderGeometry(0.153, 0.152, 0.035, 12), mPreto);
+  quepeFaixa.position.set(0, 1.66, -0.005);
+  corpo.add(quepeFaixa);
+  const quepeAba = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.018, 10, 1, false, -Math.PI * 0.42, Math.PI * 0.84), mPreto);
+  quepeAba.position.set(0, 1.645, 0.065);
+  quepeAba.rotation.x = 0.14;
+  corpo.add(quepeAba);
+  const quepeEmblema = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.015, 6), mOuro);
+  quepeEmblema.rotation.x = Math.PI / 2;
+  quepeEmblema.position.set(0, 1.70, 0.155);
+  corpo.add(quepeEmblema);
+
+  // Pernas articuladas com botas
+  function fazerPerna(sx) {
+    const pivo = new THREE.Group();
+    pivo.position.set(sx * 0.115, 0.78, 0);
+    const coxa = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.068, 0.66, 8), mCalca);
+    coxa.position.y = -0.33;
+    const bota = new THREE.Mesh(new THREE.BoxGeometry(0.125, 0.13, 0.22), mPreto);
+    bota.position.set(0, -0.71, 0.035);
+    pivo.add(coxa, bota);
+    return pivo;
+  }
+  const pernaE = fazerPerna(-1);
+  const pernaD = fazerPerna(1);
+  corpo.add(pernaE, pernaD);
+
+  // Braços articulados com ombro arredondado + manga + mão
+  function fazerBraco(sx) {
+    const pivo = new THREE.Group();
+    pivo.position.set(sx * 0.285, 1.31, 0);
+    const ombro = new THREE.Mesh(new THREE.SphereGeometry(0.072, 8, 6), mCamisa);
+    const manga = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.052, 0.46, 8), mCamisa);
+    manga.position.y = -0.24;
+    const mao = new THREE.Mesh(new THREE.SphereGeometry(0.052, 8, 6), mPele);
+    mao.position.y = -0.50;
+    pivo.add(ombro, manga, mao);
+    return pivo;
+  }
+  const bracoE = fazerBraco(-1);
+  const bracoD = fazerBraco(1);
+  corpo.add(bracoE, bracoD);
+
+  let acao = 'Parado';
+  let fase = 0;
+  return {
+    obj: g,
+    tocar(nome) { acao = nome; },
+    atualizar(dt) {
+      if (acao === 'Correr' || acao === 'Andar') {
+        const vel = acao === 'Correr' ? 12.5 : 7.8;
+        const amp = acao === 'Correr' ? 0.78 : 0.46;
+        fase += dt * vel;
+        const s = Math.sin(fase) * amp;
+        pernaE.rotation.x = s;
+        pernaD.rotation.x = -s;
+        bracoE.rotation.x = -s * 0.85;
+        bracoD.rotation.x = s * 0.85;
+        corpo.position.y = Math.abs(Math.cos(fase)) * (acao === 'Correr' ? 0.065 : 0.03);
+        corpo.rotation.x = acao === 'Correr' ? 0.12 : 0.04;
+      } else if (acao === 'Pular') {
+        pernaE.rotation.x = 0.35;
+        pernaD.rotation.x = -0.35;
+        bracoE.rotation.x = -0.85;
+        bracoD.rotation.x = -0.85;
+        corpo.position.y = 0;
+        corpo.rotation.x = 0;
+      } else {
+        pernaE.rotation.x *= 0.8;
+        pernaD.rotation.x *= 0.8;
+        bracoE.rotation.x *= 0.8;
+        bracoD.rotation.x *= 0.8;
+        corpo.position.y = 0;
+        corpo.rotation.x *= 0.8;
+      }
+    },
+  };
+}
+
+// Converte materiais PBR de um GLB Kenney para Lambert leve (mantendo a textura)
+function converterParaLambert(root) {
+  root.traverse(m => {
+    if (!m.isMesh || !m.material || Array.isArray(m.material)) return;
+    const mat = m.material;
+    if (mat.isMeshStandardMaterial) {
+      m.userData.matPbr = mat;
+      m.userData.matLeve = new THREE.MeshLambertMaterial({
+        color: mat.color ? mat.color.clone() : 0xffffff,
+        map: mat.map || null,
+        transparent: mat.transparent,
+        opacity: mat.opacity,
+      });
+    }
+  });
+}
+
+// Viatura Ford Crown Victoria P71 otimizada para tempo real:
+// Mantém a carroceria, pintura "POLICE · HRYZ CITY 117", pushbar, giroflex e rodas que giram/esterçam,
+// mas corta ~85.000 triângulos e ~80 draw calls (troca as 4 rodas de 18k tris por rodas leves, oculta interior invisível e troca clearcoat por Phong brilhoso).
+function criarViaturaP71Otimizada(modoCompleto = false) {
+  const p71 = criarViatura({
+    livery: 'preto-branco',
+    numero: '117',
+    cidade: 'HRYZ CITY',
+    placa: 'HRYZ 911',
+    pushbar: true,
+    sujeira: 0.25,
+  });
+
+  // 1. Oculta o interior (30 malhas / 14k triângulos invisíveis por trás do vidro fumê em 3ª pessoa)
+  const interior = p71.grupo.getObjectByName('interior');
+  if (interior) interior.visible = false;
+
+  // 2. Troca as 4 rodas pesadas (72.416 triângulos / 56 malhas) por rodas P71 leves (4x2 = 8 malhas / ~1.100 tris)
+  const geoPneu = new THREE.CylinderGeometry(0.355, 0.355, 0.235, 16);
+  geoPneu.rotateZ(Math.PI / 2);
+  const geoAro = new THREE.CylinderGeometry(0.215, 0.215, 0.245, 14);
+  geoAro.rotateZ(Math.PI / 2);
+  const geoCalota = new THREE.CylinderGeometry(0.085, 0.095, 0.258, 12);
+  geoCalota.rotateZ(Math.PI / 2);
+  const matPneu = new THREE.MeshLambertMaterial({ color: 0x16181c });
+  const matAro  = new THREE.MeshPhongMaterial({ color: 0x14171c, shininess: 45, specular: 0x444c55 });
+  const matCalota = new THREE.MeshPhongMaterial({ color: 0xd5dce4, shininess: 110, specular: 0xffffff });
+
+  for (const r of p71.rodas) {
+    // Limpa os 14 filhos pesados de cada pivô de roda e coloca o conjunto leve que continua girando e esterçando!
+    while (r.pivo.children.length) r.pivo.remove(r.pivo.children[0]);
+    const giroNovo = new THREE.Group();
+    const pneuM = new THREE.Mesh(geoPneu, matPneu);
+    const aroM = new THREE.Mesh(geoAro, matAro);
+    const calM = new THREE.Mesh(geoCalota, matCalota);
+    giroNovo.add(pneuM, aroM, calM);
+    r.pivo.add(giroNovo);
+    r.giro = giroNovo;
+  }
+
+  // 3. Preserva o material de pintura da P71 (ele usa onBeforeCompile para a pintura "POLICE · HRYZ CITY · 117" e os recortes das caixas de roda!)
+  //    e só desliga o clearcoat pesado no modo Leve; demais materiais PBR viram Phong leve.
+  const matPintura = p71.pintura?.material;
+  const luzesDinamicas = [];
+  p71.grupo.traverse(m => {
+    if (m.isLight) {
+      luzesDinamicas.push(m);
+      return;
+    }
+    if (!m.isMesh || !m.material || Array.isArray(m.material)) return;
+    const mat = m.material;
+    if (mat === matPintura) return;
+    if (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial) {
+      m.userData.matPbr = mat;
+      m.userData.matLeve = new THREE.MeshPhongMaterial({
+        color: mat.color ? mat.color.clone() : 0xffffff,
+        map: mat.map || null,
+        emissive: mat.emissive ? mat.emissive.clone() : 0x000000,
+        emissiveIntensity: mat.emissiveIntensity ?? 1,
+        transparent: mat.transparent,
+        opacity: mat.opacity,
+        depthWrite: mat.depthWrite,
+        side: mat.side,
+        shininess: mat.clearcoat ? 95 : Math.round((1 - (mat.roughness ?? 0.5)) * 80),
+        specular: new THREE.Color(mat.clearcoat ? 0x6b7c90 : 0x333c48),
+      });
+    }
+  });
+
+  // 4. Farol leve com gradiente suave no chão (usado no modo Leve para economizar os 2 SpotLights)
+  const fc = document.createElement('canvas'); fc.width = 64; fc.height = 128;
+  const fg = fc.getContext('2d');
+  const gr = fg.createLinearGradient(0, 128, 0, 0);
+  gr.addColorStop(0, 'rgba(255,244,205,0.75)');
+  gr.addColorStop(0.55, 'rgba(255,240,190,0.28)');
+  gr.addColorStop(1, 'rgba(255,240,190,0)');
+  fg.fillStyle = gr;
+  fg.beginPath(); fg.moveTo(22, 128); fg.lineTo(42, 128); fg.lineTo(64, 0); fg.lineTo(0, 0); fg.closePath(); fg.fill();
+  const fTex = new THREE.CanvasTexture(fc);
+  fTex.colorSpace = THREE.SRGBColorSpace;
+  const fachoMat = new THREE.MeshBasicMaterial({ map: fTex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+  const facho = new THREE.Mesh(new THREE.PlaneGeometry(5.8, 15), fachoMat);
+  facho.rotation.x = -Math.PI / 2;
+  facho.position.set(0, 0.04, 9.5);
+  p71.grupo.add(facho);
+
+  let usandoPbr = modoCompleto;
+  let faroisLigados = false;
+  const faroisOrig = p71.farois.bind(p71);
+  const luzesOrig = p71.luzes.bind(p71);
+
+  p71.definirModo = (pbrAtivo, sombraAtiva) => {
+    usandoPbr = pbrAtivo;
+    if (matPintura) {
+      matPintura.clearcoat = pbrAtivo ? 1.0 : 0.0;
+      matPintura.roughness = pbrAtivo ? 0.30 : 0.42;
+    }
+    p71.grupo.traverse(m => {
+      if (!m.isMesh) return;
+      if (m.userData.matPbr && m.userData.matLeve) {
+        m.material = pbrAtivo ? m.userData.matPbr : m.userData.matLeve;
+      }
+      if (m.name !== 'sombraChao' && m !== facho) {
+        m.castShadow = sombraAtiva;
+      }
+    });
+    for (const l of luzesDinamicas) l.visible = pbrAtivo;
+    p71.farois(faroisLigados);
+  };
+
+  p71.farois = on => {
+    faroisLigados = !!on;
+    faroisOrig(usandoPbr && faroisLigados);
+    fachoMat.opacity = (!usandoPbr && faroisLigados) ? 0.55 : 0;
+  };
+  p71.luzes = (t, modo) => {
+    luzesOrig(t, modo);
+    if (!usandoPbr) {
+      for (const l of luzesDinamicas) l.visible = false;
+    }
+  };
+
+  p71.definirModo(modoCompleto, modoCompleto);
+  return p71;
+}
 
 // ====================================================================================================
 // Inicialização principal do jogo
@@ -176,37 +645,48 @@ export async function iniciarJogo() {
     toastTimer = setTimeout(() => elToast.classList.remove('visivel'), 2600);
   }
 
-  // ---- Renderer, Qualidade e Cena
+  // ---- Renderer, Qualidade e Cena (padrão = Leve para rodar liso em qualquer PC ou celular!)
   const Q = new URLSearchParams(location.search);
   let ehNoite = Q.has('noite');
   let ehChuva = Q.has('chuva');
+  if (Q.has('touch')) document.body.classList.add('modo-touch');
 
   const qParam = (Q.get('qualidade') || '').toLowerCase();
   let qSalva = '';
-  try { qSalva = localStorage.getItem('hryz_qualidade') || ''; } catch (_) {}
-  let qualAtual = QUALIDADES[qParam] || QUALIDADES[qSalva] || QUALIDADES.medio;
+  try { qSalva = localStorage.getItem('hryz_qualidade_v2') || ''; } catch (_) {}
+  let qualAtual = QUALIDADES[qParam] || QUALIDADES[qSalva] || QUALIDADES.leve;
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  const renderer = new THREE.WebGLRenderer({
+    antialias: qualAtual.id !== 'leve',
+    powerPreference: 'high-performance',
+  });
   renderer.setPixelRatio(Math.min(devicePixelRatio, qualAtual.pixelRatio));
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMapping = qualAtual.pbr ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
   renderer.toneMappingExposure = ehNoite ? 1.15 : 1.04;
   document.body.prepend(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(56, innerWidth / innerHeight, 0.25, qualAtual.camFar);
+  const camera = new THREE.PerspectiveCamera(56, innerWidth / innerHeight, 0.4, qualAtual.camFar);
+
+  // Céu gradiente leve com sol/lua (1 draw call)
+  const ceu = criarCeuLeve();
+  scene.add(ceu.mesh);
+
+  // Fumaça leve de drift
+  const fumacaDrift = criarFumacaDrift(scene);
 
   const hemi = new THREE.HemisphereLight(0xffffff, 0x8fa3b5, 1.45);
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xfff4e0, 2.6);
+  const sun = new THREE.DirectionalLight(0xfff4e0, 2.2);
   sun.castShadow = qualAtual.sombras;
   sun.shadow.mapSize.set(1024, 1024);
   sun.shadow.bias = -0.0005;
   sun.shadow.normalBias = 0.05;
   const SR = qualAtual.sombraRaio;
-  Object.assign(sun.shadow.camera, { left: -SR, right: SR, top: SR, bottom: -SR, near: 1, far: 260 });
+  Object.assign(sun.shadow.camera, { left: -SR, right: SR, top: SR, bottom: -SR, near: 1, far: 240 });
   scene.add(sun, sun.target);
 
   let envDia = null;
@@ -237,7 +717,7 @@ export async function iniciarJogo() {
     elTextoCarga.textContent = texto;
   }
 
-  // ---- Construir Cidade Hryz (otimizada em malhas mescladas + InstancedMesh por setores)
+  // ---- Construir Cidade Hryz (ultra-leve: Lambert texturizado + malhas mescladas + culling por setor)
   atualizarProgresso(0.05, 'Carregando Cidade Hryz…');
   const cidade = await construirCidade({
     scene,
@@ -247,19 +727,21 @@ export async function iniciarJogo() {
   });
 
   function aplicarClima() {
-    const fundo = ehNoite ? 0x091124 : (ehChuva ? 0x7c92a6 : 0xb8dff5);
+    const fundo = ehNoite ? 0x0e1833 : (ehChuva ? 0x7c92a6 : 0xbce0f7);
     scene.background = new THREE.Color(fundo);
-    const fNear = ehChuva ? Math.min(qualAtual.fogNear, 85) : qualAtual.fogNear;
-    const fFar = ehChuva ? Math.min(qualAtual.fogFar, 260) : qualAtual.fogFar;
+    ceu.definir({ noite: ehNoite, chuva: ehChuva });
+    const fNear = ehChuva ? Math.min(qualAtual.fogNear, 65) : qualAtual.fogNear;
+    const fFar = ehChuva ? Math.min(qualAtual.fogFar, 220) : qualAtual.fogFar;
     scene.fog = new THREE.Fog(fundo, fNear, fFar);
-    scene.environment = obterAmbiente(ehNoite);
+    scene.environment = qualAtual.pbr ? obterAmbiente(ehNoite) : null;
+    renderer.toneMapping = qualAtual.pbr ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
     renderer.toneMappingExposure = ehNoite ? 1.18 : (ehChuva ? 0.98 : 1.05);
 
     hemi.color.setHex(ehNoite ? 0x5c77b8 : (ehChuva ? 0x9fb2c4 : 0xffffff));
     hemi.groundColor.setHex(ehNoite ? 0x182136 : 0x7e94a8);
-    hemi.intensity = ehNoite ? 1.1 : (ehChuva ? 1.2 : 1.45);
+    hemi.intensity = ehNoite ? 1.05 : (ehChuva ? 1.15 : (qualAtual.pbr ? 1.45 : 1.15));
     sun.color.setHex(ehNoite ? 0x9db4ea : 0xfff4e0);
-    sun.intensity = ehNoite ? 0.95 : (ehChuva ? 1.4 : 2.6);
+    sun.intensity = ehNoite ? 0.85 : (ehChuva ? 1.2 : (qualAtual.pbr ? 2.6 : 1.85));
 
     cidade.alternarNoite(ehNoite);
     cidade.alternarChuva(ehChuva);
@@ -294,24 +776,17 @@ export async function iniciarJogo() {
   rainLines.visible = ehChuva;
   scene.add(rainLines);
 
-  // ---- Veículos dirigíveis (Viatura Crown Victoria P71 + carros Kenney espalhados pela cidade)
+  // ---- Veículos dirigíveis (Viatura Ford Crown Victoria P71 Game-Ready em todos os modos!)
   atualizarProgresso(0.80, 'Montando Viatura Crown Victoria P71…');
   const veiculos = [];
   const glbLoader = new GLTFLoader();
 
-  // 1. Viatura Crown Victoria P71 (herói, estacionada bem em frente à Delegacia!)
-  const p71 = criarViatura({
-    livery: 'preto-branco',
-    numero: '117',
-    cidade: 'HRYZ CITY',
-    placa: 'HRYZ 911',
-    pushbar: true,
-    sujeira: 0.25,
-  });
+  const p71 = criarViaturaP71Otimizada(qualAtual.pbr);
   p71.grupo.position.set(146, 0, 166.2);
   p71.grupo.rotation.y = Math.PI / 2;
   scene.add(p71.grupo);
-  veiculos.push({
+
+  const veiculoPolicia = {
     id: 'p71',
     nome: 'Viatura Crown Victoria P71',
     obj: p71.grupo,
@@ -321,7 +796,12 @@ export async function iniciarJogo() {
     acel: 22, velMax: 48, velRe: 14, freio: 34, raio: 2.35,
     sirene: false, farois: false, ehPolicia: true,
     camDist: 7.4, camAlt: 2.7, capoY: 1.42, capoZ: 0.55,
-  });
+  };
+  veiculos.push(veiculoPolicia);
+
+  function sincronizarViaturaPolicia(pbrAtivo, sombraAtiva) {
+    p71.definirModo(pbrAtivo, sombraAtiva);
+  }
 
   // 2. Frota extra dirigível (Kenney)
   atualizarProgresso(0.88, 'Estacionando frota dirigível…');
@@ -331,6 +811,7 @@ export async function iniciarJogo() {
     { nome: 'Fórmula Hryz',    arq: 'race',         x: 242, z: 222,   ry: Math.PI,      acel: 34, velMax: 68, raio: 1.85 },
     { nome: 'Fórmula Pista',   arq: 'race-future',  x: 132, z: 567,   ry: Math.PI / 2,  acel: 36, velMax: 72, raio: 1.85 },
     { nome: 'SUV de Luxo',     arq: 'suv-luxury',   x: 256, z: 313.8, ry: -Math.PI / 2, acel: 20, velMax: 44, raio: 2.0 },
+    { nome: 'Jipe da Selva',   arq: 'suv',          x: 454, z: 266.5, ry: Math.PI / 2 - 0.14, acel: 22, velMax: 46, raio: 2.0 },
     { nome: 'Bombeiros',       arq: 'firetruck',    x: 130, z: 98,    ry: Math.PI / 2,  acel: 15, velMax: 34, raio: 2.3 },
     { nome: 'Ambulância',      arq: 'ambulance',    x: 148, z: 98,    ry: Math.PI / 2,  acel: 18, velMax: 40, raio: 2.1 },
   ];
@@ -339,7 +820,14 @@ export async function iniciarJogo() {
       const g = await glbLoader.loadAsync(`${BASE_BIB}/veiculos/${f.arq}.glb`);
       const o = g.scene;
       o.scale.setScalar(ESCALA_VEICULO);
-      o.traverse(m => { if (m.isMesh) { m.castShadow = qualAtual.sombraPrincipal; m.receiveShadow = true; } });
+      converterParaLambert(o);
+      o.traverse(m => {
+        if (m.isMesh) {
+          if (!qualAtual.pbr && m.userData.matLeve) m.material = m.userData.matLeve;
+          m.castShadow = qualAtual.sombraPrincipal;
+          m.receiveShadow = true;
+        }
+      });
       o.position.set(f.x, 0, f.z);
       o.rotation.y = f.ry;
       scene.add(o);
@@ -354,12 +842,17 @@ export async function iniciarJogo() {
     } catch (e) { console.warn('carro skip', f.arq, e); }
   }));
 
-  // ---- Personagem Jogável (cache por modelo para trocar com C)
+  // ---- Personagem Jogável (ultra-leve no modo Leve; elenco GLB completo em Médio/Alto ou ao trocar com C)
   atualizarProgresso(0.94, 'Preparando personagem jogável…');
   const cachePers = new Map();
   let persIdx = 0;
   let persAtual = null;
   let persAcao = 'Parado';
+  let usandoPersLeve = false;
+
+  const persLeveInst = criarPersonagemLeve();
+  persLeveInst.obj.visible = false;
+  scene.add(persLeveInst.obj);
 
   const jogador = {
     x: 147.2, y: CALCADA, z: 163.8,
@@ -368,7 +861,20 @@ export async function iniciarJogo() {
     veiculo: null,
   };
 
+  function ativarPersonagemLeve() {
+    if (persAtual) persAtual.inst.obj.visible = false;
+    usandoPersLeve = true;
+    persAtual = { inst: persLeveInst, def: { id: 'policial-leve', nome: 'Policial (Leve)' } };
+    persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
+    persAtual.inst.obj.rotation.y = jogador.ry;
+    persAtual.inst.obj.visible = !jogador.veiculo;
+    persAcao = '';
+    tocarAcao('Parado');
+    elPersNome.textContent = 'Policial';
+  }
+
   async function carregarPersonagem(idx) {
+    usandoPersLeve = false;
     const def = PERSONAGENS_DEF[idx % PERSONAGENS_DEF.length];
     if (!cachePers.has(def.id)) {
       let inst;
@@ -405,7 +911,8 @@ export async function iniciarJogo() {
     }
   }
 
-  await carregarPersonagem(0);
+  if (qualAtual.personagemCompleto) await carregarPersonagem(0);
+  else ativarPersonagemLeve();
 
   // ---- Armas (pistola e metralhadora feitas no Blender)
   atualizarProgresso(0.97, 'Carregando armas…');
@@ -421,6 +928,8 @@ export async function iniciarJogo() {
   function trocarArma(id) {
     if (jogador.veiculo) { mostrarToast('Saia do veículo para usar armas'); return; }
     armas.equipar(armas.atual === id ? null : id);
+    // o personagem ultra-leve (modo Leve) não tem esqueleto: para segurar a arma, troca pelo elenco completo
+    if (armas.ativa && usandoPersLeve) carregarPersonagem(persIdx).then(() => mostrarToast(`${armas.info?.nome ?? 'Arma'} na mão · clique para atirar · X recarrega`));
     mostrarToast(armas.ativa ? `${armas.info.nome} na mão · clique para atirar · X recarrega` : 'Arma guardada');
     atualizarHudArma();
   }
@@ -480,9 +989,9 @@ export async function iniciarJogo() {
     return { x: nx, z: nz, bateu };
   }
 
-  // ---- Entradas (Teclado + Mouse + Touch)
+  // ---- Entradas (Teclado + Mouse + Multi-Touch Mobile)
   const teclas = new Set();
-  const touch = { mx: 0, mz: 0, acelerar: false, freiar: false, pular: false };
+  const touch = { mx: 0, mz: 0, acel: false, freio: false, esq: false, dir: false, drift: false, correr: false, pular: false };
 
   let camModo = 0; // 0 = 3ª pessoa, 1 = capô/1ª pessoa, 2 = aérea
   let camYaw = -0.35;
@@ -490,6 +999,7 @@ export async function iniciarJogo() {
   let camDist = 5.6;
   let snapCam = true;
   let arrastando = false;
+  let camPointerId = null;
   let ultimoX = 0, ultimoY = 0;
   let tempoSemMouse = 10;
 
@@ -506,7 +1016,6 @@ export async function iniciarJogo() {
     som.desbloquear();
     if (jogador.veiculo) {
       const v = jogador.veiculo;
-      // Sai pela porta esquerda do carro
       const lx = Math.cos(v.ry) * (v.raio + 1.15);
       const lz = -Math.sin(v.ry) * (v.raio + 1.15);
       const res = resolverColisoes(v.x + lx, v.z + lz, 0.45);
@@ -529,6 +1038,7 @@ export async function iniciarJogo() {
       som.tocarPorta();
       mostrarToast(`Dirigindo: ${perto.nome}${perto.ehPolicia ? ' (L = Sirene)' : ''}`);
     }
+    touch.acel = touch.freio = touch.esq = touch.dir = touch.drift = touch.pular = false;
     atualizarHudModo();
   }
 
@@ -536,6 +1046,11 @@ export async function iniciarJogo() {
     const dir = !!jogador.veiculo;
     elVel.classList.toggle('oculto', !dir);
     elModoPe.classList.toggle('oculto', dir);
+    // Alterna controles touch entre modo a pé (joystick) e dirigindo (volante + pedais)
+    $('touch-pe-esq')?.classList.toggle('oculto', dir);
+    $('touch-pe-dir')?.classList.toggle('oculto', dir);
+    $('touch-carro-esq')?.classList.toggle('oculto', !dir);
+    $('touch-carro-dir')?.classList.toggle('oculto', !dir);
     if (dir) {
       elVeiculoNome.textContent = jogador.veiculo.nome;
       $('btn-sirene').classList.toggle('oculto', !jogador.veiculo.ehPolicia);
@@ -543,6 +1058,227 @@ export async function iniciarJogo() {
     } else {
       $('btn-sirene').classList.add('oculto');
     }
+  }
+
+  // ---- T. rex da Selva Jurássica (carregado em segundo plano sem travar o início do jogo!)
+  const trexOlharAlvo = new THREE.Vector3();
+  const trexState = {
+    inst: null,
+    carregando: false,
+    carregado: false,
+    erro: false,
+    x: 494,
+    z: 274,
+    rumo: Math.PI * 0.85, // rad em atan2(dz, dx) — no GLB, +X é frente, logo rotation.y = -rumo
+    vel: 3.4,
+    dist: 0,
+    estado: 'patrulha', // 'patrulha' | 'rugindo' | 'perseguindo' | 'mordendo'
+    timerEstado: 0,
+    patrulhaAng: 2.8,
+    avisoCooldown: 0,
+    rugidoCooldown: 0,
+    quadroAnim: 0,
+  };
+
+  function sincronizarTrexQualidade() {
+    if (!trexState.inst) return;
+    trexState.inst.definirQualidade({
+      pbr: qualAtual.pbr,
+      sombra: qualAtual.sombras && qualAtual.id === 'alto',
+    });
+  }
+
+  function garantirTrex(avisar = false) {
+    if (trexState.carregado) return Promise.resolve(trexState.inst);
+    if (trexState.carregando) {
+      if (avisar) mostrarToast('🦖 Carregando T. rex na Selva…');
+      return trexState._prom;
+    }
+    trexState.carregando = true;
+    if (avisar) mostrarToast('🦖 Carregando T. rex na Selva…');
+    trexState._prom = criarTrex({
+      url: `${BASE_BIB}/animais/trex/trex.glb`,
+      pbr: qualAtual.pbr,
+      sombra: qualAtual.sombras && qualAtual.id === 'alto',
+    }).then(inst => {
+      trexState.inst = inst;
+      trexState.carregado = true;
+      trexState.carregando = false;
+      inst.grupo.position.set(trexState.x, 0.05, trexState.z);
+      inst.grupo.rotation.set(0, -trexState.rumo, 0);
+      inst.posar({ dist: 0, vel: 3.2, t: 0, bocaK: 0.72 });
+      inst.grupo.visible = false;
+      scene.add(inst.grupo);
+      if (Math.hypot(jogador.x - SELVA_INFO.cx, jogador.z - SELVA_INFO.cz) < 120) {
+        mostrarToast('🦖 O T. rex apareceu na clareira!');
+      }
+      return inst;
+    }).catch(err => {
+      console.warn('T. rex load skip:', err);
+      trexState.carregando = false;
+      trexState.erro = true;
+      return null;
+    });
+    return trexState._prom;
+  }
+
+  function atualizarTrex(dt, t, px, py, pz) {
+    const tr = trexState;
+    tr.avisoCooldown = Math.max(0, tr.avisoCooldown - dt);
+    tr.rugidoCooldown = Math.max(0, tr.rugidoCooldown - dt);
+
+    const { cx, cz, clareiraR, lagoX, lagoZ, lagoR } = SELVA_INFO;
+    const distJog = Math.hypot(px - tr.x, pz - tr.z);
+    const distJogCentro = Math.hypot(px - cx, pz - cz);
+    const jogNaSelva = distJogCentro < 68;
+
+    // Se o jogador se aproximar da selva, garante que o T. rex comece a baixar imediatamente
+    if (!tr.carregado && !tr.carregando && !tr.erro && distJogCentro < 170) {
+      garantirTrex(false);
+    }
+
+    // IA do T. rex (patrulha tranquila → rugido de alerta → perseguição na clareira → bote leve)
+    let alvoX = tr.x, alvoZ = tr.z, velAlvo = 3.4;
+    let rugido = 0, mordida = 0, parado = 0, usarOlhar = false;
+
+    if (tr.estado === 'patrulha') {
+      tr.patrulhaAng += dt * 0.16;
+      const rPat = 21 + Math.sin(tr.patrulhaAng * 2) * 5;
+      alvoX = cx + Math.cos(tr.patrulhaAng) * rPat;
+      alvoZ = cz + Math.sin(tr.patrulhaAng) * (rPat * 0.85);
+      velAlvo = 3.6;
+
+      if (jogNaSelva && distJog < 44) {
+        tr.estado = 'rugindo';
+        tr.timerEstado = 1.35;
+        if (tr.rugidoCooldown <= 0) {
+          som.tocarRugidoTrex(Math.max(0.25, 1 - distJog / 65));
+          tr.rugidoCooldown = 5.5;
+        }
+        if (tr.avisoCooldown <= 0) {
+          mostrarToast('🦖 O T. rex viu você! CORRA!');
+          tr.avisoCooldown = 14;
+        }
+      }
+    } else if (tr.estado === 'rugindo') {
+      tr.timerEstado -= dt;
+      alvoX = px; alvoZ = pz;
+      velAlvo = 0;
+      parado = 1;
+      usarOlhar = true;
+      rugido = Math.sin(Math.max(0, Math.min(1, 1 - tr.timerEstado / 1.35)) * Math.PI);
+      if (tr.timerEstado <= 0) {
+        tr.estado = (jogNaSelva && distJog < 58) ? 'perseguindo' : 'patrulha';
+      }
+    } else if (tr.estado === 'perseguindo') {
+      if (!jogNaSelva || distJog > 64) {
+        tr.estado = 'patrulha';
+      } else {
+        alvoX = px; alvoZ = pz;
+        velAlvo = 7.8; // mais rápido que corrida a pé (6.4 m/s), mas fácil de despistar de carro!
+        usarOlhar = true;
+        if (distJog < 7.2) {
+          tr.estado = 'mordendo';
+          tr.timerEstado = 1.15;
+          if (tr.rugidoCooldown <= 0) {
+            som.tocarRugidoTrex(1.0);
+            tr.rugidoCooldown = 4.5;
+          }
+          // Empurrão brincalhão para dar emoção sem tela de game over
+          const angEmp = Math.atan2(px - tr.x, pz - tr.z);
+          if (jogador.veiculo) {
+            const v = jogador.veiculo;
+            v.vel = Math.max(v.vel, 10);
+            if (tr.avisoCooldown <= 0) {
+              mostrarToast('🦖 O T. rex bateu no carro! Acelere!');
+              tr.avisoCooldown = 7;
+            }
+          } else {
+            const empurrado = resolverColisoes(jogador.x + Math.sin(angEmp) * 7.5, jogador.z + Math.cos(angEmp) * 7.5, 0.45);
+            jogador.x = empurrado.x;
+            jogador.z = empurrado.z;
+            jogador.vy = 4.5;
+            jogador.noChao = false;
+            if (tr.avisoCooldown <= 0) {
+              mostrarToast('🦖 Quase virou lanche do T. rex!');
+              tr.avisoCooldown = 7;
+            }
+          }
+        }
+      }
+    } else if (tr.estado === 'mordendo') {
+      tr.timerEstado -= dt;
+      alvoX = px; alvoZ = pz;
+      velAlvo = 0.8;
+      usarOlhar = true;
+      const u = Math.max(0, Math.min(1, 1 - tr.timerEstado / 1.15));
+      mordida = u < 0.7 ? u / 0.7 : (1 - (u - 0.7) / 0.3);
+      rugido = u > 0.55 ? (u - 0.55) / 0.45 : 0;
+      if (tr.timerEstado <= 0) {
+        tr.estado = 'rugindo';
+        tr.timerEstado = 1.0;
+      }
+    }
+
+    // Movimento suave mantendo o T. rex dentro da clareira e fora do fundo da lagoa
+    const dx = alvoX - tr.x, dz = alvoZ - tr.z;
+    const distAlvo = Math.hypot(dx, dz);
+    if (distAlvo > 0.5) {
+      const rumoDesejado = Math.atan2(dz, dx);
+      let diff = (rumoDesejado - tr.rumo + Math.PI) % (Math.PI * 2) - Math.PI;
+      if (diff < -Math.PI) diff += Math.PI * 2;
+      const maxTurn = (tr.estado === 'perseguindo' ? 2.4 : 1.55) * dt;
+      tr.rumo += Math.max(-maxTurn, Math.min(maxTurn, diff));
+    }
+    tr.vel += (velAlvo - tr.vel) * Math.min(1, dt * 4.5);
+    let nx = tr.x + Math.cos(tr.rumo) * tr.vel * dt;
+    let nz = tr.z + Math.sin(tr.rumo) * tr.vel * dt;
+
+    // Mantém o T. rex na reserva da selva (não invade o centro da cidade)
+    const dCentro = Math.hypot(nx - cx, nz - cz);
+    const maxRaio = clareiraR - 3;
+    if (dCentro > maxRaio) {
+      nx = cx + ((nx - cx) / dCentro) * maxRaio;
+      nz = cz + ((nz - cz) / dCentro) * maxRaio;
+    }
+    // Contorna a lagoa
+    const dLago = Math.hypot(nx - lagoX, nz - lagoZ);
+    if (dLago < lagoR + 2.5 && dLago > 0.01) {
+      nx = lagoX + ((nx - lagoX) / dLago) * (lagoR + 2.5);
+      nz = lagoZ + ((nz - lagoZ) / dLago) * (lagoR + 2.5);
+    }
+    tr.dist += Math.hypot(nx - tr.x, nz - tr.z);
+    tr.x = nx;
+    tr.z = nz;
+
+    if (!tr.inst) return;
+    const visDist = qualAtual.viewDist + 45;
+    const visivel = distJog <= visDist;
+    tr.inst.grupo.visible = visivel;
+    if (!visivel) return;
+
+    tr.inst.grupo.position.set(tr.x, 0.05, tr.z);
+    tr.inst.grupo.rotation.set(0, -tr.rumo, 0);
+
+    // Atualiza IK/ossos a 60 Hz de perto e 30 Hz quando > 60 m (zero impacto no FPS!)
+    tr.quadroAnim++;
+    if (distJog > 60 && (tr.quadroAnim & 1) === 1) return;
+
+    let olharVec = null;
+    if (usarOlhar) {
+      trexOlharAlvo.set(px, py + 0.4, pz);
+      olharVec = trexOlharAlvo;
+    }
+    tr.inst.posar({
+      dist: tr.dist,
+      vel: tr.vel,
+      olhar: olharVec,
+      rugido,
+      mordida,
+      parado,
+      t,
+      bocaK: 0.72,
+    });
   }
 
   function teleportar(pt) {
@@ -556,13 +1292,18 @@ export async function iniciarJogo() {
     }
     camYaw = pt.ang;
     snapCam = true;
-    mostrarToast(`Teleportado para: ${pt.nome}`);
+    minimapTimer = 99;
+    if (pt.id === 'selva' && !trexState.carregado) {
+      garantirTrex(true);
+    } else {
+      mostrarToast(`Teleportado para: ${pt.nome}`);
+    }
   }
 
   function aplicarQualidade(id, avisar = false) {
-    const q = QUALIDADES[id] || QUALIDADES.medio;
+    const q = QUALIDADES[id] || QUALIDADES.leve;
     qualAtual = q;
-    try { localStorage.setItem('hryz_qualidade', q.id); } catch (_) {}
+    try { localStorage.setItem('hryz_qualidade_v2', q.id); } catch (_) {}
 
     renderer.setPixelRatio(Math.min(devicePixelRatio, q.pixelRatio));
     renderer.setSize(innerWidth, innerHeight);
@@ -577,8 +1318,22 @@ export async function iniciarJogo() {
     sun.shadow.camera.bottom = -sr;
     sun.shadow.camera.updateProjectionMatrix();
 
+    sincronizarViaturaPolicia(q.pbr, q.sombras);
+    sincronizarTrexQualidade();
+    if (q.personagemCompleto && usandoPersLeve) carregarPersonagem(persIdx);
+    else if (!q.personagemCompleto && !usandoPersLeve) ativarPersonagemLeve();
+
     for (const v of veiculos) {
-      if (!v.api) v.obj.traverse(m => { if (m.isMesh) m.castShadow = q.sombraPrincipal; });
+      if (!v.ehPolicia) {
+        v.obj.traverse(m => {
+          if (m.isMesh) {
+            m.castShadow = q.sombraPrincipal;
+            if (m.userData.matPbr && m.userData.matLeve) {
+              m.material = q.pbr ? m.userData.matPbr : m.userData.matLeve;
+            }
+          }
+        });
+      }
     }
     for (const entry of cachePers.values()) {
       entry.inst.obj.traverse(m => { if (m.isMesh) m.castShadow = q.sombraDetalhe; });
@@ -597,6 +1352,51 @@ export async function iniciarJogo() {
     const i = ORDEM_QUAL.indexOf(qualAtual.id);
     aplicarQualidade(ORDEM_QUAL[(i + 1) % ORDEM_QUAL.length], true);
   }
+
+  // Modo Tela Cheia + trava em Horizontal (landscape) no celular
+  async function alternarTelaCheiaHorizontal() {
+    try {
+      if (!document.fullscreenElement) {
+        const el = document.documentElement;
+        if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' });
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        if (screen.orientation?.lock) {
+          await screen.orientation.lock('landscape').catch(() => {});
+        }
+        mostrarToast('Modo Horizontal / Tela Cheia ativado');
+      } else {
+        if (screen.orientation?.unlock) {
+          try { screen.orientation.unlock(); } catch (_) {}
+        }
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      }
+    } catch (_) {
+      mostrarToast('Gire o celular de lado para o modo horizontal');
+    }
+  }
+
+  document.addEventListener('fullscreenchange', () => {
+    const ativo = !!document.fullscreenElement;
+    const btnT = $('btn-tela');
+    if (btnT) {
+      btnT.classList.toggle('ativo', ativo);
+      btnT.textContent = ativo ? '⛶ Sair' : '⛶ Horizontal';
+    }
+    setTimeout(() => {
+      renderer.setSize(innerWidth, innerHeight);
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+    }, 120);
+  });
+
+  addEventListener('orientationchange', () => {
+    setTimeout(() => {
+      renderer.setSize(innerWidth, innerHeight);
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+    }, 180);
+  });
 
   addEventListener('keydown', e => {
     const code = e.code;
@@ -633,20 +1433,30 @@ export async function iniciarJogo() {
   });
   addEventListener('keyup', e => teclas.delete(e.code));
 
+  // Giro de câmera com suporte a multi-touch (não interfere no joystick nem nos pedais!)
   renderer.domElement.addEventListener('pointerdown', e => {
-    if (e.target !== renderer.domElement) return;
-    arrastando = true; ultimoX = e.clientX; ultimoY = e.clientY;
+    if (e.target !== renderer.domElement || camPointerId !== null) return;
+    camPointerId = e.pointerId;
+    arrastando = true;
+    ultimoX = e.clientX; ultimoY = e.clientY;
     if (e.button === 0 && armas.ativa && !jogador.veiculo) armas.gatilho(true);
   });
   addEventListener('pointermove', e => {
-    if (!arrastando) return;
+    if (!arrastando || e.pointerId !== camPointerId) return;
     const dx = e.clientX - ultimoX, dy = e.clientY - ultimoY;
     ultimoX = e.clientX; ultimoY = e.clientY;
     camYaw -= dx * 0.0055;
     camPitch = Math.max(0.06, Math.min(1.15, camPitch + dy * 0.0045));
     tempoSemMouse = 0;
   });
-  addEventListener('pointerup', () => { arrastando = false; armas.gatilho(false); });
+  const soltarCam = e => {
+    if (e.pointerId !== camPointerId) return;
+    arrastando = false;
+    camPointerId = null;
+    armas.gatilho(false);
+  };
+  addEventListener('pointerup', soltarCam);
+  addEventListener('pointercancel', soltarCam);
   renderer.domElement.addEventListener('wheel', e => {
     camDist = Math.max(3.5, Math.min(18, camDist + e.deltaY * 0.006));
   }, { passive: true });
@@ -657,6 +1467,9 @@ export async function iniciarJogo() {
   $('btn-chuva').onclick = () => { ehChuva = !ehChuva; rainLines.visible = ehChuva; aplicarClima(); };
   $('btn-cam').onclick = () => { camModo = (camModo + 1) % 3; mostrarToast(['Câmera: 3ª Pessoa', 'Câmera: Capô / 1ª Pessoa', 'Câmera: Aérea'][camModo]); };
   $('btn-pers').onclick = () => carregarPersonagem(persIdx + 1).then(() => mostrarToast(`Personagem: ${PERSONAGENS_DEF[persIdx].nome}`));
+  $('btn-tela').onclick = alternarTelaCheiaHorizontal;
+  $('btn-ativar-horizontal').onclick = () => { $('aviso-girar').classList.add('dispensado'); alternarTelaCheiaHorizontal(); };
+  $('btn-fechar-girar').onclick = () => $('aviso-girar').classList.add('dispensado');
   $('btn-sirene').onclick = () => {
     if (!jogador.veiculo?.ehPolicia) return;
     jogador.veiculo.sirene = !jogador.veiculo.sirene;
@@ -678,17 +1491,18 @@ export async function iniciarJogo() {
     selTp.blur();
   };
 
-  // Controles touch (celulares/tablets)
+  // Controles touch (celulares/tablets em modo horizontal e vertical)
   const joyBase = $('joy-base'), joyKnob = $('joy-knob');
   let joyId = null, joyCx = 0, joyCy = 0;
   joyBase.addEventListener('pointerdown', e => {
+    e.stopPropagation();
     joyId = e.pointerId; joyBase.setPointerCapture(joyId);
     const r = joyBase.getBoundingClientRect();
     joyCx = r.left + r.width / 2; joyCy = r.top + r.height / 2;
   });
   joyBase.addEventListener('pointermove', e => {
     if (e.pointerId !== joyId) return;
-    const maxR = 42;
+    const maxR = 40;
     const dx = e.clientX - joyCx, dy = e.clientY - joyCy;
     const d = Math.hypot(dx, dy);
     const nx = d > maxR ? (dx / d) * maxR : dx;
@@ -700,12 +1514,38 @@ export async function iniciarJogo() {
   joyBase.addEventListener('pointerup', resetJoy);
   joyBase.addEventListener('pointercancel', resetJoy);
 
+  function bindSegurar(id, onChange) {
+    const el = $(id);
+    if (!el) return;
+    let pid = null;
+    el.addEventListener('pointerdown', e => {
+      e.stopPropagation(); e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(pid); } catch (_) {}
+      el.classList.add('ativo');
+      onChange(true);
+    });
+    const soltar = e => {
+      if (pid !== null && e.pointerId !== pid) return;
+      pid = null;
+      el.classList.remove('ativo');
+      onChange(false);
+    };
+    el.addEventListener('pointerup', soltar);
+    el.addEventListener('pointercancel', soltar);
+  }
+
   $('touch-entrar').onclick = entrarOuSairVeiculo;
+  $('touch-sair').onclick = entrarOuSairVeiculo;
+  bindSegurar('touch-pular', v => { touch.pular = v; });
+  bindSegurar('touch-correr', v => { touch.correr = v; });
+  bindSegurar('touch-esq', v => { touch.esq = v; });
+  bindSegurar('touch-dir', v => { touch.dir = v; });
+  bindSegurar('touch-acel', v => { touch.acel = v; });
+  bindSegurar('touch-freio', v => { touch.freio = v; });
+  bindSegurar('touch-drift', v => { touch.drift = v; });
   $('touch-arma').onclick = () => trocarArma(armas.atual === null ? 'pistola' : armas.atual === 'pistola' ? 'metralhadora' : null);
-  $('touch-atirar').addEventListener('pointerdown', () => armas.gatilho(true));
-  $('touch-atirar').addEventListener('pointerup', () => armas.gatilho(false));
-  $('touch-pular').addEventListener('pointerdown', () => { touch.pular = true; });
-  $('touch-pular').addEventListener('pointerup', () => { touch.pular = false; });
+  bindSegurar('touch-atirar', v => armas.gatilho(v));
 
   // ---- Minimapa (Canvas 2D)
   function desenharMinimapa(px, pz, pyaw) {
@@ -744,6 +1584,24 @@ export async function iniciarJogo() {
     const [ex, ez] = toMM(40.5 * TILE - 48, 7 * TILE - 36);
     mmCtx.fillRect(ex, ez, 96 * esc, 72 * esc);
 
+    // Selva Jurássica (reserva verde-escura + clareira + lagoa + marcador do T. rex)
+    if (cidade.mapaInfo.selva) {
+      const sv = cidade.mapaInfo.selva;
+      const [sx0, sz0] = toMM(sv.minX, sv.minZ);
+      mmCtx.fillStyle = '#14532d';
+      mmCtx.fillRect(sx0, sz0, (sv.maxX - sv.minX) * esc, (sv.maxZ - sv.minZ) * esc);
+      const [scx, scz] = toMM(sv.cx, sv.cz);
+      mmCtx.fillStyle = '#785c3e';
+      mmCtx.beginPath();
+      mmCtx.arc(scx, scz, 32 * esc, 0, Math.PI * 2);
+      mmCtx.fill();
+      const [slx, slz] = toMM(sv.lagoX, sv.lagoZ);
+      mmCtx.fillStyle = '#0d9488';
+      mmCtx.beginPath();
+      mmCtx.arc(slx, slz, sv.lagoR * esc, 0, Math.PI * 2);
+      mmCtx.fill();
+    }
+
     // Veículos dirigíveis
     for (const v of veiculos) {
       const [vx, vz] = toMM(v.x, v.z);
@@ -751,6 +1609,18 @@ export async function iniciarJogo() {
       mmCtx.beginPath();
       mmCtx.arc(vx, vz, v.ehPolicia ? 4 : 2.8, 0, Math.PI * 2);
       mmCtx.fill();
+    }
+
+    // T. rex (ponto vermelho pulsante na selva)
+    {
+      const [tx, tz] = toMM(trexState.x, trexState.z);
+      mmCtx.fillStyle = '#ef4444';
+      mmCtx.beginPath();
+      mmCtx.arc(tx, tz, 4.4, 0, Math.PI * 2);
+      mmCtx.fill();
+      mmCtx.strokeStyle = '#fecaca';
+      mmCtx.lineWidth = 1.2;
+      mmCtx.stroke();
     }
 
     // Checkpoint ativo (pulsante)
@@ -783,6 +1653,8 @@ export async function iniciarJogo() {
   atualizarHudModo();
   atualizarProgresso(1, 'Cidade pronta!');
   setTimeout(() => elTelaCarga.classList.add('oculto'), 220);
+  // Baixa o T. rex em segundo plano logo após o jogo abrir para estar pronto ao visitar a Selva
+  setTimeout(() => garantirTrex(false), 900);
 
   // ---- Loop principal (60 FPS)
   const relogio = new THREE.Clock();
@@ -830,10 +1702,13 @@ export async function iniciarJogo() {
       if (v.api?.luzes) v.api.luzes(tTotal, v.sirene ? 'ligado' : 'off');
     }
 
-    const frente = (teclas.has('KeyW') || teclas.has('ArrowUp') ? 1 : 0) - (teclas.has('KeyS') || teclas.has('ArrowDown') ? 1 : 0) - touch.mz;
-    const lado = (teclas.has('KeyD') || teclas.has('ArrowRight') ? 1 : 0) - (teclas.has('KeyA') || teclas.has('ArrowLeft') ? 1 : 0) + touch.mx;
-    const sprint = teclas.has('ShiftLeft') || teclas.has('ShiftRight');
-    const espaco = teclas.has('Space') || touch.pular;
+    const tFrente = (touch.acel ? 1 : 0) - (touch.freio ? 1 : 0) - touch.mz;
+    const tLado = (touch.dir ? 1 : 0) - (touch.esq ? 1 : 0) + touch.mx;
+    const frente = (teclas.has('KeyW') || teclas.has('ArrowUp') ? 1 : 0) - (teclas.has('KeyS') || teclas.has('ArrowDown') ? 1 : 0) + tFrente;
+    const lado = (teclas.has('KeyD') || teclas.has('ArrowRight') ? 1 : 0) - (teclas.has('KeyA') || teclas.has('ArrowLeft') ? 1 : 0) + tLado;
+    const joyMag = Math.hypot(touch.mx, touch.mz);
+    const sprint = teclas.has('ShiftLeft') || teclas.has('ShiftRight') || touch.correr || joyMag > 0.82;
+    const espaco = teclas.has('Space') || touch.pular || touch.drift;
 
     let focoX, focoY, focoZ, focoYaw, velAbs = 0;
 
@@ -855,9 +1730,10 @@ export async function iniciarJogo() {
         if (Math.abs(v.vel) < 0.08) v.vel = 0;
       }
 
-      // Freio de mão / drift
+      // Freio de mão / drift + fumaça leve de pneu
       if (espaco) {
         v.vel *= Math.exp(-3.8 * dt);
+        if (Math.abs(v.vel) > 7) fumacaDrift.emitir(v.x, v.z, v.ry, dt);
       }
 
       // Esterçamento suave dependente da velocidade
@@ -954,6 +1830,7 @@ export async function iniciarJogo() {
       focoX = jogador.x; focoY = jogador.y + 1.45; focoZ = jogador.z; focoYaw = jogador.ry;
 
       const perto = acharVeiculoPerto();
+      $('touch-entrar')?.classList.toggle('tbtn-destaque', !!perto);
       if (perto) {
         elPrompt.textContent = `[E] Entrar: ${perto.nome}`;
         elPrompt.classList.remove('oculto');
@@ -965,8 +1842,17 @@ export async function iniciarJogo() {
     if (jogador.veiculo) armas.atualizar(dt, tTotal, null, false);
     atualizarHudArma();
 
-    // Atualiza setores visíveis, trânsito e NPCs próximos ao jogador
+    // Atualiza setores visíveis, trânsito, frota distante, T. rex da Selva, fumaça de drift e NPCs próximos
+    fumacaDrift.atualizar(dt);
     cidade.atualizar(dt, tTotal, focoX, focoZ);
+    atualizarTrex(dt, tTotal, focoX, focoY, focoZ);
+    const vDist2 = (qualAtual.viewDist + 20) * (qualAtual.viewDist + 20);
+    for (let i = 0; i < veiculos.length; i++) {
+      const v = veiculos[i];
+      if (v === jogador.veiculo) { v.obj.visible = true; continue; }
+      const dx = v.x - focoX, dz = v.z - focoZ;
+      v.obj.visible = (dx * dx + dz * dz) <= vDist2;
+    }
 
     // ---- Som contínuo
     som.atualizar(tTotal, {
@@ -1045,7 +1931,10 @@ export async function iniciarJogo() {
       );
     }
 
-    // ---- Minimapa (atualizado em frequência reduzida) + Render
+    // ---- Céu acompanha a câmera + Minimapa (em frequência reduzida) + Render
+    ceu.mesh.position.copy(camera.position);
+    ceu.mesh.scale.setScalar(camera.far * 0.92);
+
     minimapTimer += dt;
     if (minimapTimer >= qualAtual.minimapInterval) {
       minimapTimer = 0;
@@ -1063,10 +1952,19 @@ export async function iniciarJogo() {
     passo: dt => passo(dt),
     entrar: () => { entrarOuSairVeiculo(); snapCam = true; },
     teleportar: id => { const pt = PONTOS_TELEPORTE.find(p => p.id === id); if (pt) teleportar(pt); },
+    irPara: (x, z, ang = 0) => teleportar({ id: 'custom', nome: 'Custom', x, z, ang }),
     noite: v => { ehNoite = v; aplicarClima(); },
     chuva: v => { ehChuva = v; rainLines.visible = ehChuva; aplicarClima(); },
     qualidade: id => aplicarQualidade(id, false),
     sirene: v => { if (jogador.veiculo?.ehPolicia) { jogador.veiculo.sirene = v; $('btn-sirene').classList.toggle('ativo', v); } },
+    carregarTrex: () => garantirTrex(false),
+    trex: () => ({
+      carregado: trexState.carregado,
+      estado: trexState.estado,
+      x: trexState.x,
+      z: trexState.z,
+      visivel: !!trexState.inst?.grupo.visible,
+    }),
     stats: () => ({
       fps: fpsAtual,
       qualidade: qualAtual.id,
