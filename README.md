@@ -7,7 +7,7 @@ Repositório publicado na Vercel com o jogo de mundo aberto 3D **Hryz City** na 
 ```text
 .
 ├── index.html                  # Hryz City — Jogo 3D de mundo aberto (página inicial na Vercel)
-├── jogo/                       # Motor do jogo (cidade.js, jogo.js: andar, dirigir P71/carros, dia/noite, chuva, minimapa; armas.js: pistola e metralhadora; abertura.js: passeio de câmera pulável pela cidade; sala.js + sala/miniaturas: escolha de personagem, veículo e local)
+├── jogo/                       # Motor do jogo (cidade.js, jogo.js: andar, dirigir P71/carros, dia/noite, chuva, minimapa; armas.js: pistola e metralhadora; abertura.js: passeio de câmera pulável pela cidade; sala.js + sala/miniaturas: escolha de personagem, veículo e local; missao.js: missão do refém na rotatória; balacam.js: câmera da bala da sniper; loja.js: loja de munição com conversa)
 ├── mentoria.html               # Landing page da Mentoria Jarvis OS (Tailwind + Alpine.js)
 ├── vercel.json                 # Headers de MIME/cache para modelos .glb e previews na Vercel
 ├── CLAUDE.md                   # Regras obrigatórias de criação e direção de vídeo
