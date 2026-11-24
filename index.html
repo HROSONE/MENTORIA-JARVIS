@@ -265,9 +265,102 @@
     #prompt-acao { bottom: 96px; font-size: 12px; padding: 6px 12px; }
     #toast { top: 48px; font-size: 11px; padding: 6px 12px; }
   }
+  /* ---------- Abertura (cutscene pulável) e Sala de entrada ---------- */
+  body.em-cine #hud-esq, body.em-cine #hud-dir, body.em-cine #prompt-acao, body.em-cine #mira, body.em-cine #hud-arma,
+  body.em-cine #hud-base-dir, body.em-cine #controles-touch, body.em-cine #aviso-girar, body.em-cine #toast { display: none !important; }
+  #abertura { position: fixed; inset: 0; z-index: 60; pointer-events: auto; cursor: default; }
+  #abertura .faixa { position: absolute; left: 0; right: 0; height: 9vh; background: #000; }
+  #abertura .faixa.cima { top: 0; } #abertura .faixa.baixo { bottom: 0; }
+  #ab-preto { position: absolute; inset: 0; background: #000; opacity: 1; pointer-events: none; }
+  #ab-titulo { position: absolute; left: 0; right: 0; top: 38%; text-align: center; opacity: 0; transform: translateY(10px); transition: opacity .8s ease, transform .8s ease; pointer-events: none; }
+  #ab-titulo.visivel { opacity: 1; transform: none; }
+  #ab-titulo .logo-jogo { font-size: clamp(40px, 9vw, 96px); text-shadow: 0 6px 30px rgba(0,0,0,.6); }
+  #ab-titulo .sub-jogo { color: #e2e8f0; text-shadow: 0 2px 10px rgba(0,0,0,.8); margin-top: 6px; }
+  #ab-local { position: absolute; left: max(22px, 4vw); bottom: calc(9vh + 22px); display: flex; align-items: center; gap: 14px; opacity: 0; transform: translateX(-16px); transition: opacity .45s ease, transform .45s ease; pointer-events: none; }
+  #ab-local.visivel { opacity: 1; transform: none; }
+  #ab-num { font-size: clamp(26px, 4vw, 44px); font-weight: 900; color: var(--accent); text-shadow: 0 2px 12px rgba(0,0,0,.7); }
+  #ab-nome { font-size: clamp(20px, 3.4vw, 38px); font-weight: 900; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 3px 14px rgba(0,0,0,.85); border-left: 3px solid var(--accent); padding-left: 14px; }
+  #ab-dica { font-size: clamp(11px, 1.4vw, 15px); color: #e2e8f0; padding-left: 17px; margin-top: 2px; text-shadow: 0 2px 8px rgba(0,0,0,.9); }
+  #ab-pular { position: absolute; right: max(18px, 3vw); bottom: calc(9vh + 18px); padding: 10px 18px; border-radius: 999px; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.45); color: #fff; font-weight: 800; font-size: 14px; letter-spacing: 1px; cursor: pointer; }
+  #ab-pular:hover { background: rgba(56,189,248,.35); }
+  #ab-pular small { opacity: .65; font-weight: 600; margin-left: 6px; }
+  #ab-progresso { position: absolute; left: 0; right: 0; bottom: 9vh; height: 3px; background: rgba(255,255,255,.12); }
+  #ab-barra { height: 100%; background: var(--accent); transform-origin: 0 0; transform: scaleX(0); }
+
+  #sala { position: fixed; inset: 0; z-index: 55; pointer-events: none; display: grid; grid-template-columns: minmax(300px, 460px) 1fr; grid-template-rows: auto 1fr auto; gap: 14px; padding: max(16px, env(safe-area-inset-top)) 18px max(16px, env(safe-area-inset-bottom)); }
+  #sala > * { pointer-events: auto; }
+  .sala-topo { grid-column: 1; grid-row: 1; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; text-shadow: 0 2px 12px rgba(0,0,0,.7); }
+  .sala-topo .logo-jogo { font-size: clamp(26px, 3.4vw, 40px); }
+  .sala-topo .sala-titulo { color: #e2e8f0; font-size: 15px; font-weight: 600; }
+  .sala-painel { grid-column: 1; grid-row: 2 / 4; display: flex; flex-direction: column; min-height: 0; min-width: 0; padding: 10px; }
+  #sala-abas { display: flex; gap: 6px; margin-bottom: 10px; }
+  #sala-abas button { flex: 1; padding: 10px 6px; border-radius: 10px; border: 1px solid var(--border-glass); background: rgba(255,255,255,.04); color: var(--muted); font-weight: 800; font-size: 13px; cursor: pointer; }
+  #sala-abas button.ativa { background: var(--accent); color: #04111f; border-color: var(--accent); }
+  #sala-grade { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 8px; align-content: start; padding: 2px; }
+  .sala-cartao { display: flex; flex-direction: column; gap: 3px; padding: 6px; border-radius: 10px; border: 2px solid transparent; background: rgba(255,255,255,.05); color: var(--text); text-align: left; cursor: pointer; }
+  .sala-cartao:hover { background: rgba(255,255,255,.1); }
+  .sala-cartao.ativo { border-color: var(--gold); background: rgba(250,204,21,.12); }
+  .sala-img { position: relative; aspect-ratio: 4 / 3; border-radius: 7px; overflow: hidden; background: radial-gradient(circle at 50% 40%, #334155, #0f172a); display: grid; place-items: center; }
+  .sala-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .sala-icone { font-size: 34px; }
+  .sala-img img + .sala-icone { display: none; }
+  .sala-nome { font-weight: 800; font-size: 13px; line-height: 1.15; }
+  .sala-desc { font-size: 11px; color: var(--muted); line-height: 1.2; }
+  .sala-base { grid-column: 2; grid-row: 3; justify-self: end; align-self: end; display: flex; align-items: center; gap: 14px; padding: 10px 10px 10px 16px; max-width: 100%; }
+  #sala-resumo { font-size: 14px; color: #e2e8f0; }
+  #sala-resumo span { color: var(--gold); }
+  #sala-jogar { white-space: nowrap; padding: 14px 30px; border-radius: 10px; border: 0; background: linear-gradient(90deg, #22c55e, #16a34a); color: #fff; font-weight: 900; font-size: 18px; letter-spacing: 1px; cursor: pointer; box-shadow: 0 6px 18px rgba(22,163,74,.45); }
+  #sala-jogar:disabled { filter: grayscale(.7); cursor: wait; }
+  #sala-rever { grid-column: 2; grid-row: 1; justify-self: end; align-self: start; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border-glass); background: var(--bg-glass); color: var(--text); font-size: 12px; font-weight: 700; cursor: pointer; }
+  .sala-dica { font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+  @media (max-width: 760px), (max-height: 520px) {
+    #sala { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto auto; gap: 8px; padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); }
+    .sala-topo .sala-titulo { display: none; }
+    #sala-rever { grid-column: 1; grid-row: 1; padding: 6px 10px; font-size: 11px; }
+    .sala-painel { grid-column: 1; grid-row: 3; padding: 8px; }
+    #sala-abas button { padding: 7px 4px; font-size: 12px; min-width: 0; }
+    #sala-grade { display: flex; overflow-x: auto; overflow-y: hidden; gap: 6px; }
+    .sala-cartao { flex: 0 0 112px; }
+    .sala-desc, .sala-dica { display: none; }
+    .sala-base { grid-column: 1; grid-row: 4; justify-self: stretch; justify-content: space-between; padding: 8px 8px 8px 12px; }
+    #sala-resumo { font-size: 12px; }
+    #sala-jogar { padding: 11px 20px; font-size: 16px; }
+    #ab-local { bottom: calc(9vh + 14px); }
+    #ab-pular { bottom: auto; top: calc(9vh + 12px); padding: 8px 14px; font-size: 12px; }
+  }
+  @media (max-height: 520px) and (min-width: 600px) {
+    #sala { grid-template-columns: minmax(260px, 46vw) minmax(0, 1fr); grid-template-rows: auto 1fr auto; }
+    .sala-painel { grid-column: 1; grid-row: 2 / 4; }
+    #sala-grade { display: grid; overflow-y: auto; overflow-x: hidden; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+    .sala-base { grid-column: 2; grid-row: 3; justify-self: end; }
+  }
 </style>
 </head>
 <body>
+
+
+  <!-- Abertura: passeio pela cidade (pulável) -->
+  <div id="abertura" class="oculto">
+    <div class="faixa cima"></div><div class="faixa baixo"></div>
+    <div id="ab-titulo"><div class="logo-jogo">HRYZ <span>CITY</span></div><div class="sub-jogo">Bem-vindo à cidade</div></div>
+    <div id="ab-local"><div id="ab-num">01</div><div><div id="ab-nome"></div><div id="ab-dica"></div></div></div>
+    <div id="ab-progresso"><div id="ab-barra"></div></div>
+    <div id="ab-preto"></div>
+    <button id="ab-pular">PULAR ⏭<small>Enter</small></button>
+  </div>
+
+  <!-- Sala de entrada: personagem, veículo e local -->
+  <div id="sala" class="oculto">
+    <header class="sala-topo"><div class="logo-jogo">HRYZ <span>CITY</span></div><div class="sala-titulo">Escolha quem você é, o que vai dirigir e onde começar</div></header>
+    <button id="sala-rever">↺ Ver a abertura</button>
+    <div class="sala-painel glass">
+      <nav id="sala-abas"></nav>
+      <div id="sala-grade"></div>
+      <div class="sala-dica">Setas: trocar · Tab: próxima aba · Enter: jogar</div>
+    </div>
+    <div class="sala-base glass"><div id="sala-resumo"></div><button id="sala-jogar">JOGAR ▶</button></div>
+  </div>
 
   <!-- Tela de Carregamento -->
   <div id="tela-carga">
@@ -307,6 +400,7 @@
     <button class="btn-hud" id="btn-pers" title="Trocar Personagem (C)">🧍 Personagem</button>
     <button class="btn-hud" id="btn-tela" title="Tela cheia / Modo Horizontal no celular">⛶ Horizontal</button>
     <button class="btn-hud" id="btn-som" title="Ligar/Silenciar som (M)">🔊</button>
+    <button class="btn-hud" id="btn-sala" title="Voltar para a sala: trocar personagem, carro e local (P)">🏠 Sala</button>
     <button class="btn-hud" id="btn-ajuda" title="Controles (H)">?</button>
   </div>
 
@@ -383,7 +477,8 @@
         <kbd>1 / 2</kbd><span>Pistola / Metralhadora (3 ou G guarda)</span>
         <kbd>Clique</kbd><span>Atirar (segure para rajada na metralhadora)</span>
         <kbd>X</kbd><span>Recarregar</span>
-        <kbd>L</kbd><span>Ligar/desligar giroflex e sirene na Viatura P71</span>
+        <kbd>L</kbd><span>Giroflex e sirene (viatura, ambulância e bombeiros)</span>
+        <kbd>P</kbd><span>Voltar para a sala (trocar personagem, carro e local)</span>
         <kbd>F</kbd><span>Faróis do carro</span>
         <kbd>V</kbd><span>Alternar câmera (3ª pessoa / Capô / Aérea)</span>
         <kbd>C</kbd><span>Trocar personagem jogável</span>
