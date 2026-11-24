@@ -220,7 +220,7 @@ export function criarAmbulancia(opc = {}) {
 
   // ---------------- módulo (baú)
   const mod = caixa(2 * mx, y1 - y0, ml, mats.branco, 0.07, [0, (y0 + y1) / 2, mz]); add(mod);
-  add(caixa(2 * mx - 0.04, 0.06, ml - 0.04, mats.plastico, 0.02, [0, y1 + 0.01, mz]));                    // calha do teto
+  for (const s of [1, -1]) add(caixa(0.04, 0.05, ml - 0.04, mats.plastico, 0.01, [s * (mx - 0.03), y1 + 0.01, mz]));   // calhas do teto
   add(caixa(1.10, 0.20, 0.90, mats.branco, 0.05, [0, y1 + 0.12, -2.35]));                               // ar-condicionado no teto
   // saias com o vão da roda traseira
   const wz0 = A.ZR + 0.62, wz1 = A.ZR - 0.62;
