@@ -7,7 +7,8 @@ import { TILE, CALCADA, ESCALA_VEICULO } from '../videos/biblioteca3d/cidade/kit
 import { Personagem } from '../videos/biblioteca3d/personagens/elenco/elenco.js';
 import { Corredor } from '../videos/biblioteca3d/personagens/corredor/corredor.js';
 import { criarViatura, criarAmbiente } from '../videos/biblioteca3d/veiculos/policia/viatura.js';
-import { construirCidade, PONTOS_TELEPORTE } from './cidade.js';
+import { construirCidade, PONTOS_TELEPORTE, SELVA_INFO } from './cidade.js';
+import { criarTrex } from './trex.js';
 
 const BASE_BIB = './videos/biblioteca3d';
 
@@ -22,6 +23,7 @@ const PERSONAGENS_DEF = [
 
 const CHECKPOINTS = [
   { nome: 'Praça Central',      x: 216, z: 168 },
+  { nome: '🦖 Selva do T. rex', x: 510, z: 280 },
   { nome: 'Rotatória Central',  x: 252, z: 222 },
   { nome: 'Entrada da Rodovia', x: 18,  z: 96  },
   { nome: 'Reta da Rodovia',    x: 18,  z: 360 },
@@ -32,7 +34,7 @@ const CHECKPOINTS = [
 ];
 
 // ====================================================================================================
-// Áudio procedural leve (WebAudio): motor, sirene P71, porta e checkpoint
+// Áudio procedural leve (WebAudio): motor, sirene P71, porta, checkpoint e rugido do T. rex
 // ====================================================================================================
 class SomJogo {
   constructor() {
@@ -104,6 +106,38 @@ class SomJogo {
     g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
     o.connect(g); g.connect(this.ctx.destination);
     o.start(now); o.stop(now + 0.13);
+  }
+  tocarRugidoTrex(intensidade = 1) {
+    if (!this.ctx || this.mudo) return;
+    const now = this.ctx.currentTime;
+    const dur = 1.35;
+    const vol = Math.max(0.02, Math.min(1, intensidade)) * 0.22;
+
+    // Camada grave gutural (sawtooth modulado)
+    const o1 = this.ctx.createOscillator();
+    const o2 = this.ctx.createOscillator();
+    const filt = this.ctx.createBiquadFilter();
+    const g = this.ctx.createGain();
+    o1.type = 'sawtooth';
+    o2.type = 'triangle';
+    o1.frequency.setValueAtTime(142, now);
+    o1.frequency.exponentialRampToValueAtTime(86, now + 0.35);
+    o1.frequency.exponentialRampToValueAtTime(48, now + dur);
+    o2.frequency.setValueAtTime(71, now);
+    o2.frequency.exponentialRampToValueAtTime(34, now + dur);
+
+    filt.type = 'lowpass';
+    filt.frequency.setValueAtTime(480, now);
+    filt.frequency.exponentialRampToValueAtTime(160, now + dur);
+    filt.Q.value = 3.2;
+
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(vol, now + 0.12);
+    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    o1.connect(filt); o2.connect(filt); filt.connect(g); g.connect(this.ctx.destination);
+    o1.start(now); o2.start(now);
+    o1.stop(now + dur + 0.04); o2.stop(now + dur + 0.04);
   }
 }
 
@@ -775,6 +809,7 @@ export async function iniciarJogo() {
     { nome: 'Fórmula Hryz',    arq: 'race',         x: 242, z: 222,   ry: Math.PI,      acel: 34, velMax: 68, raio: 1.85 },
     { nome: 'Fórmula Pista',   arq: 'race-future',  x: 132, z: 567,   ry: Math.PI / 2,  acel: 36, velMax: 72, raio: 1.85 },
     { nome: 'SUV de Luxo',     arq: 'suv-luxury',   x: 256, z: 313.8, ry: -Math.PI / 2, acel: 20, velMax: 44, raio: 2.0 },
+    { nome: 'Jipe da Selva',   arq: 'suv',          x: 454, z: 266.5, ry: Math.PI / 2 - 0.14, acel: 22, velMax: 46, raio: 2.0 },
     { nome: 'Bombeiros',       arq: 'firetruck',    x: 130, z: 98,    ry: Math.PI / 2,  acel: 15, velMax: 34, raio: 2.3 },
     { nome: 'Ambulância',      arq: 'ambulance',    x: 148, z: 98,    ry: Math.PI / 2,  acel: 18, velMax: 40, raio: 2.1 },
   ];
@@ -1003,6 +1038,227 @@ export async function iniciarJogo() {
     }
   }
 
+  // ---- T. rex da Selva Jurássica (carregado em segundo plano sem travar o início do jogo!)
+  const trexOlharAlvo = new THREE.Vector3();
+  const trexState = {
+    inst: null,
+    carregando: false,
+    carregado: false,
+    erro: false,
+    x: 494,
+    z: 274,
+    rumo: Math.PI * 0.85, // rad em atan2(dz, dx) — no GLB, +X é frente, logo rotation.y = -rumo
+    vel: 3.4,
+    dist: 0,
+    estado: 'patrulha', // 'patrulha' | 'rugindo' | 'perseguindo' | 'mordendo'
+    timerEstado: 0,
+    patrulhaAng: 2.8,
+    avisoCooldown: 0,
+    rugidoCooldown: 0,
+    quadroAnim: 0,
+  };
+
+  function sincronizarTrexQualidade() {
+    if (!trexState.inst) return;
+    trexState.inst.definirQualidade({
+      pbr: qualAtual.pbr,
+      sombra: qualAtual.sombras && qualAtual.id === 'alto',
+    });
+  }
+
+  function garantirTrex(avisar = false) {
+    if (trexState.carregado) return Promise.resolve(trexState.inst);
+    if (trexState.carregando) {
+      if (avisar) mostrarToast('🦖 Carregando T. rex na Selva…');
+      return trexState._prom;
+    }
+    trexState.carregando = true;
+    if (avisar) mostrarToast('🦖 Carregando T. rex na Selva…');
+    trexState._prom = criarTrex({
+      url: `${BASE_BIB}/animais/trex/trex.glb`,
+      pbr: qualAtual.pbr,
+      sombra: qualAtual.sombras && qualAtual.id === 'alto',
+    }).then(inst => {
+      trexState.inst = inst;
+      trexState.carregado = true;
+      trexState.carregando = false;
+      inst.grupo.position.set(trexState.x, 0.05, trexState.z);
+      inst.grupo.rotation.set(0, -trexState.rumo, 0);
+      inst.posar({ dist: 0, vel: 3.2, t: 0, bocaK: 0.72 });
+      inst.grupo.visible = false;
+      scene.add(inst.grupo);
+      if (Math.hypot(jogador.x - SELVA_INFO.cx, jogador.z - SELVA_INFO.cz) < 120) {
+        mostrarToast('🦖 O T. rex apareceu na clareira!');
+      }
+      return inst;
+    }).catch(err => {
+      console.warn('T. rex load skip:', err);
+      trexState.carregando = false;
+      trexState.erro = true;
+      return null;
+    });
+    return trexState._prom;
+  }
+
+  function atualizarTrex(dt, t, px, py, pz) {
+    const tr = trexState;
+    tr.avisoCooldown = Math.max(0, tr.avisoCooldown - dt);
+    tr.rugidoCooldown = Math.max(0, tr.rugidoCooldown - dt);
+
+    const { cx, cz, clareiraR, lagoX, lagoZ, lagoR } = SELVA_INFO;
+    const distJog = Math.hypot(px - tr.x, pz - tr.z);
+    const distJogCentro = Math.hypot(px - cx, pz - cz);
+    const jogNaSelva = distJogCentro < 68;
+
+    // Se o jogador se aproximar da selva, garante que o T. rex comece a baixar imediatamente
+    if (!tr.carregado && !tr.carregando && !tr.erro && distJogCentro < 170) {
+      garantirTrex(false);
+    }
+
+    // IA do T. rex (patrulha tranquila → rugido de alerta → perseguição na clareira → bote leve)
+    let alvoX = tr.x, alvoZ = tr.z, velAlvo = 3.4;
+    let rugido = 0, mordida = 0, parado = 0, usarOlhar = false;
+
+    if (tr.estado === 'patrulha') {
+      tr.patrulhaAng += dt * 0.16;
+      const rPat = 21 + Math.sin(tr.patrulhaAng * 2) * 5;
+      alvoX = cx + Math.cos(tr.patrulhaAng) * rPat;
+      alvoZ = cz + Math.sin(tr.patrulhaAng) * (rPat * 0.85);
+      velAlvo = 3.6;
+
+      if (jogNaSelva && distJog < 44) {
+        tr.estado = 'rugindo';
+        tr.timerEstado = 1.35;
+        if (tr.rugidoCooldown <= 0) {
+          som.tocarRugidoTrex(Math.max(0.25, 1 - distJog / 65));
+          tr.rugidoCooldown = 5.5;
+        }
+        if (tr.avisoCooldown <= 0) {
+          mostrarToast('🦖 O T. rex viu você! CORRA!');
+          tr.avisoCooldown = 14;
+        }
+      }
+    } else if (tr.estado === 'rugindo') {
+      tr.timerEstado -= dt;
+      alvoX = px; alvoZ = pz;
+      velAlvo = 0;
+      parado = 1;
+      usarOlhar = true;
+      rugido = Math.sin(Math.max(0, Math.min(1, 1 - tr.timerEstado / 1.35)) * Math.PI);
+      if (tr.timerEstado <= 0) {
+        tr.estado = (jogNaSelva && distJog < 58) ? 'perseguindo' : 'patrulha';
+      }
+    } else if (tr.estado === 'perseguindo') {
+      if (!jogNaSelva || distJog > 64) {
+        tr.estado = 'patrulha';
+      } else {
+        alvoX = px; alvoZ = pz;
+        velAlvo = 7.8; // mais rápido que corrida a pé (6.4 m/s), mas fácil de despistar de carro!
+        usarOlhar = true;
+        if (distJog < 7.2) {
+          tr.estado = 'mordendo';
+          tr.timerEstado = 1.15;
+          if (tr.rugidoCooldown <= 0) {
+            som.tocarRugidoTrex(1.0);
+            tr.rugidoCooldown = 4.5;
+          }
+          // Empurrão brincalhão para dar emoção sem tela de game over
+          const angEmp = Math.atan2(px - tr.x, pz - tr.z);
+          if (jogador.veiculo) {
+            const v = jogador.veiculo;
+            v.vel = Math.max(v.vel, 10);
+            if (tr.avisoCooldown <= 0) {
+              mostrarToast('🦖 O T. rex bateu no carro! Acelere!');
+              tr.avisoCooldown = 7;
+            }
+          } else {
+            const empurrado = resolverColisoes(jogador.x + Math.sin(angEmp) * 7.5, jogador.z + Math.cos(angEmp) * 7.5, 0.45);
+            jogador.x = empurrado.x;
+            jogador.z = empurrado.z;
+            jogador.vy = 4.5;
+            jogador.noChao = false;
+            if (tr.avisoCooldown <= 0) {
+              mostrarToast('🦖 Quase virou lanche do T. rex!');
+              tr.avisoCooldown = 7;
+            }
+          }
+        }
+      }
+    } else if (tr.estado === 'mordendo') {
+      tr.timerEstado -= dt;
+      alvoX = px; alvoZ = pz;
+      velAlvo = 0.8;
+      usarOlhar = true;
+      const u = Math.max(0, Math.min(1, 1 - tr.timerEstado / 1.15));
+      mordida = u < 0.7 ? u / 0.7 : (1 - (u - 0.7) / 0.3);
+      rugido = u > 0.55 ? (u - 0.55) / 0.45 : 0;
+      if (tr.timerEstado <= 0) {
+        tr.estado = 'rugindo';
+        tr.timerEstado = 1.0;
+      }
+    }
+
+    // Movimento suave mantendo o T. rex dentro da clareira e fora do fundo da lagoa
+    const dx = alvoX - tr.x, dz = alvoZ - tr.z;
+    const distAlvo = Math.hypot(dx, dz);
+    if (distAlvo > 0.5) {
+      const rumoDesejado = Math.atan2(dz, dx);
+      let diff = (rumoDesejado - tr.rumo + Math.PI) % (Math.PI * 2) - Math.PI;
+      if (diff < -Math.PI) diff += Math.PI * 2;
+      const maxTurn = (tr.estado === 'perseguindo' ? 2.4 : 1.55) * dt;
+      tr.rumo += Math.max(-maxTurn, Math.min(maxTurn, diff));
+    }
+    tr.vel += (velAlvo - tr.vel) * Math.min(1, dt * 4.5);
+    let nx = tr.x + Math.cos(tr.rumo) * tr.vel * dt;
+    let nz = tr.z + Math.sin(tr.rumo) * tr.vel * dt;
+
+    // Mantém o T. rex na reserva da selva (não invade o centro da cidade)
+    const dCentro = Math.hypot(nx - cx, nz - cz);
+    const maxRaio = clareiraR - 3;
+    if (dCentro > maxRaio) {
+      nx = cx + ((nx - cx) / dCentro) * maxRaio;
+      nz = cz + ((nz - cz) / dCentro) * maxRaio;
+    }
+    // Contorna a lagoa
+    const dLago = Math.hypot(nx - lagoX, nz - lagoZ);
+    if (dLago < lagoR + 2.5 && dLago > 0.01) {
+      nx = lagoX + ((nx - lagoX) / dLago) * (lagoR + 2.5);
+      nz = lagoZ + ((nz - lagoZ) / dLago) * (lagoR + 2.5);
+    }
+    tr.dist += Math.hypot(nx - tr.x, nz - tr.z);
+    tr.x = nx;
+    tr.z = nz;
+
+    if (!tr.inst) return;
+    const visDist = qualAtual.viewDist + 45;
+    const visivel = distJog <= visDist;
+    tr.inst.grupo.visible = visivel;
+    if (!visivel) return;
+
+    tr.inst.grupo.position.set(tr.x, 0.05, tr.z);
+    tr.inst.grupo.rotation.set(0, -tr.rumo, 0);
+
+    // Atualiza IK/ossos a 60 Hz de perto e 30 Hz quando > 60 m (zero impacto no FPS!)
+    tr.quadroAnim++;
+    if (distJog > 60 && (tr.quadroAnim & 1) === 1) return;
+
+    let olharVec = null;
+    if (usarOlhar) {
+      trexOlharAlvo.set(px, py + 0.4, pz);
+      olharVec = trexOlharAlvo;
+    }
+    tr.inst.posar({
+      dist: tr.dist,
+      vel: tr.vel,
+      olhar: olharVec,
+      rugido,
+      mordida,
+      parado,
+      t,
+      bocaK: 0.72,
+    });
+  }
+
   function teleportar(pt) {
     if (jogador.veiculo) {
       const v = jogador.veiculo;
@@ -1014,7 +1270,12 @@ export async function iniciarJogo() {
     }
     camYaw = pt.ang;
     snapCam = true;
-    mostrarToast(`Teleportado para: ${pt.nome}`);
+    minimapTimer = 99;
+    if (pt.id === 'selva' && !trexState.carregado) {
+      garantirTrex(true);
+    } else {
+      mostrarToast(`Teleportado para: ${pt.nome}`);
+    }
   }
 
   function aplicarQualidade(id, avisar = false) {
@@ -1036,6 +1297,7 @@ export async function iniciarJogo() {
     sun.shadow.camera.updateProjectionMatrix();
 
     sincronizarViaturaPolicia(q.pbr, q.sombras);
+    sincronizarTrexQualidade();
     if (q.personagemCompleto && usandoPersLeve) carregarPersonagem(persIdx);
     else if (!q.personagemCompleto && !usandoPersLeve) ativarPersonagemLeve();
 
@@ -1292,6 +1554,24 @@ export async function iniciarJogo() {
     const [ex, ez] = toMM(40.5 * TILE - 48, 7 * TILE - 36);
     mmCtx.fillRect(ex, ez, 96 * esc, 72 * esc);
 
+    // Selva Jurássica (reserva verde-escura + clareira + lagoa + marcador do T. rex)
+    if (cidade.mapaInfo.selva) {
+      const sv = cidade.mapaInfo.selva;
+      const [sx0, sz0] = toMM(sv.minX, sv.minZ);
+      mmCtx.fillStyle = '#14532d';
+      mmCtx.fillRect(sx0, sz0, (sv.maxX - sv.minX) * esc, (sv.maxZ - sv.minZ) * esc);
+      const [scx, scz] = toMM(sv.cx, sv.cz);
+      mmCtx.fillStyle = '#785c3e';
+      mmCtx.beginPath();
+      mmCtx.arc(scx, scz, 32 * esc, 0, Math.PI * 2);
+      mmCtx.fill();
+      const [slx, slz] = toMM(sv.lagoX, sv.lagoZ);
+      mmCtx.fillStyle = '#0d9488';
+      mmCtx.beginPath();
+      mmCtx.arc(slx, slz, sv.lagoR * esc, 0, Math.PI * 2);
+      mmCtx.fill();
+    }
+
     // Veículos dirigíveis
     for (const v of veiculos) {
       const [vx, vz] = toMM(v.x, v.z);
@@ -1299,6 +1579,18 @@ export async function iniciarJogo() {
       mmCtx.beginPath();
       mmCtx.arc(vx, vz, v.ehPolicia ? 4 : 2.8, 0, Math.PI * 2);
       mmCtx.fill();
+    }
+
+    // T. rex (ponto vermelho pulsante na selva)
+    {
+      const [tx, tz] = toMM(trexState.x, trexState.z);
+      mmCtx.fillStyle = '#ef4444';
+      mmCtx.beginPath();
+      mmCtx.arc(tx, tz, 4.4, 0, Math.PI * 2);
+      mmCtx.fill();
+      mmCtx.strokeStyle = '#fecaca';
+      mmCtx.lineWidth = 1.2;
+      mmCtx.stroke();
     }
 
     // Checkpoint ativo (pulsante)
@@ -1331,6 +1623,8 @@ export async function iniciarJogo() {
   atualizarHudModo();
   atualizarProgresso(1, 'Cidade pronta!');
   setTimeout(() => elTelaCarga.classList.add('oculto'), 220);
+  // Baixa o T. rex em segundo plano logo após o jogo abrir para estar pronto ao visitar a Selva
+  setTimeout(() => garantirTrex(false), 900);
 
   // ---- Loop principal (60 FPS)
   const relogio = new THREE.Clock();
@@ -1513,9 +1807,10 @@ export async function iniciarJogo() {
       }
     }
 
-    // Atualiza setores visíveis, trânsito, frota distante, fumaça de drift e NPCs próximos
+    // Atualiza setores visíveis, trânsito, frota distante, T. rex da Selva, fumaça de drift e NPCs próximos
     fumacaDrift.atualizar(dt);
     cidade.atualizar(dt, tTotal, focoX, focoZ);
+    atualizarTrex(dt, tTotal, focoX, focoY, focoZ);
     const vDist2 = (qualAtual.viewDist + 20) * (qualAtual.viewDist + 20);
     for (let i = 0; i < veiculos.length; i++) {
       const v = veiculos[i];
@@ -1619,10 +1914,19 @@ export async function iniciarJogo() {
     passo: dt => passo(dt),
     entrar: () => { entrarOuSairVeiculo(); snapCam = true; },
     teleportar: id => { const pt = PONTOS_TELEPORTE.find(p => p.id === id); if (pt) teleportar(pt); },
+    irPara: (x, z, ang = 0) => teleportar({ id: 'custom', nome: 'Custom', x, z, ang }),
     noite: v => { ehNoite = v; aplicarClima(); },
     chuva: v => { ehChuva = v; rainLines.visible = ehChuva; aplicarClima(); },
     qualidade: id => aplicarQualidade(id, false),
     sirene: v => { if (jogador.veiculo?.ehPolicia) { jogador.veiculo.sirene = v; $('btn-sirene').classList.toggle('ativo', v); } },
+    carregarTrex: () => garantirTrex(false),
+    trex: () => ({
+      carregado: trexState.carregado,
+      estado: trexState.estado,
+      x: trexState.x,
+      z: trexState.z,
+      visivel: !!trexState.inst?.grupo.visible,
+    }),
     stats: () => ({
       fps: fpsAtual,
       qualidade: qualAtual.id,

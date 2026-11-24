@@ -185,15 +185,25 @@ function prepararGeoMesclavel(srcGeo, worldMat, corOverride) {
   return g;
 }
 
+export const SELVA_INFO = {
+  minX: 426, maxX: 610,
+  minZ: 185, maxZ: 375,
+  cx: 520, cz: 280,
+  clareiraR: 42,
+  gateX: 432, gateZ: 268,
+  lagoX: 556, lagoZ: 254, lagoR: 13.5,
+};
+
 export const PONTOS_TELEPORTE = [
-  { id: 'delegacia',  nome: 'Delegacia',     x: 146,   z: 166.2, ang: Math.PI / 2 },
-  { id: 'praca',      nome: 'Praça Central', x: 216,   z: 166.2, ang: 0 },
-  { id: 'rotatoria',  nome: 'Rotatória',     x: 252,   z: 222,   ang: Math.PI },
-  { id: 'rodovia',    nome: 'Rodovia',       x: 17.75, z: 240,   ang: Math.PI },
-  { id: 'aeroporto',  nome: 'Aeroporto',     x: 120,   z: 567,   ang: Math.PI / 2 },
-  { id: 'estadio',    nome: 'Estádio',       x: 396,   z: 84,    ang: 0 },
-  { id: 'condominio', nome: 'Jardim Hryz',   x: 246,   z: 312,   ang: Math.PI / 2 },
-  { id: 'parque',     nome: 'Parque',        x: 336,   z: 166.2, ang: Math.PI },
+  { id: 'delegacia',  nome: 'Delegacia',        x: 146,   z: 166.2, ang: Math.PI / 2 },
+  { id: 'selva',      nome: '🦖 Selva (T. rex)', x: 446,   z: 270,   ang: Math.PI / 2 - 0.10 },
+  { id: 'praca',      nome: 'Praça Central',    x: 216,   z: 166.2, ang: 0 },
+  { id: 'rotatoria',  nome: 'Rotatória',        x: 252,   z: 222,   ang: Math.PI },
+  { id: 'rodovia',    nome: 'Rodovia',          x: 17.75, z: 240,   ang: Math.PI },
+  { id: 'aeroporto',  nome: 'Aeroporto',        x: 120,   z: 567,   ang: Math.PI / 2 },
+  { id: 'estadio',    nome: 'Estádio',          x: 396,   z: 84,    ang: 0 },
+  { id: 'condominio', nome: 'Jardim Hryz',      x: 246,   z: 312,   ang: Math.PI / 2 },
+  { id: 'parque',     nome: 'Parque',           x: 336,   z: 166.2, ang: Math.PI },
 ];
 
 const NPCS_DEFS = [
@@ -225,24 +235,31 @@ export async function construirCidade({
   const texAsfalto = criarTexturaPadrao('asfalto');
   const texSuperficie = criarTexturaPadrao('superficie');
   const texGrama = criarTexturaPadrao('grama');
+  const texSelva = criarTexturaPadrao('grama');
   texGrama.repeat.set(320, 320);
 
   // Materiais Lambert texturizados (5x mais rápidos por pixel em Leve/Médio) e PBR (Alto)
   const MAT_LAMBERT = {
-    fosco:   new THREE.MeshLambertMaterial({ vertexColors: true, map: texSuperficie }),
-    metal:   new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 65, specular: 0x556677 }),
-    asfalto: new THREE.MeshLambertMaterial({ vertexColors: true, map: texAsfalto, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
-    luz:     new THREE.MeshLambertMaterial({ vertexColors: true }),
-    vidro:   new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 90, specular: 0x7799bb }),
+    fosco:     new THREE.MeshLambertMaterial({ vertexColors: true, map: texSuperficie }),
+    metal:     new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 65, specular: 0x556677 }),
+    asfalto:   new THREE.MeshLambertMaterial({ vertexColors: true, map: texAsfalto, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
+    luz:       new THREE.MeshLambertMaterial({ vertexColors: true }),
+    vidro:     new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 90, specular: 0x7799bb }),
     semaforoLuz: new THREE.MeshBasicMaterial({ vertexColors: true }),
+    selvaChao: new THREE.MeshLambertMaterial({ vertexColors: true, map: texSelva, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
+    selvaVeg:  new THREE.MeshLambertMaterial({ vertexColors: true, map: texSelva }),
+    agua:      new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 110, specular: 0x78d8d0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
   };
   const MAT_PBR = {
-    fosco:   new THREE.MeshStandardMaterial({ vertexColors: true, map: texSuperficie, roughness: 0.84, metalness: 0.04 }),
-    metal:   new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.34, metalness: 0.62 }),
-    asfalto: new THREE.MeshStandardMaterial({ vertexColors: true, map: texAsfalto, roughness: 0.88, metalness: 0.02, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
-    luz:     new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4,  metalness: 0.0 }),
-    vidro:   new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.22, metalness: 0.25 }),
+    fosco:     new THREE.MeshStandardMaterial({ vertexColors: true, map: texSuperficie, roughness: 0.84, metalness: 0.04 }),
+    metal:     new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.34, metalness: 0.62 }),
+    asfalto:   new THREE.MeshStandardMaterial({ vertexColors: true, map: texAsfalto, roughness: 0.88, metalness: 0.02, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
+    luz:       new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4,  metalness: 0.0 }),
+    vidro:     new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.22, metalness: 0.25 }),
     semaforoLuz: new THREE.MeshBasicMaterial({ vertexColors: true }),
+    selvaChao: new THREE.MeshStandardMaterial({ vertexColors: true, map: texSelva, roughness: 0.92, metalness: 0.0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
+    selvaVeg:  new THREE.MeshStandardMaterial({ vertexColors: true, map: texSelva, roughness: 0.86, metalness: 0.0 }),
+    agua:      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.16, metalness: 0.18, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
   };
 
   const matsLetreiro = new Set();
@@ -761,6 +778,31 @@ export async function construirCidade({
   }
   for (let gx = 36; gx <= 46; gx += 2) colocar('arvore-palmeira', gx * TILE, 1 * TILE - 1.5, R() * 6);
 
+  // ====================================================================================================
+  // 5.5 Selva Jurássica (leste — palmeiras tropicais do kit mescladas nos setores)
+  // ====================================================================================================
+  {
+    const rngP = aleatorio(7741);
+    const { cx, cz, lagoX, lagoZ, lagoR } = SELVA_INFO;
+    // Palmeiras emoldurando a entrada da selva, a borda da clareira e a lagoa
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2 + (rngP() - 0.5) * 0.16;
+      const rr = 38 + rngP() * 24;
+      const px = cx + Math.cos(a) * rr;
+      const pz = cz + Math.sin(a) * rr;
+      // Mantém corredor da estrada livre até a clareira
+      if (px < 500 && Math.abs(pz - 274) < 16) continue;
+      if (Math.hypot(px - lagoX, pz - lagoZ) < lagoR + 2.5) continue;
+      colocar('arvore-palmeira', px, pz, rngP() * 6.28, 0.02, { escala: 1.05 + rngP() * 0.45, colisor: false });
+    }
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + 0.4;
+      const px = lagoX + Math.cos(a) * (lagoR + 3.2 + rngP() * 2.5);
+      const pz = lagoZ + Math.sin(a) * (lagoR + 3.2 + rngP() * 2.5);
+      colocar('arvore-palmeira', px, pz, rngP() * 6.28, 0.02, { escala: 1.15 + rngP() * 0.35, colisor: false });
+    }
+  }
+
   for (const [nome, gx, gz] of PISOS) if (!OCUPADO.has(k(gx, gz))) ladrilho(nome, gx, gz);
 
   // ====================================================================================================
@@ -892,6 +934,257 @@ export async function construirCidade({
         batch.matrices.push(tmpWorldMat.clone());
       }
     }
+  }
+
+  // ====================================================================================================
+  // 7.5 Selva Jurássica (leste — 100% mesclada por setor: chão musgoso, trilha, lagoa, portal, árvores e samambaias)
+  // ====================================================================================================
+  {
+    const rngS = aleatorio(9917);
+    const { minX, maxX, minZ, maxZ, cx, cz, clareiraR, gateX, gateZ, lagoX, lagoZ, lagoR } = SELVA_INFO;
+    const tmpEuler = new THREE.Euler();
+    const tmpCor = new THREE.Color();
+
+    function addSelvaGeo(srcGeo, x, y, z, rx, ry, rz, sx, sy, sz, corHex, balde = 'selvaVeg', sombra = 'detalhe') {
+      const ch = obterChunk(x, z);
+      tmpPos.set(x, y, z);
+      tmpEuler.set(rx, ry, rz, 'YXZ');
+      tmpQuat.setFromEuler(tmpEuler);
+      tmpEsc.set(sx, sy, sz);
+      tmpWorldMat.compose(tmpPos, tmpQuat, tmpEsc);
+      const sTag = (balde === 'selvaChao' || balde === 'agua' || balde === 'luz') ? 'nunca' : sombra;
+      const mKey = `0#${balde}#${sTag}`;
+      let bucket = ch.mesclas.get(mKey);
+      if (!bucket) {
+        bucket = { decor: false, balde, sombra: sTag, geos: [] };
+        ch.mesclas.set(mKey, bucket);
+      }
+      tmpCor.setHex(corHex);
+      bucket.geos.push(prepararGeoMesclavel(srcGeo, tmpWorldMat, tmpCor));
+    }
+
+    // Geometrias-base ultra-leves (reutilizadas e descartadas no fim do bloco)
+    const gPisoTile = new THREE.PlaneGeometry(24, 24);
+    gPisoTile.rotateX(-Math.PI / 2);
+    const gTrilha = new THREE.PlaneGeometry(11.5, 11.5);
+    gTrilha.rotateX(-Math.PI / 2);
+    const gDisco = new THREE.CircleGeometry(1, 20);
+    gDisco.rotateX(-Math.PI / 2);
+    const gTronco = new THREE.CylinderGeometry(0.32, 0.58, 1, 5);
+    gTronco.translate(0, 0.5, 0);
+    const gCopa = new THREE.DodecahedronGeometry(1, 0);
+    const gFolha = new THREE.ConeGeometry(0.55, 2.2, 4);
+    gFolha.scale(1.0, 1.0, 0.22);
+    gFolha.translate(0, 1.1, 0);
+    const gRocha = new THREE.DodecahedronGeometry(1, 0);
+    const gPoste = new THREE.BoxGeometry(1, 1, 1);
+
+    // 1. Chão musgoso da selva dividido em blocos de 24m (culling exato por setor, zero z-fighting)
+    for (let x = minX + 10; x <= maxX - 10; x += 22) {
+      for (let z = minZ + 10; z <= maxZ - 10; z += 22) {
+        const dCentro = Math.hypot((x - cx) / 96, (z - cz) / 96);
+        if (dCentro > 1.08) continue;
+        const corPiso = ((Math.floor(x / 22) + Math.floor(z / 22)) % 2 === 0) ? 0x2a5223 : 0x24481e;
+        addSelvaGeo(gPisoTile, x, 0.025, z, 0, 0, 0, 1.02, 1, 1.02, corPiso, 'selvaChao', 'nunca');
+      }
+    }
+
+    // 2. Estrada de terra ligando a rua leste (x=400, z=240) ao portal (432, 268) e à clareira central (520, 280)
+    const rotaSelva = [
+      [402, 240], [412, 248], [422, 258], [432, 268],
+      [444, 271], [456, 274], [468, 276], [480, 278], [492, 279],
+    ];
+    for (let i = 0; i < rotaSelva.length - 1; i++) {
+      const [x0, z0] = rotaSelva[i], [x1, z1] = rotaSelva[i + 1];
+      const ang = Math.atan2(x1 - x0, z1 - z0);
+      const segs = 2;
+      for (let s = 0; s < segs; s++) {
+        const u = (s + 0.5) / segs;
+        const px = x0 + (x1 - x0) * u;
+        const pz = z0 + (z1 - z0) * u;
+        addSelvaGeo(gTrilha, px, 0.052, pz, 0, ang, 0, 0.88, 1, 0.95, 0x76583b, 'selvaChao', 'nunca');
+      }
+    }
+    // Clareira central de terra batida onde o T. rex patrulha (em 4 quadrantes para culling perfeito)
+    addSelvaGeo(gDisco, cx, 0.048, cz, 0, 0, 0, 34, 1, 31, 0x6f5438, 'selvaChao', 'nunca');
+    addSelvaGeo(gDisco, cx - 12, 0.052, cz + 6, 0, 0, 0, 20, 1, 18, 0x7b5f40, 'selvaChao', 'nunca');
+    addSelvaGeo(gDisco, cx + 10, 0.052, cz - 8, 0, 0, 0, 19, 1, 17, 0x674e34, 'selvaChao', 'nunca');
+
+    // 3. Lagoa tropical com margem de lama na borda leste da clareira
+    addSelvaGeo(gDisco, lagoX, 0.046, lagoZ, 0, 0, 0, lagoR + 3.2, 1, lagoR + 2.4, 0x56412b, 'selvaChao', 'nunca');
+    addSelvaGeo(gDisco, lagoX, 0.068, lagoZ, 0, 0, 0, lagoR, 1, lagoR * 0.88, 0x1a7f78, 'agua', 'nunca');
+
+    // Função de proteção de corredor livre (estrada + portal + clareira + lagoa)
+    function noCorredorLivre(x, z, margem = 0) {
+      if (Math.hypot(x - cx, z - cz) < clareiraR - 4 + margem) return true;
+      if (Math.hypot(x - lagoX, z - lagoZ) < lagoR + 2 + margem) return true;
+      for (let i = 0; i < rotaSelva.length; i++) {
+        if (Math.hypot(x - rotaSelva[i][0], z - rotaSelva[i][1]) < 11.5 + margem) return true;
+      }
+      return false;
+    }
+
+    // 4. Portal "SELVA JURÁSSICA · T. REX" na entrada (432, 268) + cerca rústica de madeira
+    {
+      const gAng = Math.atan2(444 - 422, 271 - 258); // direção entrando na selva
+      const fx = Math.sin(gAng), fz = Math.cos(gAng);
+      const lx = fz, lz = -fx; // lateral perpendicular ao caminho
+      for (const s of [-1, 1]) {
+        const px = gateX + lx * 6.0 * s;
+        const pz = gateZ + lz * 6.0 * s;
+        // Base de pedra + torre de madeira
+        addSelvaGeo(gPoste, px, 0.9, pz, 0, gAng, 0, 1.9, 1.8, 1.9, 0x5c6358, 'selvaVeg', 'principal');
+        addSelvaGeo(gPoste, px, 4.9, pz, 0, gAng, 0, 1.15, 7.2, 1.15, 0x4f3520, 'selvaVeg', 'principal');
+        // Tocha/lanterna quente no topo da torre
+        addSelvaGeo(gPoste, px, 8.75, pz, 0, gAng, 0, 0.9, 0.7, 0.9, 0xffaa33, 'luz', 'nunca');
+        haloCoords.push(px, 8.85, pz);
+        // Colisor da torre (deixa vão livre de ~10m para carros passarem fácil!)
+        colisores.push({ minX: px - 1.1, maxX: px + 1.1, minZ: pz - 1.1, maxZ: pz + 1.1 });
+      }
+      // Viga superior do portal (altura livre de 6,6 m)
+      addSelvaGeo(gPoste, gateX, 7.1, gateZ, 0, gAng, 0, 13.6, 0.85, 1.0, 0x452d1a, 'selvaVeg', 'principal');
+      addSelvaGeo(gPoste, gateX, 7.85, gateZ, 0, gAng, 0, 12.2, 0.45, 0.65, 0x5c3c22, 'selvaVeg', 'principal');
+
+      // Placa rústica legível de ambos os lados ("SELVA JURÁSSICA • CUIDADO T. REX")
+      const pCan = document.createElement('canvas');
+      pCan.width = 512; pCan.height = 128;
+      const pg = pCan.getContext('2d');
+      pg.fillStyle = '#2d1c0f';
+      pg.fillRect(0, 0, 512, 128);
+      pg.strokeStyle = '#d97706';
+      pg.lineWidth = 8;
+      pg.strokeRect(8, 8, 496, 112);
+      pg.fillStyle = '#fde047';
+      pg.font = '900 40px system-ui, sans-serif';
+      pg.textAlign = 'center';
+      pg.textBaseline = 'middle';
+      pg.fillText('SELVA JURÁSSICA', 256, 48);
+      pg.fillStyle = '#f87171';
+      pg.font = '800 24px system-ui, sans-serif';
+      pg.fillText('⚠ CUIDADO: T. REX SOLTO ⚠', 256, 92);
+      const pTex = new THREE.CanvasTexture(pCan);
+      pTex.colorSpace = THREE.SRGBColorSpace;
+      const pMat = new THREE.MeshBasicMaterial({ map: pTex });
+      const pGeo = new THREE.PlaneGeometry(8.6, 2.15);
+      for (const lado of [-1, 1]) {
+        const placa = new THREE.Mesh(pGeo, pMat);
+        placa.position.set(gateX + fx * 0.56 * lado, 7.15, gateZ + fz * 0.56 * lado);
+        placa.rotation.y = lado > 0 ? gAng : gAng + Math.PI;
+        placa.matrixAutoUpdate = false;
+        placa.updateMatrix();
+        obterChunk(gateX, gateZ).group.add(placa);
+      }
+
+      // Cerca rústica de troncos flanqueando a entrada
+      for (const s of [-1, 1]) {
+        for (let k = 1; k <= 5; k++) {
+          const px = gateX + lx * (6.2 + k * 4.2) * s;
+          const pz = gateZ + lz * (6.2 + k * 4.2) * s;
+          addSelvaGeo(gPoste, px, 1.1, pz, 0, gAng, 0, 0.35, 2.2, 0.35, 0x4f3520, 'selvaVeg', 'detalhe');
+          const mx = gateX + lx * (6.2 + (k - 0.5) * 4.2) * s;
+          const mz = gateZ + lz * (6.2 + (k - 0.5) * 4.2) * s;
+          addSelvaGeo(gPoste, mx, 1.55, mz, 0, gAng, 0, 4.2, 0.18, 0.16, 0x5c3e26, 'selvaVeg', 'detalhe');
+          addSelvaGeo(gPoste, mx, 0.85, mz, 0, gAng, 0, 4.2, 0.18, 0.16, 0x5c3e26, 'selvaVeg', 'detalhe');
+        }
+      }
+    }
+
+    // 5. Árvores tropicais altas com copas em camadas (~92 árvores, só ~13k triângulos no total!)
+    const tonsCopa = [0x1c5922, 0x236a28, 0x2b7a2f, 0x184b1e, 0x317f31];
+    const tonsTronco = [0x58402a, 0x4a3522, 0x624730];
+    let arvCriadas = 0;
+    for (let tent = 0; tent < 420 && arvCriadas < 92; tent++) {
+      const a = rngS() * Math.PI * 2;
+      const rr = clareiraR - 1 + rngS() * 48;
+      const tx = cx + Math.cos(a) * rr;
+      const tz = cz + Math.sin(a) * rr;
+      if (tx < minX + 4 || tx > maxX - 4 || tz < minZ + 4 || tz > maxZ - 4) continue;
+      if (noCorredorLivre(tx, tz, 1.5)) continue;
+
+      const h = 8.5 + rngS() * 7.0;
+      const esp = 0.85 + rngS() * 0.55;
+      const corT = tonsTronco[Math.floor(rngS() * tonsTronco.length)];
+      const corC1 = tonsCopa[Math.floor(rngS() * tonsCopa.length)];
+      const corC2 = tonsCopa[Math.floor(rngS() * tonsCopa.length)];
+      const tiltX = (rngS() - 0.5) * 0.12;
+      const tiltZ = (rngS() - 0.5) * 0.12;
+
+      addSelvaGeo(gTronco, tx, 0, tz, tiltX, rngS() * 6.28, tiltZ, esp, h, esp, corT, 'selvaVeg', 'detalhe');
+      const rCopa = 3.2 + rngS() * 2.4;
+      addSelvaGeo(gCopa, tx, h + 0.5, tz, 0, rngS() * 6.28, 0, rCopa, rCopa * 0.52, rCopa, corC1, 'selvaVeg', 'detalhe');
+      addSelvaGeo(
+        gCopa,
+        tx + (rngS() - 0.5) * 2.6,
+        h - 1.0 + rngS() * 1.4,
+        tz + (rngS() - 0.5) * 2.6,
+        0, rngS() * 6.28, 0,
+        rCopa * 0.78, rCopa * 0.44, rCopa * 0.78,
+        corC2, 'selvaVeg', 'detalhe'
+      );
+      if (rr > clareiraR + 4) {
+        colisores.push({ minX: tx - 0.75, maxX: tx + 0.75, minZ: tz - 0.75, maxZ: tz + 0.75 });
+      }
+      arvCriadas++;
+    }
+
+    // 6. Samambaias gigantes pré-históricas e arbustos tropicais (~160 moitas mescladas)
+    const tonsSam = [0x2e7d32, 0x3b8e38, 0x246928, 0x45993b];
+    let samCriadas = 0;
+    for (let tent = 0; tent < 500 && samCriadas < 160; tent++) {
+      const a = rngS() * Math.PI * 2;
+      const rr = 30 + rngS() * 58;
+      const fx = cx + Math.cos(a) * rr;
+      const fz = cz + Math.sin(a) * rr;
+      if (fx < minX + 2 || fx > maxX - 2 || fz < minZ + 2 || fz > maxZ - 2) continue;
+      if (Math.hypot(fx - cx, fz - cz) < 31) continue;
+      if (Math.hypot(fx - lagoX, fz - lagoZ) < lagoR + 0.5) continue;
+      let naEstrada = false;
+      for (let i = 0; i < rotaSelva.length; i++) {
+        if (Math.hypot(fx - rotaSelva[i][0], fz - rotaSelva[i][1]) < 7.6) { naEstrada = true; break; }
+      }
+      if (naEstrada) continue;
+
+      const esc = 0.85 + rngS() * 0.95;
+      const corF = tonsSam[Math.floor(rngS() * tonsSam.length)];
+      const baseRot = rngS() * 6.28;
+      const nFolhas = 5;
+      for (let f = 0; f < nFolhas; f++) {
+        const fa = baseRot + (f / nFolhas) * Math.PI * 2 + (rngS() - 0.5) * 0.25;
+        addSelvaGeo(gFolha, fx, 0.04, fz, 0.85 + rngS() * 0.3, fa, 0, esc, esc, esc, corF, 'selvaVeg', 'nunca');
+      }
+      samCriadas++;
+    }
+
+    // 7. Rochas musgosas (na margem da lagoa e ao redor da clareira) + troncos caídos
+    const tonsRocha = [0x596454, 0x4c5747, 0x646c5c];
+    for (let i = 0; i < 28; i++) {
+      const pertoLago = i < 10;
+      const a = pertoLago ? (i / 10) * Math.PI * 2 + rngS() * 0.3 : rngS() * Math.PI * 2;
+      const rr = pertoLago ? (lagoR + 0.6 + rngS() * 2.5) : (38 + rngS() * 42);
+      const rx = (pertoLago ? lagoX : cx) + Math.cos(a) * rr;
+      const rz = (pertoLago ? lagoZ : cz) + Math.sin(a) * rr;
+      if (!pertoLago && noCorredorLivre(rx, rz, 0)) continue;
+      const sx = 1.4 + rngS() * 2.4;
+      const sy = 0.9 + rngS() * 1.5;
+      const sz = 1.4 + rngS() * 2.4;
+      const corR = tonsRocha[Math.floor(rngS() * tonsRocha.length)];
+      addSelvaGeo(gRocha, rx, sy * 0.35, rz, rngS() * 0.4, rngS() * 6.28, rngS() * 0.4, sx, sy, sz, corR, 'selvaVeg', 'detalhe');
+      if (sx > 2.2) {
+        colisores.push({ minX: rx - sx * 0.7, maxX: rx + sx * 0.7, minZ: rz - sz * 0.7, maxZ: rz + sz * 0.7 });
+      }
+    }
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 + 0.35;
+      const rr = 41 + rngS() * 18;
+      const lx = cx + Math.cos(a) * rr;
+      const lz = cz + Math.sin(a) * rr;
+      if (noCorredorLivre(lx, lz, 0)) continue;
+      addSelvaGeo(gTronco, lx, 0.35, lz, Math.PI / 2, rngS() * 6.28, 0, 0.9, 5.5 + rngS() * 3.5, 0.9, 0x4b3826, 'selvaVeg', 'detalhe');
+    }
+
+    gPisoTile.dispose(); gTrilha.dispose(); gDisco.dispose();
+    gTronco.dispose(); gCopa.dispose(); gFolha.dispose();
+    gRocha.dispose(); gPoste.dispose();
   }
 
   // Aviões parados + jato voando
@@ -1193,6 +1486,6 @@ export async function construirCidade({
     aplicarQualidade,
     atualizar,
     getStats: () => ({ chunksVisiveis, chunksTotal: chunks.length, npcsCarregados: npcs.length }),
-    mapaInfo: { RUA, VX, HZ, ROT, RX, TX, TZ, PISTA },
+    mapaInfo: { RUA, VX, HZ, ROT, RX, TX, TZ, PISTA, selva: SELVA_INFO },
   };
 }
