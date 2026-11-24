@@ -144,52 +144,254 @@ const QUALIDADES = {
 };
 const ORDEM_QUAL = ['leve', 'medio', 'alto'];
 
-// Personagem policial articulado ultra-leve (~144 triângulos, zero skinning de GPU) para o modo Leve
+// Sombra de contato radial leve (evita que personagem/objetos pareçam flutuando mesmo com shadowMap desligado!)
+let _texSombraBlob = null;
+function obterTexSombraBlob() {
+  if (_texSombraBlob) return _texSombraBlob;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 4, 32, 32, 30);
+  gr.addColorStop(0, 'rgba(0,0,0,0.48)');
+  gr.addColorStop(0.55, 'rgba(0,0,0,0.22)');
+  gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  _texSombraBlob = new THREE.CanvasTexture(c);
+  return _texSombraBlob;
+}
+
+// Céu leve com gradiente, sol/lua e horizonte suave (1 draw call, < 0,1 ms!)
+function criarCeuLeve() {
+  const mat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    depthWrite: false,
+    fog: false,
+    uniforms: {
+      uTopo: { value: new THREE.Color(0x2867c7) },
+      uHor:  { value: new THREE.Color(0xbce0f7) },
+      uChao: { value: new THREE.Color(0x526b5c) },
+      uSolDir: { value: new THREE.Vector3(-0.55, 0.58, 0.45).normalize() },
+      uSolCor: { value: new THREE.Color(0xfff5d6) },
+      uSolForca: { value: 1.0 },
+    },
+    vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `
+      varying vec3 vD;
+      uniform vec3 uTopo, uHor, uChao, uSolDir, uSolCor;
+      uniform float uSolForca;
+      void main() {
+        vec3 d = normalize(vD);
+        float h = d.y;
+        vec3 c = h >= 0.0
+          ? mix(uHor, uTopo, pow(clamp(h, 0.0, 1.0), 0.58))
+          : mix(uHor, uChao, clamp(-h * 4.0, 0.0, 1.0));
+        if (h > -0.02 && uSolForca > 0.01) {
+          float s = max(dot(d, uSolDir), 0.0);
+          c += uSolCor * (pow(s, 18.0) * 0.25 + pow(s, 360.0) * 1.8) * uSolForca;
+        }
+        gl_FragColor = vec4(c, 1.0);
+      }
+    `,
+  });
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 10), mat);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = -10;
+  return {
+    mesh,
+    definir({ noite, chuva }) {
+      if (noite) {
+        mat.uniforms.uTopo.value.setHex(0x060b1c);
+        mat.uniforms.uHor.value.setHex(0x162447);
+        mat.uniforms.uChao.value.setHex(0x080d1a);
+        mat.uniforms.uSolDir.value.set(0.45, 0.52, -0.55).normalize();
+        mat.uniforms.uSolCor.value.setHex(0xcbdcff);
+        mat.uniforms.uSolForca.value = 0.55;
+      } else if (chuva) {
+        mat.uniforms.uTopo.value.setHex(0x4c6073);
+        mat.uniforms.uHor.value.setHex(0x8fa3b5);
+        mat.uniforms.uChao.value.setHex(0x4a5966);
+        mat.uniforms.uSolForca.value = 0.08;
+      } else {
+        mat.uniforms.uTopo.value.setHex(0x2867c7);
+        mat.uniforms.uHor.value.setHex(0xbce0f7);
+        mat.uniforms.uChao.value.setHex(0x526b5c);
+        mat.uniforms.uSolDir.value.set(-0.55, 0.58, 0.45).normalize();
+        mat.uniforms.uSolCor.value.setHex(0xfff5d6);
+        mat.uniforms.uSolForca.value = 1.0;
+      }
+    },
+  };
+}
+
+// Pool leve de fumaça de pneu para drift (16 partículas recicladas, zero alocação por frame)
+function criarFumacaDrift(scene) {
+  const N = 16;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 2, 32, 32, 30);
+  gr.addColorStop(0, 'rgba(235,240,248,0.65)');
+  gr.addColorStop(0.5, 'rgba(210,220,232,0.30)');
+  gr.addColorStop(1, 'rgba(200,210,225,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c);
+
+  const pool = [];
+  for (let i = 0; i < N; i++) {
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false });
+    const sp = new THREE.Sprite(mat);
+    sp.visible = false;
+    scene.add(sp);
+    pool.push({ sp, mat, vida: 0, maxVida: 0.6, vx: 0, vy: 0, vz: 0 });
+  }
+  let idx = 0, cooldown = 0;
+  return {
+    emitir(x, z, ry, dt) {
+      cooldown -= dt;
+      if (cooldown > 0) return;
+      cooldown = 0.045;
+      for (const lado of [-0.72, 0.72]) {
+        const p = pool[idx++ % N];
+        const rx = x - Math.sin(ry) * 1.45 + Math.cos(ry) * lado;
+        const rz = z - Math.cos(ry) * 1.45 - Math.sin(ry) * lado;
+        p.sp.position.set(rx, 0.28, rz);
+        p.sp.scale.setScalar(0.65);
+        p.sp.visible = true;
+        p.vida = 0.52;
+        p.maxVida = 0.52;
+        p.vx = (Math.random() - 0.5) * 0.8;
+        p.vy = 0.9 + Math.random() * 0.5;
+        p.vz = (Math.random() - 0.5) * 0.8;
+      }
+    },
+    atualizar(dt) {
+      for (let i = 0; i < N; i++) {
+        const p = pool[i];
+        if (p.vida <= 0) continue;
+        p.vida -= dt;
+        if (p.vida <= 0) { p.sp.visible = false; continue; }
+        const u = 1 - p.vida / p.maxVida;
+        p.sp.position.x += p.vx * dt;
+        p.sp.position.y += p.vy * dt;
+        p.sp.position.z += p.vz * dt;
+        p.sp.scale.setScalar(0.65 + u * 1.85);
+        p.mat.opacity = (1 - u) * 0.55;
+      }
+    },
+  };
+}
+
+// Personagem policial estilizado e arredondado (~520 triângulos, zero skinning de GPU, com sombra no chão!)
 function criarPersonagemLeve() {
   const g = new THREE.Group();
   g.name = 'PolicialLeve';
-  const mAzul = new THREE.MeshLambertMaterial({ color: 0x1e3a6e });
-  const mCalca = new THREE.MeshLambertMaterial({ color: 0x111c33 });
-  const mPele = new THREE.MeshLambertMaterial({ color: 0xe6b89c });
-  const mPreto = new THREE.MeshLambertMaterial({ color: 0x151820 });
-  const mOuro = new THREE.MeshLambertMaterial({ color: 0xfacc15 });
+
+  const mCamisa = new THREE.MeshLambertMaterial({ color: 0x1f3d73 });
+  const mColete = new THREE.MeshLambertMaterial({ color: 0x132038 });
+  const mCalca  = new THREE.MeshLambertMaterial({ color: 0x101a2e });
+  const mPele   = new THREE.MeshLambertMaterial({ color: 0xe8bc9e });
+  const mCabelo = new THREE.MeshLambertMaterial({ color: 0x261d18 });
+  const mPreto  = new THREE.MeshLambertMaterial({ color: 0x14171e });
+  const mOuro   = new THREE.MeshPhongMaterial({ color: 0xfacc15, shininess: 90, specular: 0xfff0a0 });
+  const mOculos = new THREE.MeshPhongMaterial({ color: 0x0b0f18, shininess: 120, specular: 0x6688aa });
+
+  // Sombra de contato macia nos pés (nunca parece flutuando!)
+  const sombra = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.15, 1.15),
+    new THREE.MeshBasicMaterial({ map: obterTexSombraBlob(), transparent: true, depthWrite: false })
+  );
+  sombra.rotation.x = -Math.PI / 2;
+  sombra.position.y = 0.025;
+  g.add(sombra);
 
   const corpo = new THREE.Group();
   g.add(corpo);
 
-  const tronco = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.58, 0.24), mAzul);
-  tronco.position.y = 1.06;
+  // Tronco com ombros arredondados + colete tático + gravata + cinto + distintivo
+  const tronco = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.17, 0.56, 10), mCamisa);
+  tronco.scale.set(1.18, 1, 0.72);
+  tronco.position.y = 1.08;
   corpo.add(tronco);
 
-  const cinto = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.08, 0.26), mPreto);
-  cinto.position.y = 0.78;
+  const colete = new THREE.Mesh(new THREE.CylinderGeometry(0.225, 0.19, 0.42, 10), mColete);
+  colete.scale.set(1.16, 1, 0.78);
+  colete.position.y = 1.07;
+  corpo.add(colete);
+
+  const cinto = new THREE.Mesh(new THREE.CylinderGeometry(0.195, 0.195, 0.075, 10), mPreto);
+  cinto.scale.set(1.15, 1, 0.78);
+  cinto.position.y = 0.81;
   corpo.add(cinto);
 
-  const distintivo = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.02), mOuro);
-  distintivo.position.set(0.11, 1.18, 0.13);
+  const fivela = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.03), mOuro);
+  fivela.position.set(0, 0.81, 0.155);
+  corpo.add(fivela);
+
+  const distintivo = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.015, 6), mOuro);
+  distintivo.rotation.x = Math.PI / 2;
+  distintivo.position.set(0.11, 1.19, 0.165);
   corpo.add(distintivo);
 
-  const cabeca = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.28, 0.28), mPele);
-  cabeca.position.y = 1.52;
+  const pescoco = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.075, 0.11, 8), mPele);
+  pescoco.position.y = 1.40;
+  corpo.add(pescoco);
+
+  // Cabeça arredondada, cabelo, óculos escuros e quepe policial detalhado
+  const cabeca = new THREE.Mesh(new THREE.SphereGeometry(0.145, 12, 10), mPele);
+  cabeca.scale.set(0.95, 1.08, 0.98);
+  cabeca.position.y = 1.56;
   corpo.add(cabeca);
 
-  const quepe = new THREE.Mesh(new THREE.BoxGeometry(0.31, 0.11, 0.31), mAzul);
-  quepe.position.y = 1.69;
-  corpo.add(quepe);
-  const aba = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.03, 0.12), mPreto);
-  aba.position.set(0, 1.64, 0.17);
-  corpo.add(aba);
+  const cabelo = new THREE.Mesh(new THREE.SphereGeometry(0.148, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), mCabelo);
+  cabelo.position.set(0, 1.57, -0.015);
+  corpo.add(cabelo);
 
-  const pernaE = new THREE.Group(); pernaE.position.set(-0.12, 0.75, 0);
-  const mPE = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.74, 0.18), mCalca); mPE.position.y = -0.37; pernaE.add(mPE);
-  const pernaD = new THREE.Group(); pernaD.position.set(0.12, 0.75, 0);
-  const mPD = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.74, 0.18), mCalca); mPD.position.y = -0.37; pernaD.add(mPD);
+  const oculos = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.055, 0.04), mOculos);
+  oculos.position.set(0, 1.57, 0.13);
+  corpo.add(oculos);
+
+  const quepeBase = new THREE.Mesh(new THREE.CylinderGeometry(0.165, 0.148, 0.09, 12), mCamisa);
+  quepeBase.position.set(0, 1.70, -0.005);
+  corpo.add(quepeBase);
+  const quepeFaixa = new THREE.Mesh(new THREE.CylinderGeometry(0.153, 0.152, 0.035, 12), mPreto);
+  quepeFaixa.position.set(0, 1.66, -0.005);
+  corpo.add(quepeFaixa);
+  const quepeAba = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.018, 10, 1, false, -Math.PI * 0.42, Math.PI * 0.84), mPreto);
+  quepeAba.position.set(0, 1.645, 0.065);
+  quepeAba.rotation.x = 0.14;
+  corpo.add(quepeAba);
+  const quepeEmblema = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.015, 6), mOuro);
+  quepeEmblema.rotation.x = Math.PI / 2;
+  quepeEmblema.position.set(0, 1.70, 0.155);
+  corpo.add(quepeEmblema);
+
+  // Pernas articuladas com botas
+  function fazerPerna(sx) {
+    const pivo = new THREE.Group();
+    pivo.position.set(sx * 0.115, 0.78, 0);
+    const coxa = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.068, 0.66, 8), mCalca);
+    coxa.position.y = -0.33;
+    const bota = new THREE.Mesh(new THREE.BoxGeometry(0.125, 0.13, 0.22), mPreto);
+    bota.position.set(0, -0.71, 0.035);
+    pivo.add(coxa, bota);
+    return pivo;
+  }
+  const pernaE = fazerPerna(-1);
+  const pernaD = fazerPerna(1);
   corpo.add(pernaE, pernaD);
 
-  const bracoE = new THREE.Group(); bracoE.position.set(-0.31, 1.31, 0);
-  const mBE = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.56, 0.15), mAzul); mBE.position.y = -0.28; bracoE.add(mBE);
-  const bracoD = new THREE.Group(); bracoD.position.set(0.31, 1.31, 0);
-  const mBD = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.56, 0.15), mAzul); mBD.position.y = -0.28; bracoD.add(mBD);
+  // Braços articulados com ombro arredondado + manga + mão
+  function fazerBraco(sx) {
+    const pivo = new THREE.Group();
+    pivo.position.set(sx * 0.285, 1.31, 0);
+    const ombro = new THREE.Mesh(new THREE.SphereGeometry(0.072, 8, 6), mCamisa);
+    const manga = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.052, 0.46, 8), mCamisa);
+    manga.position.y = -0.24;
+    const mao = new THREE.Mesh(new THREE.SphereGeometry(0.052, 8, 6), mPele);
+    mao.position.y = -0.50;
+    pivo.add(ombro, manga, mao);
+    return pivo;
+  }
+  const bracoE = fazerBraco(-1);
+  const bracoD = fazerBraco(1);
   corpo.add(bracoE, bracoD);
 
   let acao = 'Parado';
@@ -199,27 +401,30 @@ function criarPersonagemLeve() {
     tocar(nome) { acao = nome; },
     atualizar(dt) {
       if (acao === 'Correr' || acao === 'Andar') {
-        const vel = acao === 'Correr' ? 12 : 7.5;
-        const amp = acao === 'Correr' ? 0.75 : 0.45;
+        const vel = acao === 'Correr' ? 12.5 : 7.8;
+        const amp = acao === 'Correr' ? 0.78 : 0.46;
         fase += dt * vel;
         const s = Math.sin(fase) * amp;
         pernaE.rotation.x = s;
         pernaD.rotation.x = -s;
-        bracoE.rotation.x = -s * 0.8;
-        bracoD.rotation.x = s * 0.8;
-        corpo.position.y = Math.abs(Math.cos(fase)) * (acao === 'Correr' ? 0.06 : 0.03);
+        bracoE.rotation.x = -s * 0.85;
+        bracoD.rotation.x = s * 0.85;
+        corpo.position.y = Math.abs(Math.cos(fase)) * (acao === 'Correr' ? 0.065 : 0.03);
+        corpo.rotation.x = acao === 'Correr' ? 0.12 : 0.04;
       } else if (acao === 'Pular') {
         pernaE.rotation.x = 0.35;
         pernaD.rotation.x = -0.35;
-        bracoE.rotation.x = -0.8;
-        bracoD.rotation.x = -0.8;
+        bracoE.rotation.x = -0.85;
+        bracoD.rotation.x = -0.85;
         corpo.position.y = 0;
+        corpo.rotation.x = 0;
       } else {
         pernaE.rotation.x *= 0.8;
         pernaD.rotation.x *= 0.8;
         bracoE.rotation.x *= 0.8;
         bracoD.rotation.x *= 0.8;
         corpo.position.y = 0;
+        corpo.rotation.x *= 0.8;
       }
     },
   };
@@ -242,42 +447,76 @@ function converterParaLambert(root) {
   });
 }
 
-// Viatura policial ultra-leve (~1.3k triângulos e 5 draw calls vs 166k triângulos / 206 draw calls da P71)
-async function criarViaturaLeve(glbLoader) {
-  const G = new THREE.Group();
-  G.name = 'viaturaLeve';
-  const gltf = await glbLoader.loadAsync(`${BASE_BIB}/veiculos/police.glb`);
-  const carro = gltf.scene;
-  carro.scale.setScalar(ESCALA_VEICULO);
-  converterParaLambert(carro);
-  carro.traverse(m => {
-    if (m.isMesh) {
-      if (m.userData.matLeve) m.material = m.userData.matLeve;
-      m.castShadow = false;
-      m.receiveShadow = true;
+// Viatura Ford Crown Victoria P71 otimizada para tempo real:
+// Mantém a carroceria, pintura "POLICE · HRYZ CITY 117", pushbar, giroflex e rodas que giram/esterçam,
+// mas corta ~85.000 triângulos e ~80 draw calls (troca as 4 rodas de 18k tris por rodas leves, oculta interior invisível e troca clearcoat por Phong brilhoso).
+function criarViaturaP71Otimizada(modoCompleto = false) {
+  const p71 = criarViatura({
+    livery: 'preto-branco',
+    numero: '117',
+    cidade: 'HRYZ CITY',
+    placa: 'HRYZ 911',
+    pushbar: true,
+    sujeira: 0.25,
+  });
+
+  // 1. Oculta o interior (30 malhas / 14k triângulos invisíveis por trás do vidro fumê em 3ª pessoa)
+  const interior = p71.grupo.getObjectByName('interior');
+  if (interior) interior.visible = false;
+
+  // 2. Troca as 4 rodas pesadas (72.416 triângulos / 56 malhas) por rodas P71 leves (4x2 = 8 malhas / ~1.100 tris)
+  const geoPneu = new THREE.CylinderGeometry(0.355, 0.355, 0.235, 16);
+  geoPneu.rotateZ(Math.PI / 2);
+  const geoAro = new THREE.CylinderGeometry(0.215, 0.215, 0.245, 14);
+  geoAro.rotateZ(Math.PI / 2);
+  const geoCalota = new THREE.CylinderGeometry(0.085, 0.095, 0.258, 12);
+  geoCalota.rotateZ(Math.PI / 2);
+  const matPneu = new THREE.MeshLambertMaterial({ color: 0x16181c });
+  const matAro  = new THREE.MeshPhongMaterial({ color: 0x14171c, shininess: 45, specular: 0x444c55 });
+  const matCalota = new THREE.MeshPhongMaterial({ color: 0xd5dce4, shininess: 110, specular: 0xffffff });
+
+  for (const r of p71.rodas) {
+    // Limpa os 14 filhos pesados de cada pivô de roda e coloca o conjunto leve que continua girando e esterçando!
+    while (r.pivo.children.length) r.pivo.remove(r.pivo.children[0]);
+    const giroNovo = new THREE.Group();
+    const pneuM = new THREE.Mesh(geoPneu, matPneu);
+    const aroM = new THREE.Mesh(geoAro, matAro);
+    const calM = new THREE.Mesh(geoCalota, matCalota);
+    giroNovo.add(pneuM, aroM, calM);
+    r.pivo.add(giroNovo);
+    r.giro = giroNovo;
+  }
+
+  // 3. Preserva o material de pintura da P71 (ele usa onBeforeCompile para a pintura "POLICE · HRYZ CITY · 117" e os recortes das caixas de roda!)
+  //    e só desliga o clearcoat pesado no modo Leve; demais materiais PBR viram Phong leve.
+  const matPintura = p71.pintura?.material;
+  const luzesDinamicas = [];
+  p71.grupo.traverse(m => {
+    if (m.isLight) {
+      luzesDinamicas.push(m);
+      return;
+    }
+    if (!m.isMesh || !m.material || Array.isArray(m.material)) return;
+    const mat = m.material;
+    if (mat === matPintura) return;
+    if (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial) {
+      m.userData.matPbr = mat;
+      m.userData.matLeve = new THREE.MeshPhongMaterial({
+        color: mat.color ? mat.color.clone() : 0xffffff,
+        map: mat.map || null,
+        emissive: mat.emissive ? mat.emissive.clone() : 0x000000,
+        emissiveIntensity: mat.emissiveIntensity ?? 1,
+        transparent: mat.transparent,
+        opacity: mat.opacity,
+        depthWrite: mat.depthWrite,
+        side: mat.side,
+        shininess: mat.clearcoat ? 95 : Math.round((1 - (mat.roughness ?? 0.5)) * 80),
+        specular: new THREE.Color(mat.clearcoat ? 0x6b7c90 : 0x333c48),
+      });
     }
   });
-  G.add(carro);
 
-  // Giroflex leve no teto (2 malhas leves, sem PointLight/SpotLight)
-  const matV = new THREE.MeshBasicMaterial({ color: 0x881111 });
-  const matA = new THREE.MeshBasicMaterial({ color: 0x113388 });
-  const barraV = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.14, 0.24), matV);
-  barraV.position.set(-0.23, 1.80, -0.08);
-  const barraA = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.14, 0.24), matA);
-  barraA.position.set(0.23, 1.80, -0.08);
-  G.add(barraV, barraA);
-
-  // Sombra de contato leve sob o carro
-  const sombra = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.3, 4.7),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.30, depthWrite: false })
-  );
-  sombra.rotation.x = -Math.PI / 2;
-  sombra.position.y = 0.02;
-  G.add(sombra);
-
-  // Farol leve com gradiente suave no chão à noite (custo zero de iluminação dinâmica)
+  // 4. Farol leve com gradiente suave no chão (usado no modo Leve para economizar os 2 SpotLights)
   const fc = document.createElement('canvas'); fc.width = 64; fc.height = 128;
   const fg = fc.getContext('2d');
   const gr = fg.createLinearGradient(0, 128, 0, 0);
@@ -289,30 +528,49 @@ async function criarViaturaLeve(glbLoader) {
   const fTex = new THREE.CanvasTexture(fc);
   fTex.colorSpace = THREE.SRGBColorSpace;
   const fachoMat = new THREE.MeshBasicMaterial({ map: fTex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
-  const facho = new THREE.Mesh(new THREE.PlaneGeometry(5.5, 14), fachoMat);
+  const facho = new THREE.Mesh(new THREE.PlaneGeometry(5.8, 15), fachoMat);
   facho.rotation.x = -Math.PI / 2;
-  facho.position.set(0, 0.04, 8.8);
-  G.add(facho);
+  facho.position.set(0, 0.04, 9.5);
+  p71.grupo.add(facho);
 
-  return {
-    grupo: G,
-    luzes(t, modo) {
-      if (modo === 'ligado') {
-        const p = Math.floor(t * 7) % 2 === 0;
-        matV.color.setHex(p ? 0xff2222 : 0x551111);
-        matA.color.setHex(p ? 0x112255 : 0x2288ff);
-      } else {
-        matV.color.setHex(0x881111);
-        matA.color.setHex(0x113388);
+  let usandoPbr = modoCompleto;
+  let faroisLigados = false;
+  const faroisOrig = p71.farois.bind(p71);
+  const luzesOrig = p71.luzes.bind(p71);
+
+  p71.definirModo = (pbrAtivo, sombraAtiva) => {
+    usandoPbr = pbrAtivo;
+    if (matPintura) {
+      matPintura.clearcoat = pbrAtivo ? 1.0 : 0.0;
+      matPintura.roughness = pbrAtivo ? 0.30 : 0.42;
+    }
+    p71.grupo.traverse(m => {
+      if (!m.isMesh) return;
+      if (m.userData.matPbr && m.userData.matLeve) {
+        m.material = pbrAtivo ? m.userData.matPbr : m.userData.matLeve;
       }
-    },
-    farois(on) { fachoMat.opacity = on ? 0.55 : 0; },
-    freio() {},
-    re() {},
-    seta() {},
-    rodar() {},
-    esterco() {},
+      if (m.name !== 'sombraChao' && m !== facho) {
+        m.castShadow = sombraAtiva;
+      }
+    });
+    for (const l of luzesDinamicas) l.visible = pbrAtivo;
+    p71.farois(faroisLigados);
   };
+
+  p71.farois = on => {
+    faroisLigados = !!on;
+    faroisOrig(usandoPbr && faroisLigados);
+    fachoMat.opacity = (!usandoPbr && faroisLigados) ? 0.55 : 0;
+  };
+  p71.luzes = (t, modo) => {
+    luzesOrig(t, modo);
+    if (!usandoPbr) {
+      for (const l of luzesDinamicas) l.visible = false;
+    }
+  };
+
+  p71.definirModo(modoCompleto, modoCompleto);
+  return p71;
 }
 
 // ====================================================================================================
@@ -351,10 +609,11 @@ export async function iniciarJogo() {
     toastTimer = setTimeout(() => elToast.classList.remove('visivel'), 2600);
   }
 
-  // ---- Renderer, Qualidade e Cena (padrão = Leve para rodar liso em qualquer PC!)
+  // ---- Renderer, Qualidade e Cena (padrão = Leve para rodar liso em qualquer PC ou celular!)
   const Q = new URLSearchParams(location.search);
   let ehNoite = Q.has('noite');
   let ehChuva = Q.has('chuva');
+  if (Q.has('touch')) document.body.classList.add('modo-touch');
 
   const qParam = (Q.get('qualidade') || '').toLowerCase();
   let qSalva = '';
@@ -374,7 +633,14 @@ export async function iniciarJogo() {
   document.body.prepend(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(56, innerWidth / innerHeight, 0.25, qualAtual.camFar);
+  const camera = new THREE.PerspectiveCamera(56, innerWidth / innerHeight, 0.4, qualAtual.camFar);
+
+  // Céu gradiente leve com sol/lua (1 draw call)
+  const ceu = criarCeuLeve();
+  scene.add(ceu.mesh);
+
+  // Fumaça leve de drift
+  const fumacaDrift = criarFumacaDrift(scene);
 
   const hemi = new THREE.HemisphereLight(0xffffff, 0x8fa3b5, 1.45);
   scene.add(hemi);
@@ -415,7 +681,7 @@ export async function iniciarJogo() {
     elTextoCarga.textContent = texto;
   }
 
-  // ---- Construir Cidade Hryz (ultra-leve: Lambert + malhas mescladas + culling por setor)
+  // ---- Construir Cidade Hryz (ultra-leve: Lambert texturizado + malhas mescladas + culling por setor)
   atualizarProgresso(0.05, 'Carregando Cidade Hryz…');
   const cidade = await construirCidade({
     scene,
@@ -425,13 +691,13 @@ export async function iniciarJogo() {
   });
 
   function aplicarClima() {
-    const fundo = ehNoite ? 0x091124 : (ehChuva ? 0x7c92a6 : 0xb8dff5);
+    const fundo = ehNoite ? 0x0e1833 : (ehChuva ? 0x7c92a6 : 0xbce0f7);
     scene.background = new THREE.Color(fundo);
+    ceu.definir({ noite: ehNoite, chuva: ehChuva });
     const fNear = ehChuva ? Math.min(qualAtual.fogNear, 65) : qualAtual.fogNear;
     const fFar = ehChuva ? Math.min(qualAtual.fogFar, 220) : qualAtual.fogFar;
     scene.fog = new THREE.Fog(fundo, fNear, fFar);
-    // Só gera/usa cubemap PMREM quando PBR ou a P71 detalhada está ativa (0 custo no modo Leve!)
-    scene.environment = (qualAtual.pbr || qualAtual.viaturaCompleta) ? obterAmbiente(ehNoite) : null;
+    scene.environment = qualAtual.pbr ? obterAmbiente(ehNoite) : null;
     renderer.toneMapping = qualAtual.pbr ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
     renderer.toneMappingExposure = ehNoite ? 1.18 : (ehChuva ? 0.98 : 1.05);
 
@@ -474,48 +740,21 @@ export async function iniciarJogo() {
   rainLines.visible = ehChuva;
   scene.add(rainLines);
 
-  // ---- Veículos dirigíveis (Viatura Leve no modo Leve, P71 completa sob demanda em Médio/Alto)
-  atualizarProgresso(0.80, 'Preparando viatura policial…');
+  // ---- Veículos dirigíveis (Viatura Ford Crown Victoria P71 Game-Ready em todos os modos!)
+  atualizarProgresso(0.80, 'Montando Viatura Crown Victoria P71…');
   const veiculos = [];
   const glbLoader = new GLTFLoader();
 
-  let viaturaLeveApi = null;
-  let viaturaP71Api = null;
-
-  async function garantirViaturaPolicia(completa) {
-    if (completa) {
-      if (!viaturaP71Api) {
-        viaturaP71Api = criarViatura({
-          livery: 'preto-branco',
-          numero: '117',
-          cidade: 'HRYZ CITY',
-          placa: 'HRYZ 911',
-          pushbar: true,
-          sujeira: 0.25,
-        });
-        viaturaP71Api.grupo.visible = false;
-        scene.add(viaturaP71Api.grupo);
-      }
-      return viaturaP71Api;
-    }
-    if (!viaturaLeveApi) {
-      viaturaLeveApi = await criarViaturaLeve(glbLoader);
-      viaturaLeveApi.grupo.visible = false;
-      scene.add(viaturaLeveApi.grupo);
-    }
-    return viaturaLeveApi;
-  }
-
-  const vPolIni = await garantirViaturaPolicia(qualAtual.viaturaCompleta);
-  vPolIni.grupo.position.set(146, 0, 166.2);
-  vPolIni.grupo.rotation.y = Math.PI / 2;
-  vPolIni.grupo.visible = true;
+  const p71 = criarViaturaP71Otimizada(qualAtual.pbr);
+  p71.grupo.position.set(146, 0, 166.2);
+  p71.grupo.rotation.y = Math.PI / 2;
+  scene.add(p71.grupo);
 
   const veiculoPolicia = {
     id: 'p71',
-    nome: qualAtual.viaturaCompleta ? 'Viatura Crown Victoria P71' : 'Viatura Policial Hryz',
-    obj: vPolIni.grupo,
-    api: vPolIni,
+    nome: 'Viatura Crown Victoria P71',
+    obj: p71.grupo,
+    api: p71,
     x: 146, z: 166.2, ry: Math.PI / 2,
     vel: 0, steer: 0, dist: 0,
     acel: 22, velMax: 48, velRe: 14, freio: 34, raio: 2.35,
@@ -524,19 +763,8 @@ export async function iniciarJogo() {
   };
   veiculos.push(veiculoPolicia);
 
-  function sincronizarViaturaPolicia(completa) {
-    garantirViaturaPolicia(completa).then(novaApi => {
-      if (veiculoPolicia.api === novaApi) return;
-      veiculoPolicia.obj.visible = false;
-      novaApi.grupo.position.set(veiculoPolicia.x, 0, veiculoPolicia.z);
-      novaApi.grupo.rotation.set(0, veiculoPolicia.ry, 0, 'YXZ');
-      novaApi.grupo.visible = true;
-      veiculoPolicia.obj = novaApi.grupo;
-      veiculoPolicia.api = novaApi;
-      veiculoPolicia.nome = completa ? 'Viatura Crown Victoria P71' : 'Viatura Policial Hryz';
-      if (novaApi.farois) novaApi.farois(veiculoPolicia.farois || ehNoite);
-      if (jogador.veiculo === veiculoPolicia) elVeiculoNome.textContent = veiculoPolicia.nome;
-    });
+  function sincronizarViaturaPolicia(pbrAtivo, sombraAtiva) {
+    p71.definirModo(pbrAtivo, sombraAtiva);
   }
 
   // 2. Frota extra dirigível (Kenney)
@@ -704,9 +932,9 @@ export async function iniciarJogo() {
     return { x: nx, z: nz, bateu };
   }
 
-  // ---- Entradas (Teclado + Mouse + Touch)
+  // ---- Entradas (Teclado + Mouse + Multi-Touch Mobile)
   const teclas = new Set();
-  const touch = { mx: 0, mz: 0, acelerar: false, freiar: false, pular: false };
+  const touch = { mx: 0, mz: 0, acel: false, freio: false, esq: false, dir: false, drift: false, correr: false, pular: false };
 
   let camModo = 0; // 0 = 3ª pessoa, 1 = capô/1ª pessoa, 2 = aérea
   let camYaw = -0.35;
@@ -714,6 +942,7 @@ export async function iniciarJogo() {
   let camDist = 5.6;
   let snapCam = true;
   let arrastando = false;
+  let camPointerId = null;
   let ultimoX = 0, ultimoY = 0;
   let tempoSemMouse = 10;
 
@@ -730,7 +959,6 @@ export async function iniciarJogo() {
     som.desbloquear();
     if (jogador.veiculo) {
       const v = jogador.veiculo;
-      // Sai pela porta esquerda do carro
       const lx = Math.cos(v.ry) * (v.raio + 1.15);
       const lz = -Math.sin(v.ry) * (v.raio + 1.15);
       const res = resolverColisoes(v.x + lx, v.z + lz, 0.45);
@@ -753,6 +981,7 @@ export async function iniciarJogo() {
       som.tocarPorta();
       mostrarToast(`Dirigindo: ${perto.nome}${perto.ehPolicia ? ' (L = Sirene)' : ''}`);
     }
+    touch.acel = touch.freio = touch.esq = touch.dir = touch.drift = touch.pular = false;
     atualizarHudModo();
   }
 
@@ -760,6 +989,11 @@ export async function iniciarJogo() {
     const dir = !!jogador.veiculo;
     elVel.classList.toggle('oculto', !dir);
     elModoPe.classList.toggle('oculto', dir);
+    // Alterna controles touch entre modo a pé (joystick) e dirigindo (volante + pedais)
+    $('touch-pe-esq')?.classList.toggle('oculto', dir);
+    $('touch-pe-dir')?.classList.toggle('oculto', dir);
+    $('touch-carro-esq')?.classList.toggle('oculto', !dir);
+    $('touch-carro-dir')?.classList.toggle('oculto', !dir);
     if (dir) {
       elVeiculoNome.textContent = jogador.veiculo.nome;
       $('btn-sirene').classList.toggle('oculto', !jogador.veiculo.ehPolicia);
@@ -801,7 +1035,7 @@ export async function iniciarJogo() {
     sun.shadow.camera.bottom = -sr;
     sun.shadow.camera.updateProjectionMatrix();
 
-    sincronizarViaturaPolicia(q.viaturaCompleta);
+    sincronizarViaturaPolicia(q.pbr, q.sombras);
     if (q.personagemCompleto && usandoPersLeve) carregarPersonagem(persIdx);
     else if (!q.personagemCompleto && !usandoPersLeve) ativarPersonagemLeve();
 
@@ -835,6 +1069,51 @@ export async function iniciarJogo() {
     aplicarQualidade(ORDEM_QUAL[(i + 1) % ORDEM_QUAL.length], true);
   }
 
+  // Modo Tela Cheia + trava em Horizontal (landscape) no celular
+  async function alternarTelaCheiaHorizontal() {
+    try {
+      if (!document.fullscreenElement) {
+        const el = document.documentElement;
+        if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' });
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        if (screen.orientation?.lock) {
+          await screen.orientation.lock('landscape').catch(() => {});
+        }
+        mostrarToast('Modo Horizontal / Tela Cheia ativado');
+      } else {
+        if (screen.orientation?.unlock) {
+          try { screen.orientation.unlock(); } catch (_) {}
+        }
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      }
+    } catch (_) {
+      mostrarToast('Gire o celular de lado para o modo horizontal');
+    }
+  }
+
+  document.addEventListener('fullscreenchange', () => {
+    const ativo = !!document.fullscreenElement;
+    const btnT = $('btn-tela');
+    if (btnT) {
+      btnT.classList.toggle('ativo', ativo);
+      btnT.textContent = ativo ? '⛶ Sair' : '⛶ Horizontal';
+    }
+    setTimeout(() => {
+      renderer.setSize(innerWidth, innerHeight);
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+    }, 120);
+  });
+
+  addEventListener('orientationchange', () => {
+    setTimeout(() => {
+      renderer.setSize(innerWidth, innerHeight);
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+    }, 180);
+  });
+
   addEventListener('keydown', e => {
     const code = e.code;
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) e.preventDefault();
@@ -866,19 +1145,28 @@ export async function iniciarJogo() {
   });
   addEventListener('keyup', e => teclas.delete(e.code));
 
+  // Giro de câmera com suporte a multi-touch (não interfere no joystick nem nos pedais!)
   renderer.domElement.addEventListener('pointerdown', e => {
-    if (e.target !== renderer.domElement) return;
-    arrastando = true; ultimoX = e.clientX; ultimoY = e.clientY;
+    if (e.target !== renderer.domElement || camPointerId !== null) return;
+    camPointerId = e.pointerId;
+    arrastando = true;
+    ultimoX = e.clientX; ultimoY = e.clientY;
   });
   addEventListener('pointermove', e => {
-    if (!arrastando) return;
+    if (!arrastando || e.pointerId !== camPointerId) return;
     const dx = e.clientX - ultimoX, dy = e.clientY - ultimoY;
     ultimoX = e.clientX; ultimoY = e.clientY;
     camYaw -= dx * 0.0055;
     camPitch = Math.max(0.06, Math.min(1.15, camPitch + dy * 0.0045));
     tempoSemMouse = 0;
   });
-  addEventListener('pointerup', () => { arrastando = false; });
+  const soltarCam = e => {
+    if (e.pointerId !== camPointerId) return;
+    arrastando = false;
+    camPointerId = null;
+  };
+  addEventListener('pointerup', soltarCam);
+  addEventListener('pointercancel', soltarCam);
   renderer.domElement.addEventListener('wheel', e => {
     camDist = Math.max(3.5, Math.min(18, camDist + e.deltaY * 0.006));
   }, { passive: true });
@@ -889,6 +1177,9 @@ export async function iniciarJogo() {
   $('btn-chuva').onclick = () => { ehChuva = !ehChuva; rainLines.visible = ehChuva; aplicarClima(); };
   $('btn-cam').onclick = () => { camModo = (camModo + 1) % 3; mostrarToast(['Câmera: 3ª Pessoa', 'Câmera: Capô / 1ª Pessoa', 'Câmera: Aérea'][camModo]); };
   $('btn-pers').onclick = () => carregarPersonagem(persIdx + 1).then(() => mostrarToast(`Personagem: ${PERSONAGENS_DEF[persIdx].nome}`));
+  $('btn-tela').onclick = alternarTelaCheiaHorizontal;
+  $('btn-ativar-horizontal').onclick = () => { $('aviso-girar').classList.add('dispensado'); alternarTelaCheiaHorizontal(); };
+  $('btn-fechar-girar').onclick = () => $('aviso-girar').classList.add('dispensado');
   $('btn-sirene').onclick = () => {
     if (!jogador.veiculo?.ehPolicia) return;
     jogador.veiculo.sirene = !jogador.veiculo.sirene;
@@ -910,17 +1201,18 @@ export async function iniciarJogo() {
     selTp.blur();
   };
 
-  // Controles touch (celulares/tablets)
+  // Controles touch (celulares/tablets em modo horizontal e vertical)
   const joyBase = $('joy-base'), joyKnob = $('joy-knob');
   let joyId = null, joyCx = 0, joyCy = 0;
   joyBase.addEventListener('pointerdown', e => {
+    e.stopPropagation();
     joyId = e.pointerId; joyBase.setPointerCapture(joyId);
     const r = joyBase.getBoundingClientRect();
     joyCx = r.left + r.width / 2; joyCy = r.top + r.height / 2;
   });
   joyBase.addEventListener('pointermove', e => {
     if (e.pointerId !== joyId) return;
-    const maxR = 42;
+    const maxR = 40;
     const dx = e.clientX - joyCx, dy = e.clientY - joyCy;
     const d = Math.hypot(dx, dy);
     const nx = d > maxR ? (dx / d) * maxR : dx;
@@ -932,9 +1224,36 @@ export async function iniciarJogo() {
   joyBase.addEventListener('pointerup', resetJoy);
   joyBase.addEventListener('pointercancel', resetJoy);
 
+  function bindSegurar(id, onChange) {
+    const el = $(id);
+    if (!el) return;
+    let pid = null;
+    el.addEventListener('pointerdown', e => {
+      e.stopPropagation(); e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(pid); } catch (_) {}
+      el.classList.add('ativo');
+      onChange(true);
+    });
+    const soltar = e => {
+      if (pid !== null && e.pointerId !== pid) return;
+      pid = null;
+      el.classList.remove('ativo');
+      onChange(false);
+    };
+    el.addEventListener('pointerup', soltar);
+    el.addEventListener('pointercancel', soltar);
+  }
+
   $('touch-entrar').onclick = entrarOuSairVeiculo;
-  $('touch-pular').addEventListener('pointerdown', () => { touch.pular = true; });
-  $('touch-pular').addEventListener('pointerup', () => { touch.pular = false; });
+  $('touch-sair').onclick = entrarOuSairVeiculo;
+  bindSegurar('touch-pular', v => { touch.pular = v; });
+  bindSegurar('touch-correr', v => { touch.correr = v; });
+  bindSegurar('touch-esq', v => { touch.esq = v; });
+  bindSegurar('touch-dir', v => { touch.dir = v; });
+  bindSegurar('touch-acel', v => { touch.acel = v; });
+  bindSegurar('touch-freio', v => { touch.freio = v; });
+  bindSegurar('touch-drift', v => { touch.drift = v; });
 
   // ---- Minimapa (Canvas 2D)
   function desenharMinimapa(px, pz, pyaw) {
@@ -1059,10 +1378,13 @@ export async function iniciarJogo() {
       if (v.api?.luzes) v.api.luzes(tTotal, v.sirene ? 'ligado' : 'off');
     }
 
-    const frente = (teclas.has('KeyW') || teclas.has('ArrowUp') ? 1 : 0) - (teclas.has('KeyS') || teclas.has('ArrowDown') ? 1 : 0) - touch.mz;
-    const lado = (teclas.has('KeyD') || teclas.has('ArrowRight') ? 1 : 0) - (teclas.has('KeyA') || teclas.has('ArrowLeft') ? 1 : 0) + touch.mx;
-    const sprint = teclas.has('ShiftLeft') || teclas.has('ShiftRight');
-    const espaco = teclas.has('Space') || touch.pular;
+    const tFrente = (touch.acel ? 1 : 0) - (touch.freio ? 1 : 0) - touch.mz;
+    const tLado = (touch.dir ? 1 : 0) - (touch.esq ? 1 : 0) + touch.mx;
+    const frente = (teclas.has('KeyW') || teclas.has('ArrowUp') ? 1 : 0) - (teclas.has('KeyS') || teclas.has('ArrowDown') ? 1 : 0) + tFrente;
+    const lado = (teclas.has('KeyD') || teclas.has('ArrowRight') ? 1 : 0) - (teclas.has('KeyA') || teclas.has('ArrowLeft') ? 1 : 0) + tLado;
+    const joyMag = Math.hypot(touch.mx, touch.mz);
+    const sprint = teclas.has('ShiftLeft') || teclas.has('ShiftRight') || touch.correr || joyMag > 0.82;
+    const espaco = teclas.has('Space') || touch.pular || touch.drift;
 
     let focoX, focoY, focoZ, focoYaw, velAbs = 0;
 
@@ -1084,9 +1406,10 @@ export async function iniciarJogo() {
         if (Math.abs(v.vel) < 0.08) v.vel = 0;
       }
 
-      // Freio de mão / drift
+      // Freio de mão / drift + fumaça leve de pneu
       if (espaco) {
         v.vel *= Math.exp(-3.8 * dt);
+        if (Math.abs(v.vel) > 7) fumacaDrift.emitir(v.x, v.z, v.ry, dt);
       }
 
       // Esterçamento suave dependente da velocidade
@@ -1181,6 +1504,7 @@ export async function iniciarJogo() {
       focoX = jogador.x; focoY = jogador.y + 1.45; focoZ = jogador.z; focoYaw = jogador.ry;
 
       const perto = acharVeiculoPerto();
+      $('touch-entrar')?.classList.toggle('tbtn-destaque', !!perto);
       if (perto) {
         elPrompt.textContent = `[E] Entrar: ${perto.nome}`;
         elPrompt.classList.remove('oculto');
@@ -1189,7 +1513,8 @@ export async function iniciarJogo() {
       }
     }
 
-    // Atualiza setores visíveis, trânsito, frota distante e NPCs próximos ao jogador
+    // Atualiza setores visíveis, trânsito, frota distante, fumaça de drift e NPCs próximos
+    fumacaDrift.atualizar(dt);
     cidade.atualizar(dt, tTotal, focoX, focoZ);
     const vDist2 = (qualAtual.viewDist + 20) * (qualAtual.viewDist + 20);
     for (let i = 0; i < veiculos.length; i++) {
@@ -1273,7 +1598,10 @@ export async function iniciarJogo() {
       );
     }
 
-    // ---- Minimapa (atualizado em frequência reduzida) + Render
+    // ---- Céu acompanha a câmera + Minimapa (em frequência reduzida) + Render
+    ceu.mesh.position.copy(camera.position);
+    ceu.mesh.scale.setScalar(camera.far * 0.92);
+
     minimapTimer += dt;
     if (minimapTimer >= qualAtual.minimapInterval) {
       minimapTimer = 0;

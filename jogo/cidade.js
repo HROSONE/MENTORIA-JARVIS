@@ -74,7 +74,66 @@ function nivelSombraPeca(nome) {
 const SEM_FORTE = { vermelho: new THREE.Color(0xff2a22), amarelo: new THREE.Color(0xffc61a), verde: new THREE.Color(0x27e05a) };
 const SEM_FRACA = { vermelho: new THREE.Color(0x4b1311), amarelo: new THREE.Color(0x4a3a0a), verde: new THREE.Color(0x0d3a1b) };
 
-// Prepara cópia não-indexada de `geo` com (position, normal, color) em espaço de mundo
+// Texturas procedurais leves (256x256, geradas 1x na inicialização): dão granulação e profundidade real com custo ~0 de FPS!
+function criarTexturaPadrao(tipo) {
+  const S = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d');
+  const rng = aleatorio(tipo === 'asfalto' ? 101 : (tipo === 'grama' ? 202 : 303));
+
+  if (tipo === 'asfalto') {
+    g.fillStyle = '#e8eaee';
+    g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 4200; i++) {
+      const v = 192 + Math.floor(rng() * 58);
+      g.fillStyle = `rgb(${v},${v},${v + 2})`;
+      const sz = rng() < 0.78 ? 2 : 3;
+      g.fillRect(rng() * S, rng() * S, sz, sz);
+    }
+    // Faixas sutis de desgaste de pneu e micro-trincas leves
+    g.strokeStyle = 'rgba(130,136,146,0.22)';
+    g.lineWidth = 1;
+    for (let i = 0; i < 6; i++) {
+      g.beginPath();
+      let x = rng() * S, y = rng() * S;
+      g.moveTo(x, y);
+      for (let s = 0; s < 5; s++) { x += (rng() - 0.5) * 40; y += (rng() - 0.5) * 40; g.lineTo(x, y); }
+      g.stroke();
+    }
+  } else if (tipo === 'grama') {
+    g.fillStyle = '#edf3ea';
+    g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 3200; i++) {
+      const v = 212 + Math.floor(rng() * 40);
+      g.fillStyle = `rgb(${v - 8},${v + 3},${v - 12})`;
+      g.fillRect(rng() * S, rng() * S, 2 + rng() * 3, 2 + rng() * 3);
+    }
+  } else {
+    // Superfície (calçada, concreto, reboco de paredes): granulação fina + juntas sutis
+    g.fillStyle = '#f2f3f5';
+    g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 2400; i++) {
+      const v = 224 + Math.floor(rng() * 30);
+      g.fillStyle = `rgb(${v},${v},${v})`;
+      g.fillRect(rng() * S, rng() * S, 2, 2);
+    }
+    g.strokeStyle = 'rgba(155,162,172,0.20)';
+    g.lineWidth = 1;
+    for (let p = 0; p < S; p += 64) {
+      g.beginPath(); g.moveTo(p, 0); g.lineTo(p, S); g.stroke();
+      g.beginPath(); g.moveTo(0, p); g.lineTo(S, p); g.stroke();
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+// Prepara cópia não-indexada de `geo` com (position, normal, uv, color) em espaço de mundo
 function prepararGeoMesclavel(srcGeo, worldMat, corOverride) {
   const g = srcGeo.index ? srcGeo.toNonIndexed() : srcGeo.clone();
   for (const attr of Object.keys(g.attributes)) {
@@ -83,10 +142,29 @@ function prepararGeoMesclavel(srcGeo, worldMat, corOverride) {
   g.applyMatrix4(worldMat);
   if (!g.attributes.normal) g.computeVertexNormals();
 
-  const count = g.attributes.position.count;
+  const pos = g.attributes.position;
+  const nrm = g.attributes.normal;
+  const count = pos.count;
   const cr = corOverride ? corOverride.r : 1;
   const cg = corOverride ? corOverride.g : 1;
   const cb = corOverride ? corOverride.b : 1;
+
+  // UVs planares em coordenadas de mundo (para texturas leves de asfalto/calçada/paredes)
+  const uvs = new Float32Array(count * 2);
+  const uvEsc = 0.22;
+  for (let i = 0; i < count; i++) {
+    const px = pos.getX(i), py = pos.getY(i), pz = pos.getZ(i);
+    const ny = Math.abs(nrm.getY(i));
+    if (ny > 0.65) {
+      uvs[i * 2] = px * uvEsc;
+      uvs[i * 2 + 1] = pz * uvEsc;
+    } else {
+      const nx = Math.abs(nrm.getX(i));
+      uvs[i * 2] = (nx > 0.5 ? pz : px) * uvEsc;
+      uvs[i * 2 + 1] = py * uvEsc;
+    }
+  }
+  g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
 
   const prevCor = g.attributes.color;
   const cores = new Float32Array(count * 3);
@@ -144,19 +222,24 @@ export async function construirCidade({
 
   const colisores = [];
 
-  // Materiais Lambert (5x mais rápidos por pixel em Leve/Médio) e PBR (Alto)
+  const texAsfalto = criarTexturaPadrao('asfalto');
+  const texSuperficie = criarTexturaPadrao('superficie');
+  const texGrama = criarTexturaPadrao('grama');
+  texGrama.repeat.set(320, 320);
+
+  // Materiais Lambert texturizados (5x mais rápidos por pixel em Leve/Médio) e PBR (Alto)
   const MAT_LAMBERT = {
-    fosco:   new THREE.MeshLambertMaterial({ vertexColors: true }),
-    metal:   new THREE.MeshLambertMaterial({ vertexColors: true }),
-    asfalto: new THREE.MeshLambertMaterial({ vertexColors: true }),
+    fosco:   new THREE.MeshLambertMaterial({ vertexColors: true, map: texSuperficie }),
+    metal:   new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 65, specular: 0x556677 }),
+    asfalto: new THREE.MeshLambertMaterial({ vertexColors: true, map: texAsfalto, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
     luz:     new THREE.MeshLambertMaterial({ vertexColors: true }),
-    vidro:   new THREE.MeshLambertMaterial({ vertexColors: true }),
+    vidro:   new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 90, specular: 0x7799bb }),
     semaforoLuz: new THREE.MeshBasicMaterial({ vertexColors: true }),
   };
   const MAT_PBR = {
-    fosco:   new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.84, metalness: 0.04 }),
+    fosco:   new THREE.MeshStandardMaterial({ vertexColors: true, map: texSuperficie, roughness: 0.84, metalness: 0.04 }),
     metal:   new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.34, metalness: 0.62 }),
-    asfalto: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.88, metalness: 0.02 }),
+    asfalto: new THREE.MeshStandardMaterial({ vertexColors: true, map: texAsfalto, roughness: 0.88, metalness: 0.02, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
     luz:     new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4,  metalness: 0.0 }),
     vidro:   new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.22, metalness: 0.25 }),
     semaforoLuz: new THREE.MeshBasicMaterial({ vertexColors: true }),
@@ -182,16 +265,23 @@ export async function construirCidade({
 
   function alternarChuva(molhado) {
     estadoChuva = molhado;
-    MAT_LAMBERT.asfalto.color.setHex(molhado ? 0xa0a8b2 : 0xffffff);
+    MAT_LAMBERT.asfalto.color.setHex(molhado ? 0x9aa4b0 : 0xffffff);
     MAT_PBR.asfalto.color.setHex(molhado ? 0xa6aeb8 : 0xffffff);
     MAT_PBR.asfalto.roughness = molhado ? 0.24 : 0.88;
   }
 
-  // Chão base de grama (Lambert — custo quase zero!)
-  const chaoMat = new THREE.MeshLambertMaterial({ color: noiteInicial ? 0x2c4a2a : 0x6fa94c });
-  const chao = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), chaoMat);
+  // Chão base de grama texturizado (subdividido + polygonOffset positivo: zero z-fighting em GPUs mobile 16-bit!)
+  const chaoMat = new THREE.MeshLambertMaterial({
+    color: noiteInicial ? 0x2c4a2a : 0x6fa94c,
+    map: texGrama,
+    polygonOffset: true,
+    polygonOffsetFactor: 2,
+    polygonOffsetUnits: 2,
+  });
+  texGrama.repeat.set(140, 140);
+  const chao = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600, 32, 32), chaoMat);
   chao.rotation.x = -Math.PI / 2;
-  chao.position.set(300, -0.03, 300);
+  chao.position.set(300, -0.18, 300);
   chao.receiveShadow = true;
   chao.matrixAutoUpdate = false;
   chao.updateMatrix();
