@@ -1023,7 +1023,7 @@ export async function iniciarJogo() {
   function sairMira() {
     if (!mira.ativa) return;
     mira.ativa = false; armas.luneta = false; persAtual.inst.obj.visible = !jogador.veiculo;
-    camera.fov = 56; camera.updateProjectionMatrix(); camYaw = mira.yaw; snapCam = true;
+    camera.fov = 56; camera.near = 0.4; camera.updateProjectionMatrix(); camYaw = mira.yaw; snapCam = true;
     elLuneta.classList.add('oculto'); document.body.classList.remove('na-luneta', 'respiracao');
   }
 
@@ -2231,7 +2231,7 @@ export async function iniciarJogo() {
     }
 
     // ---- Câmera (abertura/sala já posicionaram a câmera; senão 3ª pessoa / Capô / Aérea)
-    if (!cine && !mira.ativa && camera.fov !== 56) { camera.fov = 56; camera.updateProjectionMatrix(); }
+    if (!cine && !mira.ativa && (camera.fov !== 56 || camera.near !== 0.4)) { camera.fov = 56; camera.near = 0.4; camera.updateProjectionMatrix(); }
     if (cine) {
       // nada: a câmera da cena já foi posicionada
     } else if (mira.ativa) {
@@ -2242,7 +2242,8 @@ export async function iniciarJogo() {
       const r = 0.0016 * (mira.fov / 14) * (segura ? 0.12 : 1), yaw = mira.yaw + Math.sin(tTotal * 0.9) * r + Math.sin(tTotal * 2.3) * r * 0.35, pit = mira.pitch + Math.sin(tTotal * 1.3 + 1) * r * 0.8;
       camera.position.set(jogador.x, jogador.y + 1.62, jogador.z);
       camera.lookAt(jogador.x + Math.sin(yaw) * Math.cos(pit) * 10, jogador.y + 1.62 + Math.sin(pit) * 10, jogador.z + Math.cos(yaw) * Math.cos(pit) * 10);
-      if (camera.fov !== mira.fov) { camera.fov = mira.fov; camera.updateProjectionMatrix(); }
+      // na luneta nada a menos de 2,5 m importa: corta a mureta e o que estiver colado no olho (a bala também ignora)
+      if (camera.fov !== mira.fov || camera.near !== 2.5) { camera.fov = mira.fov; camera.near = 2.5; camera.updateProjectionMatrix(); }
       snapCam = true;
     } else if (camModo === 0) {
       let d = jogador.veiculo ? Math.max(camDist, jogador.veiculo.camDist) : camDist;
