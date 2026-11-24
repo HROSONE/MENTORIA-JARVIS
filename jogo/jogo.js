@@ -8,6 +8,12 @@ import { TILE, CALCADA, ESCALA_VEICULO } from '../videos/biblioteca3d/cidade/kit
 import { Personagem } from '../videos/biblioteca3d/personagens/elenco/elenco.js';
 import { Corredor } from '../videos/biblioteca3d/personagens/corredor/corredor.js';
 import { criarViatura, criarAmbiente } from '../videos/biblioteca3d/veiculos/policia/viatura.js';
+import { criarAmbulancia } from '../videos/biblioteca3d/veiculos/ambulancia/ambulancia.js';
+import * as Hatch from '../videos/biblioteca3d/veiculos/hatch/hatch.js';
+import * as Taxi from '../videos/biblioteca3d/veiculos/taxi/taxi.js';
+import * as Picape from '../videos/biblioteca3d/veiculos/picape/picape.js';
+import * as Onibus from '../videos/biblioteca3d/veiculos/onibus/onibus.js';
+import * as Bombeiros from '../videos/biblioteca3d/veiculos/bombeiros/bombeiros.js';
 import { construirCidade, PONTOS_TELEPORTE, SELVA_INFO } from './cidade.js';
 import { criarTrex } from './trex.js';
 import { Armas } from './armas.js';
@@ -794,7 +800,7 @@ export async function iniciarJogo() {
     x: 146, z: 166.2, ry: Math.PI / 2,
     vel: 0, steer: 0, dist: 0,
     acel: 22, velMax: 48, velRe: 14, freio: 34, raio: 2.35,
-    sirene: false, farois: false, ehPolicia: true,
+    sirene: false, farois: false, ehPolicia: true, temSirene: true,
     camDist: 7.4, camAlt: 2.7, capoY: 1.42, capoZ: 0.55,
   };
   veiculos.push(veiculoPolicia);
@@ -807,13 +813,10 @@ export async function iniciarJogo() {
   atualizarProgresso(0.88, 'Estacionando frota dirigível…');
   const frotaExtra = [
     { nome: 'Esportivo Hryz',  arq: 'sedan-sports', x: 196, z: 166.2, ry: Math.PI / 2,  acel: 27, velMax: 55, raio: 1.9 },
-    { nome: 'Táxi da Praça',   arq: 'taxi',         x: 218, z: 169.8, ry: -Math.PI / 2, acel: 19, velMax: 40, raio: 1.9 },
     { nome: 'Fórmula Hryz',    arq: 'race',         x: 242, z: 222,   ry: Math.PI,      acel: 34, velMax: 68, raio: 1.85 },
     { nome: 'Fórmula Pista',   arq: 'race-future',  x: 132, z: 567,   ry: Math.PI / 2,  acel: 36, velMax: 72, raio: 1.85 },
     { nome: 'SUV de Luxo',     arq: 'suv-luxury',   x: 256, z: 313.8, ry: -Math.PI / 2, acel: 20, velMax: 44, raio: 2.0 },
     { nome: 'Jipe da Selva',   arq: 'suv',          x: 454, z: 266.5, ry: Math.PI / 2 - 0.14, acel: 22, velMax: 46, raio: 2.0 },
-    { nome: 'Bombeiros',       arq: 'firetruck',    x: 130, z: 98,    ry: Math.PI / 2,  acel: 15, velMax: 34, raio: 2.3 },
-    { nome: 'Ambulância',      arq: 'ambulance',    x: 148, z: 98,    ry: Math.PI / 2,  acel: 18, velMax: 40, raio: 2.1 },
   ];
   await Promise.all(frotaExtra.map(async f => {
     try {
@@ -841,6 +844,50 @@ export async function iniciarJogo() {
       });
     } catch (e) { console.warn('carro skip', f.arq, e); }
   }));
+
+  // 3. Frota própria do canal (biblioteca3d/veiculos: kit procedural em metros reais, com luzes, setas, freio, ré e rodas que giram)
+  //    Os SpotLights/PointLights de cada carro são removidos no jogo (cada luz a mais encarece o shader de toda a cena);
+  //    faróis, lanternas e giroflex continuam acendendo pelos materiais emissivos.
+  atualizarProgresso(0.90, 'Estacionando a frota do canal…');
+  const frotaCanal = [
+    { nome: 'Hatch Hryz',        criar: () => Hatch.criar(),     x: 172, z: 166.2, ry: Math.PI / 2,  acel: 21, velMax: 44, raio: 2.0, camDist: 6.6, camAlt: 2.4, capoY: 1.30, capoZ: 0.3 },
+    { nome: 'Táxi da Praça',     criar: () => Taxi.criar(),      x: 218, z: 169.8, ry: -Math.PI / 2, acel: 20, velMax: 42, raio: 2.2, camDist: 7.0, camAlt: 2.5, capoY: 1.32, capoZ: 0.4 },
+    { nome: 'Picape Cabine Dupla', criar: () => Picape.criar(),  x: 240, z: 169.8, ry: -Math.PI / 2, acel: 19, velMax: 42, raio: 2.6, camDist: 8.0, camAlt: 2.9, capoY: 1.75, capoZ: 0.6 },
+    { nome: 'Ônibus Escolar',    criar: () => Onibus.criar(),    x: 292, z: 166.2, ry: Math.PI / 2,  acel: 11, velMax: 28, raio: 3.4, camDist: 13.5, camAlt: 4.6, capoY: 2.35, capoZ: 4.3 },
+    { nome: 'Caminhão de Bombeiros', criar: () => Bombeiros.criar(), x: 128, z: 98, ry: Math.PI / 2, acel: 14, velMax: 34, raio: 3.1, camDist: 12.0, camAlt: 4.3, capoY: 2.40, capoZ: 3.3, sirene: true },
+    { nome: 'Ambulância',        criar: () => criarAmbulancia(), x: 148, z: 98,    ry: Math.PI / 2,  acel: 17, velMax: 40, raio: 2.8, camDist: 9.5, camAlt: 3.6, capoY: 2.05, capoZ: 2.0, sirene: true },
+  ];
+  for (const f of frotaCanal) {
+    try {
+      const api = f.criar(), o = api.grupo;
+      const luzesRemover = [];
+      o.traverse(m => {
+        if (m.isLight) { luzesRemover.push(m); return; }
+        if (!m.isMesh) return;
+        m.castShadow = qualAtual.sombraPrincipal; m.receiveShadow = true;
+        const mat = m.material;
+        // versão leve (Lambert) só para o que não acende: lâmpadas, faróis e giroflex mantêm o material emissivo do modelo
+        if (mat && !Array.isArray(mat) && mat.isMeshStandardMaterial && !(mat.emissive && mat.emissive.getHex() !== 0)) {
+          m.userData.matPbr = mat;
+          m.userData.matLeve = new THREE.MeshLambertMaterial({ color: mat.color.clone(), map: mat.map || null, transparent: mat.transparent, opacity: mat.opacity, side: mat.side, depthWrite: mat.depthWrite });
+          if (!qualAtual.pbr) m.material = m.userData.matLeve;
+        }
+      });
+      luzesRemover.forEach(l => l.parent.remove(l));
+      if (api.luzes) api.luzes(0, 'off');
+      o.position.set(f.x, 0, f.z);
+      o.rotation.y = f.ry;
+      scene.add(o);
+      veiculos.push({
+        id: f.nome, nome: f.nome, obj: o, api,
+        x: f.x, z: f.z, ry: f.ry,
+        vel: 0, steer: 0, dist: 0,
+        acel: f.acel, velMax: f.velMax, velRe: 12, freio: 30, raio: f.raio,
+        sirene: false, farois: false, ehPolicia: false, temSirene: !!f.sirene,
+        camDist: f.camDist, camAlt: f.camAlt, capoY: f.capoY, capoZ: f.capoZ,
+      });
+    } catch (e) { console.warn('veículo do canal não montou', f.nome, e); }
+  }
 
   // ---- Personagem Jogável (ultra-leve no modo Leve; elenco GLB completo em Médio/Alto ou ao trocar com C)
   atualizarProgresso(0.94, 'Preparando personagem jogável…');
@@ -1036,7 +1083,7 @@ export async function iniciarJogo() {
       persAtual.inst.obj.visible = false;
       camYaw = perto.ry;
       som.tocarPorta();
-      mostrarToast(`Dirigindo: ${perto.nome}${perto.ehPolicia ? ' (L = Sirene)' : ''}`);
+      mostrarToast(`Dirigindo: ${perto.nome}${perto.temSirene ? ' (L = Sirene)' : ''}`);
     }
     touch.acel = touch.freio = touch.esq = touch.dir = touch.drift = touch.pular = false;
     atualizarHudModo();
@@ -1053,7 +1100,7 @@ export async function iniciarJogo() {
     $('touch-carro-dir')?.classList.toggle('oculto', !dir);
     if (dir) {
       elVeiculoNome.textContent = jogador.veiculo.nome;
-      $('btn-sirene').classList.toggle('oculto', !jogador.veiculo.ehPolicia);
+      $('btn-sirene').classList.toggle('oculto', !jogador.veiculo.temSirene);
       $('btn-sirene').classList.toggle('ativo', !!jogador.veiculo.sirene);
     } else {
       $('btn-sirene').classList.add('oculto');
@@ -1412,7 +1459,7 @@ export async function iniciarJogo() {
       else if (code === 'KeyR') { ehChuva = !ehChuva; rainLines.visible = ehChuva; aplicarClima(); mostrarToast(ehChuva ? 'Chuva e pista molhada' : 'Tempo limpo'); }
       else if (code === 'KeyV') { camModo = (camModo + 1) % 3; mostrarToast(['Câmera: 3ª Pessoa', 'Câmera: Capô / 1ª Pessoa', 'Câmera: Aérea (Drone)'][camModo]); }
       else if (code === 'KeyC') { carregarPersonagem(persIdx + 1).then(() => mostrarToast(`Personagem: ${PERSONAGENS_DEF[persIdx].nome}`)); }
-      else if (code === 'KeyL' && jogador.veiculo?.ehPolicia) {
+      else if (code === 'KeyL' && jogador.veiculo?.temSirene) {
         jogador.veiculo.sirene = !jogador.veiculo.sirene;
         $('btn-sirene').classList.toggle('ativo', jogador.veiculo.sirene);
         mostrarToast(jogador.veiculo.sirene ? 'Sirene e Giroflex LIGADOS' : 'Sirene desligada');
@@ -1471,7 +1518,7 @@ export async function iniciarJogo() {
   $('btn-ativar-horizontal').onclick = () => { $('aviso-girar').classList.add('dispensado'); alternarTelaCheiaHorizontal(); };
   $('btn-fechar-girar').onclick = () => $('aviso-girar').classList.add('dispensado');
   $('btn-sirene').onclick = () => {
-    if (!jogador.veiculo?.ehPolicia) return;
+    if (!jogador.veiculo?.temSirene) return;
     jogador.veiculo.sirene = !jogador.veiculo.sirene;
     $('btn-sirene').classList.toggle('ativo', jogador.veiculo.sirene);
   };
@@ -1956,7 +2003,7 @@ export async function iniciarJogo() {
     noite: v => { ehNoite = v; aplicarClima(); },
     chuva: v => { ehChuva = v; rainLines.visible = ehChuva; aplicarClima(); },
     qualidade: id => aplicarQualidade(id, false),
-    sirene: v => { if (jogador.veiculo?.ehPolicia) { jogador.veiculo.sirene = v; $('btn-sirene').classList.toggle('ativo', v); } },
+    sirene: v => { if (jogador.veiculo?.temSirene) { jogador.veiculo.sirene = v; $('btn-sirene').classList.toggle('ativo', v); } },
     carregarTrex: () => garantirTrex(false),
     trex: () => ({
       carregado: trexState.carregado,
