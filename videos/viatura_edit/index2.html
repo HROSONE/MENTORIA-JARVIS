@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<title>Edit da viatura v2 "Perseguição" — cena 3D (render por quadro)</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#05070d}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<script type="module">
+// v2 (retenção): a viatura persegue um carro preto. Protocolo do projeto: window.__total (s) e window.__frame(t, { jpeg }) -> dataURL. Planos em js/planos2.js.
+// Só os planos novos (reuso === null) são renderizados aqui; os demais vêm dos quadros da v1 (veja montar_quadros2.py).
+import * as THREE from 'three';
+import { criarViatura } from '../biblioteca3d/veiculos/policia/viatura.js';
+import { criarMundo } from './js/cena.js';
+import { criarFumaca, criarMarcas } from './js/fumaca.js';
+import { EDL, planoEm, loc, B, TOTAL } from './js/planos2.js';
+
+const Q = new URLSearchParams(location.search), W = +(Q.get('w') || 720), H = +(Q.get('h') || 1280);
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.2; document.body.prepend(renderer.domElement);
+
+const mundo = criarMundo(renderer), scene = mundo.scene;
+const carro = criarViatura({ livery: 'preto-branco', numero: '117', sujeira: 0.45 });                    // a viatura (herói)
+const alvo = criarViatura({ livery: 'liso', civil: true, placa: 'HRYZ 408', sujeira: 0.6 });             // o carro preto em fuga (alvo)
+const ESTACIONA = { x: 0, z: 5000, yaw: 0, pitch: 0, roll: 0, dist: 0, steer: 0, freio: 0 };               // fora do alcance da câmera (as luzes continuam na cena: o número de luzes não muda entre planos)
+for (const v of [carro, alvo]) { v.grupo.rotation.order = 'YXZ'; scene.add(v.grupo); v.farois(true, 5); }
+const fumaca = criarFumaca(scene, H), marcas = criarMarcas(scene);
+const camera = new THREE.PerspectiveCamera(46, W / H, 0.04, 400);
+const acum = document.createElement('canvas'); acum.width = W; acum.height = H; const actx = acum.getContext('2d');
+
+const pulso = (x, k = 9) => x >= 0 ? Math.exp(-k * x) : 0;
+function estrobo(modo, t) {                                                                  // luzes de emergência na batida (t = tempo da linha do tempo)
+  const bt = t / B, ph = bt - Math.floor(bt);
+  if (modo === 'bar') { const par = Math.floor(bt) % 2, f = Math.max(pulso(ph), pulso(ph - 0.30)); return { v: par ? 0.08 : f, a: par ? f : 0.08, ambar: 0.25, busca: 0, forca: 16 }; }
+  if (modo === 'oitavo') { const h = bt * 2, par = Math.floor(h) % 2, p = h - Math.floor(h), f = Math.max(pulso(p, 7), pulso(p - 0.5, 7) * 0.75); return { v: par ? 0.10 : f, a: par ? f : 0.10, ambar: 0.45, busca: 0, forca: 20 }; }
+  if (modo === 'meio') { const h = bt / 2, par = Math.floor(h) % 2, p = h - Math.floor(h), f = 0.35 + 0.65 * pulso(p, 3.2); return { v: par ? 0.05 : f, a: par ? f : 0.05, ambar: 0.2, busca: 0, forca: 14 }; }
+  return { v: 0, a: 0, ambar: 0, busca: 0, forca: 0 };
+}
+const tremor = (t, a) => [a * (Math.sin(t * 17.3) + 0.6 * Math.sin(t * 31.1 + 1)), a * (Math.sin(t * 13.7 + 2) + 0.5 * Math.sin(t * 27.9)), a * (Math.sin(t * 11.1 + 4) + 0.5 * Math.sin(t * 23.3 + 3))];
+function posicionar(v, c) { v.grupo.position.set(c.x, 0, c.z); v.grupo.rotation.set(c.pitch, c.yaw, c.roll, 'YXZ'); v.rodar(c.dist); v.esterco(c.steer); v.freio(!!c.freio); }
+const MDT_PADRAO = { cabecalho: 'EM SERVIÇO', cor: '#1fa8d8', linhas: ['UNIDADE 117 · RONDA'], barra: null };
+let mdtAtual = 'padrao';
+function telaMDT(c) { const k = c ? JSON.stringify(c) : 'padrao'; if (k === mdtAtual) return; mdtAtual = k; carro.mdt(c || MDT_PADRAO); }
+
+const _p = new THREE.Vector3(), _a = new THREE.Vector3(), _f = new THREE.Vector3(), _r = new THREE.Vector3(), _u = new THREE.Vector3();
+function montar(t) {                                                                         // posiciona carros, câmera, fumaça e luzes para o instante t da linha do tempo
+  const pl = planoEm(t), tau = Math.max(0, t - pl.b0 * B), dur = (pl.b1 - pl.b0) * B, u = pl.rampa ? pl.rampa(tau, dur) : tau;
+  const c = pl.carro(u), a = pl.alvo ? pl.alvo(u) : null;
+  posicionar(carro, c); posicionar(alvo, a || ESTACIONA); if (a && !a.freio) alvo.freio(false);
+  telaMDT(pl.mdt ? pl.mdt(u, t) : null);
+  const L = estrobo(pl.luz, t); carro.luzesManual({ ...L, t });
+  const k = cam(pl, u, c, a, t);
+  camera.fov = k.fov; camera.position.set(...k.pos); camera.updateProjectionMatrix();
+  _a.set(...k.alvo); _f.subVectors(_a, camera.position).normalize();
+  if (k.up) _u.set(...k.up); else { _r.crossVectors(_f, new THREE.Vector3(0, 1, 0)).normalize(); _u.crossVectors(_r, _f); const rr = (k.roll || 0) * Math.PI / 180; _u.multiplyScalar(Math.cos(rr)).addScaledVector(_r, Math.sin(rr)); }
+  camera.up.copy(_u); camera.lookAt(_a);
+  const foco = pl.foco ? pl.foco(u, c, a) : [c.x, 0.7, c.z];                                  // ponto que a luz de cinema acompanha (padrão: a viatura)
+  mundo.iluminar(camera.position, _p.set(foco[0], foco[1], foco[2]));
+  const barra = loc(c, 0, 1.6, -0.29);
+  fumaca.atualizar(u, pl.fumaca, camera, { v: L.v, a: L.a, pos: barra });
+  marcas.atualizar(u, pl.marcas);
+  mundo.atualizar(t);
+  return pl;
+}
+function cam(pl, u, c, a, t) {
+  const k = pl.cam(u, c, a), bt = t / B, ph = bt - Math.floor(bt), tm = tremor(t, pl.tremor);
+  const d = Math.hypot(k.alvo[0] - k.pos[0], k.alvo[1] - k.pos[1], k.alvo[2] - k.pos[2]);
+  return { pos: [k.pos[0] + tm[0] * 0.25, k.pos[1] + tm[1] * 0.25, k.pos[2] + tm[2] * 0.25], alvo: [k.alvo[0] + tm[0] * d * 0.5, k.alvo[1] + tm[1] * d * 0.5, k.alvo[2] + tm[2] * d * 0.5],
+    fov: k.fov * (1 - pl.soco * pulso(ph, 11)), roll: (k.roll || 0) + tm[2] * 90, up: k.up };
+}
+
+function quadro(t, opc = {}) {
+  t = Math.min(Math.max(t, 0), TOTAL - 1e-4);
+  const pl = planoEm(t), K = pl.mb || 1, jpeg = opc.jpeg ?? 0.93;
+  if (!pl.carro) throw new Error('plano reaproveitado da v1 (sem cena): ' + pl.nome);
+  if (K === 1) { montar(t); renderer.render(scene, camera); return renderer.domElement.toDataURL('image/jpeg', jpeg); }
+  const obt = 0.42 / 30;                                                                     // obturador de ~150°
+  const t0s = pl.b0 * B, t1s = pl.b1 * B - 1e-4;                                                // as subamostras ficam dentro do plano (sem dupla exposição nos cortes)
+  for (let i = 0; i < K; i++) { montar(Math.min(Math.max(t + ((i + 0.5) / K - 0.5) * obt, t0s), t1s, TOTAL - 1e-4)); renderer.render(scene, camera); actx.globalAlpha = 1 / (i + 1); actx.drawImage(renderer.domElement, 0, 0); }
+  return acum.toDataURL('image/jpeg', jpeg);
+}
+window.__total = TOTAL; window.__frame = quadro; window.__planos = EDL.map(p => ({ nome: p.nome, b0: p.b0, b1: p.b1, t0: p.b0 * B, t1: p.b1 * B, novo: !p.reuso }));
+const t0q = +(Q.get('t') || 0); if (planoEm(t0q).carro) quadro(t0q); window.__ready = true;
+</script>
+</body>
+</html>

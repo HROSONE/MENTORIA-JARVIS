@@ -1,0 +1,7 @@
+{ "nome": "mendes", "descricao": "Cabo Mendes: policial de uns 42 anos, corpulento, barba por fazer, farda azul-marinho, quepe (o que aponta e humilha)",
+  "corpo": { "genero": 1, "idade": 42, "musculo": 0.55, "peso": 0.70, "altura": 0.45 },
+  "pele": { "textura": "middleage_lightskinned_male_diffuse", "tom": [1.04, 0.99, 0.96], "barba": 0.9, "rugosidade": 0.5 },
+  "olhos": [0.30, 0.22, 0.12],
+  "roupa": { "suit": "male_casualsuit03", "manga": "curta", "perna": "longa", "cores": { "cima": [0.11, 0.15, 0.26], "baixo": [0.07, 0.08, 0.11] } },
+  "cabelo": { "tipo": "short04", "cor": [0.13, 0.10, 0.08] }, "sobrancelha": "eyebrow009",
+  "sapatos": { "tipo": "shoes06", "cor": [0.05, 0.05, 0.05] }, "extras": ["quepe"] }

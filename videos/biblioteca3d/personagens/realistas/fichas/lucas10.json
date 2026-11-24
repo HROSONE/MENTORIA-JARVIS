@@ -1,0 +1,7 @@
+{ "nome": "lucas10", "descricao": "Lucas aos 10 anos, no banco da viatura: saudável, camiseta vermelha, jeans, tênis",
+  "corpo": { "genero": 1, "idade": 10, "magreza": 0, "peso": 0.45 },
+  "pele": { "textura": "young_lightskinned_male_diffuse", "palidez": 0.05, "sardas": 450 },
+  "olhos": [0.42, 0.26, 0.12],
+  "roupa": { "suit": "male_casualsuit02", "manga": "curta", "perna": "longa", "cores": { "cima": [0.58, 0.12, 0.10], "baixo": [0.20, 0.27, 0.38] } },
+  "cabelo": { "tipo": "mechas", "cor": [0.29, 0.20, 0.13] }, "sobrancelha": "eyebrow001",
+  "sapatos": { "tipo": "shoes02", "cor": [0.92, 0.92, 0.92] } }

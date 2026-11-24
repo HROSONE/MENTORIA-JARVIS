@@ -1,0 +1,7 @@
+{ "nome": "trilheiro", "descricao": "Protagonista do Short do T. rex: homem de uns 30 anos, atlético, barba curta, camiseta verde-oliva, bermuda cáqui de trilha, tênis",
+  "corpo": { "genero": 1, "idade": 30, "musculo": 0.62, "peso": 0.42, "altura": 0.55 },
+  "pele": { "textura": "young_lightskinned_male_diffuse", "tom": [1.02, 0.97, 0.93], "barba": 0.55, "rugosidade": 0.3 },
+  "olhos": [0.30, 0.20, 0.10],
+  "roupa": { "suit": "male_casualsuit02", "manga": "curta", "perna": "bermuda", "cores": { "cima": [0.25, 0.30, 0.18], "baixo": [0.48, 0.42, 0.30] } },
+  "cabelo": { "tipo": "mechas", "franja": true, "comp": 0.85, "n": 4600, "cor": [0.16, 0.11, 0.07] }, "sobrancelha": "eyebrow001",
+  "sapatos": { "tipo": "shoes02", "cor": [0.30, 0.30, 0.32] } }

@@ -138,6 +138,7 @@ export const LIVERIES = {
   'preto-branco': { base: '#0e0f12', porta: '#f3f3f1', texto: '#0b0c0e', faixa: null, detalhe: '#c9a43a' },
   'branco-azul': { base: '#f1f2f3', porta: null, texto: '#17327f', faixa: '#1b3c92', detalhe: '#d6a928' },
   'branco': { base: '#f1f2f3', porta: null, texto: '#17327f', faixa: null, detalhe: '#17327f' },
+  'liso': { base: '#0a0b0e', porta: null, texto: '#0a0b0e', faixa: null, detalhe: '#0a0b0e', semGrafismo: true },        // carro comum escuro, sem letras (suspeito, civil)
 };
 const FONTE = `'Arial Black', 'Liberation Sans', 'DejaVu Sans', Arial, sans-serif`;
 
@@ -183,8 +184,7 @@ function grafismoTopo(P, L, opc) {
 export function criarPintura(opc = {}) {
   const L = LIVERIES[opc.livery || 'preto-branco'] || LIVERIES['preto-branco'], corBase = opc.corBase || L.base, rug = opc.rugosidade ?? 0.22;
   const PL = criarPincel(TEX.LW, TEX.LH, corBase, rug), PT = criarPincel(TEX.TW, TEX.TH, corBase, rug), PF = criarPincel(TEX.FW, TEX.FH, corBase, rug);
-  for (const s of [1, -1]) grafismoLado(PL, s, L, opc);
-  grafismoTopo(PT, L, opc);
+  if (!L.semGrafismo) { for (const s of [1, -1]) grafismoLado(PL, s, L, opc); grafismoTopo(PT, L, opc); }
   lado(PL, 1, opc); lado(PL, -1, opc); topo(PT, opc); frenteTras(PF, opc);
   recortes(PL, PT, PF, opc);
   const tex = { sc: textura(PL.C, true), sd: textura(PL.D, false), tc: textura(PT.C, true), td: textura(PT.D, false), fc: textura(PF.C, true), fd: textura(PF.D, false) };

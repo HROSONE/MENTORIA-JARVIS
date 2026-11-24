@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/tmp/claude-0/-home-user-MENTORIA-JARVIS/eebbbe2a-1533-594e-868d-b5e7c64e75ae/scratchpad/blender/blender-4.2.23-linux-x64/blender *)"
+    ]
+  }
+}

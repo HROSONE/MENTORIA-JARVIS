@@ -1,0 +1,6 @@
+{ "nome": "lucas12", "descricao": "Lucas aos 12 anos: magro, pálido, sardas, olheiras, camiseta cáqui, bermuda cinza, descalço (pernas e braços atrofiados)",
+  "corpo": { "genero": 1, "idade": 12, "magreza": 1 },
+  "pele": { "textura": "young_lightskinned_male_diffuse", "palidez": 0.22, "tom": [1.02, 0.985, 0.975], "clarear": 0.03, "sardas": 700, "olheiras": 1 },
+  "olhos": [0.42, 0.26, 0.12],
+  "roupa": { "suit": "male_casualsuit02", "manga": "curta", "perna": "bermuda", "cores": { "cima": [0.60, 0.55, 0.42], "baixo": [0.18, 0.18, 0.19] } },
+  "cabelo": { "tipo": "mechas", "cor": [0.29, 0.20, 0.13] }, "sobrancelha": "eyebrow001" }

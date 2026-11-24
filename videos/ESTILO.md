@@ -9,6 +9,7 @@ Regras pedidas pelo dono do canal. Valem para todo vídeo novo.
   - zoom in ou zoom out rápido (punch-in), marcando as batidas da narração;
   - avanço ou recuo (dolly), ou panorâmica.
 - **O personagem nunca fica parado:** respira, pisca, mexe a cabeça, gesticula, anda. Objetos também se mexem: fumaça, poeira, chuva, luz piscando.
+- **Personagem realista mexe como gente:** captura real (CMU) misturada entre ações, respiração e peso por cima, antecipação e acomodação em cada gesto; regras em `DIRETRIZES.md` §4b.
 - **Cenas curtas:** cerca de 3 segundos por plano, no máximo. Planos mais longos só se tiverem movimento forte o tempo todo.
 - **Cortes com energia:** whip pan (passada rápida de câmera), flash ou zoom rápido entre as cenas.
 
@@ -50,6 +51,7 @@ Câmera sempre em movimento, mas suave e com propósito. Não precisa ser eletri
 - **Antes de renderizar:** listar os planos com "objeto herói + movimento" e mostrar ao dono do canal.
 
 ## Direção de cena: pensar como diretor de cinema (regra do dono)
+- **Enquadramento vertical sem erro (regra do dono, 16/11):** antes de renderizar, conferir cada plano projetando o contorno do assunto (corpo inteiro ou a parte que importa) na tela 9:16, com margem de segurança. Se não couber, **girar a câmera em volta do assunto** (de frente, de trás ou em 3/4, para o comprimento ir para a profundidade) até caber certinho, em vez de afastar a câmera e deixar o assunto pequeno. Bicho ou objeto comprido nunca é filmado de perfil inteiro num vertical, só em detalhe.
 Todo vídeo é dirigido, não só animado. Antes de escrever qualquer cena, decidir **como a câmera conta aquele momento**: de onde ela olha, a que distância, com que lente, por que se mexe e como passa para a cena seguinte. Cada escolha tem um motivo dramático.
 
 **1. Decupagem obrigatória (antes de animar).** Para cada plano, uma linha com:

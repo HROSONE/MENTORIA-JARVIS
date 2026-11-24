@@ -64,7 +64,24 @@ Complementa o `ESTILO.md`. Ler antes de começar qualquer vídeo novo.
   - **Nada de cama de ruído contínuo sintetizada** (vento, chiado, "ambiente"). Ambiente só de gravação real de biblioteca livre, bem baixo e com agudos cortados, ou nenhum: silêncio limpo é melhor que ruído chato.
   - **Síntese só para impactos curtos** (estalo, batida, pedrinha, mordida), um por ação visível, com volume contido. Sem zumbido, drone ou tom sustentado.
   - **Música:** mesmo quando o dono pede, não entregar trilha sintetizada às cegas. Preferir faixa livre de biblioteca, bem baixa, ou avisar que não consigo ouvir e mandar primeiro um teste de áudio de 5 a 10 s para aprovação.
+- **Lição do "Ele podia voar" (16/11, o dono achou o som simples):** um arquivo por ação, colado no quadro, com volume fixo, soa "efeito de biblioteca". Regras para o próximo, todas prontas em `biblioteca3d/sons/mesa.py`:
+  - **Camadas em todo evento importante:** transiente (estalo, 0–30 ms) + corpo (estrondo, motor, impacto) + cauda (detritos, eco, vidro caindo) + reforço grave curto. Explosão, queda, batida e poder nunca saem de um arquivo só (`Mesa.evento`).
+  - **Espaço e perspectiva:** cada ambiente tem sua reverberação (`espaco='quarto'|'carro'|'sala'|'rua'|'vale'|'corredor'`); dentro do carro ou de outro cômodo o som fica abafado (`lp`); de longe fica fino e com mais eco (`hp` + espaço).
+  - **O som se move com a imagem:** o que atravessa o quadro atravessa o estéreo, com Doppler (`passagem`); quem está à esquerda soa à esquerda (`pan`).
+  - **Foley do personagem:** roupa roçando, passos e pés descalços, mão agarrando, respiração (calma, ofegante, choro contido) nos planos fechados. Personagem perto e mudo parece boneco.
+  - **Dinâmica e corte:** silêncio curto antes do impacto (`silencio`), subida feita de som real invertido até o corte ou estouro (`riser`), ouvido "abafado" depois de explosão (`abafar`), e o som do próximo plano entrando 0,2–0,5 s antes do corte (J-cut).
+  - **Ambiente que muda com o plano:** cada lugar com o seu leito real (chuva, rodagem, grilos, pátio), trocado no corte e não um leito único arrastado.
+  - **Variedade:** a mesma ação repetida usa gravações ou trechos diferentes (passos, gotas, batidas), nunca o mesmo arquivo em laço audível.
   - **Antes de entregar:** conferir no espectro que não há energia constante em frequências agudas (chiado), que o som não passa de ~-18 dB de média e que cada efeito cai no quadro da ação; se houver dúvida, tirar o som em vez de enfeitar. Não consigo ouvir o resultado, então a checagem é por análise e por teste aprovado pelo dono.
+
+## 4b. Movimento de personagem (lição do "Ele podia voar", 16/11: o dono achou os movimentos simples)
+- **Captura real primeiro, e várias:** procurar a ação em `biblioteca3d/mocap/catalogo_cmu.tsv` (2379 capturas da CMU com descrição: andar triste, sentar, rir, apontar, discutir com raiva, levantar peso, cair...) e baixar com `python3 baixar.py <código>`. No "Ele podia voar" usei uma captura só (levantar de bruços) e o resto foi pose parada com tremor: ficou duro.
+- **Toda ação tem preparação, ação e acomodação:** o corpo pega impulso antes (antecipação), o movimento acelera e desacelera (nunca velocidade constante), e depois balança e assenta (continuidade). Cabeça, mãos e cabelo chegam um pouco depois do tronco.
+- **Transições misturadas, nunca coladas:** de uma captura para outra com `misturarClipes` (lucas_poder/js/mocap.js; `yawB` alinha capturas viradas para lados diferentes); capturas ao contrário ou mais rápidas com `retimar`.
+- **Camada de vida por cima de tudo:** respiração no peito e nos ombros, troca de peso, cabeça que nunca fica cravada (`vida(L, t, {ofegante})`), fases diferentes por personagem. Personagem parado esperando a fala é proibido.
+- **Contato com o mundo:** pés plantados no chão (sem escorregar), mãos que realmente seguram (IK + dedos fechando), peso visível quando levanta algo, corpo que afunda no banco quando senta.
+- **Atuação no rosto em plano fechado:** piscar, olhar que procura, boca que respira; a emoção sobe aos poucos (tristeza → raiva em 2–3 etapas visíveis), não liga de uma vez.
+- **Conferir em movimento, não em foto:** antes do render final, renderizar a bancada `lucas_poder/teste_mocap.html` (ou um trecho do plano) em vídeo curto e olhar a sequência; folha de quadros parados esconde movimento duro.
 
 ## 5. Texto e narração
 
@@ -120,8 +137,15 @@ Complementa o `ESTILO.md`. Ler antes de começar qualquer vídeo novo.
 - Página SVG por vídeo: `_head.html` + `_shared.js` + `_helpers.js` + `_man.js` + `_objs.js` + `_scenes.js` + `_render.js`, montada por `build.py`.
 - Linha do tempo em `narr.json` (`k`, `txt`, `t0`, `t1`, `a`, `b`); cada cena é uma função `sN(t)`.
 - Render: `PAGE=… FR=… VW=… VH=… node render_svg.js <worker> 4 30` (4 processos, um por worker).
-- Som: `sfx_<nome>.py` (numpy + BigSoundBank em `sons/bsb` + Kenney) com limitador tanh.
+- Som: `sfx_<nome>.py` usando a mesa `biblioteca3d/sons/mesa.py` (gravações BigSoundBank em `biblioteca3d/sons/bsb` + Kenney; camadas, espaço, pan, limitador e checagens).
 - Stills: `shotf.js`; folhas: `sheet.py` (vertical) e `sheet169b.py` (16:9).
+
+## 9b. Custo de render em Three.js sem placa de vídeo (17/11, T. rex corrida)
+
+- **Medir antes de prometer tempo.** O Chromium aqui renderiza por CPU (SwiftShader, 4 núcleos). Com a mata (~2000 plantas instanciadas, 58 milhões de triângulos por passe) um quadro de 720×1280 levava ~57 s: os pós (AO, desfoque, brilho) somavam só ~4 s; **93% do custo era a vegetação**, desenhada 4 vezes por quadro (sombra, imagem, normais do AO, profundidade do desfoque). Perfil: abrir a página uma vez e medir o mesmo quadro ligando e desligando partes (`?ao=0 &dof=0 &sombra=0 &msaa=0 &corte=0 &lod=0 &dofrapido=0`).
+- `InstancedMesh` com `frustumCulled = false` processa **todas** as cópias em **todos** os passes. A solução está em `trex_corrida/js/corte.js` (copiar para outro vídeo com mata): a cada quadro, só ficam as cópias que cruzam o campo de visão (ou cuja sombra cai nele), as distantes (> 45 m) trocam para o modelo leve (`biblioteca3d/polyhaven/gerar_lod.py` gera `<id>_lod.glb`, só geometria; o material é o do modelo cheio, achado pelo nome), nada passa de 100 m (a névoa exp² já engoliu) e só entra no mapa de sombra o que cai na janela da câmera da luz. O desfoque lê a profundidade que o AO já desenhou (um passe a menos). Resultado: **~57 s → ~7 s por quadro** (540×960), imagem quase idêntica (diferença média 0,5/255 sem o modelo leve; o modelo leve só deixa os tufos distantes um pouco mais "em blocos").
+- Os modelos `_lod.glb` ficam fora do git (a pasta `modelo/` é baixada): rodar `gerar_lod.py` de novo ao clonar (comando no cabeçalho do script e em `trex_corrida/roteiro.md`).
+- Não prometer ganho de GPU para Three.js sem ter testado: o Blender/Cycles no Colab (T4) levou ~3 h para 1080 quadros de 720p e chegou com defeitos; o caminho local com o corte acima custa bem menos.
 
 
 ## Antes de criar um vídeo: checar a biblioteca (obrigatório)

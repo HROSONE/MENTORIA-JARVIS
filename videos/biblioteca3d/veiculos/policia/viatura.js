@@ -25,11 +25,13 @@ export function criarViatura(opc = {}) {
     G.add(criarVaoRoda(corpo, p.z, p.lado));
   }
   const ft = criarFrenteTraseira(corpo, opc); G.add(ft.grupo);
-  G.add(criarRetrovisores(), criarMacanetas(corpo), criarHolofote(opc), criarAntenas(), criarLimpadores(), criarBaixo());
-  G.add(criarInterior(opc));
-  if (opc.pushbar) G.add(criarPushBar());
-  const extras = criarLedsExtras(corpo); G.add(extras.grupo);
-  const barra = opc.barra === false ? null : criarBarra(opc); if (barra) G.add(barra.grupo);
+  const civil = !!opc.civil;                                                                             // carro comum: sem barra, holofote, antenas, LEDs, push bar nem equipamento policial
+  G.add(criarRetrovisores(), criarMacanetas(corpo), criarLimpadores(), criarBaixo());
+  if (!civil) G.add(criarHolofote(opc), criarAntenas());
+  const interior = criarInterior(opc); G.add(interior);
+  if (opc.pushbar && !civil) G.add(criarPushBar());
+  const extras = civil ? null : criarLedsExtras(corpo); if (extras) G.add(extras.grupo);
+  const barra = (opc.barra === false || civil) ? null : criarBarra(opc); if (barra) G.add(barra.grupo);
   // sombra de contato (AO falso) sob a carroceria e os pneus: assenta o carro no chão em qualquer cena
   if (opc.sombraChao !== false) {
     const cv = document.createElement('canvas'); cv.width = 256; cv.height = 576; const g = cv.getContext('2d'), px = (x, z) => [(x + 1.4) / 2.8 * 256, (3.2 - z) / 6.4 * 576];
@@ -47,11 +49,15 @@ export function criarViatura(opc = {}) {
   for (const s of [1, -1]) { const f = new THREE.SpotLight(0xfff2dc, 0, 50, 0.40, 1.0, 1.7); f.position.set(s * 0.58, 0.72, ZN - 0.1); f.target.position.set(s * 0.5, 0.0, ZN + 16); G.add(f, f.target); fachos.push(f); }
   const api = {
     grupo: G, pintura: pint, rodas, barra,
+    /** tela do computador de bordo (MDT): mdt({ cabecalho, cor, linhas: [..], numero, barra: 0..1, fundo, piscar: 0..1 }) */
+    mdt(c) { if (interior.userData.mdt) interior.userData.mdt(c); },
     /** luzes de emergência: t em segundos; modo 'off' | 'ligado' | 'fixo' | 'busca' */
-    luzes(t, modo = 'ligado') { if (barra) { barra.atualizar(t, modo); const u = barra.ultimo || { v: 0, a: 0 }; extras.atualizar(u.v, u.a); } else extras.atualizar(0, 0); },
+    /** luzes de emergência com controle direto: { v, a, ambar, busca, forca, t } (v = vermelho, a = azul, 0..1); forca = intensidade da luz colorida na cena (padrão 5) */
+    luzesManual({ v = 0, a = 0, ambar = 0, busca = 0, forca = 5, t = 0 } = {}) { if (barra) barra.definir(v, a, ambar, busca, t, forca); if (extras) extras.atualizar(v, a); },
+    luzes(t, modo = 'ligado') { if (barra) { barra.atualizar(t, modo); const u = barra.ultimo || { v: 0, a: 0 }; if (extras) extras.atualizar(u.v, u.a); } else if (extras) extras.atualizar(0, 0); },
     /** gira as rodas conforme a distância percorrida (m) */
     /** farois(ligado, intensidade) / freio(ligado) / re(ligado) / seta(lado: 1 esquerda | -1 direita, ligado) */
-    farois(on) { ft.luzes.definir('farol', on ? 0.85 : 0); for (const f of fachos) f.intensity = on ? 70 : 0; },
+    farois(on, forca = 70) { ft.luzes.definir('farol', on ? 0.85 : 0); for (const f of fachos) f.intensity = on ? forca : 0; },
     freio(on) { ft.luzes.definir('freio', on ? 0.5 : 0); },
     re(on) { ft.luzes.definir('re', on ? 0.9 : 0); },
     seta(lado, on) { const m = ft.luzes.materiais['seta' + (lado > 0 ? 'E' : 'D')]; if (m) m.opacity = on ? 0.9 : 0; },

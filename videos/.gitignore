@@ -52,3 +52,15 @@ svg/terremoto_carro/cena_cratera.html
 svg/terremoto_carro/cena_ponte.html
 svg/cabra/cabra.html
 svg/cabra/dev.html
+mestres_gravidade/quadros/
+chuva_peixes/quadros/
+viatura_edit/edl2.json
+biblioteca3d/polyhaven/textura/
+biblioteca3d/polyhaven/modelo/
+biblioteca3d/polyhaven/hdri/
+__pycache__/
+biblioteca3d/sons/bsb/*.ogg
+biblioteca3d/mocap/cmu/*.amc
+biblioteca3d/sons/commons/*.ogg
+biblioteca3d/sons/commons/*.mp3
+biblioteca3d/sons/commons/*.wav

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Você fugiria de um T. rex? (Short, ficção)</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#000}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<script type="module">
+// Protocolo do projeto: window.__total (s), window.__frame(t, { jpeg, subs }) -> dataURL, window.__planos, window.__enquadramento() (conferência 9:16).
+import { desenharTela, capturar, cam } from './js/motor.js';
+import { construirTudo, atualizar, efeitos, acharPlano, verificarEnquadramento, eventosSom, marcas } from './js/planos.js';
+const Q = new URLSearchParams(location.search);
+const S = await construirTudo();
+const desenhar = t => { atualizar(t); desenharTela(); };
+window.__frame = (t, opc = {}) => {
+  const e = efeitos(t), pl = acharPlano(t), lo = pl.t0, hi = pl.t0 + pl.dur - 1e-4;
+  return capturar(tk => desenhar(Math.min(Math.max(tk, lo), hi)), t, { subs: opc.subs ?? e.subs ?? 1, obturador: e.obturador ?? 0.5, fade: e.fade || 0, flash: e.flash || 0, flashCor: e.flashCor, jpeg: opc.jpeg ?? 0.93 });
+};
+window.__total = S.total;
+window.__planos = S.planos.map(p => ({ nome: p.id, t0: p.t0, t1: p.t0 + p.dur }));
+window.__efeitos = t => efeitos(t);
+window.__enquadramento = () => verificarEnquadramento();
+window.__eventosSom = () => eventosSom();
+window.__marcas = () => marcas();
+// vista livre para conferir o cenário (ex.: de cima da fenda): posa a cena no instante t e desenha de uma câmera qualquer
+window.__vista = (t, pos, alvo, fov = 50) => capturar(() => { atualizar(t); cam.position.set(...pos); cam.up.set(0, 1, 0); cam.lookAt(...alvo); cam.fov = fov; cam.updateProjectionMatrix(); desenharTela(); }, t, { subs: 1, jpeg: 0.88 });
+if (Q.has('t')) desenhar(+Q.get('t'));
+window.__limpos = () => S.limpos;
+window.__exportar = async () => (await import('./js/exportar.js')).exportar();
+window.__ready = true;
+</script>
+</body>
+</html>
