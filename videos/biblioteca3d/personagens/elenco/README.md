@@ -44,6 +44,7 @@ Usados nos Shorts "O elevador" (`videos/elevador/`) e "Dormir em dois minutos" (
 | `faxineira.glb` | Funcionária doméstica | 1,59 m | 78.803 | mulher de 53 anos, baixa, cabelo escuro em coque (textura de fios), túnica curta azul-acinzentada, calça escura e sapato fechado |
 | `entregador.glb` | Entregador | 1,77 m | 84.644 | rapaz de 25 anos, jaqueta laranja com faixas refletivas, calça escura e tênis branco |
 | `bombeiro.glb` | Bombeiro | 1,83 m | 72.604 | homem de 35 anos, casaco escuro com faixas refletivas amarelas, calça e botas pretas |
+| `operador.glb` | Operador de máquinas | ~1,80 m | 81.946 | homem de 42 anos, capacete branco de obra, colete laranja de alta visibilidade com faixas prateadas sobre camisa azul, calça de brim com faixa refletiva, luvas e botina (`gerador/personagens6.py`; prévia em `previews/operador.webp`) |
 | `soldado.glb` | Soldado | 1,83 m | 88.520 | rapaz de 24 anos, farda verde-oliva, capacete de aço com jugular, cinto com fivela, suspensórios de carga, mochila e botas |
 | `aviador.glb` | Aviador | 1,79 m | 85.620 | cadete de 22 anos, gorro de couro com abas e forro, óculos de voo na testa, jaqueta de couro marrom com gola de pelego, calça cáqui e botas |
 

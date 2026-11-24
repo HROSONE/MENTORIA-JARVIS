@@ -14,6 +14,12 @@ import * as Taxi from '../videos/biblioteca3d/veiculos/taxi/taxi.js';
 import * as Picape from '../videos/biblioteca3d/veiculos/picape/picape.js';
 import * as Onibus from '../videos/biblioteca3d/veiculos/onibus/onibus.js';
 import * as Bombeiros from '../videos/biblioteca3d/veiculos/bombeiros/bombeiros.js';
+import * as Escavadeira from '../videos/biblioteca3d/veiculos/escavadeira/escavadeira.js';
+import * as Retro from '../videos/biblioteca3d/veiculos/retroescavadeira/retroescavadeira.js';
+import * as Carregadeira from '../videos/biblioteca3d/veiculos/carregadeira/carregadeira.js';
+import * as Rolo from '../videos/biblioteca3d/veiculos/rolo/rolo.js';
+import * as Basculante from '../videos/biblioteca3d/veiculos/basculante/basculante.js';
+import { construirCanteiro, monteDeTerra } from './canteiro.js';
 import { construirCidade, PONTOS_TELEPORTE, SELVA_INFO } from './cidade.js';
 import { criarTrex } from './trex.js';
 import { Armas } from './armas.js';
@@ -30,6 +36,7 @@ const PERSONAGENS_DEF = [
   { id: 'jovem_a',    nome: 'Jovem A',       tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/jovem_a.glb` },
   { id: 'bombeiro',   nome: 'Bombeiro',      tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/bombeiro.glb` },
   { id: 'astronauta', nome: 'Astronauta',    tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/astronauta.glb` },
+  { id: 'operador',   nome: 'Operador',      tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/operador.glb` },
   { id: 'corredor',   nome: 'Corredor',      tipo: 'corredor', url: `${BASE_BIB}/personagens/corredor/corredor-colorido.glb` },
   { id: 'silhueta',   nome: 'Silhueta Hryz', tipo: 'silhueta', url: `${BASE_BIB}/personagens/corredor/corredor.glb` },
 ];
@@ -790,6 +797,7 @@ export async function iniciarJogo() {
   // ---- Veículos dirigíveis (Viatura Ford Crown Victoria P71 Game-Ready em todos os modos!)
   atualizarProgresso(0.80, 'Montando Viatura Crown Victoria P71…');
   const veiculos = [];
+  const montes = [];                                                                // montes de terra despejados pelo basculante
   const glbLoader = new GLTFLoader();
 
   const p71 = criarViaturaP71Otimizada(qualAtual.pbr);
@@ -861,6 +869,12 @@ export async function iniciarJogo() {
     { id: 'onibus', nome: 'Ônibus Escolar',    criar: () => Onibus.criar(),    x: 292, z: 166.2, ry: Math.PI / 2,  acel: 11, velMax: 28, raio: 3.4, camDist: 13.5, camAlt: 4.6, capoY: 2.35, capoZ: 4.3 },
     { id: 'bombeiros', nome: 'Caminhão de Bombeiros', criar: () => Bombeiros.criar(), x: 128, z: 98, ry: Math.PI / 2, acel: 14, velMax: 34, raio: 3.1, camDist: 12.0, camAlt: 4.3, capoY: 2.40, capoZ: 3.3, sirene: true },
     { id: 'ambulancia', nome: 'Ambulância',        criar: () => criarAmbulancia(), x: 148, z: 98,    ry: Math.PI / 2,  acel: 17, velMax: 40, raio: 2.8, camDist: 9.5, camAlt: 3.6, capoY: 2.05, capoZ: 2.0, sirene: true },
+    // máquinas de obra (canteiro ao norte): lentas, com ferramentas nos eixos 1–8
+    { id: 'escavadeira', nome: 'Escavadeira',     criar: () => Escavadeira.criar(),  x: 158, z: -16, ry: 0.35, acel: 5, velMax: 7, velRe: 5, raio: 3.3, camDist: 13, camAlt: 5.2, capoY: 3.3, capoZ: 0.6, maquina: true },
+    { id: 'retroescavadeira', nome: 'Retroescavadeira', criar: () => Retro.criar(), x: 176, z: -6, ry: 0, acel: 8, velMax: 11, velRe: 7, raio: 2.9, camDist: 10, camAlt: 4.0, capoY: 2.75, capoZ: -0.6, maquina: true },
+    { id: 'carregadeira', nome: 'Pá Carregadeira', criar: () => Carregadeira.criar(), x: 196, z: -8, ry: -0.3, acel: 8, velMax: 11, velRe: 7, raio: 3.4, camDist: 11, camAlt: 4.4, capoY: 3.05, capoZ: -0.6, maquina: true },
+    { id: 'rolo', nome: 'Rolo Compactador',      criar: () => Rolo.criar(),         x: 208, z: 4,   ry: Math.PI, acel: 5, velMax: 6, velRe: 5, raio: 2.6, camDist: 9, camAlt: 3.8, capoY: 2.85, capoZ: -0.8, maquina: true },
+    { id: 'basculante', nome: 'Caminhão Basculante', criar: () => Basculante.criar(), x: 148, z: 3, ry: Math.PI / 2, acel: 13, velMax: 24, velRe: 9, raio: 3.6, camDist: 12, camAlt: 4.6, capoY: 2.75, capoZ: 3.3, maquina: true },
   ];
   for (const f of frotaCanal) {
     try {
@@ -887,12 +901,16 @@ export async function iniciarJogo() {
         id: f.id, nome: f.nome, obj: o, api,
         x: f.x, z: f.z, ry: f.ry,
         vel: 0, steer: 0, dist: 0,
-        acel: f.acel, velMax: f.velMax, velRe: 12, freio: 30, raio: f.raio,
-        sirene: false, farois: false, ehPolicia: false, temSirene: !!f.sirene,
+        acel: f.acel, velMax: f.velMax, velRe: f.velRe ?? 12, freio: 30, raio: f.raio,
+        sirene: false, farois: false, ehPolicia: false, temSirene: !!f.sirene, maquina: !!f.maquina,
         camDist: f.camDist, camAlt: f.camAlt, capoY: f.capoY, capoZ: f.capoZ,
       });
     } catch (e) { console.warn('veículo do canal não montou', f.nome, e); }
   }
+
+  // canteiro de obras (terreno cercado ao norte, com o operador)
+  let canteiro = null;
+  try { canteiro = await construirCanteiro({ scene, colisores: cidade.colisores, base: BASE_BIB }); } catch (e) { console.warn('canteiro', e); }
 
   // ---- Personagem Jogável (ultra-leve no modo Leve; elenco GLB completo em Médio/Alto ou ao trocar com C)
   atualizarProgresso(0.94, 'Preparando personagem jogável…');
@@ -1179,7 +1197,11 @@ export async function iniciarJogo() {
       persAtual.inst.obj.visible = false;
       camYaw = perto.ry;
       som.tocarPorta();
-      mostrarToast(`Dirigindo: ${perto.nome}${perto.temSirene ? ' (L = Sirene)' : ''}`);
+      if (perto.api?.ferr) {
+        const ex = perto.api.ferr.eixos;
+        mostrarToast(`${perto.nome} · ` + (ex[0].id === 'vibracao' ? '1: liga/desliga a vibração' : ex.map((e, i) => `${2 * i + 1}/${2 * i + 2} ${e.nome}`).join(' · ')));
+        touch.ferrEixo = 0; atualizarBotaoEixo();
+      } else mostrarToast(`Dirigindo: ${perto.nome}${perto.temSirene ? ' (L = Sirene)' : ''}`);
     }
     touch.acel = touch.freio = touch.esq = touch.dir = touch.drift = touch.pular = false;
     atualizarHudModo();
@@ -1194,6 +1216,7 @@ export async function iniciarJogo() {
     $('touch-pe-dir')?.classList.toggle('oculto', dir);
     $('touch-carro-esq')?.classList.toggle('oculto', !dir);
     $('touch-carro-dir')?.classList.toggle('oculto', !dir);
+    $('touch-ferr')?.classList.toggle('oculto', !(dir && jogador.veiculo.api?.ferr));
     if (dir) {
       elVeiculoNome.textContent = jogador.veiculo.nome;
       $('btn-sirene').classList.toggle('oculto', !jogador.veiculo.temSirene);
@@ -1553,6 +1576,10 @@ export async function iniciarJogo() {
       else if (code === 'Escape' && mira.ativa) sairMira(true);
       else if (code === 'KeyP') entrarSala();
       else if (code === 'KeyQ') ciclarQualidade();
+      else if (jogador.veiculo?.api?.ferr && /^Digit[1-8]$/.test(code)) {
+        const fe = jogador.veiculo.api.ferr, i = Math.floor((+code.slice(5) - 1) / 2);
+        if (fe.eixos[i]?.id === 'vibracao' && code === 'Digit1') { fe.definir(i, fe.eixos[i].v > 0.5 ? 0 : 1); mostrarToast(fe.eixos[i].v > 0.5 ? 'Vibração LIGADA' : 'Vibração desligada'); }
+      }
       else if (code === 'Digit1') trocarArma('pistola');
       else if (code === 'Digit2') trocarArma('metralhadora');
       else if (code === 'Digit3') trocarArma('sniper');
@@ -1710,6 +1737,14 @@ export async function iniciarJogo() {
   bindSegurar('touch-acel', v => { touch.acel = v; });
   bindSegurar('touch-freio', v => { touch.freio = v; });
   bindSegurar('touch-drift', v => { touch.drift = v; });
+  bindSegurar('touch-ferr-mais', v => { touch.ferrMais = v; });
+  bindSegurar('touch-ferr-menos', v => { touch.ferrMenos = v; });
+  $('touch-ferr-eixo').onclick = () => {
+    const fe = jogador.veiculo?.api?.ferr; if (!fe) return;
+    if (fe.eixos[0].id === 'vibracao') { fe.definir(0, fe.eixos[0].v > 0.5 ? 0 : 1); mostrarToast(fe.eixos[0].v > 0.5 ? 'Vibração LIGADA' : 'Vibração desligada'); return; }
+    touch.ferrEixo = ((touch.ferrEixo || 0) + 1) % fe.eixos.length; atualizarBotaoEixo();
+  };
+  function atualizarBotaoEixo() { const fe = jogador.veiculo?.api?.ferr; if (fe) $('touch-ferr-eixo').textContent = fe.eixos[0].id === 'vibracao' ? 'Vibrar' : fe.eixos[touch.ferrEixo || 0].nome; }
   $('touch-arma').onclick = () => {                                              // passa pelas armas que você já tem
     const ordem = [null, 'pistola', 'metralhadora', 'sniper'].filter(id => !id || armas.possui.has(id));
     if (ordem.length === 1) { mostrarToast('Você ainda não tem armas: procure os ícones P, M e S no minimapa.'); return; }
@@ -1772,6 +1807,10 @@ export async function iniciarJogo() {
       mmCtx.fill();
     }
 
+    // Canteiro de obras
+    {
+      const [kx, kz] = toMM(140, -30); mmCtx.fillStyle = '#8a6a48'; mmCtx.fillRect(kx, kz, 80 * esc, 45 * esc);
+    }
     // Veículos dirigíveis
     for (const v of veiculos) {
       const [vx, vz] = toMM(v.x, v.z);
@@ -2016,7 +2055,7 @@ export async function iniciarJogo() {
 
     // Atualiza luzes da viatura P71 (mesmo quando você está a pé!)
     for (const v of veiculos) {
-      if (v.api?.luzes) v.api.luzes(tTotal, v.sirene ? 'ligado' : 'off');
+      if (v.api?.luzes) v.api.luzes(tTotal, v.sirene || (v.maquina && v === jogador.veiculo) ? 'ligado' : 'off');   // máquina em uso: giroflex âmbar
     }
 
     const tFrente = (touch.acel ? 1 : 0) - (touch.freio ? 1 : 0) - touch.mz;
@@ -2096,6 +2135,21 @@ export async function iniciarJogo() {
       v.obj.rotation.z = roll;
       v.obj.rotation.x = pitch;
 
+      // ferramentas da máquina de obra: 1/2 primeiro eixo, 3/4 segundo, 5/6 terceiro, 7/8 quarto (no celular: ▲ ▼ e o eixo escolhido)
+      if (v.api?.ferr) {
+        v.api.ferr.eixos.forEach((e, i) => {
+          if (e.id === 'vibracao') return;
+          const mais = (jogando && teclas.has('Digit' + (2 * i + 1))) || (touch.ferrEixo === i && touch.ferrMais);
+          const menos = (jogando && teclas.has('Digit' + (2 * i + 2))) || (touch.ferrEixo === i && touch.ferrMenos);
+          if (mais !== menos) v.api.ferr.mover(i, (mais ? 1 : -1) * dt);
+        });
+        if (v.api.vibrar) som.atualizarVibracao?.(v.api.vibrar(dt));
+        if (v.id === 'basculante') {                                                    // despejou: fica um monte de terra atrás; abaixou: carrega de novo
+          const a = v.api.ferr.valor('cacamba');
+          if (!v._despejou && a > 0.72) { v._despejou = true; const p = v.obj.localToWorld(new THREE.Vector3(0, 0, -6.2)); montes.push(monteDeTerra(scene, p.x, p.z)); if (montes.length > 12) scene.remove(montes.shift()); }
+          if (v._despejou && a < 0.02) { v._despejou = false; v.api.carregar(); }
+        }
+      }
       if (v.api) {
         v.api.rodar(v.dist);
         v.api.esterco(v.steer);
@@ -2184,6 +2238,7 @@ export async function iniciarJogo() {
 
     // Atualiza setores visíveis, trânsito, frota distante, T. rex da Selva, fumaça de drift e NPCs próximos
     fumacaDrift.atualizar(dt);
+    canteiro?.atualizar(dt, cine ? cine.foco.x : focoX, cine ? cine.foco.z : focoZ);
     if (cine) {
       const fx = cine.foco.x, fz = cine.foco.z;
       cidade.atualizar(dt, tTotal, fx, fz);
