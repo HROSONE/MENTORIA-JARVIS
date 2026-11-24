@@ -17,6 +17,8 @@ import * as Bombeiros from '../videos/biblioteca3d/veiculos/bombeiros/bombeiros.
 import { construirCidade, PONTOS_TELEPORTE, SELVA_INFO } from './cidade.js';
 import { criarTrex } from './trex.js';
 import { Armas } from './armas.js';
+import { Abertura } from './abertura.js';
+import { Sala } from './sala.js';
 
 const BASE_BIB = './videos/biblioteca3d';
 
@@ -850,12 +852,12 @@ export async function iniciarJogo() {
   //    faróis, lanternas e giroflex continuam acendendo pelos materiais emissivos.
   atualizarProgresso(0.90, 'Estacionando a frota do canal…');
   const frotaCanal = [
-    { nome: 'Hatch Hryz',        criar: () => Hatch.criar(),     x: 172, z: 166.2, ry: Math.PI / 2,  acel: 21, velMax: 44, raio: 2.0, camDist: 6.6, camAlt: 2.4, capoY: 1.30, capoZ: 0.3 },
-    { nome: 'Táxi da Praça',     criar: () => Taxi.criar(),      x: 218, z: 169.8, ry: -Math.PI / 2, acel: 20, velMax: 42, raio: 2.2, camDist: 7.0, camAlt: 2.5, capoY: 1.32, capoZ: 0.4 },
-    { nome: 'Picape Cabine Dupla', criar: () => Picape.criar(),  x: 240, z: 169.8, ry: -Math.PI / 2, acel: 19, velMax: 42, raio: 2.6, camDist: 8.0, camAlt: 2.9, capoY: 1.75, capoZ: 0.6 },
-    { nome: 'Ônibus Escolar',    criar: () => Onibus.criar(),    x: 292, z: 166.2, ry: Math.PI / 2,  acel: 11, velMax: 28, raio: 3.4, camDist: 13.5, camAlt: 4.6, capoY: 2.35, capoZ: 4.3 },
-    { nome: 'Caminhão de Bombeiros', criar: () => Bombeiros.criar(), x: 128, z: 98, ry: Math.PI / 2, acel: 14, velMax: 34, raio: 3.1, camDist: 12.0, camAlt: 4.3, capoY: 2.40, capoZ: 3.3, sirene: true },
-    { nome: 'Ambulância',        criar: () => criarAmbulancia(), x: 148, z: 98,    ry: Math.PI / 2,  acel: 17, velMax: 40, raio: 2.8, camDist: 9.5, camAlt: 3.6, capoY: 2.05, capoZ: 2.0, sirene: true },
+    { id: 'hatch', nome: 'Hatch Hryz',        criar: () => Hatch.criar(),     x: 172, z: 166.2, ry: Math.PI / 2,  acel: 21, velMax: 44, raio: 2.0, camDist: 6.6, camAlt: 2.4, capoY: 1.30, capoZ: 0.3 },
+    { id: 'taxi', nome: 'Táxi da Praça',     criar: () => Taxi.criar(),      x: 218, z: 169.8, ry: -Math.PI / 2, acel: 20, velMax: 42, raio: 2.2, camDist: 7.0, camAlt: 2.5, capoY: 1.32, capoZ: 0.4 },
+    { id: 'picape', nome: 'Picape Cabine Dupla', criar: () => Picape.criar(),  x: 240, z: 169.8, ry: -Math.PI / 2, acel: 19, velMax: 42, raio: 2.6, camDist: 8.0, camAlt: 2.9, capoY: 1.75, capoZ: 0.6 },
+    { id: 'onibus', nome: 'Ônibus Escolar',    criar: () => Onibus.criar(),    x: 292, z: 166.2, ry: Math.PI / 2,  acel: 11, velMax: 28, raio: 3.4, camDist: 13.5, camAlt: 4.6, capoY: 2.35, capoZ: 4.3 },
+    { id: 'bombeiros', nome: 'Caminhão de Bombeiros', criar: () => Bombeiros.criar(), x: 128, z: 98, ry: Math.PI / 2, acel: 14, velMax: 34, raio: 3.1, camDist: 12.0, camAlt: 4.3, capoY: 2.40, capoZ: 3.3, sirene: true },
+    { id: 'ambulancia', nome: 'Ambulância',        criar: () => criarAmbulancia(), x: 148, z: 98,    ry: Math.PI / 2,  acel: 17, velMax: 40, raio: 2.8, camDist: 9.5, camAlt: 3.6, capoY: 2.05, capoZ: 2.0, sirene: true },
   ];
   for (const f of frotaCanal) {
     try {
@@ -879,7 +881,7 @@ export async function iniciarJogo() {
       o.rotation.y = f.ry;
       scene.add(o);
       veiculos.push({
-        id: f.nome, nome: f.nome, obj: o, api,
+        id: f.id, nome: f.nome, obj: o, api,
         x: f.x, z: f.z, ry: f.ry,
         vel: 0, steer: 0, dist: 0,
         acel: f.acel, velMax: f.velMax, velRe: 12, freio: 30, raio: f.raio,
@@ -1449,7 +1451,9 @@ export async function iniciarJogo() {
     const code = e.code;
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) e.preventDefault();
     if (!teclas.has(code)) {
-      if (code === 'KeyE') entrarOuSairVeiculo();
+      if (modo !== 'jogo') { /* abertura e sala tratam as próprias teclas */ }
+      else if (code === 'KeyE') entrarOuSairVeiculo();
+      else if (code === 'KeyP') entrarSala();
       else if (code === 'KeyQ') ciclarQualidade();
       else if (code === 'Digit1') trocarArma('pistola');
       else if (code === 'Digit2') trocarArma('metralhadora');
@@ -1486,7 +1490,7 @@ export async function iniciarJogo() {
     camPointerId = e.pointerId;
     arrastando = true;
     ultimoX = e.clientX; ultimoY = e.clientY;
-    if (e.button === 0 && armas.ativa && !jogador.veiculo) armas.gatilho(true);
+    if (e.button === 0 && modo === 'jogo' && armas.ativa && !jogador.veiculo) armas.gatilho(true);
   });
   addEventListener('pointermove', e => {
     if (!arrastando || e.pointerId !== camPointerId) return;
@@ -1695,11 +1699,149 @@ export async function iniciarJogo() {
     mmCtx.restore();
   }
 
+  // ---- Abertura (passeio pulável pela cidade) → Sala (personagem, veículo e local) → Jogo
+  let modo = 'jogo';
+  let camFixa = null;                                                       // câmera parada (miniaturas e testes)
+  for (const v of veiculos) v.vaga = { x: v.x, z: v.z, ry: v.ry };          // vaga original de cada veículo
+  const abertura = new Abertura(camera, {
+    aoTerminar: () => entrarSala(),
+    aoPlano: (local, plano) => {
+      veiculoPolicia.sirene = !!plano.sirene;
+      if (plano.trex && trexState.carregado) {
+        trexState.estado = 'rugindo'; trexState.timerEstado = 2.3;
+        som.tocarRugidoTrex(0.8);
+      }
+    },
+    estado: () => ({ trex: trexState.carregado ? { x: trexState.x, z: trexState.z, rumo: trexState.rumo } : null }),
+  });
+  const LONGE = [1e5, 0, 1e5];
+  const _abAtualizar = abertura.atualizar.bind(abertura);
+  abertura.atualizar = dt => {
+    const r = _abAtualizar(dt);
+    if (r) r.trexAlvo = r.plano.trex ? [camera.position.x, 0, camera.position.z] : LONGE;
+    return r;
+  };
+
+  function colocarVeiculo(v, x, z, ry) {
+    v.x = x; v.z = z; v.ry = ry; v.vel = 0; v.steer = 0; v.sirene = false;
+    v.obj.position.set(x, 0, z); v.obj.rotation.set(0, ry, 0);
+    v.api?.freio?.(false); v.api?.re?.(false);
+  }
+  function sairSemAnimar() {
+    const v = jogador.veiculo; if (!v) return;
+    jogador.veiculo = null; v.vel = 0; v.sirene = false;
+    v.api?.freio?.(false); v.api?.re?.(false);
+    atualizarHudModo();
+  }
+  // põe o veículo escolhido no ponto do local (os outros voltam às vagas; quem estiver no caminho troca de vaga com ele)
+  // e o personagem ao lado da porta do motorista
+  function posicionarEscolha(esc) {
+    const pt = PONTOS_TELEPORTE.find(p => p.id === esc.local) || PONTOS_TELEPORTE[0];
+    sairSemAnimar();
+    for (const v of veiculos) colocarVeiculo(v, v.vaga.x, v.vaga.z, v.vaga.ry);
+    const v = veiculos.find(o => o.id === esc.veic) || null;
+    if (v) {
+      for (const o of veiculos) if (o !== v && Math.hypot(o.vaga.x - pt.x, o.vaga.z - pt.z) < v.raio + o.raio + 5) colocarVeiculo(o, v.vaga.x, v.vaga.z, v.vaga.ry);
+      colocarVeiculo(v, pt.x, pt.z, pt.ang);
+      // personagem junto ao para-lama dianteiro esquerdo, de frente para a câmera (que fica à frente e à direita)
+      const meio = v.api?.dims?.L ? v.api.dims.L / 2 : v.raio * 1.15, larg = v.api?.dims?.W ? v.api.dims.W / 2 : v.raio * 0.45;
+      const fx = Math.sin(pt.ang), fz = Math.cos(pt.ang), ex = Math.cos(pt.ang), ez = -Math.sin(pt.ang);
+      const res = resolverColisoes(pt.x + fx * meio * 0.55 + ex * (larg + 0.9), pt.z + fz * meio * 0.55 + ez * (larg + 0.9), 0.45);
+      jogador.x = res.x; jogador.z = res.z;
+    } else { jogador.x = pt.x; jogador.z = pt.z; }
+    jogador.y = CALCADA; jogador.vy = 0; jogador.noChao = true; jogador.ry = pt.ang - 0.45;
+    persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
+    persAtual.inst.obj.rotation.y = jogador.ry;
+    if (pt.id === 'selva') garantirTrex(false);
+    salaCentro.set(v ? (jogador.x + v.x) / 2 : jogador.x, 0, v ? (jogador.z + v.z) / 2 : jogador.z);
+    salaRaio = v ? Math.max(7.5, v.raio * 2.4 + 3.5) : 5.2;
+    salaAltura = v ? 2.2 + v.raio * 0.55 : 1.7;
+    salaAlvoY = v ? 1.0 + v.raio * 0.1 : 1.0;
+    salaBase = pt.ang - (v ? 0.62 : 0.25); tSala = 0;
+  }
+
+  let tokenSala = 0;
+  async function aplicarEscolha(esc) {
+    const token = ++tokenSala;
+    sala.ocupado(true);
+    try {
+      const idx = Math.max(0, PERSONAGENS_DEF.findIndex(d => d.id === esc.pers));
+      if (idx === 0 && !qualAtual.personagemCompleto) { if (!usandoPersLeve) ativarPersonagemLeve(); }
+      else if (usandoPersLeve || persIdx !== idx || !persAtual) await carregarPersonagem(idx);
+    } catch (e) { console.warn('personagem não carregou', e); }
+    if (token !== tokenSala) return;
+    persAtual.inst.obj.visible = true;
+    posicionarEscolha(esc);
+    sala.ocupado(false);
+  }
+
+  // câmera da sala: gira devagar em volta do personagem e do carro, com o assunto fora do painel
+  const salaCentro = new THREE.Vector3(146, 0, 166);
+  let salaRaio = 8, salaAltura = 2.6, salaAlvoY = 1, salaBase = 0, tSala = 0;
+  const _dirS = new THREE.Vector3(), _dirR = new THREE.Vector3(), _alvoS = new THREE.Vector3(), CIMA = new THREE.Vector3(0, 1, 0);
+  function atualizarCamSala(dt) {
+    tSala += dt;
+    const salaAng = salaBase + 0.42 * Math.sin(tSala * 0.28);                                   // balanço suave em 3/4 de frente
+    camera.position.set(salaCentro.x + Math.sin(salaAng) * salaRaio, salaAltura, salaCentro.z + Math.cos(salaAng) * salaRaio);
+    _alvoS.set(salaCentro.x, salaAlvoY, salaCentro.z);
+    _dirS.subVectors(_alvoS, camera.position).normalize();
+    _dirR.crossVectors(_dirS, CIMA).normalize();
+    if (innerWidth > 760 && innerHeight > 520) _alvoS.addScaledVector(_dirR, -salaRaio * 0.3);   // painel à esquerda: assunto à direita
+    else _alvoS.y -= salaRaio * 0.16;                                                          // painel embaixo: assunto mais para cima
+    camera.lookAt(_alvoS);
+    return { foco: { x: salaCentro.x, z: salaCentro.z }, trexAlvo: LONGE };
+  }
+
+  const MINI = './jogo/sala/miniaturas';
+  const ICONE_PERS = { policial: '👮', jovem_a: '🧑', bombeiro: '🧑‍🚒', astronauta: '👩‍🚀', corredor: '🏃', silhueta: '👤' };
+  const DESC_PERS = { policial: 'Patrulha da cidade', jovem_a: 'Morador de Hryz', bombeiro: 'Corpo de bombeiros', astronauta: 'Visitante espacial', corredor: 'Rápido e colorido', silhueta: 'O vulto do canal' };
+  const sala = new Sala({
+    pers: PERSONAGENS_DEF.map(d => ({ id: d.id, nome: d.nome, desc: DESC_PERS[d.id] || '', icone: ICONE_PERS[d.id] || '🧍', img: `${MINI}/pers-${d.id}.webp` })),
+    veic: [{ id: 'nenhum', nome: 'A pé', desc: 'Começar andando', icone: '🚶' },
+      ...veiculos.map(v => ({ id: v.id, nome: v.nome, desc: v.temSirene ? 'Com sirene (L)' : '', icone: '🚗', img: `${MINI}/veic-${v.id}.webp` }))],
+    local: PONTOS_TELEPORTE.map(p => ({ id: p.id, nome: p.nome.replace(/^\S+\s(?=Selva)/, ''), icone: '📍', img: `${MINI}/local-${p.id}.webp` })),
+  }, { pers: 'policial', veic: 'p71', local: 'delegacia' }, {
+    aoMudar: esc => aplicarEscolha(esc),
+    aoJogar: async esc => {
+      await aplicarEscolha(esc);
+      sala.fechar();
+      modo = 'jogo';
+      const v = veiculos.find(o => o.id === esc.veic);
+      if (v) { jogador.veiculo = v; persAtual.inst.obj.visible = false; jogador.x = v.x; jogador.z = v.z; }
+      camYaw = v ? v.ry : jogador.ry; camPitch = 0.32; snapCam = true; minimapTimer = 99;
+      atualizarHudModo();
+      som.desbloquear();
+      const pt = PONTOS_TELEPORTE.find(p => p.id === esc.local);
+      mostrarToast(v ? `Bem-vindo a Hryz City! ${v.nome} · ${pt?.nome ?? ''}${v.temSirene ? ' · L = sirene' : ''}` : `Bem-vindo a Hryz City! ${pt?.nome ?? ''}`);
+    },
+    aoRever: () => { sala.fechar(); iniciarAbertura(); },
+  });
+
+  function entrarSala() {
+    sairSemAnimar();
+    armas.equipar(null); atualizarHudArma();
+    modo = 'sala';
+    veiculoPolicia.sirene = false;
+    sala.abrir();
+    aplicarEscolha(sala.escolha);
+  }
+  function iniciarAbertura() {
+    sairSemAnimar();
+    for (const v of veiculos) colocarVeiculo(v, v.vaga.x, v.vaga.z, v.vaga.ry);
+    persAtual.inst.obj.visible = false;
+    modo = 'abertura';
+    abertura.iniciar();
+  }
+  $('btn-sala').onclick = () => { if (modo === 'jogo') entrarSala(); };
+
   // ---- Aplicar qualidade + clima inicial & esconder tela de carga
   aplicarQualidade(qualAtual.id, false);
   atualizarHudModo();
   atualizarProgresso(1, 'Cidade pronta!');
   setTimeout(() => elTelaCarga.classList.add('oculto'), 220);
+  if (Q.has('direto')) modo = 'jogo';                 // (testes e desenvolvimento: pula abertura e sala)
+  else if (Q.has('sala')) entrarSala();
+  else iniciarAbertura();
   // Baixa o T. rex em segundo plano logo após o jogo abrir para estar pronto ao visitar a Selva
   setTimeout(() => garantirTrex(false), 900);
 
@@ -1751,11 +1893,17 @@ export async function iniciarJogo() {
 
     const tFrente = (touch.acel ? 1 : 0) - (touch.freio ? 1 : 0) - touch.mz;
     const tLado = (touch.dir ? 1 : 0) - (touch.esq ? 1 : 0) + touch.mx;
-    const frente = (teclas.has('KeyW') || teclas.has('ArrowUp') ? 1 : 0) - (teclas.has('KeyS') || teclas.has('ArrowDown') ? 1 : 0) + tFrente;
-    const lado = (teclas.has('KeyD') || teclas.has('ArrowRight') ? 1 : 0) - (teclas.has('KeyA') || teclas.has('ArrowLeft') ? 1 : 0) + tLado;
+    const jogando = modo === 'jogo';
+    // abertura e sala: a câmera é da cena (cine.foco guia o que a cidade mostra); o jogador não se move
+    let cine = null;
+    if (modo === 'abertura') cine = abertura.atualizar(dt);
+    if (modo === 'sala') cine = atualizarCamSala(dt);
+    if (camFixa) { camera.position.copy(camFixa.p); camera.lookAt(camFixa.a); cine = { foco: { x: camFixa.a.x, z: camFixa.a.z }, trexAlvo: [1e5, 0, 1e5] }; }
+    const frente = !jogando ? 0 : (teclas.has('KeyW') || teclas.has('ArrowUp') ? 1 : 0) - (teclas.has('KeyS') || teclas.has('ArrowDown') ? 1 : 0) + tFrente;
+    const lado = !jogando ? 0 : (teclas.has('KeyD') || teclas.has('ArrowRight') ? 1 : 0) - (teclas.has('KeyA') || teclas.has('ArrowLeft') ? 1 : 0) + tLado;
     const joyMag = Math.hypot(touch.mx, touch.mz);
-    const sprint = teclas.has('ShiftLeft') || teclas.has('ShiftRight') || touch.correr || joyMag > 0.82;
-    const espaco = teclas.has('Space') || touch.pular || touch.drift;
+    const sprint = jogando && (teclas.has('ShiftLeft') || teclas.has('ShiftRight') || touch.correr || joyMag > 0.82);
+    const espaco = jogando && (teclas.has('Space') || touch.pular || touch.drift);
 
     let focoX, focoY, focoZ, focoYaw, velAbs = 0;
 
@@ -1876,7 +2024,7 @@ export async function iniciarJogo() {
 
       focoX = jogador.x; focoY = jogador.y + 1.45; focoZ = jogador.z; focoYaw = jogador.ry;
 
-      const perto = acharVeiculoPerto();
+      const perto = jogando ? acharVeiculoPerto() : null;
       $('touch-entrar')?.classList.toggle('tbtn-destaque', !!perto);
       if (perto) {
         elPrompt.textContent = `[E] Entrar: ${perto.nome}`;
@@ -1891,8 +2039,16 @@ export async function iniciarJogo() {
 
     // Atualiza setores visíveis, trânsito, frota distante, T. rex da Selva, fumaça de drift e NPCs próximos
     fumacaDrift.atualizar(dt);
-    cidade.atualizar(dt, tTotal, focoX, focoZ);
-    atualizarTrex(dt, tTotal, focoX, focoY, focoZ);
+    if (cine) {
+      const fx = cine.foco.x, fz = cine.foco.z;
+      cidade.atualizar(dt, tTotal, fx, fz);
+      const ta = cine.trexAlvo || [jogador.x, jogador.y, jogador.z];
+      atualizarTrex(dt, tTotal, ta[0], ta[1], ta[2]);
+      focoX = fx; focoZ = fz;
+    } else {
+      cidade.atualizar(dt, tTotal, focoX, focoZ);
+      atualizarTrex(dt, tTotal, focoX, focoY, focoZ);
+    }
     const vDist2 = (qualAtual.viewDist + 20) * (qualAtual.viewDist + 20);
     for (let i = 0; i < veiculos.length; i++) {
       const v = veiculos[i];
@@ -1909,10 +2065,11 @@ export async function iniciarJogo() {
     });
 
     // ---- Checkpoint
+    cpGrupo.visible = jogando;
     cpAnel.rotation.z = tTotal * 1.4;
     cpFeixe.material.opacity = 0.13 + 0.06 * Math.sin(tTotal * 3.2);
     const cp = CHECKPOINTS[cpIdx];
-    if (Math.hypot(focoX - cp.x, focoZ - cp.z) < 5.8) {
+    if (jogando && Math.hypot(focoX - cp.x, focoZ - cp.z) < 5.8) {
       score += 100;
       elScore.textContent = `${score} pts`;
       som.tocarBeep(660, 0.16, 0.09);
@@ -1938,8 +2095,10 @@ export async function iniciarJogo() {
       rainGeo.attributes.position.needsUpdate = true;
     }
 
-    // ---- Câmera (3ª pessoa / Capô / Aérea)
-    if (camModo === 0) {
+    // ---- Câmera (abertura/sala já posicionaram a câmera; senão 3ª pessoa / Capô / Aérea)
+    if (cine) {
+      // nada: a câmera da cena já foi posicionada
+    } else if (camModo === 0) {
       const d = jogador.veiculo ? Math.max(camDist, jogador.veiculo.camDist) : camDist;
       const h = (jogador.veiculo ? jogador.veiculo.camAlt : 1.7) + Math.sin(camPitch) * d * 0.72;
       const hDist = Math.cos(camPitch) * d;
@@ -1996,6 +2155,11 @@ export async function iniciarJogo() {
   }
   window.__jogo = {
     pausar: v => { pausado = v; },
+    modo: () => modo,
+    camFixa: (p, a) => { camFixa = p ? { p: new THREE.Vector3(...p), a: new THREE.Vector3(...a) } : null; },
+    pose: () => ({ jogador: { x: jogador.x, z: jogador.z, ry: jogador.ry }, veiculos: veiculos.map(v => ({ id: v.id, x: v.x, z: v.z, ry: v.ry, raio: v.raio })) }),
+    abertura: { duracao: abertura.duracao, marcos: () => abertura.linha.map(s => [s.t0, s.t1, s.loc.id]), irPara: t => abertura.irPara(t), pular: () => abertura.pular(), iniciar: () => iniciarAbertura() },
+    sala: { escolher: (campo, id) => sala.escolher(campo, id), jogar: () => document.getElementById('sala-jogar').click(), abrir: () => entrarSala() },
     passo: dt => passo(dt),
     entrar: () => { entrarOuSairVeiculo(); snapCam = true; },
     teleportar: id => { const pt = PONTOS_TELEPORTE.find(p => p.id === id); if (pt) teleportar(pt); },
