@@ -2283,7 +2283,7 @@ export async function iniciarJogo() {
         const nx = jogador.x + Math.sin(dirMundo) * passo, nz = jogador.z + Math.cos(dirMundo) * passo;
         const pl = jogador.plataforma;
         // pulou por cima da mureta do terraço (no ar, acima dela, saindo do retângulo): cai do prédio
-        if (pl && !pl.interior && !jogador.noChao && jogador.y > pl.y + 0.95 && (nx < pl.minX || nx > pl.maxX || nz < pl.minZ || nz > pl.maxZ)) { jogador.plataforma = null; mostrarToast('Você pulou do terraço!'); }
+        if (pl && !pl.interior && !jogador.noChao && jogador.y > pl.y + 0.95 && (nx < pl.minX + 0.4 || nx > pl.maxX - 0.4 || nz < pl.minZ + 0.4 || nz > pl.maxZ - 0.4)) { jogador.plataforma = null; mostrarToast('Você pulou do terraço!'); }
         const col = jogador.plataforma ? moverNaPlataforma(nx, nz, 0.38) : resolverColisoes(nx, nz, 0.42);
         jogador.x = col.x; jogador.z = col.z;
         if (!jogador.plataforma) for (const o of veiculos) {                       // não atravessa os carros
@@ -2480,6 +2480,10 @@ export async function iniciarJogo() {
   window.__jogo = {
     pausar: v => { pausado = v; },
     modo: () => modo,
+    fisica: () => ({ vida: vida.hp, terrenoMin: terreno ? Math.min(...terreno.h) : null, terrenoMax: terreno ? Math.max(...terreno.h) : null,
+      cargas: veiculos.filter(v => v.api?.cacambas || v.api?.cargaAtual).map(v => [v.id, ...(v.api.cacambas || []).map(c => +c.carga.toFixed(2)), v.api.cargaAtual ? +v.api.cargaAtual().toFixed(2) : null]),
+      queimados: veiculos.filter(v => v.queimado).map(v => v.id), hp: veiculos.filter(v => v.hp < 100).map(v => [v.id, Math.round(v.hp)]), trex: trexState.hp }),
+    danoTrex: n => danoTrex(n),
     missao, loja, balacam, mira: () => ({ ...mira }),
     irParaPos: (x, z, ry = 0, terraco = false) => irPara({ x, z, ry }, terraco === 'manter' ? jogador.plataforma : terraco ? TORRE.terraco : null),
     mirar: (yaw, pitch, fov) => { if (!mira.ativa) entrarMira(true); mira.yaw = yaw; mira.pitch = pitch; if (fov) mira.fov = fov; },
