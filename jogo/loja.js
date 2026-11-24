@@ -5,6 +5,7 @@
 // e ao fim ele já está com 5 balas de sniper e os pentes repostos.
 import * as THREE from 'three';
 import { Personagem } from '../videos/biblioteca3d/personagens/elenco/elenco.js';
+import { instalarAnimacoesUniversal } from '../videos/biblioteca3d/animacoes/universal.js';
 import { ik2 } from './armas.js';
 import { LOJA_PORTA } from './missao.js';
 
@@ -85,7 +86,8 @@ export class Loja {
     // vendedor
     this.vend = await Personagem.carregar(`${this.base}/personagens/elenco/homem.glb`);
     this.vend.obj.position.set(0, 0, -3.3); this.vend.obj.traverse(m => { if (m.isMesh) m.castShadow = true; });
-    g.add(this.vend.obj); this.vend.tocar('Parado'); this.vend.piscarAuto(true); this.vend.rosto({ expressao: 'sorriso', forca: 0.6 });
+    try { await instalarAnimacoesUniversal(this.vend, { preCarregar: ['ParadoPro'] }); } catch (_) {}
+    g.add(this.vend.obj); this.vend.tocar('ParadoPro'); this.vend.piscarAuto(true); this.vend.rosto({ expressao: 'sorriso', forca: 0.6 });
     // fachada na cidade: letreiro sobre a porta
     const fach = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 1.0), new THREE.MeshBasicMaterial({ map: texto(1040, 200, (c, w, h) => { c.fillStyle = '#111827'; c.fillRect(0, 0, w, h); c.strokeStyle = '#facc15'; c.lineWidth = 10; c.strokeRect(6, 6, w - 12, h - 12); c.fillStyle = '#facc15'; c.font = '900 84px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('ARMAS & MUNIÇÃO', w / 2, h / 2 + 4); }) }));
     fach.position.set(LOJA_PORTA.x, 4.6, LOJA_PORTA.z - 0.95); this.scene.add(fach);

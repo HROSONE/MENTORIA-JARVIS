@@ -7,6 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { TILE, CALCADA, ESCALA_VEICULO } from '../videos/biblioteca3d/cidade/kit.js';
 import { Personagem } from '../videos/biblioteca3d/personagens/elenco/elenco.js';
 import { Corredor } from '../videos/biblioteca3d/personagens/corredor/corredor.js';
+import { instalarAnimacoesUniversal } from '../videos/biblioteca3d/animacoes/universal.js';
 import { criarViatura, criarAmbiente } from '../videos/biblioteca3d/veiculos/policia/viatura.js';
 import { criarAmbulancia } from '../videos/biblioteca3d/veiculos/ambulancia/ambulancia.js';
 import * as Hatch from '../videos/biblioteca3d/veiculos/hatch/hatch.js';
@@ -152,18 +153,50 @@ class SomJogo {
     o1.start(now); o2.start(now);
     o1.stop(now + dur + 0.04); o2.stop(now + dur + 0.04);
   }
+  tocarSoco(combo = 0) {
+    if (!this.ctx || this.mudo) return;
+    const now = this.ctx.currentTime;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = 'triangle';
+    const f0 = combo === 2 ? 195 : (combo === 1 ? 165 : 145);
+    o.frequency.setValueAtTime(f0, now);
+    o.frequency.exponentialRampToValueAtTime(46, now + 0.11);
+    g.gain.setValueAtTime(0.16, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    o.connect(g); g.connect(this.ctx.destination);
+    o.start(now); o.stop(now + 0.13);
+  }
+  tocarRolar() {
+    if (!this.ctx || this.mudo) return;
+    const now = this.ctx.currentTime;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(120, now);
+    o.frequency.exponentialRampToValueAtTime(52, now + 0.18);
+    g.gain.setValueAtTime(0.11, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.20);
+    o.connect(g); g.connect(this.ctx.destination);
+    o.start(now); o.stop(now + 0.21);
+  }
 }
+
+const CLIPES_JOGADOR = [
+  'ParadoPro', 'AndarPro', 'Trotar', 'CorrerSprint',
+  'AgacharParado', 'AgacharAndar', 'PularAr', 'AcrobaciaRolar',
+  'SocoJab', 'SocoDireto', 'SocoGancho',
+];
+const COMBO_SOCOS = ['SocoJab', 'SocoDireto', 'SocoGancho'];
 
 const QUALIDADES = {
   leve: {
     id: 'leve', rotulo: 'Leve',
     pixelRatio: 0.75,
     pbr: false, mostrarDecor: false,
-    viaturaCompleta: false, personagemCompleto: false,
+    viaturaCompleta: false, personagemCompleto: true,
     sombras: false, sombraRaio: 36,
     sombraPrincipal: false, sombraDetalhe: false,
     viewDist: 120, camFar: 165, fogNear: 55, fogFar: 155,
-    npcsMax: 0, npcDist: 40, trafegoMax: 8,
+    npcsMax: 3, npcDist: 45, trafegoMax: 8,
     rainN: 220, minimapInterval: 0.16,
   },
   medio: {
@@ -911,6 +944,13 @@ export async function iniciarJogo() {
     vy: 0, ry: -0.45,
     noChao: true,
     veiculo: null,
+    agachado: false,
+    rolando: 0,
+    golpeando: 0,
+    comboIdx: 0,
+    comboReset: 0,
+    sprintTravado: false,
+    focoAlt: 1.45,
   };
 
   function ativarPersonagemLeve() {
@@ -937,6 +977,11 @@ export async function iniciarJogo() {
         inst = await Corredor.carregar(def.url);
         if (def.tipo === 'silhueta') inst.silhueta();
       }
+      try {
+        await instalarAnimacoesUniversal(inst, { preCarregar: CLIPES_JOGADOR });
+      } catch (e) {
+        console.warn('Animações universais fallback:', e);
+      }
       inst.obj.traverse(m => { if (m.isMesh) { m.castShadow = qualAtual.sombraDetalhe; m.receiveShadow = true; } });
       inst.obj.visible = false;
       scene.add(inst.obj);
@@ -949,17 +994,19 @@ export async function iniciarJogo() {
     persAtual.inst.obj.rotation.y = jogador.ry;
     persAtual.inst.obj.visible = !jogador.veiculo;
     persAcao = '';
-    tocarAcao('Parado');
+    tocarAcao(jogador.agachado ? 'AgacharParado' : 'ParadoPro');
     elPersNome.textContent = def.nome;
   }
 
-  function tocarAcao(nome, fade = 0.18) {
-    if (!persAtual || persAcao === nome) return;
+  function tocarAcao(nome, fade = 0.16, { loop = true, velocidade = 1, forcar = false } = {}) {
+    if (!persAtual || (!forcar && persAcao === nome)) return;
     try {
-      persAtual.inst.tocar(nome, { fade, loop: nome !== 'Pular' });
+      const naoRepete = !loop || nome === 'Pular' || nome === 'PularAr' || nome === 'AcrobaciaRolar' || nome.startsWith('Soco');
+      persAtual.inst.tocar(nome, { fade, velocidade, loop: !naoRepete });
       persAcao = nome;
     } catch (_) {
-      if (nome !== 'Parado') tocarAcao('Parado', fade);
+      const fallback = nome.includes('Correr') || nome === 'Trotar' ? 'Correr' : (nome.includes('Andar') ? 'Andar' : 'Parado');
+      if (nome !== fallback) tocarAcao(fallback, fade);
     }
   }
 
@@ -973,10 +1020,17 @@ export async function iniciarJogo() {
   try { await armas.carregar(BASE_BIB); } catch (e) { console.warn('armas não carregaram', e); }
   window.__armas = armas;                                                            // (para testes automáticos)
   const elMira = $('mira'), elArma = $('hud-arma');
+  const elPataCentral = $('touch-atirar'), elPataIcone = $('pata-icone'), elPataRotulo = $('pata-rotulo');
+  const elBtnRecarregar = $('touch-recarregar'), elBtnMirar = $('touch-mirar');
   function atualizarHudArma() {
     const inf = armas.info, armado = !!inf && !jogador.veiculo;
     elMira.classList.toggle('oculto', !armado || camModo === 2); elArma.classList.toggle('oculto', !inf);
     if (inf) elArma.textContent = `${{ pistola: '🔫', metralhadora: '🔫🔫', sniper: '🎯' }[inf.id]} ${inf.nome} · ${inf.recarregando ? 'recarregando…' : `${inf.municao}/${inf.pente}`} · reserva ${inf.reserva}`;
+    if (elPataCentral) elPataCentral.classList.toggle('armado', armado);
+    if (elPataIcone) elPataIcone.textContent = armado ? '🔥' : '👊';
+    if (elPataRotulo) elPataRotulo.textContent = armado ? 'Atirar' : 'Soco';
+    if (elBtnRecarregar) elBtnRecarregar.classList.toggle('oculto', !armado);
+    if (elBtnMirar) elBtnMirar.classList.toggle('oculto', !armado);
   }
   const NOMES_ARMA = { pistola: 'pistola', metralhadora: 'metralhadora', sniper: 'sniper' };
   function trocarArma(id) {
@@ -986,7 +1040,7 @@ export async function iniciarJogo() {
     armas.equipar(armas.atual === id ? null : id);
     // o personagem ultra-leve (modo Leve) não tem esqueleto: para segurar a arma, troca pelo elenco completo
     if (armas.ativa && usandoPersLeve) carregarPersonagem(persIdx).then(() => mostrarToast(`${armas.info?.nome ?? 'Arma'} na mão · clique para atirar · X recarrega`));
-    mostrarToast(armas.ativa ? `${armas.info.nome} na mão · clique para atirar · X recarrega` : 'Arma guardada');
+    mostrarToast(armas.ativa ? `${armas.info.nome} na mão · clique para atirar · X recarrega` : 'Punhos livres · botão central para Soco');
     atualizarHudArma();
   }
 
@@ -1155,8 +1209,15 @@ export async function iniciarJogo() {
     return melhor;
   }
 
+  function sincronizarBotoesPata() {
+    $('touch-agachar')?.classList.toggle('ativo', !!jogador.agachado);
+    $('touch-correr')?.classList.toggle('travado', !!jogador.sprintTravado);
+  }
+
   function entrarOuSairVeiculo() {
     som.desbloquear();
+    jogador.agachado = false; jogador.rolando = 0; jogador.golpeando = 0; jogador.sprintTravado = false;
+    sincronizarBotoesPata();
     if (jogador.veiculo) {
       const v = jogador.veiculo;
       const lx = Math.cos(v.ry) * (v.raio + 1.15);
@@ -1169,7 +1230,7 @@ export async function iniciarJogo() {
       if (v.api?.re) v.api.re(false);
       persAtual.inst.obj.visible = true;
       persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
-      tocarAcao('Parado');
+      tocarAcao('ParadoPro');
       som.tocarPorta();
       mostrarToast(`Saiu de: ${v.nome}`);
     } else {
@@ -1543,12 +1604,59 @@ export async function iniciarJogo() {
     }, 180);
   });
 
+  function alternarAgachar(forcar = null) {
+    if (modo !== 'jogo' || travado || balacam.ativa || jogador.veiculo || mira.ativa) return;
+    som.desbloquear();
+    jogador.agachado = forcar === null ? !jogador.agachado : !!forcar;
+    if (jogador.agachado) jogador.sprintTravado = false;
+    sincronizarBotoesPata();
+  }
+
+  function iniciarRolamento() {
+    if (modo !== 'jogo' || travado || balacam.ativa || jogador.veiculo || mira.ativa) return;
+    if (!jogador.noChao || jogador.rolando > 0.08) return;
+    som.desbloquear();
+    jogador.agachado = false;
+    jogador.golpeando = 0;
+    jogador.rolando = 0.66;
+    sincronizarBotoesPata();
+    som.tocarRolar();
+    tocarAcao('AcrobaciaRolar', 0.08, { loop: false, velocidade: 1.35, forcar: true });
+  }
+
+  function desferirGolpe() {
+    if (modo !== 'jogo' || travado || balacam.ativa || jogador.veiculo || mira.ativa || armas.ativa) return;
+    if (!jogador.noChao || jogador.rolando > 0 || jogador.golpeando > 0.14) return;
+    som.desbloquear();
+    if (jogador.agachado) {
+      jogador.agachado = false;
+      sincronizarBotoesPata();
+    }
+    const idx = jogador.comboReset > 0 ? jogador.comboIdx : 0;
+    const clipe = COMBO_SOCOS[idx % COMBO_SOCOS.length];
+    jogador.comboIdx = (idx + 1) % COMBO_SOCOS.length;
+    jogador.comboReset = 1.15;
+    jogador.golpeando = 0.44;
+    som.tocarSoco(idx);
+    tocarAcao(clipe, 0.06, { loop: false, velocidade: 1.28, forcar: true });
+    // Leve avanço de combate a cada golpe
+    const passo = 0.28;
+    const nx = jogador.x + Math.sin(jogador.ry) * passo, nz = jogador.z + Math.cos(jogador.ry) * passo;
+    const col = jogador.plataforma ? moverNaPlataforma(nx, nz, 0.38) : resolverColisoes(nx, nz, 0.42);
+    jogador.x = col.x; jogador.z = col.z;
+  }
+
   addEventListener('keydown', e => {
     const code = e.code;
-    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) e.preventDefault();
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'AltLeft', 'AltRight'].includes(code)) e.preventDefault();
     if (!teclas.has(code)) {
       if (modo !== 'jogo') { /* abertura e sala tratam as próprias teclas */ }
       else if (code === 'KeyE') { const it = interacaoAtual(); if (it) it.fazer(); else entrarOuSairVeiculo(); }
+      else if (code === 'KeyB' || code === 'ControlLeft' || code === 'ControlRight') alternarAgachar();
+      else if (code === 'AltLeft' || code === 'AltRight') iniciarRolamento();
+      else if (code === 'ShiftLeft' || code === 'ShiftRight') {
+        if (jogador.agachado) { jogador.agachado = false; sincronizarBotoesPata(); }
+      }
       else if (code === 'KeyZ') { if (mira.ativa) sairMira(true); else entrarMira(true); }
       else if (code === 'Escape' && mira.ativa) sairMira(true);
       else if (code === 'KeyP') entrarSala();
@@ -1593,7 +1701,10 @@ export async function iniciarJogo() {
   renderer.domElement.addEventListener('mousedown', e => {
     if (modo !== 'jogo' || travado || balacam.ativa) return;
     if (e.button === 2) entrarMira(false);
-    if (e.button === 0 && armas.ativa && !jogador.veiculo) armas.gatilho(true);
+    if (e.button === 0 && !jogador.veiculo) {
+      if (armas.ativa) armas.gatilho(true);
+      else desferirGolpe();
+    }
   });
   addEventListener('mouseup', e => {
     if (e.button === 2 && mira.ativa && !mira.fixa) sairMira(false);
@@ -1702,9 +1813,23 @@ export async function iniciarJogo() {
 
   $('touch-entrar').onclick = () => { const it = interacaoAtual(); if (it) it.fazer(); else entrarOuSairVeiculo(); };
   $('touch-mirar').onclick = () => { if (mira.ativa) sairMira(true); else entrarMira(true); };
+  $('touch-recarregar').onclick = () => { som.desbloquear(); armas.recarregar(); };
   $('touch-sair').onclick = entrarOuSairVeiculo;
   bindSegurar('touch-pular', v => { touch.pular = v; });
-  bindSegurar('touch-correr', v => { touch.correr = v; });
+  let tToqueCorrer = 0;
+  bindSegurar('touch-correr', v => {
+    touch.correr = v;
+    if (v) {
+      tToqueCorrer = performance.now();
+      if (jogador.agachado) { jogador.agachado = false; sincronizarBotoesPata(); }
+    } else if (performance.now() - tToqueCorrer < 240) {
+      jogador.sprintTravado = !jogador.sprintTravado;
+      if (jogador.sprintTravado) jogador.agachado = false;
+      sincronizarBotoesPata();
+    }
+  });
+  bindSegurar('touch-agachar', v => { if (v) alternarAgachar(); });
+  bindSegurar('touch-rolar', v => { if (v) iniciarRolamento(); });
   bindSegurar('touch-esq', v => { touch.esq = v; });
   bindSegurar('touch-dir', v => { touch.dir = v; });
   bindSegurar('touch-acel', v => { touch.acel = v; });
@@ -1715,7 +1840,10 @@ export async function iniciarJogo() {
     if (ordem.length === 1) { mostrarToast('Você ainda não tem armas: procure os ícones P, M e S no minimapa.'); return; }
     trocarArma(ordem[(ordem.indexOf(armas.atual) + 1) % ordem.length] ?? armas.atual);
   };
-  bindSegurar('touch-atirar', v => armas.gatilho(v));
+  bindSegurar('touch-atirar', v => {
+    if (armas.ativa) armas.gatilho(v);
+    else if (v) desferirGolpe();
+  });
 
   // ---- Minimapa (Canvas 2D)
   function desenharMinimapa(px, pz, pyaw) {
@@ -2035,7 +2163,7 @@ export async function iniciarJogo() {
     let frente = !jogando ? 0 : (teclas.has('KeyW') || teclas.has('ArrowUp') ? 1 : 0) - (teclas.has('KeyS') || teclas.has('ArrowDown') ? 1 : 0) + tFrente;
     let lado = !jogando ? 0 : (teclas.has('KeyD') || teclas.has('ArrowRight') ? 1 : 0) - (teclas.has('KeyA') || teclas.has('ArrowLeft') ? 1 : 0) + tLado;
     const joyMag = Math.hypot(touch.mx, touch.mz);
-    const sprint = jogando && (teclas.has('ShiftLeft') || teclas.has('ShiftRight') || touch.correr || joyMag > 0.82);
+    const sprint = jogando && !jogador.agachado && (teclas.has('ShiftLeft') || teclas.has('ShiftRight') || touch.correr || jogador.sprintTravado);
     const espaco = jogando && !mira.ativa && (teclas.has('Space') || touch.pular || touch.drift);
     if (mira.ativa) {                                                            // na luneta, as setas/WASD ajustam a mira em vez de andar
       const k = mira.fov / 56;
@@ -2122,26 +2250,42 @@ export async function iniciarJogo() {
       elPrompt.classList.add('oculto');
     } else {
       // ==================== A PÉ ====================
+      jogador.rolando = Math.max(0, jogador.rolando - dt);
+      jogador.golpeando = Math.max(0, jogador.golpeando - dt);
+      jogador.comboReset = Math.max(0, jogador.comboReset - dt);
+
       const mag = Math.hypot(frente, lado);
       const movendo = mag > 0.08;
-      if (movendo) {
-        const dirMundo = Math.atan2(
-          Math.sin(camYaw) * frente - Math.cos(camYaw) * lado,
-          Math.cos(camYaw) * frente + Math.sin(camYaw) * lado
-        );
+      const dirMundo = movendo ? Math.atan2(
+        Math.sin(camYaw) * frente - Math.cos(camYaw) * lado,
+        Math.cos(camYaw) * frente + Math.sin(camYaw) * lado
+      ) : jogador.ry;
+
+      if (jogador.rolando > 0) {
+        if (movendo) jogador.ry += anguloDiff(jogador.ry, dirMundo) * Math.min(1, dt * 6);
+        const velRolar = 7.2 * (0.62 + 0.38 * (jogador.rolando / 0.66));
+        const passo = velRolar * dt;
+        const nx = jogador.x + Math.sin(jogador.ry) * passo, nz = jogador.z + Math.cos(jogador.ry) * passo;
+        const col = jogador.plataforma ? moverNaPlataforma(nx, nz, 0.38) : resolverColisoes(nx, nz, 0.42);
+        jogador.x = col.x; jogador.z = col.z;
+        velAbs = velRolar;
+      } else if (movendo) {
         jogador.ry += anguloDiff(jogador.ry, dirMundo) * Math.min(1, dt * 11);
-        const velBase = sprint ? 6.4 : 2.9;
-        const passo = velBase * Math.min(1, mag) * dt;
+        const velBase = jogador.agachado ? 1.95 : (sprint ? 6.5 : (mag > 0.62 ? 3.85 : 2.45));
+        const fatorGolpe = jogador.golpeando > 0 ? 0.35 : 1;
+        const passo = velBase * fatorGolpe * Math.min(1, mag) * dt;
         const nx = jogador.x + Math.sin(dirMundo) * passo, nz = jogador.z + Math.cos(dirMundo) * passo;
         const col = jogador.plataforma ? moverNaPlataforma(nx, nz, 0.38) : resolverColisoes(nx, nz, 0.42);
         jogador.x = col.x; jogador.z = col.z;
-        velAbs = velBase * Math.min(1, mag);
+        velAbs = velBase * fatorGolpe * Math.min(1, mag);
       }
 
-      if (espaco && jogador.noChao) {
-        jogador.vy = 6.2;
+      if (espaco && jogador.noChao && jogador.rolando <= 0) {
+        if (jogador.agachado) { jogador.agachado = false; sincronizarBotoesPata(); }
+        jogador.golpeando = 0;
+        jogador.vy = 6.3;
         jogador.noChao = false;
-        tocarAcao('Pular', 0.08);
+        tocarAcao('PularAr', 0.08, { loop: false });
       }
       if (!jogador.noChao) {
         jogador.vy -= 17.5 * dt;
@@ -2152,18 +2296,25 @@ export async function iniciarJogo() {
         }
       }
       if (jogador.noChao) {
-        if (!movendo) tocarAcao('Parado');
-        else tocarAcao(sprint ? 'Correr' : 'Andar');
+        if (jogador.rolando > 0) { /* mantém AcrobaciaRolar */ }
+        else if (jogador.golpeando > 0) { /* mantém Soco atual */ }
+        else if (jogador.agachado) tocarAcao(movendo ? 'AgacharAndar' : 'AgacharParado', 0.16);
+        else if (!movendo) tocarAcao('ParadoPro', 0.20);
+        else if (sprint) tocarAcao('CorrerSprint', 0.16);
+        else if (mag > 0.62) tocarAcao('Trotar', 0.18);
+        else tocarAcao('AndarPro', 0.18);
       }
 
       if (mira.ativa) jogador.ry = mira.yaw;
-      else if (armas.ativa) jogador.ry += anguloDiff(jogador.ry, camYaw) * Math.min(1, dt * 14);   // armado: o corpo vira para onde a câmera mira
+      else if (armas.ativa && jogador.rolando <= 0) jogador.ry += anguloDiff(jogador.ry, camYaw) * Math.min(1, dt * 14);   // armado: o corpo vira para onde a câmera mira
       persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
       persAtual.inst.obj.rotation.y = jogador.ry;
       persAtual.inst.atualizar(dt);
-      armas.atualizar(dt, tTotal, persAtual.inst.obj, true);
+      armas.atualizar(dt, tTotal, persAtual.inst.obj, jogador.rolando <= 0);
 
-      focoX = jogador.x; focoY = jogador.y + 1.45; focoZ = jogador.z; focoYaw = jogador.ry;
+      const altAlvo = jogador.rolando > 0 ? 0.95 : (jogador.agachado ? 1.04 : 1.45);
+      jogador.focoAlt += (altAlvo - jogador.focoAlt) * Math.min(1, dt * 10);
+      focoX = jogador.x; focoY = jogador.y + jogador.focoAlt; focoZ = jogador.z; focoYaw = jogador.ry;
 
       const inter = jogando ? interacaoAtual() : null;
       const perto = jogando && !inter ? acharVeiculoPerto() : null;
@@ -2318,7 +2469,14 @@ export async function iniciarJogo() {
     irParaPos: (x, z, ry = 0, terraco = false) => irPara({ x, z, ry }, terraco === 'manter' ? jogador.plataforma : terraco ? TORRE.terraco : null),
     mirar: (yaw, pitch, fov) => { if (!mira.ativa) entrarMira(true); mira.yaw = yaw; mira.pitch = pitch; if (fov) mira.fov = fov; },
     camFixa: (p, a) => { camFixa = p ? { p: new THREE.Vector3(...p), a: new THREE.Vector3(...a) } : null; },
-    pose: () => ({ jogador: { x: jogador.x, z: jogador.z, ry: jogador.ry }, veiculos: veiculos.map(v => ({ id: v.id, x: v.x, z: v.z, ry: v.ry, raio: v.raio })) }),
+    pose: () => ({ jogador: { x: jogador.x, y: jogador.y, z: jogador.z, ry: jogador.ry, acao: persAcao, agachado: jogador.agachado, rolando: jogador.rolando, golpeando: jogador.golpeando, sprintTravado: jogador.sprintTravado }, veiculos: veiculos.map(v => ({ id: v.id, x: v.x, z: v.z, ry: v.ry, raio: v.raio })) }),
+    acoes: {
+      agachar: v => alternarAgachar(v),
+      rolar: () => iniciarRolamento(),
+      golpear: () => desferirGolpe(),
+      trocarPers: idx => carregarPersonagem(idx),
+      equipar: id => trocarArma(id),
+    },
     abertura: { duracao: abertura.duracao, marcos: () => abertura.linha.map(s => [s.t0, s.t1, s.loc.id]), irPara: t => abertura.irPara(t), pular: () => abertura.pular(), iniciar: () => iniciarAbertura() },
     sala: { escolher: (campo, id) => sala.escolher(campo, id), jogar: () => document.getElementById('sala-jogar').click(), abrir: () => entrarSala() },
     passo: dt => passo(dt),

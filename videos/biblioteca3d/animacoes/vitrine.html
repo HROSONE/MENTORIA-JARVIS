@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>Vitrine — Animações Profissionais Universais em Todos os Personagens</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#0e1b2e;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center}
+  canvas{display:block;max-width:100vw;max-height:100vh}
+</style>
+<script type="importmap">{"imports":{"three":"../../node_modules/three/build/three.module.js","three/addons/":"../../node_modules/three/examples/jsm/"}}</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { Personagem } from '../personagens/elenco/elenco.js';
+import { criarLucasReal } from '../../lucas_poder/js/lucasreal.js';
+import { instalarAnimacoesUniversal } from './universal.js';
+
+const Q = new URLSearchParams(location.search);
+const larg = +(Q.get('w') || 960), alt = +(Q.get('h') || 540);
+
+const renderer = new THREE.WebGLRenderer({ antialias: Q.get('aa') !== '0', preserveDrawingBuffer: true });
+renderer.setSize(larg, alt);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.08;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x112238);
+scene.fog = new THREE.Fog(0x112238, 9, 22);
+
+const cam = new THREE.PerspectiveCamera(36, larg / alt, 0.1, 40);
+cam.position.set(0, 1.55, 5.45);
+cam.lookAt(0, 0.92, 0);
+
+scene.add(new THREE.HemisphereLight(0xdff0ff, 0x1b2d44, 1.35));
+const sol = new THREE.DirectionalLight(0xfff2dc, 2.3);
+sol.position.set(3.2, 5.5, 4.2);
+sol.castShadow = true;
+sol.shadow.mapSize.set(1024, 1024);
+Object.assign(sol.shadow.camera, { near: 1, far: 16, left: -4, right: 4, top: 3, bottom: -3 });
+scene.add(sol);
+const rim = new THREE.DirectionalLight(0x74c8ff, 1.15);
+rim.position.set(-3.5, 2.8, -2.8);
+scene.add(rim);
+
+// Piso de estúdio quadriculado discreto para provar contato exato dos pés em y=0!
+const cPiso = document.createElement('canvas'); cPiso.width = cPiso.height = 256;
+const gp = cPiso.getContext('2d');
+gp.fillStyle = '#182f4c'; gp.fillRect(0, 0, 256, 256);
+gp.fillStyle = '#1d385a'; gp.fillRect(0, 0, 128, 128); gp.fillRect(128, 128, 128, 128);
+const texPiso = new THREE.CanvasTexture(cPiso);
+texPiso.wrapS = texPiso.wrapT = THREE.RepeatWrapping;
+texPiso.repeat.set(12, 12);
+texPiso.colorSpace = THREE.SRGBColorSpace;
+const piso = new THREE.Mesh(new THREE.PlaneGeometry(24, 24), new THREE.MeshStandardMaterial({ map: texPiso, roughness: 0.82 }));
+piso.rotation.x = -Math.PI / 2;
+piso.receiveShadow = true;
+scene.add(piso);
+
+// Placa suspensa mostrando o nome da animação atual
+const cTag = document.createElement('canvas'); cTag.width = 768; cTag.height = 110;
+const gTag = cTag.getContext('2d');
+const texTag = new THREE.CanvasTexture(cTag);
+texTag.colorSpace = THREE.SRGBColorSpace;
+const placa = new THREE.Mesh(new THREE.PlaneGeometry(3.3, 0.47), new THREE.MeshBasicMaterial({ map: texTag, transparent: true }));
+placa.position.set(0, 2.24, -0.35);
+scene.add(placa);
+
+function escreverPlaca(titulo, sub) {
+  gTag.clearRect(0, 0, 768, 110);
+  gTag.fillStyle = 'rgba(10, 22, 38, 0.88)';
+  gTag.beginPath(); gTag.roundRect(8, 6, 752, 98, 22); gTag.fill();
+  gTag.strokeStyle = '#3ba4ff'; gTag.lineWidth = 4; gTag.stroke();
+  gTag.fillStyle = '#ffffff'; gTag.font = '900 34px "DejaVu Sans", sans-serif'; gTag.textAlign = 'center';
+  gTag.fillText(titulo, 384, 52);
+  gTag.fillStyle = '#9dd4ff'; gTag.font = '700 21px "DejaVu Sans", sans-serif';
+  gTag.fillText(sub, 384, 86);
+  texTag.needsUpdate = true;
+}
+
+// Carrega 5 personagens de famílias e estaturas diferentes!
+const [davi, lucas, professora, policial, astronauta] = await Promise.all([
+  Personagem.carregar('../personagens/elenco/davi.glb'),
+  criarLucasReal({ url: '../personagens/realistas/lucas10.glb' }),
+  criarLucasReal({ url: '../personagens/realistas/professora.glb' }),
+  Personagem.carregar('../personagens/elenco/policial.glb'),
+  Personagem.carregar('../personagens/elenco/astronauta.glb'),
+]);
+
+const atores = [
+  { a: davi, obj: davi.obj, x: -1.85, yaw: 0.22 },
+  { a: lucas, obj: lucas.grupo, x: -0.95, yaw: 0.14 },
+  { a: policial, obj: policial.obj, x: 0.0, yaw: 0.08 },
+  { a: professora, obj: professora.grupo, x: 0.95, yaw: -0.14 },
+  { a: astronauta, obj: astronauta.obj, x: 1.85, yaw: -0.22 },
+];
+
+const SEQUENCIA = [
+  { clip: 'CorrerSprint', titulo: 'CORRIDA SPRINT (Sprint_Loop)', sub: 'Davi · Lucas10 · Policial · Professora · Astronauta', dur: 1.8 },
+  { clip: 'AgacharAndar', titulo: 'FURTIVO AGACHADO (Crouch_Fwd_Loop)', sub: 'Retarget automático Elenco + Realistas', dur: 2.0 },
+  { clip: 'MirarPistola', titulo: 'MIRA TÁTICA (Pistol_Aim_Neutral)', sub: 'Punhos, ombros e coluna alinhados', dur: 1.8 },
+  { clip: 'SocoDireto', titulo: 'COMBATE / SOCO DIRETO (Punch_Cross)', sub: 'Torção real de quadril e peito + dedos fechados', dur: 1.8 },
+  { clip: 'AndarFurtivo', titulo: 'CAPTURA ÓPTICA CMU (cmu:120_09)', sub: 'Estúdio óptico real aplicado nos 5 esqueletos', dur: 2.0 },
+  { clip: 'Dancar', titulo: 'DANÇA / COMEMORAÇÃO (Dance_Loop)', sub: '117+ animações prontas p/ qualquer personagem!', dur: 2.2 },
+];
+const TOTAL = SEQUENCIA.reduce((s, x) => s + x.dur, 0);
+
+const nomesPre = SEQUENCIA.map(s => s.clip);
+for (const item of atores) {
+  item.obj.position.set(item.x, 0, 0);
+  item.obj.rotation.y = item.yaw;
+  scene.add(item.obj);
+  await instalarAnimacoesUniversal(item.a, { preCarregar: nomesPre });
+}
+
+let tituloAtual = '';
+async function desenharEm(t) {
+  const u = ((t % TOTAL) + TOTAL) % TOTAL;
+  let acc = 0, seg = SEQUENCIA[0], tLocal = 0;
+  for (const s of SEQUENCIA) {
+    if (u < acc + s.dur) { seg = s; tLocal = u - acc; break; }
+    acc += s.dur;
+  }
+  if (seg.titulo !== tituloAtual) {
+    tituloAtual = seg.titulo;
+    escreverPlaca(seg.titulo, seg.sub);
+  }
+  for (let i = 0; i < atores.length; i++) {
+    await atores[i].a.pose(seg.clip, tLocal + i * 0.08);
+    atores[i].obj.position.set(atores[i].x, 0, 0);
+    atores[i].obj.rotation.y = atores[i].yaw;
+  }
+  cam.position.set(Math.sin(u * 0.55) * 0.35, 1.50, 5.35 - 0.18 * Math.cos(u * 0.55));
+  cam.lookAt(0, 0.96, 0);
+  renderer.render(scene, cam);
+}
+
+window.__total = TOTAL;
+window.__frame = async (t, { jpeg = 0.92 } = {}) => {
+  await desenharEm(t);
+  return renderer.domElement.toDataURL('image/jpeg', jpeg);
+};
+
+if (!Q.has('studio')) {
+  let t = 0, ult = performance.now();
+  const loop = async now => {
+    const dt = Math.min((now - ult) / 1000, 0.08); ult = now;
+    t = (t + dt) % TOTAL;
+    await desenharEm(t);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+window.__ready = true;
+</script>
+</body>
+</html>
