@@ -1,6 +1,7 @@
 // HRYZ CITY — Jogo 3D de mundo aberto na Cidade Oficial do canal (Three.js r160)
 // Controles: WASD/Setas, Shift (correr), Espaço (pular / freio de mão), E (entrar/sair do carro),
 // L (sirene/giroflex), F (faróis), N (dia/noite), R (chuva), V (câmera), C (personagem), M (som), H (ajuda).
+// Armas (a pé): 1 pistola, 2 metralhadora, 3 ou G guardar, clique esquerdo atira (segure para rajada na metralhadora), X recarregar.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { TILE, CALCADA, ESCALA_VEICULO } from '../videos/biblioteca3d/cidade/kit.js';
@@ -8,6 +9,7 @@ import { Personagem } from '../videos/biblioteca3d/personagens/elenco/elenco.js'
 import { Corredor } from '../videos/biblioteca3d/personagens/corredor/corredor.js';
 import { criarViatura, criarAmbiente } from '../videos/biblioteca3d/veiculos/policia/viatura.js';
 import { construirCidade, PONTOS_TELEPORTE } from './cidade.js';
+import { Armas } from './armas.js';
 
 const BASE_BIB = './videos/biblioteca3d';
 
@@ -405,6 +407,24 @@ export async function iniciarJogo() {
 
   await carregarPersonagem(0);
 
+  // ---- Armas (pistola e metralhadora feitas no Blender)
+  atualizarProgresso(0.97, 'Carregando armas…');
+  const armas = new Armas({ scene, camera, som, alvos: () => [cidade.mundo, ...veiculos.map(v => v.obj)], chao: () => jogador.y });
+  try { await armas.carregar(BASE_BIB); } catch (e) { console.warn('armas não carregaram', e); }
+  window.__armas = armas;                                                            // (para testes automáticos)
+  const elMira = $('mira'), elArma = $('hud-arma');
+  function atualizarHudArma() {
+    const inf = armas.info, armado = !!inf && !jogador.veiculo;
+    elMira.classList.toggle('oculto', !armado || camModo === 2); elArma.classList.toggle('oculto', !inf);
+    if (inf) elArma.textContent = `${inf.nome === 'Pistola' ? '🔫' : '🔫🔫'} ${inf.nome} · ${inf.recarregando ? 'recarregando…' : `${inf.municao}/${inf.pente}`}`;
+  }
+  function trocarArma(id) {
+    if (jogador.veiculo) { mostrarToast('Saia do veículo para usar armas'); return; }
+    armas.equipar(armas.atual === id ? null : id);
+    mostrarToast(armas.ativa ? `${armas.info.nome} na mão · clique para atirar · X recarrega` : 'Arma guardada');
+    atualizarHudArma();
+  }
+
   // ---- Checkpoint Tour (anéis dourados nos marcos da cidade)
   let cpIdx = 0;
   let score = 0;
@@ -584,6 +604,10 @@ export async function iniciarJogo() {
     if (!teclas.has(code)) {
       if (code === 'KeyE') entrarOuSairVeiculo();
       else if (code === 'KeyQ') ciclarQualidade();
+      else if (code === 'Digit1') trocarArma('pistola');
+      else if (code === 'Digit2') trocarArma('metralhadora');
+      else if (code === 'Digit3' || code === 'KeyG') trocarArma(null);
+      else if (code === 'KeyX') armas.recarregar();
       else if (code === 'KeyN') { ehNoite = !ehNoite; aplicarClima(); mostrarToast(ehNoite ? 'Modo Noite ativado' : 'Modo Dia ativado'); }
       else if (code === 'KeyR') { ehChuva = !ehChuva; rainLines.visible = ehChuva; aplicarClima(); mostrarToast(ehChuva ? 'Chuva e pista molhada' : 'Tempo limpo'); }
       else if (code === 'KeyV') { camModo = (camModo + 1) % 3; mostrarToast(['Câmera: 3ª Pessoa', 'Câmera: Capô / 1ª Pessoa', 'Câmera: Aérea (Drone)'][camModo]); }
@@ -612,6 +636,7 @@ export async function iniciarJogo() {
   renderer.domElement.addEventListener('pointerdown', e => {
     if (e.target !== renderer.domElement) return;
     arrastando = true; ultimoX = e.clientX; ultimoY = e.clientY;
+    if (e.button === 0 && armas.ativa && !jogador.veiculo) armas.gatilho(true);
   });
   addEventListener('pointermove', e => {
     if (!arrastando) return;
@@ -621,7 +646,7 @@ export async function iniciarJogo() {
     camPitch = Math.max(0.06, Math.min(1.15, camPitch + dy * 0.0045));
     tempoSemMouse = 0;
   });
-  addEventListener('pointerup', () => { arrastando = false; });
+  addEventListener('pointerup', () => { arrastando = false; armas.gatilho(false); });
   renderer.domElement.addEventListener('wheel', e => {
     camDist = Math.max(3.5, Math.min(18, camDist + e.deltaY * 0.006));
   }, { passive: true });
@@ -676,6 +701,9 @@ export async function iniciarJogo() {
   joyBase.addEventListener('pointercancel', resetJoy);
 
   $('touch-entrar').onclick = entrarOuSairVeiculo;
+  $('touch-arma').onclick = () => trocarArma(armas.atual === null ? 'pistola' : armas.atual === 'pistola' ? 'metralhadora' : null);
+  $('touch-atirar').addEventListener('pointerdown', () => armas.gatilho(true));
+  $('touch-atirar').addEventListener('pointerup', () => armas.gatilho(false));
   $('touch-pular').addEventListener('pointerdown', () => { touch.pular = true; });
   $('touch-pular').addEventListener('pointerup', () => { touch.pular = false; });
 
@@ -917,9 +945,11 @@ export async function iniciarJogo() {
         else tocarAcao(sprint ? 'Correr' : 'Andar');
       }
 
+      if (armas.ativa) jogador.ry += anguloDiff(jogador.ry, camYaw) * Math.min(1, dt * 14);   // armado: o corpo vira para onde a câmera mira
       persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
       persAtual.inst.obj.rotation.y = jogador.ry;
       persAtual.inst.atualizar(dt);
+      armas.atualizar(dt, tTotal, persAtual.inst.obj, true);
 
       focoX = jogador.x; focoY = jogador.y + 1.45; focoZ = jogador.z; focoYaw = jogador.ry;
 
@@ -931,6 +961,9 @@ export async function iniciarJogo() {
         elPrompt.classList.add('oculto');
       }
     }
+
+    if (jogador.veiculo) armas.atualizar(dt, tTotal, null, false);
+    atualizarHudArma();
 
     // Atualiza setores visíveis, trânsito e NPCs próximos ao jogador
     cidade.atualizar(dt, tTotal, focoX, focoZ);
@@ -978,9 +1011,12 @@ export async function iniciarJogo() {
       const h = (jogador.veiculo ? jogador.veiculo.camAlt : 1.7) + Math.sin(camPitch) * d * 0.72;
       const hDist = Math.cos(camPitch) * d;
       posCamDesejada.set(focoX - Math.sin(camYaw) * hDist, Math.max(0.8, focoY + h - 1.1), focoZ - Math.cos(camYaw) * hDist);
+      const ombro = armas.ativa && !jogador.veiculo ? 0.62 : 0;                       // armado: câmera sobre o ombro direito
+      if (ombro) posCamDesejada.add(new THREE.Vector3(-Math.cos(camYaw) * ombro, 0, Math.sin(camYaw) * ombro));
       if (snapCam) { camera.position.copy(posCamDesejada); snapCam = false; }
       else camera.position.lerp(posCamDesejada, Math.min(1, dt * 9));
       alvoCam.set(focoX, focoY + (jogador.veiculo ? 0.5 : 0.1), focoZ);
+      if (ombro) alvoCam.add(new THREE.Vector3(-Math.cos(camYaw) * ombro + Math.sin(camYaw) * 3, 0.15, Math.sin(camYaw) * ombro + Math.cos(camYaw) * 3));
       camera.lookAt(alvoCam);
     } else if (camModo === 1) {
       snapCam = false;
