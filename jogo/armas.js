@@ -6,10 +6,13 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-const DEF = {
-  pistola:      { nome: 'Pistola',      arq: 'pistola.glb',      cadencia: 0.16, auto: false, pente: 15, recarga: 1.2, dano: 1, recuo: 0.11, ferrolho: 0.030, dispersao: 0.006, volume: 0.55 },
-  metralhadora: { nome: 'Metralhadora', arq: 'metralhadora.glb', cadencia: 0.085, auto: true,  pente: 30, recarga: 1.8, dano: 1, recuo: 0.045, ferrolho: 0.022, dispersao: 0.018, volume: 0.75 },
+export const DEF = {
+  pistola:      { nome: 'Pistola',      arq: 'pistola.glb',      cadencia: 0.16, auto: false, pente: 15, recarga: 1.2, dano: 1, recuo: 0.11, ferrolho: 0.030, dispersao: 0.006, volume: 0.55, reserva: 45 },
+  metralhadora: { nome: 'Metralhadora', arq: 'metralhadora.glb', cadencia: 0.085, auto: true,  pente: 30, recarga: 1.8, dano: 1, recuo: 0.045, ferrolho: 0.022, dispersao: 0.018, volume: 0.75, reserva: 90 },
+  // fuzil de ferrolho: 1 bala na arma; as outras só comprando na loja. Todo tiro dela vira a câmera da bala (aoDisparoSniper).
+  sniper:       { nome: 'Sniper',       arq: 'sniper.glb',       cadencia: 1.4, auto: false, pente: 1,  recarga: 1.7, dano: 1, recuo: 0.16, ferrolho: 0.085, dispersao: 0.03, volume: 1.0, reserva: 0 },
 };
+export { ik2, apontar };
 const V = () => new THREE.Vector3();
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _v = V(), _v2 = V(), _m = new THREE.Matrix4();
 
@@ -58,6 +61,7 @@ export class Armas {
   constructor(opc) {
     Object.assign(this, opc);
     this.modelos = {}; this.atual = null; this.estado = {};
+    this.possui = new Set(opc.possui || []); this.reserva = {}; this.luneta = false;
     this.gatilhoApertado = false; this.tUltimo = -9; this.recarregando = 0; this.recuo = 0; this.ferrolho = 0; this.gat = 0; this.flash = 0;
     this.capsulas = []; this.rastros = []; this.faiscas = []; this.marcas = [];
     this.rc = new THREE.Raycaster(); this.rc.far = 220;
@@ -72,7 +76,7 @@ export class Armas {
       const m = { raiz, ferrolho: no('Ferrolho'), gatilho: no('Gatilho'), carregador: no('Carregador'), boca: no('Boca'), ejecao: no('Ejecao'), apoio: no('Apoio') };
       m.ferrolho0 = m.ferrolho.position.clone(); m.gatilho0 = m.gatilho.quaternion.clone(); m.carregador0 = m.carregador.position.clone();
       raiz.visible = false; this.scene.add(raiz); this.modelos[id] = m;
-      this.estado[id] = { municao: d.pente };
+      this.estado[id] = { municao: this.possui.has(id) ? d.pente : 0 }; this.reserva[id] = this.possui.has(id) ? d.reserva : 0;
     }
     // efeitos compartilhados
     this.clarao = new THREE.Sprite(new THREE.SpriteMaterial({ map: texClarao(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
@@ -86,20 +90,38 @@ export class Armas {
     this.matPoeira = new THREE.SpriteMaterial({ color: 0xbfb7a8, transparent: true, opacity: 0.5, depthWrite: false });
   }
   get ativa() { return !!this.atual; }
-  get info() { if (!this.atual) return null; return { nome: DEF[this.atual].nome, municao: this.estado[this.atual].municao, pente: DEF[this.atual].pente, recarregando: this.recarregando > 0 }; }
-  /** equipa 'pistola' | 'metralhadora' | null (guardar) */
+  get info() { if (!this.atual) return null; return { id: this.atual, nome: DEF[this.atual].nome, municao: this.estado[this.atual].municao, pente: DEF[this.atual].pente, reserva: this.reserva[this.atual], recarregando: this.recarregando > 0 }; }
+  /** pega a arma no mapa: passa a ter, com o pente cheio e a reserva inicial */
+  pegar(id) {
+    if (!DEF[id]) return false;
+    const nova = !this.possui.has(id); this.possui.add(id);
+    if (nova) { this.estado[id].municao = DEF[id].pente; this.reserva[id] = DEF[id].reserva; }
+    return nova;
+  }
+  /** compra na loja: +n balas da sniper e repõe as reservas da pistola e da metralhadora */
+  comprar(nSniper = 5) {
+    this.reserva.sniper = (this.reserva.sniper || 0) + nSniper;
+    for (const id of ['pistola', 'metralhadora']) this.reserva[id] = Math.max(this.reserva[id] || 0, DEF[id].reserva);
+    if (this.possui.has('sniper') && this.estado.sniper.municao === 0) this.recarregar(true);
+  }
+  /** equipa 'pistola' | 'metralhadora' | 'sniper' | null (guardar). Só equipa o que já foi pego. */
   equipar(id) {
+    if (id && !this.possui.has(id)) return false;
     for (const m of Object.values(this.modelos)) m.raiz.visible = false;
-    this.atual = id && this.modelos[id] ? id : null; this.recarregando = 0; this.gatilhoApertado = false;
+    this.atual = id && this.modelos[id] ? id : null; this.recarregando = 0; this.gatilhoApertado = false; this.luneta = false;
     if (this.atual) { this.modelos[this.atual].raiz.visible = true; this._som('engatilhar'); }
+    return true;
   }
   gatilho(apertado) {
     if (apertado && !this.gatilhoApertado) this._quer = true;          // semiautomática: um tiro por clique
     this.gatilhoApertado = apertado;
   }
-  recarregar() {
-    if (!this.atual || this.recarregando > 0 || this.estado[this.atual].municao === DEF[this.atual].pente) return;
-    this.recarregando = DEF[this.atual].recarga; this._som('soltar');
+  recarregar(forcar = false) {
+    const id = forcar ? 'sniper' : this.atual;
+    if (!id || this.recarregando > 0 || this.estado[id].municao === DEF[id].pente) return false;
+    if ((this.reserva[id] || 0) <= 0) { this.aoSemMunicao?.(id); return false; }
+    if (forcar && this.atual !== 'sniper') { const n = Math.min(DEF[id].pente - this.estado[id].municao, this.reserva[id]); this.estado[id].municao += n; this.reserva[id] -= n; return true; }
+    this.recarregando = DEF[id].recarga; this._som('soltar'); return true;
   }
 
   /**
@@ -110,7 +132,7 @@ export class Armas {
     this._efeitos(dt);
     if (!this.atual) return;
     const m = this.modelos[this.atual], d = DEF[this.atual];
-    m.raiz.visible = visivel && !!pers;
+    m.raiz.visible = visivel && !!pers && !this.luneta;                                    // na luneta a visão é do olho: a arma some
     if (!pers || !visivel) return;
     const osso = n => pers.getObjectByName(n);
     // ponto de mira: o que está no centro da tela, a 40 m
@@ -124,6 +146,7 @@ export class Armas {
     // onde a arma fica (posição do cabo), e a direção do cano
     let cabo;
     if (this.atual === 'pistola') cabo = OD.clone().lerp(OE, 0.45).addScaledVector(frente, 0.50).addScaledVector(cima, -0.02);
+    else if (this.atual === 'sniper') cabo = OD.clone().addScaledVector(frente, 0.16).addScaledVector(cima, -0.10).addScaledVector(direita, -0.07);
     else cabo = OD.clone().addScaledVector(frente, 0.22).addScaledVector(cima, -0.13).addScaledVector(direita, -0.05);
     const dirCano = mira.clone().sub(cabo).normalize();
     // recuo: a arma sobe e vem para trás, volta com mola
@@ -149,13 +172,13 @@ export class Armas {
       const u = 1 - this.recarregando / d.recarga;
       m.carregador.position.copy(m.carregador0); m.carregador.position.y -= u < 0.5 ? u * 0.5 : (1 - u) * 0.5; m.carregador.visible = u < 0.35 || u > 0.55;
       this.recarregando -= dt;
-      if (this.recarregando <= 0) { this.recarregando = 0; est.municao = d.pente; m.carregador.position.copy(m.carregador0); m.carregador.visible = true; this._som('engatilhar'); }
+      if (this.recarregando <= 0) { this.recarregando = 0; const n = Math.min(d.pente - est.municao, this.reserva[this.atual]); est.municao += n; this.reserva[this.atual] -= n; m.carregador.position.copy(m.carregador0); m.carregador.visible = true; this._som('engatilhar'); }
     }
     // tiro
     const quer = d.auto ? this.gatilhoApertado : this._quer; this._quer = false;
     if (quer && this.recarregando <= 0 && t - this.tUltimo >= d.cadencia) {
       if (est.municao <= 0) { if (!d.auto || t - this.tUltimo > 0.3) { this._som('vazio'); this.tUltimo = t; } this.recarregar(); }
-      else { est.municao--; this.tUltimo = t; this._atirar(m, d); if (est.municao === 0) setTimeout(() => this.recarregar(), 250); }
+      else { est.municao--; this.tUltimo = t; this._atirar(m, d); if (est.municao === 0 && this.reserva[this.atual] > 0) setTimeout(() => this.recarregar(), this.atual === 'sniper' ? 900 : 250); }
     }
     this.recuo = Math.max(0, this.recuo - dt * (this.atual === 'pistola' ? 1.4 : 2.2));
     this.ferrolho = Math.max(0, this.ferrolho - dt * 0.45); this.gat = Math.max(0, this.gat - dt * 6);
@@ -164,6 +187,16 @@ export class Armas {
   _atirar(m, d) {
     this.recuo = Math.min(0.22, this.recuo + d.recuo); this.ferrolho = d.ferrolho; this.gat = 1; this.flash = 0.05;
     const boca = m.boca.getWorldPosition(V());
+    if (this.atual === 'sniper') {
+      // sniper: o raio sai exatamente do centro da luneta (sem luneta, com a dispersão do tiro sem apoio) e a câmera da bala cuida do resto
+      const disp = this.luneta ? 0 : d.dispersao;
+      this.rc.setFromCamera(new THREE.Vector2((Math.random() - 0.5) * disp * 2, (Math.random() - 0.5) * disp * 2), this.camera);
+      const origem = this.rc.ray.origin.clone(), dir = this.rc.ray.direction.clone();
+      this.clarao.position.copy(boca); this.clarao.scale.setScalar(0.9); this.clarao.visible = !this.luneta; this.luz.position.copy(boca); this.luz.intensity = 8;
+      this._som('tiro', d.volume);
+      this.aoDisparoSniper?.({ origem, dir, boca: boca.clone(), luneta: this.luneta });
+      return;
+    }
     // raio do centro da tela (com dispersão) → ponto atingido
     this.rc.setFromCamera(new THREE.Vector2((Math.random() - 0.5) * d.dispersao * 2 * (1 + this.recuo * 6), (Math.random() - 0.5) * d.dispersao * 2 * (1 + this.recuo * 6)), this.camera);
     this.rc.near = this.camera.position.distanceTo(boca) * 0.8;
@@ -194,7 +227,7 @@ export class Armas {
       this.scene.add(mk); this.marcas.push(mk); if (this.marcas.length > 80) this.scene.remove(this.marcas.shift());
     }
     this._som('tiro', d.volume);
-    if (this.aoAtirar) this.aoAtirar(ponto);
+    if (this.aoAtirar) this.aoAtirar(ponto, this.atual);
   }
 
   _efeitos(dt) {
@@ -221,13 +254,18 @@ export class Armas {
     const ctx = s.ctx, now = ctx.currentTime, saida = ctx.destination;
     const ruido = (dur) => { const b = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate), a = b.getChannelData(0); for (let i = 0; i < a.length; i++) a[i] = Math.random() * 2 - 1; const n = ctx.createBufferSource(); n.buffer = b; return n; };
     if (tipo === 'tiro') {
-      const pist = this.atual === 'pistola';
+      const pist = this.atual === 'pistola', snp = this.atual === 'sniper';
       const n = ruido(0.35), f = ctx.createBiquadFilter(), g = ctx.createGain();
       f.type = 'lowpass'; f.frequency.setValueAtTime(pist ? 5200 : 4200, now); f.frequency.exponentialRampToValueAtTime(380, now + 0.25);
-      g.gain.setValueAtTime(vol * 0.9, now); g.gain.exponentialRampToValueAtTime(0.001, now + (pist ? 0.22 : 0.18));
+      g.gain.setValueAtTime(vol * 0.9, now); g.gain.exponentialRampToValueAtTime(0.001, now + (pist ? 0.22 : snp ? 0.42 : 0.18));
       n.connect(f); f.connect(g); g.connect(saida); n.start(now); n.stop(now + 0.35);
       const o = ctx.createOscillator(), go = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(pist ? 150 : 120, now); o.frequency.exponentialRampToValueAtTime(40, now + 0.12);
       go.gain.setValueAtTime(vol * 0.8, now); go.gain.exponentialRampToValueAtTime(0.001, now + 0.14); o.connect(go); go.connect(saida); o.start(now); o.stop(now + 0.15);
+      if (snp) {                                                                          // estalo supersônico e rolar do eco entre os prédios
+        const r2 = ruido(2.2), f2 = ctx.createBiquadFilter(), g2 = ctx.createGain(); f2.type = 'lowpass'; f2.frequency.value = 700;
+        g2.gain.setValueAtTime(0.0001, now); g2.gain.linearRampToValueAtTime(vol * 0.35, now + 0.12); g2.gain.exponentialRampToValueAtTime(0.001, now + 2.1);
+        r2.connect(f2); f2.connect(g2); g2.connect(saida); r2.start(now); r2.stop(now + 2.2);
+      }
       const e = ruido(0.6), fe = ctx.createBiquadFilter(), ge = ctx.createGain(); fe.type = 'bandpass'; fe.frequency.value = 900; fe.Q.value = 0.7;                   // eco da rua
       ge.gain.setValueAtTime(0.0001, now); ge.gain.linearRampToValueAtTime(vol * 0.12, now + 0.06); ge.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
       e.connect(fe); fe.connect(ge); ge.connect(saida); e.start(now); e.stop(now + 0.6);

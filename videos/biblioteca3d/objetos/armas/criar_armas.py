@@ -1,7 +1,7 @@
-# Armas genéricas para o jogo Hryz City, feitas por script no Blender: uma PISTOLA semiautomática (tamanho de uma pistola de serviço,
+# Armas genéricas para o jogo Hryz City, feitas por script no Blender: uma SNIPER de ferrolho com luneta (~1,43 m), uma PISTOLA semiautomática (tamanho de uma pistola de serviço,
 # ~19 cm) e uma METRALHADORA/carabina automática (~84 cm, no estilo das carabinas de cano curto). Sem marca e sem cópia de modelo real.
 # Peças móveis separadas (o jogo anima): Ferrolho (corre para trás no tiro), Gatilho, Carregador (sai na recarga).
-# Marcadores (vazios): Boca (saída do cano), Ejecao (janela das cápsulas), Apoio (onde a mão esquerda segura, só na metralhadora).
+# Marcadores (vazios): Boca (saída do cano), Ejecao (janela das cápsulas), Apoio (onde a mão esquerda segura), Luneta (olho atrás da ocular, só na sniper).
 # Eixos no Blender: cano para -Y, z para cima; origem = onde a mão direita segura (topo do cabo). No glTF/Three.js: cano para +Z, y para cima.
 # uso: blender -b -P criar_armas.py -- [--glb pasta] [--render pasta]
 import bpy, bmesh, math, os, sys
@@ -136,6 +136,57 @@ def metralhadora(M):
     vazio('Boca', (0, -0.588, zc), raiz); vazio('Ejecao', (0.014, -0.020, 0.050), raiz); vazio('Apoio', (0, -0.300, zc - 0.010), raiz)
     return raiz
 
+# ------------------------------------------------------------------------------------------------ SNIPER (fuzil de ferrolho com luneta)
+def sniper(M):
+    raiz = vazio('Sniper', (0, 0, 0))
+    M = dict(M, polimero=mat('polimero_oliva', (0.035, 0.040, 0.026), 0.7, 0.0))
+    zc = 0.050                                                                                           # altura do cano
+    pc = []
+    # caixa da culatra redonda e trilho da luneta
+    pc.append(cil('culatra', 0.0175, -0.160, 0.110, 0, zc, M['metal'], n=20))
+    pc.append(caixa('trilhoS', -0.0105, 0.0105, -0.150, 0.100, zc + 0.016, zc + 0.024, M['metal'], 0.0008))
+    # coronha de polímero: corpo, empunhadura vertical, apoio de rosto e soleira
+    pc.append(caixa('coronhaFrente', -0.022, 0.022, -0.420, -0.120, -0.020, zc - 0.010, M['polimero'], 0.008))       # guarda-mão
+    pc.append(caixa('coronhaMeio', -0.020, 0.020, -0.130, 0.040, -0.030, zc - 0.012, M['polimero'], 0.006))
+    pc.append(caixa('caboS', -0.016, 0.016, -0.004, 0.040, -0.115, -0.010, M['polimero'], 0.006, rot=('X', math.radians(-12)), piv=(0, 0.02, -0.01)))
+    pc.append(caixa('pescoco', -0.018, 0.018, 0.030, 0.150, -0.050, 0.020, M['polimero'], 0.008))
+    pc.append(caixa('coronhaTras', -0.020, 0.020, 0.140, 0.420, -0.080, 0.040, M['polimero'], 0.010))
+    pc.append(caixa('apoioRosto', -0.017, 0.017, 0.170, 0.360, 0.040, 0.075, M['polimero'], 0.008))
+    pc.append(caixa('soleiraS', -0.022, 0.022, 0.415, 0.440, -0.090, 0.048, M['alma'], 0.006))
+    pc.append(caixa('gmS', -0.005, 0.005, -0.070, -0.004, -0.044, -0.036, M['metal'], 0.002))              # guarda-mato
+    # cano longo pesado, freio de boca com janelas
+    pc.append(cil('canoS', 0.0125, -0.900, -0.150, 0, zc, M['metal'], n=20, r2=0.0105))   # (r fica na ponta y1: mais grosso na câmara)
+    pc.append(cil('freio', 0.0150, -0.985, -0.900, 0, zc, M['metal'], n=16))
+    for k in range(3):
+        for s in (1, -1): pc.append(caixa(f'jf{k}{s}', s * 0.0150 - 0.0020, s * 0.0150 + 0.0020, -0.975 + k * 0.024, -0.962 + k * 0.024, zc - 0.007, zc + 0.007, M['alma'], 0))
+    pc.append(cil('almaS', 0.0052, -0.9855, -0.975, 0, zc, M['alma']))
+    # luneta: tubo, campânula da objetiva, ocular, torres e anéis
+    zl = zc + 0.062
+    pc.append(cil('tubo', 0.0150, -0.205, 0.072, 0, zl, M['metal'], n=24))
+    pc.append(cil('objetiva', 0.0150, -0.290, -0.200, 0, zl, M['metal'], n=28, r2=0.0270))
+    pc.append(cil('objetiva2', 0.0270, -0.300, -0.288, 0, zl, M['metal'], n=28))
+    pc.append(cil('lenteF', 0.0240, -0.3015, -0.299, 0, zl, M['vidro'], n=28))
+    pc.append(cil('ocular', 0.0200, 0.070, 0.140, 0, zl, M['metal'], n=24, r2=0.0150))
+    pc.append(cil('lenteT', 0.0175, 0.140, 0.1415, 0, zl, M['vidro'], n=24))
+    pc.append(caixa('torreC', -0.011, 0.011, -0.070, -0.040, zl + 0.012, zl + 0.034, M['metal'], 0.003))
+    pc.append(caixa('torreL', 0.012, 0.034, -0.070, -0.040, zl - 0.011, zl + 0.011, M['metal'], 0.003))
+    for y in (-0.120, 0.030):
+        pc.append(caixa(f'anel{y}', -0.019, 0.019, y - 0.010, y + 0.010, zc + 0.018, zl + 0.004, M['metal'], 0.002))
+    # bipé recolhido sob o guarda-mão
+    for s in (1, -1): pc.append(caixa(f'bipe{s}', s * 0.012 - 0.004, s * 0.012 + 0.004, -0.400, -0.210, -0.032, -0.022, M['metal'], 0.002))
+    pc.append(caixa('bipeBase', -0.020, 0.020, -0.410, -0.385, -0.030, -0.012, M['metal'], 0.003))
+    corpo = juntar(pc, 'Corpo'); corpo.parent = raiz
+    # ferrolho: cilindro com a alavanca e a bola à direita (corre para trás ao recarregar)
+    fe = [cil('ferroC', 0.0110, -0.060, 0.080, 0, zc + 0.004, M['aco'], n=16),
+          caixa('alavanca', 0.010, 0.048, 0.050, 0.062, zc - 0.002, zc + 0.006, M['aco'], 0.002, rot=('Y', math.radians(25)), piv=(0.01, 0.056, zc + 0.002))]
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.0105, location=(0.050, 0.056, zc - 0.018)); bola = bpy.context.object; bola.data.materials.append(M['aco']); fe.append(bola)
+    ferrolho = juntar(fe, 'Ferrolho'); ferrolho.parent = raiz
+    gat = caixa('Gatilho', -0.0035, 0.0035, -0.042, -0.034, -0.034, -0.012, M['metal'], 0.0015, rot=('X', math.radians(12)), piv=(0, -0.038, -0.012)); gat.parent = raiz
+    car = caixa('Carregador', -0.0140, 0.0140, -0.110, -0.062, -0.060, -0.018, M['metal'], 0.002); car.parent = raiz
+    vazio('Boca', (0, -0.990, zc), raiz); vazio('Ejecao', (0.018, -0.020, zc + 0.012), raiz); vazio('Apoio', (0, -0.300, -0.010), raiz)
+    vazio('Luneta', (0, 0.150, zl), raiz)                                                                 # olho atrás da ocular
+    return raiz
+
 def exportar(raiz, arquivo):
     bpy.ops.object.select_all(action='DESELECT')
     def sel(o):
@@ -153,7 +204,7 @@ def render(raiz, arquivo, L):
     sc = bpy.context.scene; sc.render.engine = 'CYCLES'; sc.cycles.samples = 48; sc.cycles.use_denoising = True; sc.render.resolution_x, sc.render.resolution_y = 1400, 800
     sc.render.filepath = arquivo; sc.view_settings.view_transform = 'AgX'; bpy.ops.render.render(write_still=True)
 
-for nome, fn, L in [('pistola', pistola, 0.20), ('metralhadora', metralhadora, 0.62)]:
+for nome, fn, L in [('pistola', pistola, 0.20), ('metralhadora', metralhadora, 0.62), ('sniper', sniper, 1.10)]:
     limpar(); M = mats(); raiz = fn(M)
     if arg('glb'): exportar(raiz, os.path.join(arg('glb'), nome + '.glb'))
     if arg('render'): render(raiz, os.path.join(arg('render'), nome + '.png'), L)

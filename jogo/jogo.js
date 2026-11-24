@@ -19,6 +19,9 @@ import { criarTrex } from './trex.js';
 import { Armas } from './armas.js';
 import { Abertura } from './abertura.js';
 import { Sala } from './sala.js';
+import { Missao, TORRE } from './missao.js';
+import { BalaCam } from './balacam.js';
+import { Loja } from './loja.js';
 
 const BASE_BIB = './videos/biblioteca3d';
 
@@ -815,7 +818,7 @@ export async function iniciarJogo() {
   atualizarProgresso(0.88, 'Estacionando frota dirigível…');
   const frotaExtra = [
     { nome: 'Esportivo Hryz',  arq: 'sedan-sports', x: 196, z: 166.2, ry: Math.PI / 2,  acel: 27, velMax: 55, raio: 1.9 },
-    { nome: 'Fórmula Hryz',    arq: 'race',         x: 242, z: 222,   ry: Math.PI,      acel: 34, velMax: 68, raio: 1.85 },
+    { nome: 'Fórmula Hryz',    arq: 'race',         x: 290, z: 238.2, ry: -Math.PI / 2, acel: 34, velMax: 68, raio: 1.85 },   // (fora do cerco da missão na rotatória)
     { nome: 'Fórmula Pista',   arq: 'race-future',  x: 132, z: 567,   ry: Math.PI / 2,  acel: 36, velMax: 72, raio: 1.85 },
     { nome: 'SUV de Luxo',     arq: 'suv-luxury',   x: 256, z: 313.8, ry: -Math.PI / 2, acel: 20, velMax: 44, raio: 2.0 },
     { nome: 'Jipe da Selva',   arq: 'suv',          x: 454, z: 266.5, ry: Math.PI / 2 - 0.14, acel: 22, velMax: 46, raio: 2.0 },
@@ -965,22 +968,102 @@ export async function iniciarJogo() {
 
   // ---- Armas (pistola e metralhadora feitas no Blender)
   atualizarProgresso(0.97, 'Carregando armas…');
-  const armas = new Armas({ scene, camera, som, alvos: () => [cidade.mundo, ...veiculos.map(v => v.obj)], chao: () => jogador.y });
+  const armas = new Armas({ scene, camera, som, alvos: () => [cidade.mundo, ...veiculos.map(v => v.obj)], chao: () => jogador.y,
+    possui: Q.has('armas') ? ['pistola', 'metralhadora', 'sniper'] : [] });                       // as armas ficam espalhadas pelo mapa (missão)
   try { await armas.carregar(BASE_BIB); } catch (e) { console.warn('armas não carregaram', e); }
   window.__armas = armas;                                                            // (para testes automáticos)
   const elMira = $('mira'), elArma = $('hud-arma');
   function atualizarHudArma() {
     const inf = armas.info, armado = !!inf && !jogador.veiculo;
     elMira.classList.toggle('oculto', !armado || camModo === 2); elArma.classList.toggle('oculto', !inf);
-    if (inf) elArma.textContent = `${inf.nome === 'Pistola' ? '🔫' : '🔫🔫'} ${inf.nome} · ${inf.recarregando ? 'recarregando…' : `${inf.municao}/${inf.pente}`}`;
+    if (inf) elArma.textContent = `${{ pistola: '🔫', metralhadora: '🔫🔫', sniper: '🎯' }[inf.id]} ${inf.nome} · ${inf.recarregando ? 'recarregando…' : `${inf.municao}/${inf.pente}`} · reserva ${inf.reserva}`;
   }
+  const NOMES_ARMA = { pistola: 'pistola', metralhadora: 'metralhadora', sniper: 'sniper' };
   function trocarArma(id) {
     if (jogador.veiculo) { mostrarToast('Saia do veículo para usar armas'); return; }
+    if (id && !armas.possui.has(id)) { mostrarToast(`Você ainda não tem a ${NOMES_ARMA[id]}: procure o ícone dela no minimapa.`); return; }
+    if (mira.ativa) sairMira(true);
     armas.equipar(armas.atual === id ? null : id);
     // o personagem ultra-leve (modo Leve) não tem esqueleto: para segurar a arma, troca pelo elenco completo
     if (armas.ativa && usandoPersLeve) carregarPersonagem(persIdx).then(() => mostrarToast(`${armas.info?.nome ?? 'Arma'} na mão · clique para atirar · X recarrega`));
     mostrarToast(armas.ativa ? `${armas.info.nome} na mão · clique para atirar · X recarrega` : 'Arma guardada');
     atualizarHudArma();
+  }
+
+  // ---- Plataformas (terraço da torre, interior da loja): o jogador anda num retângulo, numa altura própria
+  function moverNaPlataforma(x, z, r) {
+    const p = jogador.plataforma;
+    let nx = Math.max(p.minX + r, Math.min(p.maxX - r, x)), nz = Math.max(p.minZ + r, Math.min(p.maxZ - r, z)), bateu = nx !== x || nz !== z;
+    for (const b of p.obst || []) {
+      const cx = Math.max(b.minX, Math.min(nx, b.maxX)), cz = Math.max(b.minZ, Math.min(nz, b.maxZ)), dx = nx - cx, dz = nz - cz, d2 = dx * dx + dz * dz;
+      if (d2 < r * r) { bateu = true; if (d2 > 1e-6) { const d = Math.sqrt(d2); nx = cx + dx / d * r; nz = cz + dz / d * r; } else nz = b.maxZ + r; }
+    }
+    return { x: nx, z: nz, bateu };
+  }
+  function irPara(pos, plataforma, y) {
+    jogador.plataforma = plataforma || null;
+    jogador.x = pos.x; jogador.z = pos.z; jogador.y = y ?? (plataforma ? plataforma.y : CALCADA); jogador.vy = 0; jogador.noChao = true;
+    if (pos.ry !== undefined) { jogador.ry = pos.ry; camYaw = pos.ry; }
+    persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z); persAtual.inst.obj.rotation.y = jogador.ry;
+    snapCam = true; minimapTimer = 99;
+  }
+  const elPreto = $('tela-preta');
+  function comFade(f) { elPreto.classList.add('visivel'); setTimeout(() => { f(); setTimeout(() => elPreto.classList.remove('visivel'), 120); }, 320); }
+
+  // ---- Luneta da sniper
+  const mira = { ativa: false, fixa: false, yaw: 0, pitch: -0.2, fov: 14 };
+  const elLuneta = $('luneta');
+  function entrarMira(fixa) {
+    if (armas.atual !== 'sniper' || jogador.veiculo || balacam.ativa || modo !== 'jogo') {
+      if (fixa && armas.possui.has('sniper') && !jogador.veiculo) { trocarArma('sniper'); } else return;
+    }
+    mira.ativa = true; mira.fixa = !!fixa; mira.yaw = jogador.plataforma === TORRE.terraco ? camYaw : camYaw; mira.pitch = jogador.plataforma === TORRE.terraco ? -0.45 : -0.04; mira.fov = jogador.plataforma === TORRE.terraco ? 7 : 14;
+    armas.luneta = true; persAtual.inst.obj.visible = false; elLuneta.classList.remove('oculto'); document.body.classList.add('na-luneta');
+  }
+  function sairMira() {
+    if (!mira.ativa) return;
+    mira.ativa = false; armas.luneta = false; persAtual.inst.obj.visible = !jogador.veiculo;
+    camera.fov = 56; camera.near = 0.4; camera.updateProjectionMatrix(); camYaw = mira.yaw; snapCam = true;
+    elLuneta.classList.add('oculto'); document.body.classList.remove('na-luneta', 'respiracao');
+  }
+
+  // ---- Missão do refém, câmera da bala e loja de munição
+  let travado = false;
+  atualizarProgresso(0.975, 'Preparando a missão…');
+  const hudRot = $('hud-alvo-rot');
+  const ganchos = {
+    jogador: () => jogador, noTerraco: () => jogador.plataforma === TORRE.terraco, noVeiculo: () => !!jogador.veiculo,
+    sireneLigada: () => !!jogador.veiculo?.sirene, toast: m => mostrarToast(m), noite: () => ehNoite,
+    irTerraco: () => comFade(() => { irPara(TORRE.chegada, TORRE.terraco); mostrarToast('Terraço da torre, 38 m de altura. Sniper (3) e botão direito (ou Z) para a luneta.'); }),
+    descerTerraco: () => comFade(() => { sairMira(); irPara({ x: TORRE.porta.x, z: TORRE.porta.z + 1.6, ry: 0 }, null); }),
+    atingirJogador: () => { sairMira(); travado = true; persAtual.inst.obj.rotation.x = -1.35; },
+    reviver: () => { persAtual.inst.obj.rotation.x = 0; travado = false; irPara({ x: 146, z: 163.8, ry: Math.PI / 2 }, null); },
+    hud: (rot, txt) => { hudRot.textContent = rot; elAlvoNome.textContent = txt; },
+  };
+  const missao = new Missao({ scene, camera, armas, som, base: BASE_BIB, jogo: ganchos });
+  const balacam = new BalaCam({
+    scene, camera, renderer, armas, som,
+    alvosEspeciais: () => missao.alvosBala(),
+    aoImpacto: res => missao.aoImpacto(res),
+    aoFim: () => { snapCam = true; if (missao.estado !== 'ativa') sairMira(); },
+  });
+  const loja = new Loja({ scene, camera, armas, base: BASE_BIB, jogo: {
+    jogador: () => jogador, noVeiculo: () => !!jogador.veiculo, toast: m => mostrarToast(m),
+    pers: () => (usandoPersLeve ? null : persAtual.inst),
+    garantirCompleto: async () => { if (usandoPersLeve) await carregarPersonagem(persIdx); },
+    entrar: (pos, plat) => comFade(() => { sairMira(); irPara(pos, plat); }),
+    sair: pos => comFade(() => irPara(pos, null)),
+    travar: v => { travado = v; if (v) { armas.gatilho(false); elPrompt.classList.add('oculto'); } snapCam = true; },
+    posicionar: pos => irPara(pos, jogador.plataforma),
+  } });
+  try { await missao.carregar(); await loja.carregar(); } catch (e) { console.warn('missão/loja não carregaram', e); }
+  armas.aoDisparoSniper = d => balacam.disparar(d);
+  armas.aoAtirar = (ponto, id) => missao.aoTiroComum(ponto, id);
+  armas.aoSemMunicao = id => mostrarToast(id === 'sniper' ? 'Sniper sem balas! Compre na Loja de Munição ($ no minimapa).' : 'Sem munição de reserva: compre na Loja ($ no minimapa).');
+  const missaoEmCurso = () => ['ativa', 'percebeu', 'falha', 'vitoria'].includes(missao.estado);
+  function interacaoAtual() {
+    if (modo !== 'jogo' || travado || balacam.ativa) return null;
+    return loja.interacao() || missao.interacao();
   }
 
   // ---- Checkpoint Tour (anéis dourados nos marcos da cidade)
@@ -1053,6 +1136,7 @@ export async function iniciarJogo() {
   let tempoSemMouse = 10;
 
   function acharVeiculoPerto() {
+    if (jogador.plataforma) return null;
     let melhor = null, bestD = 5.4;
     for (const v of veiculos) {
       const d = Math.hypot(v.x - jogador.x, v.z - jogador.z);
@@ -1331,6 +1415,8 @@ export async function iniciarJogo() {
   }
 
   function teleportar(pt) {
+    sairMira(); jogador.plataforma = null;
+    if (loja.dentro) { loja.dentro = false; loja.grupo.visible = false; }
     if (jogador.veiculo) {
       const v = jogador.veiculo;
       v.x = pt.x; v.z = pt.z; v.ry = pt.ang; v.vel = 0; v.steer = 0;
@@ -1452,12 +1538,15 @@ export async function iniciarJogo() {
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) e.preventDefault();
     if (!teclas.has(code)) {
       if (modo !== 'jogo') { /* abertura e sala tratam as próprias teclas */ }
-      else if (code === 'KeyE') entrarOuSairVeiculo();
+      else if (code === 'KeyE') { const it = interacaoAtual(); if (it) it.fazer(); else entrarOuSairVeiculo(); }
+      else if (code === 'KeyZ') { if (mira.ativa) sairMira(true); else entrarMira(true); }
+      else if (code === 'Escape' && mira.ativa) sairMira(true);
       else if (code === 'KeyP') entrarSala();
       else if (code === 'KeyQ') ciclarQualidade();
       else if (code === 'Digit1') trocarArma('pistola');
       else if (code === 'Digit2') trocarArma('metralhadora');
-      else if (code === 'Digit3' || code === 'KeyG') trocarArma(null);
+      else if (code === 'Digit3') trocarArma('sniper');
+      else if (code === 'KeyG') trocarArma(null);
       else if (code === 'KeyX') armas.recarregar();
       else if (code === 'KeyN') { ehNoite = !ehNoite; aplicarClima(); mostrarToast(ehNoite ? 'Modo Noite ativado' : 'Modo Dia ativado'); }
       else if (code === 'KeyR') { ehChuva = !ehChuva; rainLines.visible = ehChuva; aplicarClima(); mostrarToast(ehChuva ? 'Chuva e pista molhada' : 'Tempo limpo'); }
@@ -1490,12 +1579,26 @@ export async function iniciarJogo() {
     camPointerId = e.pointerId;
     arrastando = true;
     ultimoX = e.clientX; ultimoY = e.clientY;
-    if (e.button === 0 && modo === 'jogo' && armas.ativa && !jogador.veiculo) armas.gatilho(true);
   });
+  renderer.domElement.addEventListener('mousedown', e => {
+    if (modo !== 'jogo' || travado || balacam.ativa) return;
+    if (e.button === 2) entrarMira(false);
+    if (e.button === 0 && armas.ativa && !jogador.veiculo) armas.gatilho(true);
+  });
+  addEventListener('mouseup', e => {
+    if (e.button === 2 && mira.ativa && !mira.fixa) sairMira(false);
+    if (e.button === 0) armas.gatilho(false);
+  });
+  renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
   addEventListener('pointermove', e => {
     if (!arrastando || e.pointerId !== camPointerId) return;
     const dx = e.clientX - ultimoX, dy = e.clientY - ultimoY;
     ultimoX = e.clientX; ultimoY = e.clientY;
+    if (mira.ativa) {                                                            // luneta: quanto mais zoom, mais fino o ajuste
+      const k = mira.fov / 56 * 0.85;
+      mira.yaw -= dx * 0.0055 * k; mira.pitch = Math.max(-1.2, Math.min(0.6, mira.pitch - dy * 0.0045 * k));
+      return;
+    }
     camYaw -= dx * 0.0055;
     camPitch = Math.max(0.06, Math.min(1.15, camPitch + dy * 0.0045));
     tempoSemMouse = 0;
@@ -1509,6 +1612,7 @@ export async function iniciarJogo() {
   addEventListener('pointerup', soltarCam);
   addEventListener('pointercancel', soltarCam);
   renderer.domElement.addEventListener('wheel', e => {
+    if (mira.ativa) { mira.fov = Math.max(3.5, Math.min(30, mira.fov * (1 + e.deltaY * 0.0012))); return; }
     camDist = Math.max(3.5, Math.min(18, camDist + e.deltaY * 0.006));
   }, { passive: true });
 
@@ -1586,7 +1690,8 @@ export async function iniciarJogo() {
     el.addEventListener('pointercancel', soltar);
   }
 
-  $('touch-entrar').onclick = entrarOuSairVeiculo;
+  $('touch-entrar').onclick = () => { const it = interacaoAtual(); if (it) it.fazer(); else entrarOuSairVeiculo(); };
+  $('touch-mirar').onclick = () => { if (mira.ativa) sairMira(true); else entrarMira(true); };
   $('touch-sair').onclick = entrarOuSairVeiculo;
   bindSegurar('touch-pular', v => { touch.pular = v; });
   bindSegurar('touch-correr', v => { touch.correr = v; });
@@ -1595,7 +1700,11 @@ export async function iniciarJogo() {
   bindSegurar('touch-acel', v => { touch.acel = v; });
   bindSegurar('touch-freio', v => { touch.freio = v; });
   bindSegurar('touch-drift', v => { touch.drift = v; });
-  $('touch-arma').onclick = () => trocarArma(armas.atual === null ? 'pistola' : armas.atual === 'pistola' ? 'metralhadora' : null);
+  $('touch-arma').onclick = () => {                                              // passa pelas armas que você já tem
+    const ordem = [null, 'pistola', 'metralhadora', 'sniper'].filter(id => !id || armas.possui.has(id));
+    if (ordem.length === 1) { mostrarToast('Você ainda não tem armas: procure os ícones P, M e S no minimapa.'); return; }
+    trocarArma(ordem[(ordem.indexOf(armas.atual) + 1) % ordem.length] ?? armas.atual);
+  };
   bindSegurar('touch-atirar', v => armas.gatilho(v));
 
   // ---- Minimapa (Canvas 2D)
@@ -1674,8 +1783,10 @@ export async function iniciarJogo() {
       mmCtx.stroke();
     }
 
+    missao.desenharMinimapa(mmCtx, toMM, W, H);
     // Checkpoint ativo (pulsante)
     const cp = CHECKPOINTS[cpIdx];
+    if (!missaoEmCurso()) {
     const [cpx, cpz] = toMM(cp.x, cp.z);
     const clampedX = Math.max(8, Math.min(W - 8, cpx));
     const clampedZ = Math.max(8, Math.min(H - 8, cpz));
@@ -1683,6 +1794,7 @@ export async function iniciarJogo() {
     mmCtx.beginPath();
     mmCtx.arc(clampedX, clampedZ, 5, 0, Math.PI * 2);
     mmCtx.fill();
+    }
 
     // Seta do jogador no centro
     mmCtx.save();
@@ -1812,12 +1924,15 @@ export async function iniciarJogo() {
       atualizarHudModo();
       som.desbloquear();
       const pt = PONTOS_TELEPORTE.find(p => p.id === esc.local);
+      if (missao.estado === 'inativa') missao.iniciar();
       mostrarToast(v ? `Bem-vindo a Hryz City! ${v.nome} · ${pt?.nome ?? ''}${v.temSirene ? ' · L = sirene' : ''}` : `Bem-vindo a Hryz City! ${pt?.nome ?? ''}`);
     },
     aoRever: () => { sala.fechar(); iniciarAbertura(); },
   });
 
   function entrarSala() {
+    sairMira(); jogador.plataforma = null; travado = false; persAtual.inst.obj.rotation.x = 0;
+    if (loja.dentro) { loja.dentro = false; loja.grupo.visible = false; }
     sairSemAnimar();
     armas.equipar(null); atualizarHudArma();
     modo = 'sala';
@@ -1839,7 +1954,7 @@ export async function iniciarJogo() {
   atualizarHudModo();
   atualizarProgresso(1, 'Cidade pronta!');
   setTimeout(() => elTelaCarga.classList.add('oculto'), 220);
-  if (Q.has('direto')) modo = 'jogo';                 // (testes e desenvolvimento: pula abertura e sala)
+  if (Q.has('direto')) { modo = 'jogo'; if (!Q.has('semmissao')) missao.iniciar(); }   // (testes e desenvolvimento: pula abertura e sala)
   else if (Q.has('sala')) entrarSala();
   else iniciarAbertura();
   // Baixa o T. rex em segundo plano logo após o jogo abrir para estar pronto ao visitar a Selva
@@ -1869,7 +1984,10 @@ export async function iniciarJogo() {
 
   let pausado = Q.has('pausa');
   function passo(dtFixo = null) {
-    const dt = dtFixo ?? Math.min(relogio.getDelta(), 0.05);
+    const dtReal = dtFixo ?? Math.min(relogio.getDelta(), 0.05);
+    // câmera da bala: o mundo anda em câmera lenta (escala) enquanto a câmera segue a bala no tempo real
+    const rBala = balacam.ativa ? balacam.atualizar(dtReal) : null;
+    const dt = dtReal * (rBala ? rBala.escala : 1);
     tTotal += dt;
     tempoSemMouse += dt;
 
@@ -1893,17 +2011,27 @@ export async function iniciarJogo() {
 
     const tFrente = (touch.acel ? 1 : 0) - (touch.freio ? 1 : 0) - touch.mz;
     const tLado = (touch.dir ? 1 : 0) - (touch.esq ? 1 : 0) + touch.mx;
-    const jogando = modo === 'jogo';
+    const jogando = modo === 'jogo' && !travado && !balacam.ativa && !['percebeu', 'intro'].includes(missao.estado);
     // abertura e sala: a câmera é da cena (cine.foco guia o que a cidade mostra); o jogador não se move
     let cine = null;
     if (modo === 'abertura') cine = abertura.atualizar(dt);
     if (modo === 'sala') cine = atualizarCamSala(dt);
+    if (rBala) cine = { foco: rBala.foco, trexAlvo: [jogador.x, jogador.y, jogador.z] };
+    const rLoja = loja.atualizar(dtReal, tTotal);
+    if (rLoja) cine = { foco: rLoja.foco, trexAlvo: [1e5, 0, 1e5] };
+    const rMis = modo === 'jogo' ? missao.camCena() : null;
+    if (rMis) { if (mira.ativa) sairMira(); camera.position.copy(rMis.p); camera.lookAt(rMis.a); const fv = rMis.fov || 46; if (camera.fov !== fv) { camera.fov = fv; camera.updateProjectionMatrix(); } cine = { foco: { x: rMis.a.x, z: rMis.a.z }, trexAlvo: [jogador.x, jogador.y, jogador.z] }; }
     if (camFixa) { camera.position.copy(camFixa.p); camera.lookAt(camFixa.a); cine = { foco: { x: camFixa.a.x, z: camFixa.a.z }, trexAlvo: [1e5, 0, 1e5] }; }
-    const frente = !jogando ? 0 : (teclas.has('KeyW') || teclas.has('ArrowUp') ? 1 : 0) - (teclas.has('KeyS') || teclas.has('ArrowDown') ? 1 : 0) + tFrente;
-    const lado = !jogando ? 0 : (teclas.has('KeyD') || teclas.has('ArrowRight') ? 1 : 0) - (teclas.has('KeyA') || teclas.has('ArrowLeft') ? 1 : 0) + tLado;
+    let frente = !jogando ? 0 : (teclas.has('KeyW') || teclas.has('ArrowUp') ? 1 : 0) - (teclas.has('KeyS') || teclas.has('ArrowDown') ? 1 : 0) + tFrente;
+    let lado = !jogando ? 0 : (teclas.has('KeyD') || teclas.has('ArrowRight') ? 1 : 0) - (teclas.has('KeyA') || teclas.has('ArrowLeft') ? 1 : 0) + tLado;
     const joyMag = Math.hypot(touch.mx, touch.mz);
     const sprint = jogando && (teclas.has('ShiftLeft') || teclas.has('ShiftRight') || touch.correr || joyMag > 0.82);
-    const espaco = jogando && (teclas.has('Space') || touch.pular || touch.drift);
+    const espaco = jogando && !mira.ativa && (teclas.has('Space') || touch.pular || touch.drift);
+    if (mira.ativa) {                                                            // na luneta, as setas/WASD ajustam a mira em vez de andar
+      const k = mira.fov / 56;
+      mira.yaw -= lado * dt * 0.55 * k; mira.pitch = Math.max(-1.2, Math.min(0.6, mira.pitch + frente * dt * 0.45 * k));
+      frente = 0; lado = 0;
+    }
 
     let focoX, focoY, focoZ, focoYaw, velAbs = 0;
 
@@ -1994,7 +2122,8 @@ export async function iniciarJogo() {
         jogador.ry += anguloDiff(jogador.ry, dirMundo) * Math.min(1, dt * 11);
         const velBase = sprint ? 6.4 : 2.9;
         const passo = velBase * Math.min(1, mag) * dt;
-        const col = resolverColisoes(jogador.x + Math.sin(dirMundo) * passo, jogador.z + Math.cos(dirMundo) * passo, 0.42);
+        const nx = jogador.x + Math.sin(dirMundo) * passo, nz = jogador.z + Math.cos(dirMundo) * passo;
+        const col = jogador.plataforma ? moverNaPlataforma(nx, nz, 0.38) : resolverColisoes(nx, nz, 0.42);
         jogador.x = col.x; jogador.z = col.z;
         velAbs = velBase * Math.min(1, mag);
       }
@@ -2007,8 +2136,9 @@ export async function iniciarJogo() {
       if (!jogador.noChao) {
         jogador.vy -= 17.5 * dt;
         jogador.y += jogador.vy * dt;
-        if (jogador.y <= CALCADA) {
-          jogador.y = CALCADA; jogador.vy = 0; jogador.noChao = true;
+        const chao = jogador.plataforma ? jogador.plataforma.y : CALCADA;
+        if (jogador.y <= chao) {
+          jogador.y = chao; jogador.vy = 0; jogador.noChao = true;
         }
       }
       if (jogador.noChao) {
@@ -2016,7 +2146,8 @@ export async function iniciarJogo() {
         else tocarAcao(sprint ? 'Correr' : 'Andar');
       }
 
-      if (armas.ativa) jogador.ry += anguloDiff(jogador.ry, camYaw) * Math.min(1, dt * 14);   // armado: o corpo vira para onde a câmera mira
+      if (mira.ativa) jogador.ry = mira.yaw;
+      else if (armas.ativa) jogador.ry += anguloDiff(jogador.ry, camYaw) * Math.min(1, dt * 14);   // armado: o corpo vira para onde a câmera mira
       persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
       persAtual.inst.obj.rotation.y = jogador.ry;
       persAtual.inst.atualizar(dt);
@@ -2024,9 +2155,11 @@ export async function iniciarJogo() {
 
       focoX = jogador.x; focoY = jogador.y + 1.45; focoZ = jogador.z; focoYaw = jogador.ry;
 
-      const perto = jogando ? acharVeiculoPerto() : null;
-      $('touch-entrar')?.classList.toggle('tbtn-destaque', !!perto);
-      if (perto) {
+      const inter = jogando ? interacaoAtual() : null;
+      const perto = jogando && !inter ? acharVeiculoPerto() : null;
+      $('touch-entrar')?.classList.toggle('tbtn-destaque', !!perto || !!inter);
+      if (inter) { elPrompt.textContent = inter.texto; elPrompt.classList.remove('oculto'); }
+      else if (perto) {
         elPrompt.textContent = `[E] Entrar: ${perto.nome}`;
         elPrompt.classList.remove('oculto');
       } else {
@@ -2036,6 +2169,8 @@ export async function iniciarJogo() {
 
     if (jogador.veiculo) armas.atualizar(dt, tTotal, null, false);
     atualizarHudArma();
+    missao.atualizar(dt, tTotal);
+    balacam.atualizarEfeitos(dt);
 
     // Atualiza setores visíveis, trânsito, frota distante, T. rex da Selva, fumaça de drift e NPCs próximos
     fumacaDrift.atualizar(dt);
@@ -2061,15 +2196,15 @@ export async function iniciarJogo() {
     som.atualizar(tTotal, {
       dirigindo: !!jogador.veiculo,
       velAbs,
-      sireneAtiva: !!jogador.veiculo?.sirene || veiculos.some(v => v.sirene && Math.hypot(v.x - focoX, v.z - focoZ) < 45),
+      sireneAtiva: missao.sireneProxima(focoX, focoZ) || !!jogador.veiculo?.sirene || veiculos.some(v => v.sirene && Math.hypot(v.x - focoX, v.z - focoZ) < 45),
     });
 
     // ---- Checkpoint
-    cpGrupo.visible = jogando;
     cpAnel.rotation.z = tTotal * 1.4;
     cpFeixe.material.opacity = 0.13 + 0.06 * Math.sin(tTotal * 3.2);
     const cp = CHECKPOINTS[cpIdx];
-    if (jogando && Math.hypot(focoX - cp.x, focoZ - cp.z) < 5.8) {
+    cpGrupo.visible = jogando && !missaoEmCurso();
+    if (jogando && !missaoEmCurso() && Math.hypot(focoX - cp.x, focoZ - cp.z) < 5.8) {
       score += 100;
       elScore.textContent = `${score} pts`;
       som.tocarBeep(660, 0.16, 0.09);
@@ -2096,10 +2231,23 @@ export async function iniciarJogo() {
     }
 
     // ---- Câmera (abertura/sala já posicionaram a câmera; senão 3ª pessoa / Capô / Aérea)
+    if (!cine && !mira.ativa && (camera.fov !== 56 || camera.near !== 0.4)) { camera.fov = 56; camera.near = 0.4; camera.updateProjectionMatrix(); }
     if (cine) {
       // nada: a câmera da cena já foi posicionada
+    } else if (mira.ativa) {
+      // luneta: o olho do personagem, com a respiração mexendo de leve a mira
+      // Shift: segura a respiração e a mira quase para
+      const segura = teclas.has('ShiftLeft') || teclas.has('ShiftRight') || touch.correr;
+      document.body.classList.toggle('respiracao', segura);
+      const r = 0.0016 * (mira.fov / 14) * (segura ? 0.12 : 1), yaw = mira.yaw + Math.sin(tTotal * 0.9) * r + Math.sin(tTotal * 2.3) * r * 0.35, pit = mira.pitch + Math.sin(tTotal * 1.3 + 1) * r * 0.8;
+      camera.position.set(jogador.x, jogador.y + 1.62, jogador.z);
+      camera.lookAt(jogador.x + Math.sin(yaw) * Math.cos(pit) * 10, jogador.y + 1.62 + Math.sin(pit) * 10, jogador.z + Math.cos(yaw) * Math.cos(pit) * 10);
+      // na luneta nada a menos de 2,5 m importa: corta a mureta e o que estiver colado no olho (a bala também ignora)
+      if (camera.fov !== mira.fov || camera.near !== 2.5) { camera.fov = mira.fov; camera.near = 2.5; camera.updateProjectionMatrix(); }
+      snapCam = true;
     } else if (camModo === 0) {
-      const d = jogador.veiculo ? Math.max(camDist, jogador.veiculo.camDist) : camDist;
+      let d = jogador.veiculo ? Math.max(camDist, jogador.veiculo.camDist) : camDist;
+      if (jogador.plataforma?.interior) d = Math.min(d, 3.0);                   // dentro da loja a câmera fica perto (paredes)
       const h = (jogador.veiculo ? jogador.veiculo.camAlt : 1.7) + Math.sin(camPitch) * d * 0.72;
       const hDist = Math.cos(camPitch) * d;
       posCamDesejada.set(focoX - Math.sin(camYaw) * hDist, Math.max(0.8, focoY + h - 1.1), focoZ - Math.cos(camYaw) * hDist);
@@ -2156,6 +2304,9 @@ export async function iniciarJogo() {
   window.__jogo = {
     pausar: v => { pausado = v; },
     modo: () => modo,
+    missao, loja, balacam, mira: () => ({ ...mira }),
+    irParaPos: (x, z, ry = 0, terraco = false) => irPara({ x, z, ry }, terraco === 'manter' ? jogador.plataforma : terraco ? TORRE.terraco : null),
+    mirar: (yaw, pitch, fov) => { if (!mira.ativa) entrarMira(true); mira.yaw = yaw; mira.pitch = pitch; if (fov) mira.fov = fov; },
     camFixa: (p, a) => { camFixa = p ? { p: new THREE.Vector3(...p), a: new THREE.Vector3(...a) } : null; },
     pose: () => ({ jogador: { x: jogador.x, z: jogador.z, ry: jogador.ry }, veiculos: veiculos.map(v => ({ id: v.id, x: v.x, z: v.z, ry: v.ry, raio: v.raio })) }),
     abertura: { duracao: abertura.duracao, marcos: () => abertura.linha.map(s => [s.t0, s.t1, s.loc.id]), irPara: t => abertura.irPara(t), pular: () => abertura.pular(), iniciar: () => iniciarAbertura() },
