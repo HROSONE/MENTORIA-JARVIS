@@ -180,7 +180,8 @@ export class Missao {
 
   iniciar(comIntro = true) {
     if (this.estado !== 'inativa' && this.estado !== 'falha') return;
-    this.t = 0; this.acoes = []; this.tFala = 2; this.iFala = 0;
+    this.t = 0; this.acoes = []; this.tFala = 2; this.iFala = 0; this.graca = 3;   // alguns segundos sem detecção ao (re)começar
+    this._limparFalas?.();
     this._montarCena(); this._mostrar(true);
     if (comIntro) return this._intro();
     this.estado = 'ativa';
@@ -320,10 +321,11 @@ export class Missao {
     // atores
     this._animarAtores(dt, t);
     if (this.estado === 'ativa') {
-      this.nervoso = Math.max(0, this.nervoso - dt);
+      this.nervoso = Math.max(0, this.nervoso - dt); this.graca = Math.max(0, (this.graca || 0) - dt);
       if (this.nervoso <= 0 && this.bandido._estadoRosto !== 'raiva') { this.bandido.rosto({ expressao: 'raiva', forca: 0.9 }); this.bandido._estadoRosto = 'raiva'; }
       const d = Math.hypot(j.x - CENA.x, j.z - CENA.z);
-      if (!this.jogo.noTerraco() && d < RAIO_ALERTA) this._falhar(this.jogo.noVeiculo() ? 'O bandido viu o carro chegando.' : 'O bandido viu você chegando.');
+      if (this.graca > 0) { /* acabou de recomeçar */ }
+      else if (!this.jogo.noTerraco() && d < RAIO_ALERTA) this._falhar(this.jogo.noVeiculo() ? 'O bandido viu o carro chegando.' : 'O bandido viu você chegando.');
       else if (this.jogo.sireneLigada() && d < 90) this._falhar('A sirene assustou o bandido.');
     }
     // ações programadas (sequências de vitória/derrota)
@@ -464,7 +466,7 @@ export class Missao {
     this._depois(perto ? 4.2 : 3.6, () => {
       this.estado = 'falha'; document.body.classList.remove('em-cine');
       this._card('MISSÃO FRACASSADA', `${motivo}<br><br>${refemAtingida ? 'Mire com calma: a cabeça do bandido fica logo atrás da dela.' : 'O bandido atirou na refém e a polícia abriu fogo.'}${perto ? '<br><b>Você estava perto demais e também foi atingido.</b>' : ''}<br><br>Lembre: só a <b class="c-s">sniper</b>, de cima do <b class="c-t">terraço da torre</b>, sem chegar a menos de ${RAIO_ALERTA} m.`,
-        'Tentar de novo', () => { this._fecharCard(); this.el.dano.classList.remove('visivel'); if (perto) this.jogo.reviver(); this.iniciar(false); this._fecharCard(); });
+        'Tentar de novo', () => { this._fecharCard(); this.el.dano.classList.remove('visivel'); this.jogo.reviver(); this.iniciar(false); this._fecharCard(); });   // recomeça sempre longe da cena
     });
   }
 

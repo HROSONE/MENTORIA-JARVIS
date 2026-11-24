@@ -28,6 +28,7 @@ export class Sala {
     });
     this.elJogar.addEventListener('click', () => this.g.aoJogar?.({ ...this.escolha }));
     document.getElementById('sala-rever').addEventListener('click', () => this.g.aoRever?.());
+    document.getElementById('sala-tela').addEventListener('click', () => document.getElementById('btn-tela').click());   // mesmo botão Horizontal do jogo
     this._tecla = e => {
       if (!this.aberta) return;
       if (e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); e.stopImmediatePropagation(); this.elJogar.click(); }
@@ -45,7 +46,7 @@ export class Sala {
   abrir() {
     this.aberta = true;
     this.el.classList.remove('oculto');
-    document.body.classList.add('em-cine');
+    document.body.classList.add('em-cine', 'na-sala');
     addEventListener('keydown', this._tecla, true);
     this.mostrarAba(this.aba);
     this._resumo();
@@ -54,7 +55,7 @@ export class Sala {
   fechar() {
     this.aberta = false;
     this.el.classList.add('oculto');
-    document.body.classList.remove('em-cine');
+    document.body.classList.remove('em-cine', 'na-sala');
     removeEventListener('keydown', this._tecla, true);
   }
 

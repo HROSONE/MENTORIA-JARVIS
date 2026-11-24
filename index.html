@@ -266,8 +266,12 @@
     #toast { top: 48px; font-size: 11px; padding: 6px 12px; }
   }
   /* ---------- Abertura (cutscene pulável) e Sala de entrada ---------- */
-  body.em-cine #hud-esq, body.em-cine #hud-dir, body.em-cine #prompt-acao, body.em-cine #mira, body.em-cine #hud-arma,
+  body.em-cine #hud-esq, body.em-cine #prompt-acao, body.em-cine #mira, body.em-cine #hud-arma,
   body.em-cine #hud-base-dir, body.em-cine #controles-touch, body.em-cine #aviso-girar, body.em-cine #toast { display: none !important; }
+  /* nas telas de cinema (abertura, sala, cenas) só o botão Horizontal/tela cheia continua, no alto e no centro */
+  body.em-cine #hud-dir { z-index: 70; left: 50%; right: auto; transform: translateX(-50%); top: max(10px, env(safe-area-inset-top)); max-width: none; }
+  body.em-cine #hud-dir > :not(#btn-tela) { display: none !important; }
+  body.na-sala #hud-dir { display: none !important; }
   #abertura { position: fixed; inset: 0; z-index: 60; pointer-events: auto; cursor: default; }
   #abertura .faixa { position: absolute; left: 0; right: 0; height: 9vh; background: #000; }
   #abertura .faixa.cima { top: 0; } #abertura .faixa.baixo { bottom: 0; }
@@ -311,13 +315,18 @@
   #sala-resumo span { color: var(--gold); }
   #sala-jogar { white-space: nowrap; padding: 14px 30px; border-radius: 10px; border: 0; background: linear-gradient(90deg, #22c55e, #16a34a); color: #fff; font-weight: 900; font-size: 18px; letter-spacing: 1px; cursor: pointer; box-shadow: 0 6px 18px rgba(22,163,74,.45); }
   #sala-jogar:disabled { filter: grayscale(.7); cursor: wait; }
-  #sala-rever { grid-column: 2; grid-row: 1; justify-self: end; align-self: start; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border-glass); background: var(--bg-glass); color: var(--text); font-size: 12px; font-weight: 700; cursor: pointer; }
+  #sala-acoes { grid-column: 2; grid-row: 1; justify-self: end; align-self: start; display: flex; gap: 8px; }
+  #sala-tela, #sala-rever { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border-glass); background: var(--bg-glass); color: var(--text); font-size: 12px; font-weight: 700; cursor: pointer; }
   .sala-dica { font-size: 11px; color: var(--muted); margin-top: 8px; }
 
   @media (max-width: 760px), (max-height: 520px) {
     #sala { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto auto; gap: 8px; padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); }
     .sala-topo .sala-titulo { display: none; }
-    #sala-rever { grid-column: 1; grid-row: 1; padding: 6px 10px; font-size: 11px; }
+    #sala-acoes { grid-column: 1; grid-row: 1; gap: 6px; }
+    #sala-tela, #sala-rever { padding: 6px 10px; font-size: 11px; }
+  }
+  @media (max-width: 440px) {
+    #sala-tela span { display: none; }
     .sala-painel { grid-column: 1; grid-row: 3; padding: 8px; }
     #sala-abas button { padding: 7px 4px; font-size: 12px; min-width: 0; }
     #sala-grade { display: flex; overflow-x: auto; overflow-y: hidden; gap: 6px; }
@@ -334,6 +343,7 @@
     .sala-painel { grid-column: 1; grid-row: 2 / 4; }
     #sala-grade { display: grid; overflow-y: auto; overflow-x: hidden; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
     .sala-base { grid-column: 2; grid-row: 3; justify-self: end; }
+    #sala-acoes { grid-column: 2; grid-row: 1; justify-self: end; }
   }
   /* ---------- Missão: luneta, câmera da bala, balões, cartão ---------- */
   #luneta { position: fixed; inset: 0; z-index: 20; pointer-events: none;
@@ -412,7 +422,7 @@
   <!-- Sala de entrada: personagem, veículo e local -->
   <div id="sala" class="oculto">
     <header class="sala-topo"><div class="logo-jogo">HRYZ <span>CITY</span></div><div class="sala-titulo">Escolha quem você é, o que vai dirigir e onde começar</div></header>
-    <button id="sala-rever">↺ Ver a abertura</button>
+    <div id="sala-acoes"><button id="sala-tela" title="Tela cheia / modo horizontal">⛶<span> Horizontal</span></button><button id="sala-rever">↺ Ver a abertura</button></div>
     <div class="sala-painel glass">
       <nav id="sala-abas"></nav>
       <div id="sala-grade"></div>

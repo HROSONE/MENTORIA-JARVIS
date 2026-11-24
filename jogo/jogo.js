@@ -1037,7 +1037,17 @@ export async function iniciarJogo() {
     irTerraco: () => comFade(() => { irPara(TORRE.chegada, TORRE.terraco); mostrarToast('Terraço da torre, 38 m de altura. Sniper (3) e botão direito (ou Z) para a luneta.'); }),
     descerTerraco: () => comFade(() => { sairMira(); irPara({ x: TORRE.porta.x, z: TORRE.porta.z + 1.6, ry: 0 }, null); }),
     atingirJogador: () => { sairMira(); travado = true; persAtual.inst.obj.rotation.x = -1.35; },
-    reviver: () => { persAtual.inst.obj.rotation.x = 0; travado = false; irPara({ x: 146, z: 163.8, ry: Math.PI / 2 }, null); },
+    // recomeçar a missão: o jogador volta longe da cena (perto da delegacia), a pé ou com o mesmo veículo e a sirene desligada
+    reviver: () => {
+      persAtual.inst.obj.rotation.x = 0; travado = false; sairMira(); armas.gatilho(false);
+      if (loja.dentro) { loja.dentro = false; loja.grupo.visible = false; }
+      const v = jogador.veiculo;
+      if (v) {
+        v.sirene = false; $('btn-sirene').classList.remove('ativo');
+        colocarVeiculo(v, 200, 169.8, -Math.PI / 2); jogador.plataforma = null; jogador.x = v.x; jogador.z = v.z; jogador.ry = v.ry; camYaw = v.ry; snapCam = true; minimapTimer = 99;
+      } else irPara({ x: 146, z: 163.8, ry: Math.PI / 2 }, null);
+      mostrarToast('Missão reiniciada · você voltou para longe da rotatória');
+    },
     hud: (rot, txt) => { hudRot.textContent = rot; elAlvoNome.textContent = txt; },
   };
   const missao = new Missao({ scene, camera, armas, som, base: BASE_BIB, jogo: ganchos });
