@@ -1017,7 +1017,7 @@ export async function iniciarJogo() {
     if (armas.atual !== 'sniper' || jogador.veiculo || balacam.ativa || modo !== 'jogo') {
       if (fixa && armas.possui.has('sniper') && !jogador.veiculo) { trocarArma('sniper'); } else return;
     }
-    mira.ativa = true; mira.fixa = !!fixa; mira.yaw = jogador.plataforma === TORRE.terraco ? camYaw : camYaw; mira.pitch = jogador.plataforma === TORRE.terraco ? -0.45 : -0.04; mira.fov = 14;
+    mira.ativa = true; mira.fixa = !!fixa; mira.yaw = jogador.plataforma === TORRE.terraco ? camYaw : camYaw; mira.pitch = jogador.plataforma === TORRE.terraco ? -0.45 : -0.04; mira.fov = jogador.plataforma === TORRE.terraco ? 7 : 14;
     armas.luneta = true; persAtual.inst.obj.visible = false; elLuneta.classList.remove('oculto'); document.body.classList.add('na-luneta');
   }
   function sairMira() {
