@@ -20,6 +20,8 @@ import * as Carregadeira from '../videos/biblioteca3d/veiculos/carregadeira/carr
 import * as Rolo from '../videos/biblioteca3d/veiculos/rolo/rolo.js';
 import * as Basculante from '../videos/biblioteca3d/veiculos/basculante/basculante.js';
 import { construirCanteiro, monteDeTerra } from './canteiro.js';
+import { TerrenoCavavel } from './terreno.js';
+import { Efeitos, VidaJogador, danoVeiculo } from './dano.js';
 import { construirCidade, PONTOS_TELEPORTE, SELVA_INFO } from './cidade.js';
 import { criarTrex } from './trex.js';
 import { Armas } from './armas.js';
@@ -911,6 +913,18 @@ export async function iniciarJogo() {
   // canteiro de obras (terreno cercado ao norte, com o operador)
   let canteiro = null;
   try { canteiro = await construirCanteiro({ scene, colisores: cidade.colisores, base: BASE_BIB }); } catch (e) { console.warn('canteiro', e); }
+  let terreno = null;
+  if (canteiro) {                                                                  // o chão de dentro do tapume vira terreno cavável
+    canteiro.chao.visible = false;
+    terreno = new TerrenoCavavel(canteiro.grupo, { x0: 140.5, x1: 219.5, z0: -29.5, z1: 14.5 }, canteiro.materialTerra);
+  }
+  const alturaChao = (x, z) => terreno?.altura(x, z) ?? null;
+  const efeitos = new Efeitos(scene);
+  let entulho = 0;                                                                 // terra despejada fora do canteiro (vira monte a cada 3 m³)
+  function despejarTerra(x, z, m3, r = 1.2) {
+    if (terreno?.dentro(x, z)) { terreno.depositar(x, z, m3, r); return; }
+    entulho += m3; if (entulho >= 3) { entulho = 0; montes.push(monteDeTerra(scene, x, z)); if (montes.length > 14) scene.remove(montes.shift()); }
+  }
 
   // ---- Personagem Jogável (ultra-leve no modo Leve; elenco GLB completo em Médio/Alto ou ao trocar com C)
   atualizarProgresso(0.94, 'Preparando personagem jogável…');
@@ -986,7 +1000,7 @@ export async function iniciarJogo() {
 
   // ---- Armas (pistola e metralhadora feitas no Blender)
   atualizarProgresso(0.97, 'Carregando armas…');
-  const armas = new Armas({ scene, camera, som, alvos: () => [cidade.mundo, ...veiculos.map(v => v.obj)], chao: () => jogador.y,
+  const armas = new Armas({ scene, camera, som, alvos: () => [cidade.mundo, ...veiculos.map(v => v.obj), ...(trexState.inst && trexState.estado !== 'morto' ? [trexState.inst.grupo] : [])], chao: () => jogador.y,
     possui: Q.has('armas') ? ['pistola', 'metralhadora', 'sniper'] : [] });                       // as armas ficam espalhadas pelo mapa (missão)
   try { await armas.carregar(BASE_BIB); } catch (e) { console.warn('armas não carregaram', e); }
   window.__armas = armas;                                                            // (para testes automáticos)
@@ -1045,8 +1059,35 @@ export async function iniciarJogo() {
     elLuneta.classList.add('oculto'); document.body.classList.remove('na-luneta', 'respiracao');
   }
 
-  // ---- Missão do refém, câmera da bala e loja de munição
+  // ---- Vida do jogador: desmaiou → acorda no hospital
   let travado = false;
+  const vida = new VidaJogador({ aoMorrer: motivo => {
+    sairMira(); armas.gatilho(false); armas.equipar(null);
+    if (jogador.veiculo) sairSemAnimar();
+    travado = true; persAtual.inst.obj.visible = true; persAtual.inst.obj.rotation.x = -1.4;
+    mostrarToast(`Você desmaiou${motivo ? ' (' + motivo + ')' : ''}…`);
+    setTimeout(() => comFade(() => {
+      persAtual.inst.obj.rotation.x = 0; travado = false; vida.reviver();
+      if (loja.dentro) { loja.dentro = false; loja.grupo.visible = false; }
+      irPara({ x: 150, z: 100.6, ry: Math.PI }, null);
+      mostrarToast('Você acordou no Hospital Hryz. Cuidado lá fora!');
+    }), 2600);
+  } });
+  // dano por tiro: veículos (lataria) e o T. rex
+  const DANO_TIRO = { pistola: 7, metralhadora: 5, sniper: 70 };
+  function danoPorTiro(obj, ponto, id) {
+    if (!obj) return;
+    let o = obj; while (o && o.parent) { const v = veiculos.find(x => x.obj === o); if (v) { v.dano?.(DANO_TIRO[id] || 5, ponto); return; } if (trexState.inst && o === trexState.inst.grupo) { danoTrex(DANO_TIRO[id] || 5); return; } o = o.parent; }
+  }
+  function danoTrex(n) {
+    const tr = trexState; if (tr.estado === 'morto') return;
+    tr.hp -= n;
+    if (tr.hp <= 0) { tr.estado = 'morto'; tr.tMorto = 0; som.tocarRugidoTrex(0.6); mostrarToast('🦖 O T. rex caiu! Ele volta daqui a pouco…'); return; }
+    if (tr.estado === 'patrulha') { tr.estado = 'rugindo'; tr.timerEstado = 1.0; }
+    if (tr.rugidoCooldown <= 0) { som.tocarRugidoTrex(0.9); tr.rugidoCooldown = 2.5; }
+  }
+
+  // ---- Missão do refém, câmera da bala e loja de munição
   atualizarProgresso(0.975, 'Preparando a missão…');
   const hudRot = $('hud-alvo-rot');
   const ganchos = {
@@ -1054,7 +1095,7 @@ export async function iniciarJogo() {
     sireneLigada: () => !!jogador.veiculo?.sirene, toast: m => mostrarToast(m), noite: () => ehNoite,
     irTerraco: () => comFade(() => { irPara(TORRE.chegada, TORRE.terraco); mostrarToast('Terraço da torre, 38 m de altura. Sniper (3) e botão direito (ou Z) para a luneta.'); }),
     descerTerraco: () => comFade(() => { sairMira(); irPara({ x: TORRE.porta.x, z: TORRE.porta.z + 1.6, ry: 0 }, null); }),
-    atingirJogador: () => { sairMira(); travado = true; persAtual.inst.obj.rotation.x = -1.35; },
+    atingirJogador: () => { sairMira(); vida.dano(45, 'tiro da polícia'); travado = true; persAtual.inst.obj.rotation.x = -1.35; },
     // recomeçar a missão: o jogador volta longe da cena (perto da delegacia), a pé ou com o mesmo veículo e a sirene desligada
     reviver: () => {
       persAtual.inst.obj.rotation.x = 0; travado = false; sairMira(); armas.gatilho(false);
@@ -1072,7 +1113,7 @@ export async function iniciarJogo() {
   const balacam = new BalaCam({
     scene, camera, renderer, armas, som,
     alvosEspeciais: () => missao.alvosBala(),
-    aoImpacto: res => missao.aoImpacto(res),
+    aoImpacto: res => { missao.aoImpacto(res); if (res.objeto) danoPorTiro(res.objeto, res.ponto, 'sniper'); },
     aoFim: () => { snapCam = true; if (missao.estado !== 'ativa') sairMira(); },
   });
   const loja = new Loja({ scene, camera, armas, base: BASE_BIB, jogo: {
@@ -1086,7 +1127,7 @@ export async function iniciarJogo() {
   } });
   try { await missao.carregar(); await loja.carregar(); } catch (e) { console.warn('missão/loja não carregaram', e); }
   armas.aoDisparoSniper = d => balacam.disparar(d);
-  armas.aoAtirar = (ponto, id) => missao.aoTiroComum(ponto, id);
+  armas.aoAtirar = (ponto, id, obj) => { missao.aoTiroComum(ponto, id); danoPorTiro(obj, ponto, id); };
   armas.aoSemMunicao = id => mostrarToast(id === 'sniper' ? 'Sniper sem balas! Compre na Loja de Munição ($ no minimapa).' : 'Sem munição de reserva: compre na Loja ($ no minimapa).');
   const missaoEmCurso = () => ['ativa', 'percebeu', 'falha', 'vitoria'].includes(missao.estado);
   function interacaoAtual() {
@@ -1167,6 +1208,7 @@ export async function iniciarJogo() {
     if (jogador.plataforma) return null;
     let melhor = null, bestD = 5.4;
     for (const v of veiculos) {
+      if (v.queimado) continue;
       const d = Math.hypot(v.x - jogador.x, v.z - jogador.z);
       if (d < bestD) { bestD = d; melhor = v; }
     }
@@ -1238,7 +1280,8 @@ export async function iniciarJogo() {
     rumo: Math.PI * 0.85, // rad em atan2(dz, dx) — no GLB, +X é frente, logo rotation.y = -rumo
     vel: 3.4,
     dist: 0,
-    estado: 'patrulha', // 'patrulha' | 'rugindo' | 'perseguindo' | 'mordendo'
+    estado: 'patrulha', // 'patrulha' | 'rugindo' | 'perseguindo' | 'mordendo' | 'morto'
+    hp: 500, tMorto: 0,
     timerEstado: 0,
     patrulhaAng: 2.8,
     avisoCooldown: 0,
@@ -1290,6 +1333,12 @@ export async function iniciarJogo() {
 
   function atualizarTrex(dt, t, px, py, pz) {
     const tr = trexState;
+    if (tr.estado === 'morto') {
+      tr.tMorto += dt;
+      if (tr.inst) { const u = Math.min(1, tr.tMorto / 1.2); tr.inst.grupo.rotation.set(0, -tr.rumo, 0); tr.inst.grupo.rotateX(u * u * 1.45); tr.inst.grupo.position.y = 0.05 + u * 0.2; }
+      if (tr.tMorto > 90) { tr.estado = 'patrulha'; tr.hp = 500; tr.x = 494; tr.z = 274; if (tr.inst) tr.inst.grupo.rotation.set(0, -tr.rumo, 0); }
+      return;
+    }
     tr.avisoCooldown = Math.max(0, tr.avisoCooldown - dt);
     tr.rugidoCooldown = Math.max(0, tr.rugidoCooldown - dt);
 
@@ -1355,6 +1404,7 @@ export async function iniciarJogo() {
           if (jogador.veiculo) {
             const v = jogador.veiculo;
             v.vel = Math.max(v.vel, 10);
+            v.dano?.(30, new THREE.Vector3(v.x, 1.2, v.z)); vida.dano(8, 'T. rex');
             if (tr.avisoCooldown <= 0) {
               mostrarToast('🦖 O T. rex bateu no carro! Acelere!');
               tr.avisoCooldown = 7;
@@ -1364,7 +1414,8 @@ export async function iniciarJogo() {
             jogador.x = empurrado.x;
             jogador.z = empurrado.z;
             jogador.vy = 4.5;
-            jogador.noChao = false;
+            jogador.noChao = false; jogador.yPico = jogador.y;
+            vida.dano(35, 'T. rex');
             if (tr.avisoCooldown <= 0) {
               mostrarToast('🦖 Quase virou lanche do T. rex!');
               tr.avisoCooldown = 7;
@@ -1864,6 +1915,16 @@ export async function iniciarJogo() {
   let modo = 'jogo';
   let camFixa = null;                                                       // câmera parada (miniaturas e testes)
   for (const v of veiculos) v.vaga = { x: v.x, z: v.z, ry: v.ry };          // vaga original de cada veículo
+  for (const v of veiculos) {
+    danoVeiculo(v, efeitos, { aoExplodir: q => {
+      const dj = Math.hypot(jogador.x - q.x, jogador.z - q.z);
+      if (jogador.veiculo === q) { sairSemAnimar(); persAtual.inst.obj.visible = true; vida.dano(55, 'explosão'); }
+      else if (dj < 7) vida.dano(60 * (1 - dj / 7), 'explosão');
+      for (const o of veiculos) if (o !== q && Math.hypot(o.x - q.x, o.z - q.z) < 6) o.dano?.(25);
+      mostrarToast(`💥 ${q.nome} explodiu!`);
+    } });
+    v.aoVoltar = () => { if (jogador.veiculo === v) return false; colocarVeiculo(v, v.vaga.x, v.vaga.z, v.vaga.ry); return true; };
+  }
   const abertura = new Abertura(camera, {
     aoTerminar: () => entrarSala(),
     aoPlano: (local, plano) => {
@@ -2087,7 +2148,7 @@ export async function iniciarJogo() {
     if (jogador.veiculo) {
       // ==================== DIRIGINDO ====================
       const v = jogador.veiculo;
-      const gas = Math.max(-1, Math.min(1, frente));
+      const gas = v.queimado ? 0 : Math.max(-1, Math.min(1, frente));
       const dirInput = Math.max(-1, Math.min(1, -lado)); // + = esquerda
 
       if (gas > 0.05) {
@@ -2124,10 +2185,26 @@ export async function iniciarJogo() {
       const dz = Math.cos(v.ry) * v.vel * dt;
       const col = resolverColisoes(v.x + dx, v.z + dz, v.raio);
       v.x = col.x; v.z = col.z;
-      if (col.bateu) v.vel *= -0.25;
+      if (col.bateu) {
+        const imp = Math.abs(v.vel);
+        if (imp > 6) { v.dano?.((imp - 6) * 2.4, v.obj.position.clone().add(new THREE.Vector3(Math.sin(v.ry) * v.raio, 1, Math.cos(v.ry) * v.raio))); if (imp > 10) vida.dano((imp - 10) * 1.6, 'batida'); som.tocarBeep?.(90, 0.12, 0.25); }
+        v.vel *= -0.25;
+      }
+      // carro × carro: empurra o outro (mais leve anda mais), os dois amassam pela velocidade do impacto
+      for (const o of veiculos) {
+        if (o === v || !o.obj.visible) continue;
+        const ddx = v.x - o.x, ddz = v.z - o.z, d = Math.hypot(ddx, ddz), min = (v.raio + o.raio) * 0.72;
+        if (d >= min || d < 1e-3) continue;
+        const nx = ddx / d, nz = ddz / d, sob = min - d, mv = v.raio * v.raio * (v.maquina ? 3 : 1), mo = o.raio * o.raio * (o.maquina ? 3 : 1);
+        v.x += nx * sob * mo / (mv + mo); v.z += nz * sob * mo / (mv + mo);
+        o.x -= nx * sob * mv / (mv + mo); o.z -= nz * sob * mv / (mv + mo); o.obj.position.x = o.x; o.obj.position.z = o.z;
+        const imp = Math.abs(v.vel * (Math.sin(v.ry) * -nx + Math.cos(v.ry) * -nz));
+        if (imp > 3) { v.dano?.(imp * 1.4); o.dano?.(imp * 1.8 * mv / (mv + mo) * 2); if (imp > 9) vida.dano((imp - 9) * 1.4, 'batida'); }
+        v.vel *= imp > 3 ? -0.3 : 0.9;
+      }
 
       v.dist += v.vel * dt;
-      v.obj.position.set(v.x, 0, v.z);
+      v.obj.position.set(v.x, (alturaChao(v.x, v.z) ?? 0.03) - 0.03, v.z);       // no canteiro a máquina desce no buraco / sobe no monte
       v.obj.rotation.set(0, v.ry, 0, 'YXZ');
       // Inclinação leve de suspensão na curva e na aceleração
       const roll = -v.steer * Math.min(Math.abs(v.vel) / 25, 1) * 0.08;
@@ -2144,10 +2221,27 @@ export async function iniciarJogo() {
           if (mais !== menos) v.api.ferr.mover(i, (mais ? 1 : -1) * dt);
         });
         if (v.api.vibrar) som.atualizarVibracao?.(v.api.vibrar(dt));
-        if (v.id === 'basculante') {                                                    // despejou: fica um monte de terra atrás; abaixou: carrega de novo
-          const a = v.api.ferr.valor('cacamba');
-          if (!v._despejou && a > 0.72) { v._despejou = true; const p = v.obj.localToWorld(new THREE.Vector3(0, 0, -6.2)); montes.push(monteDeTerra(scene, p.x, p.z)); if (montes.length > 12) scene.remove(montes.shift()); }
-          if (v._despejou && a < 0.02) { v._despejou = false; v.api.carregar(); }
+        // caçambas: a ponta abaixo do chão cava (tira terra e enche); virada para despejar, a terra cai (no basculante, se estiver embaixo)
+        for (const c of v.api.cacambas || []) {
+          const p = c.ponta(), h = alturaChao(p.x, p.z);
+          if (h !== null && p.y < h - 0.04 && c.carga < c.cap) {
+            const tirado = terreno.cavar(p.x, p.z, c.cap > 2 ? 1.3 : 0.8, Math.min(c.cap - c.carga, (c.cap > 2 ? 2.4 : 1.4) * dt));
+            if (tirado > 0) { c.definirCarga(c.carga + tirado); if (Math.random() < dt * 14) efeitos.emitir('poeira', p, new THREE.Vector3((Math.random() - 0.5) * 1.5, 1.2, (Math.random() - 0.5) * 1.5), 1.2, 0.5, 1.2); }
+          }
+          if (c.carga > 0.001 && c.despejando()) {
+            const q = Math.min(c.carga, 1.8 * dt * (c.cap > 2 ? 1.6 : 1)), ce = c.centro();
+            const bas = veiculos.find(o => o.id === 'basculante' && !o.queimado && o.api?.caixaCacamba && (() => { const cx = o.api.caixaCacamba(), mid = cx.a.clone().lerp(cx.b, 0.5), L = cx.a.distanceTo(cx.b);
+              const d = new THREE.Vector3(ce.x - mid.x, 0, ce.z - mid.z), ax = cx.b.clone().sub(cx.a).setY(0).normalize(), lo = d.dot(ax), la = Math.abs(d.x * ax.z - d.z * ax.x);
+              return Math.abs(lo) < L / 2 + 0.3 && la < cx.larg / 2 + 0.3 && ce.y > mid.y - 0.3; })());
+            if (bas) bas.api.adicionarCarga(q); else { const hc = alturaChao(ce.x, ce.z) ?? 0; despejarTerra(ce.x, ce.z, q, c.cap > 2 ? 1.6 : 1.0); if (hc < ce.y && Math.random() < dt * 10) efeitos.emitir('terra', ce, new THREE.Vector3(0, -2, 0), 0.6, 0.5, 0.4, 6); }
+            if (Math.random() < dt * 16) efeitos.emitir('terra', ce, new THREE.Vector3((Math.random() - 0.5), -3, (Math.random() - 0.5)), 0.5, 0.45, 0.3, 8);
+            c.definirCarga(c.carga - q);
+          }
+        }
+        if (v.id === 'basculante' && v.api.cargaAtual() > 0.001 && v.api.ferr.valor('cacamba') > 0.5) {     // a caçamba levantada despeja a terra atrás
+          const q = Math.min(v.api.cargaAtual(), 5 * dt), p = v.obj.localToWorld(new THREE.Vector3(0, 0, -5.6 - Math.random() * 0.8));
+          v.api.adicionarCarga(-q); despejarTerra(p.x, p.z, q, 1.8);
+          if (Math.random() < dt * 18) efeitos.emitir('terra', v.obj.localToWorld(new THREE.Vector3((Math.random() - 0.5) * 1.6, 1.4, -4.4)), new THREE.Vector3(0, -2, -1.5), 0.7, 0.55, 0.4, 6);
         }
       }
       if (v.api) {
@@ -2187,22 +2281,37 @@ export async function iniciarJogo() {
         const velBase = sprint ? 6.4 : 2.9;
         const passo = velBase * Math.min(1, mag) * dt;
         const nx = jogador.x + Math.sin(dirMundo) * passo, nz = jogador.z + Math.cos(dirMundo) * passo;
+        const pl = jogador.plataforma;
+        // pulou por cima da mureta do terraço (no ar, acima dela, saindo do retângulo): cai do prédio
+        if (pl && !pl.interior && !jogador.noChao && jogador.y > pl.y + 0.95 && (nx < pl.minX || nx > pl.maxX || nz < pl.minZ || nz > pl.maxZ)) { jogador.plataforma = null; mostrarToast('Você pulou do terraço!'); }
         const col = jogador.plataforma ? moverNaPlataforma(nx, nz, 0.38) : resolverColisoes(nx, nz, 0.42);
         jogador.x = col.x; jogador.z = col.z;
+        if (!jogador.plataforma) for (const o of veiculos) {                       // não atravessa os carros
+          const ddx = jogador.x - o.x, ddz = jogador.z - o.z, d = Math.hypot(ddx, ddz), min = o.raio * 0.78 + 0.35;
+          if (d < min && d > 1e-3) { jogador.x = o.x + ddx / d * min; jogador.z = o.z + ddz / d * min; }
+        }
         velAbs = velBase * Math.min(1, mag);
       }
 
+      const chaoAqui = jogador.plataforma ? jogador.plataforma.y : (alturaChao(jogador.x, jogador.z) ?? CALCADA);
+      if (jogador.noChao) {
+        if (chaoAqui < jogador.y - 0.6) { jogador.noChao = false; jogador.vy = 0; jogador.yPico = jogador.y; }     // saiu da beira (buraco, prédio)
+        else jogador.y = chaoAqui;
+      }
       if (espaco && jogador.noChao) {
         jogador.vy = 6.2;
-        jogador.noChao = false;
+        jogador.noChao = false; jogador.yPico = jogador.y;
         tocarAcao('Pular', 0.08);
       }
       if (!jogador.noChao) {
         jogador.vy -= 17.5 * dt;
         jogador.y += jogador.vy * dt;
-        const chao = jogador.plataforma ? jogador.plataforma.y : CALCADA;
+        jogador.yPico = Math.max(jogador.yPico ?? jogador.y, jogador.y);
+        const chao = jogador.plataforma ? jogador.plataforma.y : (alturaChao(jogador.x, jogador.z) ?? CALCADA);
         if (jogador.y <= chao) {
-          jogador.y = chao; jogador.vy = 0; jogador.noChao = true;
+          const queda = (jogador.yPico ?? chao) - chao;                             // dano de queda: a partir de 3,5 m; ~15 m é fatal
+          if (queda > 3.5) { vida.dano((queda - 3.5) * 9, 'queda'); if (queda < 14) mostrarToast(`Queda de ${queda.toFixed(0)} m!`); }
+          jogador.y = chao; jogador.vy = 0; jogador.noChao = true; jogador.yPico = chao;
         }
       }
       if (jogador.noChao) {
@@ -2235,6 +2344,8 @@ export async function iniciarJogo() {
     atualizarHudArma();
     missao.atualizar(dt, tTotal);
     balacam.atualizarEfeitos(dt);
+    efeitos.atualizar(dt); vida.atualizar(dt); terreno?.atualizar(dt);
+    for (const v of veiculos) v.atualizarDano?.(dt);
 
     // Atualiza setores visíveis, trânsito, frota distante, T. rex da Selva, fumaça de drift e NPCs próximos
     fumacaDrift.atualizar(dt);

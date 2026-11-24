@@ -165,3 +165,18 @@ export function luzesBasicas(G, mats, { frente, tras, yF, yT, xs, giros = [] }) 
   for (const gr of giros) luzes.emergencia.push({ mat: gr.mat, lado: 0, pisca: false, cor: 0xffa000 });
   return luzes;
 }
+
+/** terra dentro de uma caçamba: meia esfera achatada; nivel(0..1) mostra o quanto está cheia */
+export function terraNaCacamba(pai, pos, rx, ry, rz, mats) {
+  const g = new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+  const m = new THREE.Mesh(g, mats.terra); m.position.set(...pos); m.scale.set(rx, 0.001, rz); m.visible = false; m.castShadow = true; pai.add(m);
+  m.nivel = n => { m.visible = n > 0.02; m.scale.set(rx * (0.6 + 0.4 * n), ry * n, rz * (0.6 + 0.4 * n)); };
+  return m;
+}
+/** descrição de uma caçamba para a física do jogo (cavar, carregar, despejar) */
+export function cacamba({ nome, cap, obj, ponta, centro, despejando, terra }) {
+  const c = { nome, cap, carga: 0, obj, despejando,
+    ponta: () => obj.localToWorld(new THREE.Vector3(...ponta)), centro: () => obj.localToWorld(new THREE.Vector3(...centro)),
+    definirCarga(v) { c.carga = Math.max(0, Math.min(cap, v)); terra?.nivel(c.carga / cap); } };
+  return c;
+}

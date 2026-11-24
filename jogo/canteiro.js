@@ -66,7 +66,7 @@ export async function construirCanteiro({ scene, colisores, base }) {
     operador.tocar('Parado'); operador.piscarAuto(true);
   } catch (e) { console.warn('operador', e); }
   return {
-    grupo: g, area: CANTEIRO,
+    grupo: g, area: CANTEIRO, chao, materialTerra: chao.material,
     atualizar(dt, fx, fz) {
       const perto = fx > x0 - 120 && fx < x1 + 120 && fz > z0 - 120 && fz < z1 + 120;
       g.visible = perto;

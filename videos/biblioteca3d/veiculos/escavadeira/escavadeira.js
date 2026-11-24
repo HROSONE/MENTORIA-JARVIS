@@ -89,10 +89,12 @@ export function criar(opc = {}) {
     { id: 'giro', nome: 'Giro', v: 0, min: -Math.PI, max: Math.PI, vel: 0.7 },
   ], aplicar);
   ferr.casa = casa; ferr.cacamba = cacamba; aplicar();
+  const terraC = C.terraNaCacamba(cacamba, [0, -0.62, -0.45], 0.45, 0.45, 0.42, mats); terraC.rotation.x = Math.PI * 0.1;
+  const cacambas = [C.cacamba({ nome: 'Caçamba', cap: 1.2, obj: cacamba, ponta: [0, -1.45, -0.95], centro: [0, -0.6, -0.45], terra: terraC, despejando: () => ferr.valor('cacamba') < 0.1 })];
   if (opc.sombraChao !== false) add(K.sombraChao(4.6, 3.0));
   let dist = 0;
   return K.api(G, { L: M.L, W: M.W, H: M.H, R: M.R, luzes, rodas: [], extra: {
-    ferr, esteiras: true,
+    ferr, esteiras: true, cacambas,
     rodar(metros) { const d = metros - dist; dist = metros; esteiras.forEach(e => e.mover(metros)); },
     esterco(rad) { esteiras[0].mover(dist + rad * 0.8); esteiras[1].mover(dist - rad * 0.8); },
   } });

@@ -77,9 +77,11 @@ export function criar(opc = {}) {
     { id: 'cacamba', nome: 'Caçamba', v: 0.25, min: -0.85, max: 0.75, vel: 0.8 },
   ], aplicar);
   aplicar();
+  const terraC = C.terraNaCacamba(cac, [0, -0.25, 0.55], 1.30, 0.75, 0.55, mats);
+  const cacambas = [C.cacamba({ nome: 'Caçamba', cap: 3.2, obj: cac, ponta: [0, -0.62, 1.38], centro: [0, -0.1, 0.6], terra: terraC, despejando: () => ferr.valor('cacamba') < -0.45 })];
   if (opc.sombraChao !== false) add(K.sombraChao(6.2, 2.9));
   return K.api(G, { L: M.L, W: M.W, H: M.H, R, luzes, rodas: [...rdT, ...rdF], extra: {
-    ferr,
+    ferr, cacambas,
     esterco(rad) { frente.rotation.y = THREE.MathUtils.clamp(rad * 1.25, -0.70, 0.70); },     // direção articulada (até ~40°)
   } });
 }

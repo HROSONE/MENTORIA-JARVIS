@@ -88,9 +88,14 @@ export function criar(opc = {}) {
     { id: 'giroR', nome: 'Giro da retro', v: 0, min: -1.3, max: 1.3, vel: 0.6 },
   ], aplicar);
   aplicar();
+  const terraF = C.terraNaCacamba(cacF, [0, -0.15, 0.40], 0.95, 0.40, 0.32, mats), terraR = C.terraNaCacamba(cacR, [0, -0.35, 0.30], 0.26, 0.25, 0.24, mats);
+  const cacambas = [
+    C.cacamba({ nome: 'Pá', cap: 1.0, obj: cacF, ponta: [0, -0.42, 0.95], centro: [0, -0.1, 0.45], terra: terraF, despejando: () => ferr.valor('cacambaF') < -0.45 }),
+    C.cacamba({ nome: 'Retro', cap: 0.22, obj: cacR, ponta: [0, -0.82, 0.48], centro: [0, -0.35, 0.30], terra: terraR, despejando: () => ferr.valor('bracoR') > 0.75 && ferr.valor('lancaR') > 0.25 }),
+  ];
   if (opc.sombraChao !== false) add(K.sombraChao(5.2, W));
   return K.api(G, { L: M.L, W, H: M.H, R: M.R, luzes, rodas: [...rd, ...rdT], extra: {
-    ferr,
+    ferr, cacambas,
     rodar(m) { for (const r of rd) r.giro.rotation.x = m / M.RF; for (const r of rdT) r.giro.rotation.x = m / M.R; },
   } });
 }

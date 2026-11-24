@@ -49,14 +49,14 @@ export function criar(opc = {}) {
   for (const s of [1, -1]) add(K.caixa(0.62, 0.05, 2.25, mats.preto, 0.01, [s * 0.88, R * 2 + 0.06, (zT1 + zT2) / 2]));    // para-lamas
   const luzes = C.luzesBasicas(G, mats, { frente: 4.15, tras: -3.95, yF: 1.0, yT: 0.95, xs: 0.95 });
   // ---------------- poses
-  let ferr = null;
+  let ferr = null, carga = 12; const CAP = 12;                                            // m³ de terra na caçamba
   const aplicar = () => {
     if (!ferr) return;
     const a = ferr.valor('cacamba');
     cac.rotation.x = -a;                                                                    // sobe a frente, gira no pino de trás
     tampa.rotation.x = -Math.min(1.2, Math.max(0, a - 0.18) * 1.8) * 0 + Math.min(1.1, Math.max(0, a - 0.15) * 1.6);   // a tampa abre por baixo
     const saiu = THREE.MathUtils.clamp((a - 0.45) / 0.3, 0, 1);                             // a terra escorrega para trás e sai
-    terra.position.z = (z0 + z1) / 2 - saiu * comp * 0.9; terra.scale.setScalar(1 - saiu * 0.85); terra.visible = saiu < 0.98;
+    const n = carga / CAP; terra.position.z = (z0 + z1) / 2 - saiu * comp * 0.9; terra.scale.set(n > 0 ? 0.55 + 0.45 * n : 0.001, Math.max(0.001, n), n > 0 ? 0.55 + 0.45 * n : 0.001); terra.scale.multiplyScalar(1 - saiu * 0.85); terra.visible = n > 0.01 && saiu < 0.98;
     G.updateMatrixWorld(true);
     cilT.atualizar(new THREE.Vector3(0, 1.05, 1.25), G.worldToLocal(cac.localToWorld(new THREE.Vector3(0, 0.02, z1 - 0.55))));
   };
@@ -65,6 +65,11 @@ export function criar(opc = {}) {
   if (opc.sombraChao !== false) add(K.sombraChao(M.L, W));
   return K.api(G, { L: M.L, W, H: M.H, R, luzes, rodas: rd, extra: {
     ferr,
-    carregar() { terra.visible = true; terra.scale.setScalar(1); terra.position.z = (z0 + z1) / 2; },
+    carregar() { carga = CAP; aplicar(); },
+    cargaAtual: () => carga, capacidade: CAP,                                          // (função: o api copia as propriedades)
+    /** põe (ou tira) terra; devolve quanto coube */
+    adicionarCarga(m3) { const antes = carga; carga = Math.max(0, Math.min(CAP, carga + m3)); aplicar(); return carga - antes; },
+    /** área da caçamba no mundo (para as máquinas despejarem dentro) */
+    caixaCacamba() { const a = cac.localToWorld(new THREE.Vector3(0, alt, z0)), b = cac.localToWorld(new THREE.Vector3(0, alt, z1)); return { a, b, larg }; },
   } });
 }
