@@ -488,21 +488,23 @@ def moto(M):
     dire = vazio('Direcao', COL(0.86), raiz, rot=(-CASTER, 0, 0))
     pecasD = []
     perp = Vector((0, -math.cos(CASTER), math.sin(CASTER)))            # para frente, perpendicular à coluna
+    pernaE = []                                                         # perna esquerda do garfo separada (dá para soltar no vídeo da câmara de ar)
     for s in (1, -1):
+        alvoD = pecasD if s == -1 else pernaE
         base_f = AF + Vector((s * 0.105, 0, 0))
         P = lambda t: base_f + U * t
-        pecasD.append(cil(f'Bengala{s}', P(0.06), P(0.44), 0.0245, M['cromo'], n=28))          # tubo interno (deslizante)
-        pecasD.append(cil(f'Tubo{s}', P(0.38), P(0.725), 0.033, M['dourado'], n=32))            # tubo externo dourado
-        pecasD.append(cil(f'Anel{s}', P(0.375), P(0.39), 0.036, M['preto'], n=28))              # retentor
-        pecasD.append(cil(f'Tampa{s}', P(0.725), P(0.74), 0.026, M['aluminio'], n=20))
-        pecasD.append(barra(f'PonteiraGarfo{s}', P(-0.04), P(0.11), 0.05, 0.07, 0.045, 0.055, m=M['aluminio'], up=(1, 0, 0), bev=0.008))
-        pecasD.append(cil(f'Ajuste{s}', P(0.74), P(0.752), 0.012, M['dourado'], n=12))
+        alvoD.append(cil(f'Bengala{s}', P(0.06), P(0.44), 0.0245, M['cromo'], n=28))          # tubo interno (deslizante)
+        alvoD.append(cil(f'Tubo{s}', P(0.38), P(0.725), 0.033, M['dourado'], n=32))            # tubo externo dourado
+        alvoD.append(cil(f'Anel{s}', P(0.375), P(0.39), 0.036, M['preto'], n=28))              # retentor
+        alvoD.append(cil(f'Tampa{s}', P(0.725), P(0.74), 0.026, M['aluminio'], n=20))
+        alvoD.append(barra(f'PonteiraGarfo{s}', P(-0.04), P(0.11), 0.05, 0.07, 0.045, 0.055, m=M['aluminio'], up=(1, 0, 0), bev=0.008))
+        alvoD.append(cil(f'Ajuste{s}', P(0.74), P(0.752), 0.012, M['dourado'], n=12))
         # pinça radial de 4 pistões presa na ponteira, atrás do disco
         cx = s * 0.085; pc0 = AF + Vector((cx, 0.13, 0.02)) + U * 0.03
-        pecasD.append(pinca(f'Pinca{s}', AF, s * 0.088, 0.155, 0.15, 0.85, M['pinca']))                 # atrás e acima do eixo, presa na ponteira
-        pecasD.append(barra(f'SupPinca{s}', P(0.03) + Vector((0, 0.03, 0)), AF + Vector((s * 0.105, 0.155 * math.cos(0.5) - 0.01, 0.155 * math.sin(0.5))), 0.02, 0.03, m=M['aluminio'], up=(1, 0, 0)))
+        alvoD.append(pinca(f'Pinca{s}', AF, s * 0.088, 0.155, 0.15, 0.85, M['pinca']))                 # atrás e acima do eixo, presa na ponteira
+        alvoD.append(barra(f'SupPinca{s}', P(0.03) + Vector((0, 0.03, 0)), AF + Vector((s * 0.105, 0.155 * math.cos(0.5) - 0.01, 0.155 * math.sin(0.5))), 0.02, 0.03, m=M['aluminio'], up=(1, 0, 0)))
         pl = AF + Vector((s * (0.088 + 0.027), 0.145 * math.cos(0.5), 0.145 * math.sin(0.5)))
-        pecasD.append(texto(f'PincaLogo{s}', 'HRYZ', pl, (PI / 2 - 0.5 + PI / 2 - PI / 2, 0, s * PI / 2), 0.02, M['branco'], esp=0.001))
+        alvoD.append(texto(f'PincaLogo{s}', 'HRYZ', pl, (PI / 2 - 0.5 + PI / 2 - PI / 2, 0, s * PI / 2), 0.02, M['branco'], esp=0.001))
         pc0 = AF + Vector((cx, 0.11, 0.10))
         pecasD.append(tubo(f'Flexivel{s}', [pc0 + Vector((0, -0.01, 0.07)), P(0.30) + Vector((0, 0.06, 0)), COL(0.78) + Vector((s * 0.05, 0.02, 0)), COL(0.93) + Vector((s * 0.10, 0.04, 0.02))], 0.0045, M['preto']))
     # mesas (inferior e superior) e a porca central
@@ -535,6 +537,8 @@ def moto(M):
     pecasD.append(loft('ParaLama', L, M['pintura'], fechado=False, solido=0.004, subd=1))
     for o in pecasD: ligar(o, dire)
     jd = juntar(pecasD, 'DirecaoMalha'); ligar(jd, dire)
+    for o in pernaE: ligar(o, dire)
+    jp = juntar(pernaE, 'PernaGarfoE'); ligar(jp, dire)
     rd = roda('RodaDianteira', RF, 0.12, 0.09, AF, M, discos=[(0.088, 0.155), (-0.088, 0.155)]); ligar(rd, dire)
 
     # ---------------- BALANÇA (gira no pivô): braço banana à direita, reto à esquerda, esticadores, roda traseira com coroa e pinça
