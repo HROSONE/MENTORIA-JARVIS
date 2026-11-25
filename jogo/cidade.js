@@ -953,6 +953,7 @@ export async function construirCidade({
       colisores.push({
         minX: tmpBox.min.x + fx, maxX: tmpBox.max.x - fx,
         minZ: tmpBox.min.z + fz, maxZ: tmpBox.max.z - fz,
+        maxY: tmpBox.max.y,                                                       // topo (telhado onde o super pulo pode pousar)
       });
     }
 
@@ -1489,6 +1490,23 @@ export async function construirCidade({
     if (halosPoints) halosPoints.visible = ligada;
   }
 
+  // ---- pedestres atingidos (poderes do Kael): o 1º acerto assusta e empurra, o 2º derruba
+  function atingirNpc(n, golpes = 1) {
+    if (n.morto) return false;
+    n.acertos = (n.acertos || 0) + golpes;
+    if (n.acertos >= 2) {
+      n.morto = true; n.tMorto = 0; n.mx = n.p.obj.position.x; n.mz = n.p.obj.position.z;
+      n.p.obj.rotation.order = 'YXZ'; n.p.piscarAuto(false); n.p.rosto?.({ expressao: 'grito', forca: 0.7, piscar: 1 });
+      return true;
+    }
+    n.susto = 0.5; n.p.rosto?.({ expressao: 'surpresa', forca: 1 });
+    return false;
+  }
+  function reviverNpc(n) {
+    n.morto = false; n.acertos = 0; n.susto = 0; n.p.obj.rotation.x = 0; n.p.obj.rotation.order = 'XYZ'; n.p.obj.position.y = CALCADA;
+    n.p.piscarAuto(true); n.p.rosto?.({ expressao: 'neutro', forca: 1, piscar: 0 }); n.p.tocar(n.acao);
+  }
+
   function atualizar(dt, t, focoX = 146, focoZ = 166) {
     atualizarChunks(focoX, focoZ, false);
 
@@ -1516,10 +1534,22 @@ export async function construirCidade({
         nx = n.cx + Math.cos(ang) * n.raio;
         nz = n.cz + Math.sin(ang) * n.raio;
       }
+      if (n.morto) {                                                               // caído (rajada/arremesso): fica no chão e volta depois de 30 s
+        n.tMorto += dt;
+        const k = Math.min(1, n.tMorto * 1.8), e = k * k * (3 - 2 * k);
+        n.p.obj.rotation.x = -e * (Math.PI / 2 - 0.08); n.p.obj.position.y = CALCADA + 0.12 * e;
+        if (n.tMorto < 0.6) n.p.atualizar(dt);
+        n.p.obj.visible = (n.mx - focoX) ** 2 + (n.mz - focoZ) ** 2 <= npcDist2;
+        if (n.tMorto > 30) reviverNpc(n);
+        continue;
+      }
+      if (n.susto > 0) n.susto = Math.max(0, n.susto - dt);
       const dx = nx - focoX, dz = nz - focoZ;
       const perto = (dx * dx + dz * dz) <= npcDist2;
       n.p.obj.visible = perto;
       if (perto) {
+        if (n.susto > 0) n.p.obj.rotation.x = -0.35 * Math.sin(Math.PI * n.susto / 0.5);
+        else if (n.p.obj.rotation.x) n.p.obj.rotation.x = 0;
         if (!n.estatico) {
           n.p.obj.position.set(nx, CALCADA, nz);
           n.p.obj.rotation.y = -ang;
@@ -1556,6 +1586,8 @@ export async function construirCidade({
     alternarChuva,
     aplicarQualidade,
     atualizar,
+    npcs,
+    atingirNpc,
     getStats: () => ({ chunksVisiveis, chunksTotal: chunks.length, npcsCarregados: npcs.length }),
     mapaInfo: { RUA, VX, HZ, ROT, RX, TX, TZ, PISTA, selva: SELVA_INFO },
   };

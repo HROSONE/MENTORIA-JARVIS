@@ -45,6 +45,7 @@ Usados nos Shorts "O elevador" (`videos/elevador/`) e "Dormir em dois minutos" (
 | `entregador.glb` | Entregador | 1,77 m | 84.644 | rapaz de 25 anos, jaqueta laranja com faixas refletivas, calça escura e tênis branco |
 | `bombeiro.glb` | Bombeiro | 1,83 m | 72.604 | homem de 35 anos, casaco escuro com faixas refletivas amarelas, calça e botas pretas |
 | `operador.glb` | Operador de máquinas | ~1,80 m | 81.946 | homem de 42 anos, capacete branco de obra, colete laranja de alta visibilidade com faixas prateadas sobre camisa azul, calça de brim com faixa refletiva, luvas e botina (`gerador/personagens6.py`; prévia em `previews/operador.webp`) |
+| `kael.glb` | Kael (herói, estilo anime) | ~1,96 m | 122.124 | herói protagonista original inspirado na linguagem dos mangás de luta: cabeça grande, pescoço grosso, tronco em V, braços musculosos, olhos com delineado, cabelo em crista pontuda; quimono marinho de manga curta com debrum carmim sobre camiseta carmim, faixa larga, calça larga que embola na bota alta com cordão (`gerador/personagens7.py`; prévia em `previews/kael.webp`). No jogo usa material de desenho (2 tons) + contorno preto e tem poderes (`jogo/poderes.js`) |
 | `soldado.glb` | Soldado | 1,83 m | 88.520 | rapaz de 24 anos, farda verde-oliva, capacete de aço com jugular, cinto com fivela, suspensórios de carga, mochila e botas |
 | `aviador.glb` | Aviador | 1,79 m | 85.620 | cadete de 22 anos, gorro de couro com abas e forro, óculos de voo na testa, jaqueta de couro marrom com gola de pelego, calça cáqui e botas |
 

@@ -32,11 +32,13 @@ import { Sala } from './sala.js';
 import { Missao, TORRE } from './missao.js';
 import { BalaCam } from './balacam.js';
 import { Loja } from './loja.js';
+import { PoderesKael } from './poderes.js';
 
 const BASE_BIB = './videos/biblioteca3d';
 
 const PERSONAGENS_DEF = [
   { id: 'policial',   nome: 'Policial',      tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/policial.glb` },
+  { id: 'kael',       nome: 'Kael',          tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/kael.glb`, anime: true },
   { id: 'jovem_a',    nome: 'Jovem A',       tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/jovem_a.glb` },
   { id: 'bombeiro',   nome: 'Bombeiro',      tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/bombeiro.glb` },
   { id: 'astronauta', nome: 'Astronauta',    tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/astronauta.glb` },
@@ -1040,6 +1042,7 @@ export async function iniciarJogo() {
 
   function ativarPersonagemLeve() {
     if (persAtual) persAtual.inst.obj.visible = false;
+    if (poderes) { poderes.ativo = false; ativarPoderes(); }
     usandoPersLeve = true;
     persAtual = { inst: persLeveInst, def: { id: 'policial-leve', nome: 'Policial (Leve)' } };
     persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
@@ -1050,6 +1053,26 @@ export async function iniciarJogo() {
     elPersNome.textContent = 'Policial';
   }
 
+  // Kael: material de desenho (2 tons) e contorno preto (casca invertida), sem contorno nos olhos, boca e sobrancelhas
+  const GRAD_ANIME = (() => { const t = new THREE.DataTexture(new Uint8Array([150, 150, 150, 255, 255, 255, 255, 255]), 2, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+  function visualAnime(inst) {
+    const SEM = /olho|iris|pupila|brilho|narina|boca_dentro|lingua|dente|sobrancelha|labio|delineado/i, ESP = { M_pele: 0.0018 };
+    const alvos = [];
+    inst.obj.traverse(m => {
+      if (!m.isMesh) return;
+      const old = m.material, nm = new THREE.MeshToonMaterial({ color: old.color, map: old.map, gradientMap: GRAD_ANIME, transparent: old.transparent, opacity: old.opacity, side: old.side });
+      nm.name = old.name; m.material = nm; if (m.isSkinnedMesh && !SEM.test(old.name || '')) alvos.push(m);
+    });
+    const mats = {};
+    for (const m of alvos) {
+      const e = ESP[m.material.name] ?? 0.0045;
+      const mat = mats[e] || (mats[e] = (() => { const mt = new THREE.MeshBasicMaterial({ color: 0x0b0d16, side: THREE.BackSide }); mt.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <skinning_vertex>', '#include <skinning_vertex>\n transformed += normalize(objectNormal) * ' + e.toFixed(4) + ';'); }; mt.customProgramCacheKey = () => 'contorno' + e; return mt; })());
+      const c = new THREE.SkinnedMesh(m.geometry, mat); c.bind(m.skeleton, m.bindMatrix); c.name = 'Contorno'; c.frustumCulled = false; c.castShadow = false;
+      m.parent.add(c); c.position.copy(m.position); c.quaternion.copy(m.quaternion); c.scale.copy(m.scale);
+    }
+  }
+
+  let poderes = null, ativarPoderes = () => {};
   async function carregarPersonagem(idx) {
     usandoPersLeve = false;
     const def = PERSONAGENS_DEF[idx % PERSONAGENS_DEF.length];
@@ -1058,6 +1081,7 @@ export async function iniciarJogo() {
       if (def.tipo === 'elenco') {
         inst = await Personagem.carregar(def.url);
         inst.piscarAuto(true);
+        if (def.anime) visualAnime(inst);
       } else {
         inst = await Corredor.carregar(def.url);
         if (def.tipo === 'silhueta') inst.silhueta();
@@ -1075,6 +1099,7 @@ export async function iniciarJogo() {
     if (persAtual) persAtual.inst.obj.visible = false;
     persIdx = idx % PERSONAGENS_DEF.length;
     persAtual = cachePers.get(def.id);
+    if (poderes) ativarPoderes();
     persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
     persAtual.inst.obj.rotation.y = jogador.ry;
     persAtual.inst.obj.visible = !jogador.veiculo;
@@ -1104,7 +1129,7 @@ export async function iniciarJogo() {
     possui: Q.has('armas') ? ['pistola', 'metralhadora', 'sniper'] : [] });                       // as armas ficam espalhadas pelo mapa (missão)
   try { await armas.carregar(BASE_BIB); } catch (e) { console.warn('armas não carregaram', e); }
   window.__armas = armas;                                                            // (para testes automáticos)
-  const elMira = $('mira'), elArma = $('hud-arma');
+  const elMira = $('mira'), elArma = $('hud-arma'), elCarga = $('hud-carga'), elCargaBarra = elCarga.querySelector('i');
   const elPataCentral = $('touch-atirar'), elPataIcone = $('pata-icone'), elPataRotulo = $('pata-rotulo');
   const elBtnRecarregar = $('touch-recarregar'), elBtnMirar = $('touch-mirar');
   function atualizarHudArma() {
@@ -1235,6 +1260,25 @@ export async function iniciarJogo() {
   try { await missao.carregar(); await loja.carregar(); } catch (e) { console.warn('missão/loja não carregaram', e); }
   armas.aoDisparoSniper = d => balacam.disparar(d);
   armas.aoAtirar = (ponto, id, obj) => { missao.aoTiroComum(ponto, id); danoPorTiro(obj, ponto, id); };
+
+  // ---- Poderes do Kael (rajada vermelha de uma mão, super força, super pulo)
+  let tremor = 0;
+  const ehKael = () => !usandoPersLeve && persAtual?.def?.id === 'kael';
+  poderes = new PoderesKael({ scene, camera, efeitos, som, jogo: {
+    jogador: () => jogador, inst: () => persAtual?.inst, veiculos: () => veiculos, cidade,
+    alvosExtra: () => (trexState.inst && trexState.estado !== 'morto' ? [trexState.inst.grupo] : []),
+    danoTrex: n => danoTrex(n), toast: m => mostrarToast(m), tremer: k => { tremor = Math.max(tremor, k); },
+    virar: ry => { jogador.ry = ry; persAtual.inst.obj.rotation.y = ry; }, camYaw: () => camYaw,
+    colisao: (x, z, r, y) => resolverColisoes(x, z, r, y), chao: (x, z) => chaoComTelhado(x, z, 1e9),
+  } });
+  ativarPoderes = () => {
+    poderes.ativo = ehKael();
+    document.body.classList.toggle('pers-kael', poderes.ativo);
+    if (poderes.ativo) mostrarToast('Kael: F rajada ✋ · T levanta/arremessa carro 💪 · segure Espaço para o super pulo');
+  };
+  ativarPoderes();
+  $('touch-rajada').onclick = () => poderes.rajada();
+  $('touch-forca').onclick = () => poderes.forca();
   armas.aoSemMunicao = id => mostrarToast(id === 'sniper' ? 'Sniper sem balas! Compre na Loja de Munição ($ no minimapa).' : 'Sem munição de reserva: compre na Loja ($ no minimapa).');
   const missaoEmCurso = () => ['ativa', 'percebeu', 'falha', 'vitoria'].includes(missao.estado);
   function interacaoAtual() {
@@ -1269,11 +1313,12 @@ export async function iniciarJogo() {
   posicionarCheckpoint();
 
   // ---- Colisão círculo vs AABB com deslizamento suave
-  function resolverColisoes(x, z, raio) {
+  function resolverColisoes(x, z, raio, y = -1e9) {
     let nx = Math.max(-90, Math.min(640, x));
     let nz = Math.max(-220, Math.min(680, z));
     let bateu = false;
     for (const b of cidade.colisores) {
+      if (b.maxY !== undefined && b.maxY <= y + 0.3) continue;                    // por cima do telhado (super pulo): não bate
       const cx = Math.max(b.minX, Math.min(nx, b.maxX));
       const cz = Math.max(b.minZ, Math.min(nz, b.maxZ));
       const dx = nx - cx, dz = nz - cz;
@@ -1297,6 +1342,14 @@ export async function iniciarJogo() {
     return { x: nx, z: nz, bateu };
   }
 
+  // chão com telhados: o topo mais alto dos prédios sob (x, z) que esteja abaixo de `y` (o Kael pousa e anda nos telhados)
+  function telhado(x, z, y) {
+    let h = -1e9;
+    for (const b of cidade.colisores) if (b.maxY !== undefined && b.maxY > 2.5 && b.maxY <= y + 0.3 && x > b.minX && x < b.maxX && z > b.minZ && z < b.maxZ && b.maxY > h) h = b.maxY;
+    return h;
+  }
+  function chaoComTelhado(x, z, y) { return Math.max(alturaChao(x, z) ?? CALCADA, telhado(x, z, y)); }
+
   // ---- Entradas (Teclado + Mouse + Multi-Touch Mobile)
   const teclas = new Set();
   const touch = { mx: 0, mz: 0, acel: false, freio: false, esq: false, dir: false, drift: false, correr: false, pular: false };
@@ -1315,7 +1368,7 @@ export async function iniciarJogo() {
     if (jogador.plataforma) return null;
     let melhor = null, bestD = 5.4;
     for (const v of veiculos) {
-      if (v.queimado) continue;
+      if (v.queimado || v.voando || jogador.y > 2.5) continue;
       const d = Math.hypot(v.x - jogador.x, v.z - jogador.z);
       if (d < bestD) { bestD = d; melhor = v; }
     }
@@ -1795,6 +1848,7 @@ export async function iniciarJogo() {
       else if (code === 'Digit1') trocarArma('pistola');
       else if (code === 'Digit2') trocarArma('metralhadora');
       else if (code === 'Digit3') trocarArma('sniper');
+      else if (code === 'KeyT' && poderes?.ativo) poderes.forca();
       else if (code === 'KeyG') trocarArma(null);
       else if (code === 'KeyX') armas.recarregar();
       else if (code === 'KeyN') { ehNoite = !ehNoite; aplicarClima(); mostrarToast(ehNoite ? 'Modo Noite ativado' : 'Modo Dia ativado'); }
@@ -1806,6 +1860,7 @@ export async function iniciarJogo() {
         $('btn-sirene').classList.toggle('ativo', jogador.veiculo.sirene);
         mostrarToast(jogador.veiculo.sirene ? 'Sirene e Giroflex LIGADOS' : 'Sirene desligada');
       }
+      else if (code === 'KeyF' && !jogador.veiculo && poderes?.ativo) poderes.rajada();
       else if (code === 'KeyF' && jogador.veiculo?.api?.farois) {
         jogador.veiculo.farois = !jogador.veiculo.farois;
         jogador.veiculo.api.farois(jogador.veiculo.farois || ehNoite);
@@ -2196,8 +2251,8 @@ export async function iniciarJogo() {
   }
 
   const MINI = './jogo/sala/miniaturas';
-  const ICONE_PERS = { policial: '👮', jovem_a: '🧑', bombeiro: '🧑‍🚒', astronauta: '👩‍🚀', corredor: '🏃', silhueta: '👤' };
-  const DESC_PERS = { policial: 'Patrulha da cidade', jovem_a: 'Morador de Hryz', bombeiro: 'Corpo de bombeiros', astronauta: 'Visitante espacial', corredor: 'Rápido e colorido', silhueta: 'O vulto do canal' };
+  const ICONE_PERS = { kael: '✋', policial: '👮', jovem_a: '🧑', bombeiro: '🧑‍🚒', astronauta: '👩‍🚀', corredor: '🏃', silhueta: '👤' };
+  const DESC_PERS = { kael: 'Herói: rajada, super força e super pulo', policial: 'Patrulha da cidade', jovem_a: 'Morador de Hryz', bombeiro: 'Corpo de bombeiros', astronauta: 'Visitante espacial', corredor: 'Rápido e colorido', silhueta: 'O vulto do canal' };
   const sala = new Sala({
     pers: PERSONAGENS_DEF.map(d => ({ id: d.id, nome: d.nome, desc: DESC_PERS[d.id] || '', icone: ICONE_PERS[d.id] || '🧍', img: `${MINI}/pers-${d.id}.webp` })),
     veic: [{ id: 'nenhum', nome: 'A pé', desc: 'Começar andando', icone: '🚶' },
@@ -2373,7 +2428,7 @@ export async function iniciarJogo() {
       }
       // carro × carro: empurra o outro (mais leve anda mais), os dois amassam pela velocidade do impacto
       for (const o of veiculos) {
-        if (o === v || !o.obj.visible) continue;
+        if (o === v || !o.obj.visible || o.voando) continue;
         const ddx = v.x - o.x, ddz = v.z - o.z, d = Math.hypot(ddx, ddz), min = (v.raio + o.raio) * 0.72;
         if (d >= min || d < 1e-3) continue;
         const nx = ddx / d, nz = ddz / d, sob = min - d, mv = v.raio * v.raio * (v.maquina ? 3 : 1), mo = o.raio * o.raio * (o.maquina ? 3 : 1);
@@ -2472,42 +2527,56 @@ export async function iniciarJogo() {
         velAbs = velRolar;
       } else if (movendo) {
         jogador.ry += anguloDiff(jogador.ry, dirMundo) * Math.min(1, dt * 11);
-        const velBase = jogador.agachado ? 1.95 : (sprint ? 6.5 : (mag > 0.62 ? 3.85 : 2.45));
+        const velBase = (jogador.agachado ? 1.95 : (sprint ? 6.5 : (mag > 0.62 ? 3.85 : 2.45))) * (ehKael() && !jogador.noChao ? 2.2 : 1);   // Kael: plana no ar do super pulo
         const fatorGolpe = jogador.golpeando > 0 ? 0.35 : 1;
         const passo = velBase * fatorGolpe * Math.min(1, mag) * dt;
         const nx = jogador.x + Math.sin(dirMundo) * passo, nz = jogador.z + Math.cos(dirMundo) * passo;
         const pl = jogador.plataforma;
         // pulou por cima da mureta do terraço (no ar, acima dela, saindo do retângulo): cai do prédio
         if (pl && !pl.interior && !jogador.noChao && jogador.y > pl.y + 0.95 && (nx < pl.minX + 0.4 || nx > pl.maxX - 0.4 || nz < pl.minZ + 0.4 || nz > pl.maxZ - 0.4)) { jogador.plataforma = null; mostrarToast('Você pulou do terraço!'); }
-        const col = jogador.plataforma ? moverNaPlataforma(nx, nz, 0.38) : resolverColisoes(nx, nz, 0.42);
+        const col = jogador.plataforma ? moverNaPlataforma(nx, nz, 0.38) : resolverColisoes(nx, nz, 0.42, ehKael() ? jogador.y : -1e9);
         jogador.x = col.x; jogador.z = col.z;
         if (!jogador.plataforma) for (const o of veiculos) {                       // não atravessa os carros
+          if (o.voando || jogador.y > 2.5) continue;
           const ddx = jogador.x - o.x, ddz = jogador.z - o.z, d = Math.hypot(ddx, ddz), min = o.raio * 0.78 + 0.35;
           if (d < min && d > 1e-3) { jogador.x = o.x + ddx / d * min; jogador.z = o.z + ddz / d * min; }
         }
         velAbs = velBase * fatorGolpe * Math.min(1, mag);
       }
 
-      const chaoAqui = jogador.plataforma ? jogador.plataforma.y : (alturaChao(jogador.x, jogador.z) ?? CALCADA);
+      const kael = ehKael();
+      const chaoAqui = jogador.plataforma ? jogador.plataforma.y : (kael ? chaoComTelhado(jogador.x, jogador.z, jogador.y) : (alturaChao(jogador.x, jogador.z) ?? CALCADA));
       if (jogador.noChao) {
         if (chaoAqui < jogador.y - 0.6) { jogador.noChao = false; jogador.vy = 0; jogador.yPico = jogador.y; }     // saiu da beira (buraco, prédio)
         else jogador.y = chaoAqui;
       }
-      if (espaco && jogador.noChao && jogador.rolando <= 0) {
+      // super pulo do Kael: segurar o pulo carrega (até 0,9 s); soltar pula de ~3 m (toque) até ~33 m (carga cheia, altura de prédio)
+      if (kael && jogador.noChao && jogador.rolando <= 0 && !poderes.segurando) {
+        if (espaco) { jogador.carga = Math.min(0.9, (jogador.carga || 0) + dt); elCarga.classList.remove('oculto'); elCargaBarra.style.transform = `scaleX(${(jogador.carga / 0.9).toFixed(3)})`; }
+        else if (jogador.carga > 0) {
+          const k = jogador.carga / 0.9; jogador.carga = 0; elCarga.classList.add('oculto');
+          if (jogador.agachado) { jogador.agachado = false; sincronizarBotoesPata(); }
+          jogador.golpeando = 0; jogador.vy = 10 + 24 * k; jogador.noChao = false; jogador.yPico = jogador.y;
+          tocarAcao('PularAr', 0.08, { loop: false });
+          if (k > 0.35) { for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; efeitos.emitir('poeira', new THREE.Vector3(jogador.x + Math.cos(a) * 0.5, jogador.y + 0.2, jogador.z + Math.sin(a) * 0.5), new THREE.Vector3(Math.cos(a) * 4, 0.5, Math.sin(a) * 4), 1.2, 0.8, 1.5); } tremor = Math.max(tremor, 0.2 * k); }
+        }
+      } else if (espaco && jogador.noChao && jogador.rolando <= 0 && !kael) {
         if (jogador.agachado) { jogador.agachado = false; sincronizarBotoesPata(); }
         jogador.golpeando = 0;
         jogador.vy = 6.3;
         jogador.noChao = false; jogador.yPico = jogador.y;
         tocarAcao('PularAr', 0.08, { loop: false });
       }
+      if (!jogador.noChao && jogador.carga) { jogador.carga = 0; elCarga.classList.add('oculto'); }
       if (!jogador.noChao) {
         jogador.vy -= 17.5 * dt;
         jogador.y += jogador.vy * dt;
         jogador.yPico = Math.max(jogador.yPico ?? jogador.y, jogador.y);
-        const chao = jogador.plataforma ? jogador.plataforma.y : (alturaChao(jogador.x, jogador.z) ?? CALCADA);
+        const chao = jogador.plataforma ? jogador.plataforma.y : (kael ? chaoComTelhado(jogador.x, jogador.z, jogador.y - jogador.vy * dt) : (alturaChao(jogador.x, jogador.z) ?? CALCADA));
         if (jogador.y <= chao) {
-          const queda = (jogador.yPico ?? chao) - chao;                             // dano de queda: a partir de 3,5 m; ~15 m é fatal
-          if (queda > 3.5) { vida.dano((queda - 3.5) * 9, 'queda'); if (queda < 14) mostrarToast(`Queda de ${queda.toFixed(0)} m!`); }
+          const queda = (jogador.yPico ?? chao) - chao;                             // dano de queda: a partir de 3,5 m; ~15 m é fatal (o Kael não se machuca)
+          if (kael) poderes.pouso(jogador.x, chao, jogador.z, queda);
+          else if (queda > 3.5) { vida.dano((queda - 3.5) * 9, 'queda'); if (queda < 14) mostrarToast(`Queda de ${queda.toFixed(0)} m!`); }
           jogador.y = chao; jogador.vy = 0; jogador.noChao = true; jogador.yPico = chao;
         }
       }
@@ -2548,7 +2617,7 @@ export async function iniciarJogo() {
     atualizarHudArma();
     missao.atualizar(dt, tTotal);
     balacam.atualizarEfeitos(dt);
-    efeitos.atualizar(dt); vida.atualizar(dt); terreno?.atualizar(dt);
+    efeitos.atualizar(dt); vida.atualizar(dt); terreno?.atualizar(dt); poderes.atualizar(dt);
     for (const v of veiculos) v.atualizarDano?.(dt);
 
     // Atualiza setores visíveis, trânsito, frota distante, T. rex da Selva, fumaça de drift e NPCs próximos
@@ -2638,6 +2707,7 @@ export async function iniciarJogo() {
       alvoCam.set(focoX, focoY + (jogador.veiculo ? 0.5 : 0.1), focoZ);
       if (ombro) alvoCam.add(new THREE.Vector3(-Math.cos(camYaw) * ombro + Math.sin(camYaw) * 3, 0.15, Math.sin(camYaw) * ombro + Math.cos(camYaw) * 3));
       camera.lookAt(alvoCam);
+      if (tremor > 0.005) { camera.position.add(new THREE.Vector3((Math.random() - 0.5) * tremor, (Math.random() - 0.5) * tremor, (Math.random() - 0.5) * tremor)); }
     } else if (camModo === 1) {
       snapCam = false;
       if (jogador.veiculo) {
@@ -2676,6 +2746,7 @@ export async function iniciarJogo() {
     }
     // sombras: o mapa de sombra é redesenhado a cada 2 quadros (metade do custo do passe de sombra)
     if (qualAtual.sombras) { renderer.shadowMap.autoUpdate = false; if ((quadroSombra = (quadroSombra + 1) % 2) === 0 || snapSombra) { renderer.shadowMap.needsUpdate = true; snapSombra = false; } }
+    tremor *= Math.max(0, 1 - dt * 6);
     renderer.render(scene, camera);
   }
 
@@ -2701,6 +2772,11 @@ export async function iniciarJogo() {
   }
   window.__jogo = {
     pausar: v => { pausado = v; },
+    pers: async id => { const i = PERSONAGENS_DEF.findIndex(d => d.id === id); if (i >= 0) await carregarPersonagem(i); return persAtual.def.id; },
+    poderes: () => ({ ativo: poderes.ativo, segurando: !!poderes.segurando, voando: poderes.voando.length, rombos: poderes.rombos.length, detritos: poderes.detritos.length, y: +jogador.y.toFixed(2), noChao: jogador.noChao, vida: vida.hp,
+      npcs: (cidade.npcs || []).map(n => ({ x: +n.p.obj.position.x.toFixed(1), z: +n.p.obj.position.z.toFixed(1), vis: n.p.obj.visible, acertos: n.acertos || 0, morto: !!n.morto })),
+      queimados: veiculos.filter(v => v.queimado).map(v => v.id) }),
+    poderesObj: () => poderes,
     modo: () => modo,
     fisica: () => ({ vida: vida.hp, terrenoMin: terreno ? Math.min(...terreno.h) : null, terrenoMax: terreno ? Math.max(...terreno.h) : null,
       cargas: veiculos.filter(v => v.api?.cacambas || v.api?.cargaAtual).map(v => [v.id, ...(v.api.cacambas || []).map(c => +c.carga.toFixed(2)), v.api.cargaAtual ? +v.api.cargaAtual().toFixed(2) : null]),
