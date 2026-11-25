@@ -534,11 +534,12 @@ def moto(M):
     for a in [math.radians(v) for v in range(25, 136, 10)]:
         p = Vector((0, AF.y - (RF + 0.03) * math.cos(a), AF.z + (RF + 0.03) * math.sin(a)))
         L.append([p + Vector((x, 0, 0)) + Vector((0, -math.cos(a), math.sin(a))) * (0.02 * (1 - (x / 0.075) ** 2)) for x in [-0.075 + 0.15 * i / 8 for i in range(9)]])
-    pecasD.append(loft('ParaLama', L, M['pintura'], fechado=False, solido=0.004, subd=1))
+    paralama = loft('ParaLama', L, M['pintura'], fechado=False, solido=0.004, subd=1)            # peça própria (sai no vídeo da câmara de ar)
     for o in pecasD: ligar(o, dire)
     jd = juntar(pecasD, 'DirecaoMalha'); ligar(jd, dire)
     for o in pernaE: ligar(o, dire)
     jp = juntar(pernaE, 'PernaGarfoE'); ligar(jp, dire)
+    jl = juntar([paralama], 'ParaLama'); ligar(jl, dire)
     rd = roda('RodaDianteira', RF, 0.12, 0.09, AF, M, discos=[(0.088, 0.155), (-0.088, 0.155)]); ligar(rd, dire)
 
     # ---------------- BALANÇA (gira no pivô): braço banana à direita, reto à esquerda, esticadores, roda traseira com coroa e pinça

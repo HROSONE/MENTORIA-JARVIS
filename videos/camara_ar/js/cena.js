@@ -89,23 +89,26 @@ class Camara {
     this.est = e; this.malha.visible = e.visivel !== false; this.valvula.visible = this.malha.visible && !raiox;
     this.malha.material = raiox ? this.matRaiox : this.matBorracha;
     if (!this.malha.visible) return;
-    const P = [], T = [];
-    for (let i = 0; i < NS; i++) P.push(this.ponto(e, 2 * Math.PI * i / NS));
-    for (let i = 0; i < NS; i++) T.push(P[(i + 1) % NS].clone().sub(P[(i - 1 + NS) % NS]).normalize());
-    const larg = raiox ? 0.016 : 0.021, esp = raiox ? 0.012 : MEIA;
+    const ctrl = e.curva || Array.from({ length: 72 }, (_, i) => this.ponto(e, 2 * Math.PI * i / 72));
+    const P = new THREE.CatmullRomCurve3(ctrl, true, 'centripetal').getSpacedPoints(NS).slice(0, NS);
+    const T = P.map((p, i) => P[(i + 1) % NS].clone().sub(P[(i - 1 + NS) % NS]).normalize());
+    const larg = raiox ? 0.014 : 0.019, esp = raiox ? 0.012 : MEIA;
+    this.normais = [];
     for (let i = 0; i < NS; i++) {
-      const th = 2 * Math.PI * i / NS, rr = V(0, Math.cos(th), Math.sin(th)), b = T[i].clone().cross(rr).normalize(), n = rr.clone().addScaledVector(T[i], -rr.dot(T[i])).normalize();
-      const ruga = 1 + 0.07 * Math.sin(th * 23 + 1.3) * Math.sin(th * 7);                // vazia: borracha amassada
+      // espessura apontando para fora do pneu: no plano da roda é o raio a partir do eixo; encostada na lateral, é o eixo X
+      const rad = V(0, P[i].y - W.y, P[i].z - W.z).normalize(), lat = V(Math.sign(P[i].x) || 1, 0, 0), k = clamp((Math.abs(P[i].x) - 0.035) / 0.03);
+      const n = rad.multiplyScalar(1 - k).addScaledVector(lat, k); n.addScaledVector(T[i], -n.dot(T[i])).normalize();
+      const b = T[i].clone().cross(n).normalize(); this.normais.push(n);
+      const ruga = 1 + 0.08 * Math.sin(i * 0.65 + 1.3) * Math.sin(i * 0.19);              // vazia: borracha amassada
       for (let j = 0; j < NC; j++) {
-        const a = 2 * Math.PI * j / NC, k = (i * NC + j) * 3;
-        const q = P[i].clone().addScaledVector(b, Math.cos(a) * larg * ruga).addScaledVector(n, Math.sin(a) * esp * (2 - ruga));   // faixa achatada: largura no eixo da roda, espessura no raio
-        this.pos[k] = q.x; this.pos[k + 1] = q.y; this.pos[k + 2] = q.z;
+        const a = 2 * Math.PI * j / NC, kk = (i * NC + j) * 3;
+        const q = P[i].clone().addScaledVector(b, Math.cos(a) * larg * ruga).addScaledVector(n, Math.sin(a) * esp * (2 - ruga));
+        this.pos[kk] = q.x; this.pos[kk + 1] = q.y; this.pos[kk + 2] = q.z;
       }
     }
     this.geo.attributes.position.needsUpdate = true; this.geo.computeVertexNormals(); this.geo.computeBoundingSphere();
-    // válvula embaixo, apontando para o centro
-    const pv = this.ponto(e, Math.PI), dirV = e.C.clone().sub(pv).setX(0).normalize();
-    this.valvula.position.copy(pv); this.valvula.quaternion.setFromUnitVectors(V(0, 1, 0), dirV);
+    const iv = Math.round(NS * (e.valvula ?? 0.5)) % NS;                                  // válvula para dentro do anel
+    this.valvula.position.copy(P[iv]); this.valvula.quaternion.setFromUnitVectors(V(0, 1, 0), this.normais[iv].clone().negate());
   }
 }
 
@@ -123,13 +126,15 @@ function presa(x, lado, { R = R0, aperto = 1, dentro = false } = {}) {
 }
 
 // ------------------------------------------------------------------------------------------------ carga
-let moto, perna, pernaBase, dirNo, camara, malhasMoto = [], laco, matFantasma, contornoPneu;
+let moto, perna, pernaBase, dirNo, camara, malhasMoto = [], vidraveis = [], laco, matFantasma, contornoPneu;
 export async function construir() {
   estudio();
   const L = new GLTFLoader();
   const gm = await L.loadAsync('../biblioteca3d/veiculos/moto/moto.glb');
   moto = gm.scene; moto.position.y = ELEV; scene.add(moto);
-  moto.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.userData.mat0 = o.material; malhasMoto.push(o); } });
+  moto.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.userData.mat0 = o.material; malhasMoto.push(o);
+    if (/disco_aco|pinca_vermelha/.test(o.material.name)) { const g = o.material.clone(); g.transparent = true; g.opacity = 0.22; g.depthWrite = false; o.userData.matVidro = g; vidraveis.push(o); } } });
+  moto.getObjectByName('ParaLama').visible = false;                            // sem o para-lama (tirado para mexer no pneu)
   perna = moto.getObjectByName('PernaGarfoE'); dirNo = moto.getObjectByName('Direcao'); pernaBase = perna.position.clone();
   camara = new Camara();
   // raio-x: material fantasma da moto e laço amarelo garfo + eixo
@@ -144,28 +149,69 @@ export async function construir() {
 }
 
 // ------------------------------------------------------------------------------------------------ estado por instante
+// A câmara vem deitada (anel horizontal), desce por cima do pneu e é puxada para baixo pela frente e por trás. As duas laterais
+// descem entre o pneu e as pernas do garfo e ENGANCHAM no eixo (que está preso nas duas pernas). Sem uma perna, aquele lado sai
+// pela ponta livre do eixo, passa por baixo do pneu e a câmara fica em pé em volta dele.
+const RHO = 0.307, LARGL = 0.068, TOPO_EIXO = 0.04;
+const rp = (th, x, extra = 0) => V(x, W.y + (RHO + extra) * Math.cos(th), W.z + (RHO + extra) * Math.sin(th));   // th: 0 em cima, + para a frente
+const bez = (a, m, b, u) => a.clone().multiplyScalar((1 - u) ** 2).addScaledVector(m, 2 * u * (1 - u)).addScaledVector(b, u * u);
+
+/** anel puxado: frente no ângulo thF, trás em thR; laterais em ±w; mid = ponto do meio de cada lateral (null = reta, presa no eixo se descer demais);
+ *  arco = 0..1 mistura a lateral com o arco do pneu (por cima para -X, por baixo para +X) */
+function anelPuxado(thF, thR, { w = LARGL, midE = null, midD = null, arcoE = 0, arcoD = 0, wE = w, wD = w, tremor = 0 } = {}) {
+  const lado = (s, ww, mid, arco) => {
+    const F = rp(thF, s * ww), R = rp(thR, s * ww), pts = [];
+    let m = mid;
+    if (!m) { m = F.clone().add(R).multiplyScalar(0.5); m.x = s * ww; if (m.y < W.y + TOPO_EIXO) { m.y = W.y + TOPO_EIXO + 0.01; m.z = W.z + 0.005; } }   // engancha por cima do eixo
+    m = m.clone(); m.y += tremor;
+    for (let k = 1; k < 8; k++) {
+      const u = k / 8, c = bez(F, m.clone().multiplyScalar(2).sub(F.clone().add(R).multiplyScalar(0.5)), R, u);
+      const a = s < 0 ? rp(lerp(thF, thR, u), 0) : rp(thF + (2 * Math.PI - (thF - thR)) * u, 0);   // -X passa por cima, +X por baixo
+      pts.push(c.lerp(a, arco));
+    }
+    return pts;
+  };
+  const ladoE = lado(1, wD, midD, arcoD), ladoW = lado(-1, wE, midE, arcoE);
+  // frente (+x → -x), lateral -X (frente → trás), trás (-x → +x), lateral +X (trás → frente)
+  return [rp(thF, wD), ...[0.5, 0, -0.5].map(f => rp(thF, f * wD + (1 - Math.abs(f)) * 0, 0.014 * (1 - Math.abs(f)))), rp(thF, -wE), ...ladoW, rp(thR, -wE),
+    ...[-0.5, 0, 0.5].map(f => rp(thR, f * wE, 0.014 * (1 - Math.abs(f)))), rp(thR, wD), ...ladoE.reverse()];
+}
+
+/** anel deitado descendo (antes de encostar no pneu): elipse horizontal */
+function anelDeitado(y, ax, az, z0 = W.z) {
+  return Array.from({ length: 24 }, (_, i) => { const a = 2 * Math.PI * i / 24; return V(ax * Math.cos(a), y + 0.01 * Math.sin(a * 3), z0 + az * Math.sin(a)); });
+}
+
+function preso(k, forca = 1) {                                                   // enganchado no eixo, sendo puxado
+  const puxa = Math.sin(k * 3.2) ** 2 * forca;
+  return { curva: anelPuxado(2.15 + 0.08 * puxa, -2.15 - 0.08 * puxa, { tremor: -0.006 * puxa }), valvula: 0.5 };
+}
+
 function estadoCamara(t) {
   const pl = plano(t).id;
-  if (pl === 1 || pl === 8) {                                                   // gancho / loop: presa e esticada na perna esquerda
-    const k = pl === 1 ? t : t - 35;
-    return { ...presa(0.05 + 0.025 * Math.sin(k * 3.1) ** 2, 1, { aperto: 1 }), lado: 1 };
+  if (pl === 1) return preso(t, 1);
+  if (pl === 8) return preso(t - 35, 1);
+  if (pl === 2) {                                                                // desce deitada por cima do pneu e é puxada para baixo
+    const k = t - 3;
+    if (k < 1.4) { const u = suave(inv(0.0, 1.4, k)); return { curva: anelDeitado(lerp(0.60, 0.662, u), lerp(0.20, LARGL, suave(inv(0.1, 0.6, u))), lerp(0.24, 0.19, u), W.z + lerp(0.75, 0.0, u)), valvula: 0.75 }; }   // entra deitada pela frente, por baixo do bico
+    const u = suave5(inv(1.4, 3.6, k)), th = lerp(0.55, 2.15, u);
+    if (k < 3.6) return { curva: anelPuxado(th, -th), valvula: 0.5 };
+    return preso(k - 3.6, 1);
   }
-  if (pl === 2 || pl === 3) {                                                   // tentativa de um lado e do outro
-    const lado = pl === 2 ? 1 : -1, k = t - (pl === 2 ? 3 : 8);
-    let x = lerp(0.30, 0.15, suave(inv(0.2, 1.4, k)));
-    const empurra = Math.max(suave(inv(1.4, 2.2, k)) * (1 - suave(inv(2.6, 3.0, k)) * 0.7), suave(inv(3.2, 3.9, k)) * (1 - suave(inv(4.4, 5.0, k)) * 0.5));
-    x -= 0.11 * empurra;
-    return { ...presa(lado * x, lado), lado };
-  }
+  if (pl === 3) return preso(t - 8, 1.5);                                        // do outro lado: preso também
   if (pl === 4) return { visivel: false };
   if (pl === 5) {                                                               // raio-x: a câmara no lugar certo tenta sair pelo lado esquerdo e engancha
-    const k = t - 19, sai = suave(inv(0.6, 1.8, k)) * (1 - suave(inv(2.2, 2.8, k))) + suave(inv(3.0, 4.0, k)) * (1 - suave(inv(4.6, 5.0, k)) * 0.0);
-    return { ...presa(0.24 * sai, 1, { R: 0.31, dentro: true }), lado: 1, raiox: true };
+    return { ...preso(t - 19, 1.6), raiox: true };
   }
-  if (pl === 6) return { ...presa(0.30, 1), lado: 1 };                          // esperando a perna sair
-  // plano 7: sem a perna esquerda a câmara passa por cima do pneu e assenta
-  const k = t - 30, x = lerp(0.30, 0.0, suave5(inv(0.3, 2.3, k))), assenta = suave(inv(2.3, 3.2, k)), R = lerp(R0, 0.306, assenta);
-  return { C: V(x, W.y - (R - 0.303) * assenta + 0.0 * (1 - assenta), W.z), R, lado: 1, solta: suave(inv(3.2, 4.2, k)) };
+  if (pl === 6) return preso(t - 24, 0.3);
+  // plano 7: sem a perna esquerda, o lado +X sai pela ponta do eixo, passa por baixo do pneu; o lado -X sobe por cima; a câmara fica em pé
+  const k = t - 30;
+  const a1 = suave(inv(0.2, 1.2, k)), a2 = suave(inv(1.1, 2.4, k)), a3 = suave(inv(2.0, 3.4, k));
+  const midD = a2 < 1e-3 ? V(lerp(LARGL, 0.21, a1), W.y + TOPO_EIXO + 0.01, W.z + 0.005)
+    : bez(V(0.21, W.y + TOPO_EIXO + 0.01, W.z), V(0.2, W.y - 0.32, W.z), V(0, W.y - RHO, W.z), a2);
+  const midE = bez(V(-LARGL, W.y + TOPO_EIXO + 0.01, W.z), V(-0.06, W.y + 0.25, W.z), V(0, W.y + RHO, W.z), a3);
+  const th = lerp(2.15, Math.PI / 2, a3);
+  return { curva: anelPuxado(th, -th, { midD, midE, arcoD: a2 * a3, arcoE: a3, wD: lerp(LARGL, 0, a3), wE: lerp(LARGL, 0, a3) }), valvula: 0.5 };
 }
 
 function pernaDoGarfo(t) {
@@ -185,6 +231,8 @@ function pernaDoGarfo(t) {
 function raiox(t) {
   const pl = plano(t).id, on = pl === 4 || pl === 5;
   for (const m of malhasMoto) m.material = on ? matFantasma : m.userData.mat0;
+  const vidro = !on && [1, 3, 8].includes(pl);                                  // nos closes o disco e a pinça ficam transparentes para mostrar o gancho no eixo
+  if (vidro) for (const m of vidraveis) m.material = m.userData.matVidro;
   laco.visible = on; contornoPneu.visible = on; const cv = scene.getObjectByName('cavalete'); if (cv) cv.visible = !on;
   if (on) {                                                                     // o laço amarelo se desenha (13,3–15,5 s) e pulsa
     const k = suave(inv(13.3, 15.5, t)); laco.geometry.setDrawRange(0, Math.floor(laco.geometry.index.count * (pl === 5 ? 1 : k) / 3) * 3);
@@ -201,11 +249,11 @@ function camera(t) {
   const orb = (ang, r, h, alvo) => alvo.clone().add(V(Math.sin(ang) * r, h, Math.cos(ang) * r));
   switch (pl.id) {
     case 1: case 8: {                                                           // a câmara presa na perna (3/4 de frente, de cima), push-in
-      const s = suave(u); p = V(lerp(1.15, 0.92, s), lerp(1.18, 1.05, s), lerp(1.85, 1.55, s)); a = V(0.08, 0.56, 0.62); fov = 36; break; }
+      const s = suave(u); p = V(lerp(0.95, 0.74, s), lerp(0.62, 0.56, s), lerp(1.6, 1.38, s)); a = V(0.06, 0.46, 0.66); fov = 36; break; }
     case 2: {                                                                   // plano médio 3/4: a câmara chega e trava
-      const s = suave(u); p = V(lerp(1.55, 1.3, s), lerp(1.08, 0.98, s), lerp(2.4, 2.1, s)); a = V(0.12, 0.5, 0.64); fov = 38; break; }
+      const s = suave(u); p = V(lerp(1.0, 0.85, s), lerp(1.45, 1.05, s), lerp(1.75, 1.6, s)); a = V(0.03, lerp(0.62, 0.48, s), 0.66); fov = 38; break; }
     case 3: {                                                                   // o outro lado (entra com whip)
-      const s = suave(u); p = V(lerp(-1.55, -1.3, s), lerp(1.08, 0.98, s), lerp(2.35, 2.05, s)); a = V(-0.12, 0.5, 0.64); fov = 38; break; }
+      const s = suave(u); p = V(lerp(-1.05, -0.85, s), lerp(0.72, 0.6, s), lerp(1.8, 1.55, s)); a = V(-0.05, 0.46, 0.66); fov = 38; break; }
     case 4: {                                                                   // raio-x, pull-out mostrando o laço inteiro
       const s = suave(u); p = orb(lerp(0.45, 0.7, s), lerp(1.6, 2.2, s), lerp(0.3, 0.5, s), V(0, 0.62, 0.58)); a = V(0, lerp(0.6, 0.64, s), 0.58); fov = 36; break; }
     case 5: {                                                                   // órbita em volta dos dois anéis
