@@ -7,7 +7,7 @@ from forma import loft, elipsoide, tubo, catmull, nos, osso, suave, ruido3, X_, 
 
 PAD = dict(sx=1.0, sz=1.0, mand=0.0, queixo=0.0, bochecha=0.0, testa=0.0, crista=0.0, cranio=0.0,
            olho_r=0.0125, olho_x=0.031, u_olho=0.50, olho_fundo=0.62, iris=0.52, pupila=0.28, olhos_assim=1.0, olho_inclina=0.0, lid_aberta=26.0,
-           nariz_comp=0.016, nariz_larg=0.0105, nariz_ponta=0.0090, nariz_gancho=0.0, nariz_u=0.31, narina=0.0035,
+           nariz_comp=0.016, nariz_larg=0.0105, nariz_ponta=0.0090, nariz_gancho=0.0, nariz_u=0.31, narina=0.0035, nariz_ponte=1.0,
            boca_u=0.255, boca_larg=0.027, labio=0.0040, sorriso0=0.0, boca_assim=0.0,
            orelha=1.0, orelha_abre=0.25,
            sobr_larg=0.036, sobr_esp=0.0055, sobr_u=0.085, sobr_incl=0.0, sobr_assim=0.0, sobr_junta=0.0,
@@ -219,7 +219,7 @@ class Cabeca:
         # ---- nariz: ponte que nasce dentro do rosto, ponta larga, asas e narinas
         zb = self.zf(0, self.y_nariz_base)
         L = p['nariz_comp']
-        y_top = self.y_olho + 0.003
+        y_top = self.y_nariz_base + (self.y_olho + 0.003 - self.y_nariz_base) * p['nariz_ponte']     # nariz_ponte < 1: ponte curta (nariz de anime)
         g = p['nariz_gancho']
         nl, npn = p['nariz_larg'], p['nariz_ponta']
         y_tip = self.y_nariz_base + 0.003 - g
