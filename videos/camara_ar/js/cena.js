@@ -32,6 +32,39 @@ export const PLANOS = [
 export const TOTAL = 37.4;
 export const plano = t => PLANOS.find(p => t >= p.t0 && t < p.t1) || PLANOS[PLANOS.length - 1];
 
+// ------------------------------------------------------------------------------------------------ reflexos de estúdio calculados no shader
+// Sem placa de vídeo, ler o mapa de ambiente (PMREM) custa ~7 dos ~11 s de um quadro 1080x1920. Aqui o "estúdio" (fundo azul, chão,
+// duas softboxes e a luz de cima) é uma fórmula: o mesmo tipo de reflexo, ~2,5x mais rápido. ?ibl=pmrem volta ao mapa de ambiente.
+const IBL_ANALITICO = new URLSearchParams(location.search).get('ibl') === 'analitico';   // padrão: mapa de ambiente (com o llvmpipe ele ficou barato)
+const GLSL_ESTUDIO = `
+vec3 estudioHryz(vec3 d, float rough) {
+  float y = d.y;
+  vec3 ceu = mix(vec3(0.30, 0.42, 0.60), vec3(0.60, 0.72, 0.88), smoothstep(-0.1, 0.8, y));
+  vec3 c = mix(vec3(0.20, 0.28, 0.40), ceu, smoothstep(-0.25, 0.05, y));
+  float n = mix(90.0, 2.5, rough);
+  c += vec3(1.0, 0.95, 0.88) * 2.4 * pow(max(dot(d, normalize(vec3(0.5, 0.75, 0.45))), 0.0), n);
+  c += vec3(0.80, 0.88, 1.0) * 1.3 * pow(max(dot(d, normalize(vec3(-0.6, 0.5, -0.6))), 0.0), n);
+  c += vec3(1.0) * 0.9 * pow(max(y, 0.0), n * 0.5);
+  return c;
+}`;
+function reflexoEstudio(mat, k = 0.75) {
+  if (!IBL_ANALITICO || !mat || !mat.isMeshStandardMaterial || mat.userData.estudio) return;
+  mat.userData.estudio = true; const antes = mat.onBeforeCompile;
+  mat.onBeforeCompile = (sh, r) => {
+    antes?.call(mat, sh, r);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + GLSL_ESTUDIO)
+      .replace('#include <lights_fragment_maps>', `#include <lights_fragment_maps>
+        { vec3 rv = inverseTransformDirection(reflect(-geometryViewDir, geometryNormal), viewMatrix);
+          radiance += estudioHryz(rv, material.roughness) * ${k.toFixed(3)};
+          iblIrradiance += PI * estudioHryz(inverseTransformDirection(geometryNormal, viewMatrix), 1.0) * ${k.toFixed(3)} * 0.5;
+          #ifdef USE_CLEARCOAT
+          clearcoatRadiance += estudioHryz(inverseTransformDirection(reflect(-geometryViewDir, geometryClearcoatNormal), viewMatrix), material.clearcoatRoughness) * ${k.toFixed(3)};
+          #endif
+        }`);
+  };
+  mat.needsUpdate = true;
+}
+
 // ------------------------------------------------------------------------------------------------ cenário: estúdio azul
 function estudio() {
   const ceu = new THREE.Mesh(new THREE.SphereGeometry(40, 32, 16), new THREE.ShaderMaterial({
@@ -43,7 +76,7 @@ function estudio() {
   scene.add(ceu);
   const chao = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshStandardMaterial({ color: 0x5679a8, roughness: 0.95 }));
   chao.rotation.x = -Math.PI / 2; chao.receiveShadow = true; scene.add(chao);
-  const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.75;
+  if (!IBL_ANALITICO) { const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.75; }
   const sol = new THREE.DirectionalLight(0xfff1df, 2.2); sol.position.set(2.2, 4.2, 3.0); sol.target.position.copy(W); scene.add(sol.target);
   sol.castShadow = true; sol.shadow.mapSize.set(2048, 2048); Object.assign(sol.shadow.camera, { left: -2.2, right: 2.2, top: 2.2, bottom: -2.2, near: 0.5, far: 12 }); sol.shadow.bias = -0.0004; sol.shadow.normalBias = 0.02;
   scene.add(sol);
@@ -145,6 +178,8 @@ export async function construir() {
   laco.visible = false; scene.add(laco);
   contornoPneu = new THREE.Mesh(new THREE.TorusGeometry(0.30, 0.004, 8, 120), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75 }));
   contornoPneu.rotation.y = Math.PI / 2; contornoPneu.position.copy(W); contornoPneu.visible = false; scene.add(contornoPneu);
+  scene.traverse(o => { if (o.isMesh) reflexoEstudio(o.material); });           // inclusive a câmara, o cavalete e o disco transparente
+  for (const m of vidraveis) reflexoEstudio(m.userData.matVidro);
   return { total: TOTAL };
 }
 

@@ -140,6 +140,13 @@ Complementa o `ESTILO.md`. Ler antes de começar qualquer vídeo novo.
 - Som: `sfx_<nome>.py` usando a mesa `biblioteca3d/sons/mesa.py` (gravações BigSoundBank em `biblioteca3d/sons/bsb` + Kenney; camadas, espaço, pan, limitador e checagens).
 - Stills: `shotf.js`; folhas: `sheet.py` (vertical) e `sheet169b.py` (16:9).
 
+## 9a. Render rápido sem placa de vídeo: Mesa llvmpipe em vez de SwiftShader (25/11, Short da câmara de ar)
+
+- **Regra:** o `core/harness.js` agora abre o Chromium com `--use-gl=angle --use-angle=gl-egl` (Mesa **llvmpipe**) em vez do SwiftShader. No mesmo quadro 1080×1920 da moto com mapa de ambiente: **14,1 s → 2,2 s** com 1 navegador, e com 2 trabalhadores em paralelo **~0,5 s por quadro** (o SwiftShader não ganhava nada com paralelo: 4 navegadores davam os mesmos ~10 s/quadro). A imagem é a mesma (diferença média < 1/255). `RENDER_GL=swiftshader` volta ao antigo, se precisar.
+- **Como achei:** `renderer.render()` só enfileira; o desenho de verdade acontece na leitura do quadro (`toDataURL`/`readPixels`), então medir só o `render` engana. Medir o quadro inteiro ligando e desligando partes: no SwiftShader, o mapa de ambiente (PMREM) custava ~7 dos ~11 s.
+- **Fonte da pista:** relato da Microlink (página three.js de ~24 s para ~6 s trocando SwiftShader por llvmpipe). Confirmado aqui com medição própria.
+- **Para render pesado de verdade,** GPU continua sendo o caminho (Colab ou o computador do dono), mas o llvmpipe já resolve os Shorts.
+
 ## 9b. Custo de render em Three.js sem placa de vídeo (17/11, T. rex corrida)
 
 - **Medir antes de prometer tempo.** O Chromium aqui renderiza por CPU (SwiftShader, 4 núcleos). Com a mata (~2000 plantas instanciadas, 58 milhões de triângulos por passe) um quadro de 720×1280 levava ~57 s: os pós (AO, desfoque, brilho) somavam só ~4 s; **93% do custo era a vegetação**, desenhada 4 vezes por quadro (sombra, imagem, normais do AO, profundidade do desfoque). Perfil: abrir a página uma vez e medir o mesmo quadro ligando e desligando partes (`?ao=0 &dof=0 &sombra=0 &msaa=0 &corte=0 &lod=0 &dofrapido=0`).
