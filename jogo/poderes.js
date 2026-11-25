@@ -97,8 +97,7 @@ export class PoderesKael {
   // trava sozinha no carro, pessoa ou T. rex mais alinhado à frente (até ~12° e 90 m), como num jogo de ação no celular
   _mirar() {
     const j = this.jogo.jogador(), yaw = this.jogo.camYaw();
-    const mao = this._osso('MaoD');
-    const o = mao && this.poseD > 0.6 ? mao.getWorldPosition(V()) : V(j.x + Math.sin(yaw) * 0.3, j.y + 1.45, j.z + Math.cos(yaw) * 0.3);
+    const o = V(j.x, j.y + 1.5, j.z);                                            // altura do ombro (referência da mira)
     this.camera.getWorldDirection(_a);
     const base = V(Math.sin(yaw), THREE.MathUtils.clamp(_a.y + 0.3, -0.6, 0.6), Math.cos(yaw)).normalize();
     let melhor = null, nota = 1e9;
@@ -111,8 +110,8 @@ export class PoderesKael {
     for (const v of this.jogo.veiculos()) if (v.obj.visible && !v.voando && !v.queimado && v !== j.veiculo) avaliar(V(v.x, 1.0, v.z));
     for (const n of this.jogo.cidade.npcs || []) if (!n.morto && n.p.obj.visible) avaliar(n.p.obj.position.clone().add(V(0, 1.25, 0)));
     for (const g of this.jogo.alvosExtra?.() || []) avaliar(g.getWorldPosition(V()).add(V(0, 2.2, 0)));
-    this.origemRaio = o;
-    this.dirTiro.copy(melhor ? melhor.sub(o).normalize() : base);
+    this.alvo = melhor || o.clone().addScaledVector(base, 120);                  // ponto mirado (o braço aponta para ele, o feixe sai da palma até ele)
+    this.dirTiro.subVectors(this.alvo, o).normalize();
   }
 
   _alvos() {
@@ -133,8 +132,8 @@ export class PoderesKael {
 
   _disparar() {
     this._mirar();
-    const mao = this._osso('MaoD');
-    const origem = mao ? mao.getWorldPosition(V()) : this.jogo.inst().obj.position.clone().add(V(0, 1.4, 0));
+    const origem = this._palma() || V(this.jogo.jogador().x, this.jogo.jogador().y + 1.45, this.jogo.jogador().z);
+    this.origemRaio = origem; this.dirTiro.subVectors(this.alvo, origem).normalize();
     this.ray.set(this.origemRaio, this.dirTiro); this.ray.camera = this.camera;
     let hits = []; try { hits = this.ray.intersectObjects(this._alvos(), true); } catch (e) { console.warn('rajada: raio', e); }
     let hit = hits.find(h => h.object.visible !== false && !h.object.isSprite && !h.object.isPoints && !(h.object.material?.transparent && h.object.material.opacity < 0.3));
@@ -152,7 +151,7 @@ export class PoderesKael {
       if (Math.hypot(qx - p.x, qz - p.z) < 0.55 && qy > p.y - 0.1 && qy < p.y + 1.95) { dist = tt; alvo = { tipo: 'npc', n }; hit = { point: V(qx, qy, qz), distance: tt, face: null, object: n.p.obj }; }
     }
     const ponto = hit ? hit.point.clone() : this.origemRaio.clone().addScaledVector(this.dirTiro, 150);
-    this._feixe(origem, ponto);
+    this._feixe(origem, ponto, true);
     this._somRajada();
     this.jogo.tremer(0.12);
     if (!hit) return null;
@@ -177,14 +176,14 @@ export class PoderesKael {
     return alvo.tipo;
   }
 
-  _feixe(de, ate) {
+  _feixe(de, ate, naMao = false) {
     const g = new THREE.Group(), comp = de.distanceTo(ate);
     for (const [cor, op, r] of this.matsFeixe) {
       const m = new THREE.Mesh(this.geoFeixe, new THREE.MeshBasicMaterial({ color: cor, transparent: true, opacity: op, depthWrite: false, blending: THREE.AdditiveBlending }));
       m.scale.set(r, comp, r); m.userData.r = r; m.userData.op = op; m.frustumCulled = false; g.add(m);
     }
     g.position.copy(de); _a.subVectors(ate, de).normalize(); g.quaternion.setFromUnitVectors(CIMA, _a);
-    this.scene.add(g); this.feixes.push({ grupo: g, vida: 0.34, vida0: 0.34 });
+    this.scene.add(g); this.feixes.push({ grupo: g, vida: 0.34, vida0: 0.34, naMao, fim: ate.clone() });
   }
 
   _rombo(p, n) {
@@ -288,20 +287,79 @@ export class PoderesKael {
   }
 
   // ------------------------------------------------------------------ pose (depois da animação, antes do render)
-  _osso(nome) { return this.jogo.inst()?.obj.getObjectByName(nome); }
+  _osso(nome) {
+    const inst = this.jogo.inst(); if (!inst) return null;
+    if (this._ossosDe !== inst) { this._ossosDe = inst; this._ossos = {}; inst.obj.traverse(o => { if (o.isBone) this._ossos[o.name] = o; }); }
+    return this._ossos[nome] || null;
+  }
 
-  /** gira o osso para o eixo dele (rumo ao filho) apontar para `dir` (mundo), com peso w */
-  _apontar(nomeOsso, nomeFilho, dir, w) {
-    const b = this._osso(nomeOsso), f = this._osso(nomeFilho); if (!b || !f || w <= 0) return;
+  /** pose de repouso (ligação) de cada osso no espaço do modelo, tirada das matrizes inversas do esqueleto */
+  _repouso() {
+    const inst = this.jogo.inst(); if (!inst) return null;
+    if (this._rep?.inst === inst) return this._rep;
+    let sk = null; inst.obj.traverse(m => { if (!sk && m.isSkinnedMesh) sk = m.skeleton; });
+    if (!sk) return null;
+    const q = {}, p = {}, m = new THREE.Matrix4(), esc = V();
+    sk.bones.forEach((b, i) => { m.copy(sk.boneInverses[i]).invert(); const pp = V(), qq = new THREE.Quaternion(); m.decompose(pp, qq, esc); q[b.name] = qq; p[b.name] = pp; });
+    // eixos locais: comprimento do osso (rumo ao filho) e uma referência perpendicular (frente do corpo; na mão, o lado da palma)
+    const eixos = {};
+    const local = (nome, vModelo) => vModelo.clone().applyQuaternion(q[nome].clone().invert()).normalize();
+    for (const l of ['D', 'E']) {
+      const ladoDentro = V(l === 'D' ? 1 : -1, 0, 0), frente = V(0, 0, 1);
+      const eb = p['Antebraco' + l].clone().sub(p['Braco' + l]), ea = p['Mao' + l].clone().sub(p['Antebraco' + l]);
+      eixos['Braco' + l] = { eixo: local('Braco' + l, eb), ref: local('Braco' + l, frente) };
+      eixos['Antebraco' + l] = { eixo: local('Antebraco' + l, ea), ref: local('Antebraco' + l, frente) };
+      eixos['Mao' + l] = { eixo: local('Mao' + l, ea), ref: local('Mao' + l, ladoDentro) };
+    }
+    this._rep = { inst, q, p, eixos };
+    return this._rep;
+  }
+
+  /** orienta o osso para o eixo dele apontar para `eixoW` e a referência ficar do lado de `refW` (mundo), sem torcer; peso w */
+  _orientar(nome, eixoW, refW, w) {
+    const rep = this._repouso(), b = this._osso(nome); if (!rep || !b || w <= 0 || !rep.eixos[nome]) return;
+    const { eixo, ref } = rep.eixos[nome];
+    const base = (x, r, M) => { const xx = x.clone().normalize(), yy = r.clone().addScaledVector(xx, -r.dot(xx)); if (yy.lengthSq() < 1e-6) yy.set(0, 1, 0).addScaledVector(xx, -xx.y); yy.normalize(); return M.makeBasis(xx, yy, xx.clone().cross(yy)); };
+    const Ml = base(eixo, ref, new THREE.Matrix4()), Mw = base(eixoW, refW, new THREE.Matrix4());
+    _q.setFromRotationMatrix(Mw).multiply(_q2.setFromRotationMatrix(Ml).invert());   // orientação desejada no mundo
+    b.parent.updateMatrixWorld(true); b.parent.getWorldQuaternion(_q3).invert();
+    _q.premultiply(_q3);
+    b.quaternion.slerp(_q, w);
     b.updateMatrixWorld(true);
-    b.getWorldQuaternion(_q);
-    _a.copy(f.position).normalize().applyQuaternion(_q);                       // eixo do osso no mundo
-    _q2.setFromUnitVectors(_a, _b.copy(dir).normalize());
-    _q3.copy(_q2).multiply(_q);                                                  // nova orientação no mundo
-    b.parent.getWorldQuaternion(_q2).invert();
-    _q3.premultiply(_q2);
-    b.quaternion.slerp(_q3, w);
-    b.updateMatrixWorld(true);
+  }
+
+  /** centro da palma direita no mundo (de onde sai o feixe) */
+  _palma() {
+    const rep = this._repouso(), mao = this._osso('MaoD'); if (!rep || !mao) return null;
+    mao.updateMatrixWorld(true); mao.getWorldQuaternion(_q);
+    const p = mao.getWorldPosition(V());
+    p.addScaledVector(rep.eixos.MaoD.eixo.clone().applyQuaternion(_q), 0.07);       // meio da mão
+    p.addScaledVector(rep.eixos.MaoD.ref.clone().applyQuaternion(_q), 0.035);       // um pouco à frente da palma
+    return p;
+  }
+
+  /** braço direito esticado até o alvo, mão aberta com a palma virada para ele (dedos para cima) */
+  _poseRajada(w) {
+    const ombro = this._osso('BracoD'); if (!ombro) return;
+    const o = ombro.getWorldPosition(V());
+    const d = V().subVectors(this.alvo || o.clone().add(this.dirTiro), o).normalize();
+    const cima = V(0, 1, 0).addScaledVector(d, -d.y); if (cima.lengthSq() < 1e-4) cima.set(Math.sin(this.jogo.jogador().ry), 0, Math.cos(this.jogo.jogador().ry)); cima.normalize();
+    this._orientar('BracoD', d, cima, w);
+    this._orientar('AntebracoD', d, cima, w);
+    const dedos = cima.clone().multiplyScalar(0.9).addScaledVector(d, 0.45).normalize();
+    this._orientar('MaoD', dedos, d, w);
+  }
+
+  /** os dois braços para cima segurando o carro */
+  _poseLevantar(w, ry) {
+    const frente = V(Math.sin(ry), 0, Math.cos(ry));
+    const cima = V(0, 1, 0).addScaledVector(frente, 0.18).normalize();
+    for (const l of ['D', 'E']) {
+      const lado = V(Math.cos(ry), 0, -Math.sin(ry)).multiplyScalar(l === 'E' ? 0.22 : -0.22);
+      const eixo = cima.clone().add(lado).normalize();
+      this._orientar('Braco' + l, eixo, frente.clone().negate(), w);
+      this._orientar('Antebraco' + l, cima, frente.clone().negate(), w);
+    }
   }
 
   atualizar(dt) {
@@ -310,24 +368,23 @@ export class PoderesKael {
     // rajada: braço sobe (0,1 s), dispara, segura o braço esticado um instante
     if (this.fase) {
       this.fase.t += dt;
-      if (!this.fase.disparou && this.fase.t >= 0.1) { this.fase.disparou = true; this._disparar(); }
+      if (!this.fase.disparou && this.fase.t >= 0.14) { this.fase.disparou = true; this._disparar(); }
       if (this.fase.t > 0.42) this.fase = null;
     }
-    this.poseD += ((this.fase ? 1 : 0) - this.poseD) * Math.min(1, dt * (this.fase ? 18 : 7));
+    this.poseD += ((this.fase ? 1 : 0) - this.poseD) * Math.min(1, dt * (this.fase ? 24 : 7));
     this.poseCima += ((this.segurando ? 1 : 0) - this.poseCima) * Math.min(1, dt * 8);
     if (inst && this.ativo && !j.veiculo) {
       if (this.poseD > 0.01) {
-        this._apontar('BracoD', 'AntebracoD', this.dirTiro, this.poseD);
-        this._apontar('AntebracoD', 'MaoD', this.dirTiro, this.poseD);
-        const mao = this._osso('MaoD');
-        if (mao) { mao.getWorldPosition(_c); this.brilhoMao.position.copy(_c).addScaledVector(this.dirTiro, 0.12); }
+        if (this.fase && !this.fase.disparou) this._mirar();                     // segue o alvo enquanto o braço sobe
+        this._poseRajada(this.poseD);
+        const pm = this._palma();
+        if (pm) this.brilhoMao.position.copy(pm);
         this.brilhoMao.visible = true;
-        const pulso = this.fase && !this.fase.disparou ? this.fase.t / 0.1 : 1;
+        const pulso = this.fase && !this.fase.disparou ? this.fase.t / 0.14 : 1;
         this.brilhoMao.scale.setScalar((0.35 + 0.5 * pulso) * (0.9 + Math.random() * 0.2) * this.poseD);
       } else this.brilhoMao.visible = false;
       if (this.poseCima > 0.01) {
-        _c.set(Math.sin(j.ry) * 0.25, 1, Math.cos(j.ry) * 0.25);
-        for (const l of ['D', 'E']) { this._apontar('Braco' + l, 'Antebraco' + l, _c, this.poseCima); this._apontar('Antebraco' + l, 'Mao' + l, _c, this.poseCima); }
+        this._poseLevantar(this.poseCima, j.ry);
       }
     } else this.brilhoMao.visible = false;
     // carro segurado acima da cabeça (atravessado nos ombros)
@@ -343,6 +400,10 @@ export class PoderesKael {
     // feixes e clarões apagando
     this.feixes = this.feixes.filter(f => {
       f.vida -= dt; const k = Math.max(0, f.vida / f.vida0);
+      if (f.grupo && f.naMao) {                                                   // o feixe continua saindo da palma enquanto a mão se mexe
+        const p = this._palma();
+        if (p) { const comp = p.distanceTo(f.fim); f.grupo.position.copy(p); _a.subVectors(f.fim, p).normalize(); f.grupo.quaternion.setFromUnitVectors(CIMA, _a); for (const m of f.grupo.children) m.scale.y = comp; }
+      }
       if (f.grupo) for (const m of f.grupo.children) { m.material.opacity = m.userData.op * k; const r = m.userData.r * (0.6 + 0.4 * k) * (0.9 + Math.random() * 0.2); m.scale.x = m.scale.z = r; }
       if (f.sprite) { f.sprite.material.opacity = k; f.sprite.scale.multiplyScalar(1 + dt * 2); }
       if (f.vida <= 0) { const o = f.grupo || f.sprite; this.scene.remove(o); o.traverse(m => m.material?.dispose()); return false; }

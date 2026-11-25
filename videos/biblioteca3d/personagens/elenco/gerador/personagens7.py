@@ -28,16 +28,16 @@ def _espeto(S, cab, mat, u, th, comp, dire, raio, dobra=(0.0, 0.0, 0.0), achat=0
         pts.append(cur.copy())
     tt = np.linspace(0, 1, n_pts)
     rr = raio * (1 - tt) ** 1.05 * (1 + 0.22 * np.sin(np.pi * tt)) + 0.0006
-    tubo(S, np.array(pts), rr, wc, mat, nseg=10, sub=3, fecha=(True, True), achatamento=achat, n=2.2)
+    tubo(S, np.array(pts), rr, wc, mat, nseg=7, sub=2, fecha=(True, True), achatamento=achat, n=2.2)
 
 
 def _mecha_pontos(S, cab, mat, pts, raios, achat=0.55):
-    tubo(S, np.array(pts), np.array(raios), osso(cab.e.nb, cab.e.idx, Cabeca=1), mat, nseg=10, sub=4, fecha=(True, True), achatamento=achat, n=2.2)
+    tubo(S, np.array(pts), np.array(raios), osso(cab.e.nb, cab.e.idx, Cabeca=1), mat, nseg=8, sub=3, fecha=(True, True), achatamento=achat, n=2.2)
 
 
 def cabelo_crista(S, cab, mat):
     """cabelo próprio do Kael: volume base + crista varrida para trás/esquerda + mecha da testa + laterais e nuca"""
-    H.touca(S, cab, mat, borda=lambda th: 0.70 - 0.16 * min(1.0, abs(th) / 1.6) - 0.12 * max(0.0, (abs(th) - 2.2) / 0.9), grossura=0.0065)
+    H.touca(S, cab, mat, borda=lambda th: 0.70 - 0.16 * min(1.0, abs(th) / 1.6) - 0.12 * max(0.0, (abs(th) - 2.2) / 0.9), grossura=0.0065, nseg=48, n_an=16)
     # crista: pontas grandes saindo do alto, todas puxadas para trás (-z), para cima e um pouco para a esquerda (+x)
     crista = [  # (u, th, comp, raio, dire, dobra)
         (0.95, 0.20, 0.150, 0.036, (0.25, 0.55, -0.80), (0.10, 0.30, -0.25)),
@@ -99,7 +99,7 @@ def kael():
     """herói protagonista: Kael, 19 anos, quimono de treino sem mangas azul-marinho com debrum carmim, faixa carmim, calça areia, botas"""
     e, cab, cp, S, _ = base_personagem(
         dict(perna=1.24, tronco=0.72, braco=0.93, pescoco=0.92, cabeca=1.12, ombros=1.06, quadril=0.94, pe=1.08, abre_braco=10.0),
-        dict(res=2.0, sx=0.98, sz=1.0, mand=-0.002, queixo=0.002, bochecha=-0.008, olho_r=0.0168, olho_fundo=0.80, olho_x=0.0340, lid_aberta=17,
+        dict(res=1.1, sx=0.98, sz=1.0, mand=-0.002, queixo=0.002, bochecha=-0.008, olho_r=0.0168, olho_fundo=0.80, olho_x=0.0340, lid_aberta=17,
              iris=0.62, pupila=0.24, nariz_comp=0.0075, nariz_larg=0.0040, nariz_ponta=0.0042, narina=0.0008, nariz_ponte=0.45, boca_larg=0.0170, labio=0.0018,
              sobr_esp=0.0110, sobr_larg=0.044, sobr_incl=2.3, sobr_u=0.090, barba=0.0, rubor=0.10, dentes=6),
         dict(k_braco=1.14, k_perna=1.10, k_peito=1.36, k_ombro=1.08, k_cintura=0.92, k_quad=0.80, k_mao=1.20, k_pesc=1.22))
@@ -116,7 +116,7 @@ def kael():
     larg_v = lambda y: 0.078 * max(0.0, (y - yv0) / (ytop - yv0))
     recorte_v = lambda cen: (cen[:, 2] > zc) & (np.abs(cen[:, 0]) < np.array([larg_v(y) for y in cen[:, 1]]))
     cp.casca_torso(S, 0.40, 0.985, 1.04, 0.004, 'camiseta', n_an=20)                 # camiseta carmim por baixo do V
-    cp.casca_torso(S, -0.30, 0.97, 1.14, 0.010, lambda t: 'calca' if t < -0.06 else 'gi', n_an=48, nseg=132, y_hem_seguir=(yh, yf), recorte=recorte_v, perfil_extra=afina,
+    cp.casca_torso(S, -0.30, 0.97, 1.14, 0.010, lambda t: 'calca' if t < -0.06 else 'gi', n_an=36, nseg=80, y_hem_seguir=(yh, yf), recorte=recorte_v, perfil_extra=afina,
                    flare=lambda t: (0.010 * max(0.0, (-0.04 - t) / 0.26), 0.010 * max(0.0, (-0.04 - t) / 0.26)))
     # gola atrás do pescoço: fita carmim que liga as duas pontas do V passando pela nuca
     c, rx, rz = cp.torso(0.955)
@@ -149,9 +149,9 @@ def kael():
         pts.append((x, c[1], z + 0.002))
     loft(S, np.array(pts), np.full(len(ts), 0.0065), np.full(len(ts), 0.0030), ts, cp.pesos_torso(), 'debrum', n=2.4, sub=2, nseg=8, frame='auto', fecha=(True, True))
     # faixa na cintura com o nó do lado esquerdo e as duas pontas caindo
-    cp.casca_torso(S, -0.12, 0.09, 1.30, 0.022, 'faixa', n_an=14, perfil_extra=lambda t: 0.98, fecha=(True, True))
+    cp.casca_torso(S, -0.12, 0.09, 1.30, 0.022, 'faixa', n_an=8, nseg=28, perfil_extra=lambda t: 0.98, fecha=(True, True))
     for tv in (-0.07, 0.0, 0.065):                                                                 # voltas da faixa (relevo leve)
-        cp.casca_torso(S, tv - 0.012, tv + 0.012, 1.315, 0.022, 'faixa', n_an=4, perfil_extra=lambda t: 0.98, fecha=(True, True))   # faixa grossa de várias voltas
+        cp.casca_torso(S, tv - 0.012, tv + 0.012, 1.315, 0.022, 'faixa', n_an=3, nseg=28, perfil_extra=lambda t: 0.98, fecha=(True, True))   # faixa grossa de várias voltas
     c, rx, rz = cp.torso(-0.02)
     wq = osso(e.nb, e.idx, Quadril=1)
     ang = 0.75
@@ -163,16 +163,16 @@ def kael():
 
     musc = lambda ss: (1.0 + 0.24 * np.exp(-((ss - 0.50) / 0.24) ** 2) + 0.06 * np.exp(-((ss + 0.02) / 0.12) ** 2) + 0.36 * np.exp(-((ss - 1.22) / 0.24) ** 2) + 0.05 * np.clip((ss - 1.75) / 0.2, 0, 1))
     for lado in 'ED':
-        cp.membro(S, 'braco', lado, -0.2, 2.04, 1.0, 0.0, 'pele', n_an=30, extra=musc)                    # braços musculosos (bíceps e antebraço)
+        cp.membro(S, 'braco', lado, -0.2, 2.04, 1.0, 0.0, 'pele', n_an=20, nseg=18, extra=musc)                    # braços musculosos (bíceps e antebraço)
         cp.membro(S, 'braco', lado, -0.2, 0.34, 1.10, 0.010, 'gi', n_an=10, extra=lambda ss: 1.0 + 0.04 * np.clip((ss - 0.05) / 0.25, 0, 1))  # manguinha do quimono
         cp.membro(S, 'braco', lado, 0.30, 0.35, 1.16, 0.011, 'debrum', n_an=3)
         cp.membro(S, 'braco', lado, 1.70, 1.97, 1.18, 0.006, 'munheq', n_an=8)                          # munhequeira
         cp.mao(S, lado)
         # calça larga que estufa na canela e entra no cano da bota
-        cp.membro(S, 'perna', lado, -0.12, 1.36, 1.17, 0.012, 'calca', n_an=26,
+        cp.membro(S, 'perna', lado, -0.12, 1.36, 1.17, 0.012, 'calca', n_an=18, nseg=20,
                   extra=lambda ss: 0.84 + 0.04 * np.clip((ss - 0.02) / 0.30, 0, 1) + 0.12 * np.clip((ss - 0.5) / 0.5, 0, 1) + 0.48 * np.clip((ss - 0.8) / 0.45, 0, 1) - 0.40 * np.clip((ss - 1.24) / 0.12, 0, 1) + 0.03 * np.sin(ss * 14))   # calça bem larga que embola
         cp.sapato(S, lado, 'bota', 'bota', 'sola', 'bota_det', cano=False)
-        cp.membro(S, 'perna', lado, 1.22, 1.98, 1.12, 0.010, 'bota', n_an=14)                            # cano alto da bota
+        cp.membro(S, 'perna', lado, 1.22, 1.98, 1.12, 0.010, 'bota', n_an=10, nseg=18)                            # cano alto da bota
         cp.membro(S, 'perna', lado, 1.40, 1.45, 1.17, 0.010, 'cordao', n_an=3)                           # cordão amarrado no cano
     cabelo_crista(S, cab, 'cabelo')
     _delineado(S, cab, e, 'delineado')

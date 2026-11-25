@@ -1056,12 +1056,12 @@ export async function iniciarJogo() {
   // Kael: material de desenho (2 tons) e contorno preto (casca invertida), sem contorno nos olhos, boca e sobrancelhas
   const GRAD_ANIME = (() => { const t = new THREE.DataTexture(new Uint8Array([150, 150, 150, 255, 255, 255, 255, 255]), 2, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
   function visualAnime(inst) {
-    const SEM = /olho|iris|pupila|brilho|narina|boca_dentro|lingua|dente|sobrancelha|labio|delineado/i, ESP = { M_pele: 0.0018 };
+    const COM = /^M_(pele|gi|calca|cabelo|bota|faixa|camiseta)$/, ESP = { M_pele: 0.0018 };   // contorno só nas peças grandes (silhueta); o resto não precisa
     const alvos = [];
     inst.obj.traverse(m => {
       if (!m.isMesh) return;
       const old = m.material, nm = new THREE.MeshToonMaterial({ color: old.color, map: old.map, gradientMap: GRAD_ANIME, transparent: old.transparent, opacity: old.opacity, side: old.side });
-      nm.name = old.name; m.material = nm; if (m.isSkinnedMesh && !SEM.test(old.name || '')) alvos.push(m);
+      nm.name = old.name; m.material = nm; if (m.isSkinnedMesh && COM.test(old.name || '')) alvos.push(m);
     });
     const mats = {};
     for (const m of alvos) {
