@@ -23,6 +23,7 @@ import * as Basculante from '../videos/biblioteca3d/veiculos/basculante/basculan
 import { construirCanteiro, monteDeTerra } from './canteiro.js';
 import { TerrenoCavavel } from './terreno.js';
 import { Efeitos, VidaJogador, danoVeiculo } from './dano.js';
+import { mesclarEstaticos } from './otimizar.js';
 import { construirCidade, PONTOS_TELEPORTE, SELVA_INFO } from './cidade.js';
 import { criarTrex } from './trex.js';
 import { Armas } from './armas.js';
@@ -227,7 +228,7 @@ const QUALIDADES = {
     sombras: true, sombraRaio: 65,
     sombraPrincipal: true, sombraDetalhe: true,
     viewDist: 420, camFar: 520, fogNear: 190, fogFar: 490,
-    npcsMax: 8, npcDist: 95, trafegoMax: 20,
+    npcsMax: 5, npcDist: 75, trafegoMax: 16,
     rainN: 900, minimapInterval: 0.05,
   },
 };
@@ -710,10 +711,11 @@ export async function iniciarJogo() {
   let qualAtual = QUALIDADES[qParam] || QUALIDADES[qSalva] || QUALIDADES.leve;
 
   const renderer = new THREE.WebGLRenderer({
-    antialias: qualAtual.id !== 'leve',
-    powerPreference: 'high-performance',
+    antialias: qualAtual.id !== 'leve' && devicePixelRatio < 2,            // em telas densas (celular) o MSAA custa caro e quase não aparece
+    powerPreference: 'default',                                               // 'high-performance' força o modo de maior consumo (esquenta)
   });
   renderer.setPixelRatio(Math.min(devicePixelRatio, qualAtual.pixelRatio));
+  let prAtual = renderer.getPixelRatio(), snapSombra = true;                  // resolução dinâmica e sombra (ver o laço)
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -914,6 +916,7 @@ export async function iniciarJogo() {
   for (const f of frotaCanal) {
     try {
       const api = f.criar(), o = api.grupo;
+      const mes = mesclarEstaticos(o); console.debug?.(`${f.nome}: ${mes.antes} → ${mes.depois} malhas paradas`);
       const luzesRemover = [];
       o.traverse(m => {
         if (m.isLight) { luzesRemover.push(m); return; }
@@ -938,7 +941,7 @@ export async function iniciarJogo() {
         vel: 0, steer: 0, dist: 0,
         acel: f.acel, velMax: f.velMax, velRe: f.velRe ?? 12, freio: 30, raio: f.raio,
         sirene: false, farois: false, ehPolicia: false, temSirene: !!f.sirene, maquina: !!f.maquina,
-        camDist: f.camDist, camAlt: f.camAlt, capoY: f.capoY, capoZ: f.capoZ,
+        camDist: f.camDist, camAlt: f.camAlt, capoY: f.capoY, capoZ: f.capoZ, detalhado: true,
       });
     } catch (e) { console.warn('veículo do canal não montou', f.nome, e); }
   }
@@ -1585,7 +1588,7 @@ export async function iniciarJogo() {
     qualAtual = q;
     try { localStorage.setItem('hryz_qualidade_v2', q.id); } catch (_) {}
 
-    renderer.setPixelRatio(Math.min(devicePixelRatio, q.pixelRatio));
+    renderer.setPixelRatio(Math.min(devicePixelRatio, q.pixelRatio)); prAtual = renderer.getPixelRatio(); snapSombra = true;
     renderer.setSize(innerWidth, innerHeight);
     camera.far = q.camFar;
     camera.updateProjectionMatrix();
@@ -2516,7 +2519,7 @@ export async function iniciarJogo() {
       const v = veiculos[i];
       if (v === jogador.veiculo) { v.obj.visible = true; continue; }
       const dx = v.x - focoX, dz = v.z - focoZ;
-      v.obj.visible = (dx * dx + dz * dz) <= vDist2;
+      v.obj.visible = (dx * dx + dz * dz) <= (v.detalhado ? Math.min(vDist2, 170 * 170) : vDist2);   // carros detalhados só até 170 m
     }
 
     // ---- Som contínuo
@@ -2621,12 +2624,30 @@ export async function iniciarJogo() {
       minimapTimer = 0;
       desenharMinimapa(focoX, focoZ, focoYaw);
     }
+    // sombras: o mapa de sombra é redesenhado a cada 2 quadros (metade do custo do passe de sombra)
+    if (qualAtual.sombras) { renderer.shadowMap.autoUpdate = false; if ((quadroSombra = (quadroSombra + 1) % 2) === 0 || snapSombra) { renderer.shadowMap.needsUpdate = true; snapSombra = false; } }
     renderer.render(scene, camera);
   }
 
-  function loop() {
+  // ---- Laço com limite de 60 quadros/s (celulares de 120 Hz desenhavam o dobro) e resolução dinâmica:
+  //      se o aparelho não segura ~50 qps, a resolução interna baixa um pouco (até um piso por qualidade) e volta quando sobra folga.
+  let quadroSombra = 0, ultimoQuadro = 0, janelaT = 0, janelaN = 0;
+  const PISO_PR = { leve: 0.6, medio: 0.8, alto: 0.95 };
+  function loop(agora = performance.now()) {
     requestAnimationFrame(loop);
-    if (!pausado) passo();
+    if (pausado) return;
+    if (agora - ultimoQuadro < 1000 / 61) return;                                   // no máximo ~60 qps
+    const dtq = ultimoQuadro ? agora - ultimoQuadro : 16.7; ultimoQuadro = agora;
+    passo();
+    janelaT += dtq; janelaN++;
+    if (janelaT > 2000) {
+      const qps = janelaN * 1000 / janelaT; janelaT = 0; janelaN = 0;
+      const teto = Math.min(devicePixelRatio, qualAtual.pixelRatio), piso = Math.min(teto, PISO_PR[qualAtual.id] ?? 0.8);
+      let novo = prAtual;
+      if (qps < 48 && prAtual > piso) novo = Math.max(piso, prAtual - 0.12);
+      else if (qps > 57 && prAtual < teto) novo = Math.min(teto, prAtual + 0.06);
+      if (Math.abs(novo - prAtual) > 0.01) { prAtual = novo; renderer.setPixelRatio(prAtual); }
+    }
   }
   window.__jogo = {
     pausar: v => { pausado = v; },

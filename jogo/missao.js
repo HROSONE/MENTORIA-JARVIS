@@ -299,7 +299,7 @@ export class Missao {
     if (this.estado === 'inativa') return;
     const j = this.jogo.jogador();
     if (this.estado === 'intro') this.tIntro += dt;
-    this._animarHeli(dt, t);
+    if (this.camera.position.distanceTo(V(CENA.x, 30, CENA.z)) < 320) this._animarHeli(dt, t);
     // falas de tempos em tempos (bandido, refém e negociador) enquanto o jogador está por perto ou olhando pela luneta
     if (this.estado === 'ativa') {
       this.tFala -= dt;
@@ -319,7 +319,9 @@ export class Missao {
       }
     }
     // atores
-    this._animarAtores(dt, t);
+    // longe da cena (e sem cena de câmera) os atores ficam parados: poupa CPU (7 esqueletos com IK)
+    const longe = this.camera.position.distanceTo(V(CENA.x, 1, CENA.z)) > 170 && this.estado !== 'intro' && this.estado !== 'percebeu' && this.estado !== 'vitoria';
+    if (!longe || (this._q = (this._q || 0) + 1) % 30 === 0) this._animarAtores(longe ? dt * 30 : dt, t);
     if (this.estado === 'ativa') {
       this.nervoso = Math.max(0, this.nervoso - dt); this.graca = Math.max(0, (this.graca || 0) - dt);
       if (this.nervoso <= 0 && this.bandido._estadoRosto !== 'raiva') { this.bandido.rosto({ expressao: 'raiva', forca: 0.9 }); this.bandido._estadoRosto = 'raiva'; }
