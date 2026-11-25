@@ -398,6 +398,11 @@ export function criar(opc = {}) {
   if (opc.sombraChao !== false) add(K.sombraChao(M.L * 0.9, 0.55));
   G.traverse(o => { if (o.isMesh) o.castShadow = o.castShadow !== false; });
 
+  // marcadores para montar o piloto (mesmos nomes do GLB do Blender)
+  const marca = (p, pai = G) => { const o = new THREE.Object3D(); o.position.copy(p); pai.add(o); return o; };
+  const pontos = { assento: marca(B(0, 0.26, 0.87)), peE: marca(B(0.20, 0.22, 0.39)), peD: marca(B(-0.20, 0.22, 0.39)), maoE: null, maoD: null };
+  { const mE = B(...add3(add3(AF, U, 0.66), [0.33, 0.07, -0.03])), mD = B(...add3(add3(AF, U, 0.66), [-0.33, 0.07, -0.03])); G.updateMatrixWorld(true);
+    pontos.maoE = marca(dir.worldToLocal(mE.clone()), dir); pontos.maoD = marca(dir.worldToLocal(mD.clone()), dir); }   // as mãos vão com o guidão
   const rodas = [{ giro: rodaD, d: true, R: M.RF }, { giro: rodaT, d: false, R: M.RT }];
   return K.api(G, { L: M.L, W: M.W, H: M.H, R: M.RF, luzes, rodas, extra: {
     moto: true, direcao: dir, balanca: bal,
@@ -405,7 +410,7 @@ export function criar(opc = {}) {
     esterco(rad) { dir.quaternion.copy(q0).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.clamp(rad, -0.6, 0.6))); },
     /** compressão da suspensão traseira (rad, positivo = roda sobe) */
     suspensao(rad) { bal.rotation.x = rad; },
-    descanso(baixo) { desc.rotation.z = baixo ? 1.1 : 0; },
-    pontos: { assento: B(0, 0.26, 0.87), pe: [B(0.20, 0.22, 0.39), B(-0.20, 0.22, 0.39)], mao: [Bv(add3(add3(AF, U, 0.66), [0.33, 0.07, -0.03])), Bv(add3(add3(AF, U, 0.66), [-0.33, 0.07, -0.03]))] },
+    descanso(baixo) { desc.rotation.set(baixo ? -1.15 : 0, 0, baixo ? -0.35 : 0); },
+    pontos,
   } });
 }
