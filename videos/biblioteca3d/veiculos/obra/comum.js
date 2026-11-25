@@ -40,6 +40,7 @@ export function cilindroHidraulico(rCam, rHaste, comp, mats) {
   const haste = new THREE.Mesh(new THREE.CylinderGeometry(rHaste, rHaste, 1, 12), mats.haste); haste.geometry.rotateX(Math.PI / 2); haste.geometry.translate(0, 0, 0.5); g.add(haste);
   const olhal = new THREE.Mesh(new THREE.TorusGeometry(rHaste * 1.3, rHaste * 0.5, 8, 14), mats.aco); g.add(olhal);
   const vA = new THREE.Vector3(), vB = new THREE.Vector3(), Z = new THREE.Vector3(0, 0, 1);
+  haste.userData.dinamico = olhal.userData.dinamico = true;                    // mudam de tamanho/posição: não mesclar
   g.atualizar = (A, B) => {
     vA.copy(A); vB.copy(B); const d = vA.distanceTo(vB);
     g.position.copy(vA); g.quaternion.setFromUnitVectors(Z, vB.clone().sub(vA).normalize());
@@ -169,7 +170,7 @@ export function luzesBasicas(G, mats, { frente, tras, yF, yT, xs, giros = [] }) 
 /** terra dentro de uma caçamba: meia esfera achatada; nivel(0..1) mostra o quanto está cheia */
 export function terraNaCacamba(pai, pos, rx, ry, rz, mats) {
   const g = new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
-  const m = new THREE.Mesh(g, mats.terra); m.position.set(...pos); m.scale.set(rx, 0.001, rz); m.visible = false; m.castShadow = true; pai.add(m);
+  const m = new THREE.Mesh(g, mats.terra); m.position.set(...pos); m.scale.set(rx, 0.001, rz); m.visible = false; m.castShadow = true; m.userData.dinamico = true; pai.add(m);
   m.nivel = n => { m.visible = n > 0.02; m.scale.set(rx * (0.6 + 0.4 * n), ry * n, rz * (0.6 + 0.4 * n)); };
   return m;
 }

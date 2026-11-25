@@ -92,8 +92,13 @@ function criarTexturaPadrao(tipo) {
       const sz = rng() < 0.78 ? 2 : 3;
       g.fillRect(rng() * S, rng() * S, sz, sz);
     }
+    for (let i = 0; i < 5; i++) {                                                      // remendos e manchas de óleo
+      const x = rng() * S, y = rng() * S, r = 8 + rng() * 26;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(90,92,98,${0.18 + rng() * 0.2})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr; g.fillRect(x - r, y - r, 2 * r, 2 * r);
+    }
     // Faixas sutis de desgaste de pneu e micro-trincas leves
-    g.strokeStyle = 'rgba(130,136,146,0.22)';
+    g.strokeStyle = 'rgba(110,116,126,0.30)';
     g.lineWidth = 1;
     for (let i = 0; i < 6; i++) {
       g.beginPath();
@@ -103,13 +108,19 @@ function criarTexturaPadrao(tipo) {
       g.stroke();
     }
   } else if (tipo === 'grama') {
-    g.fillStyle = '#edf3ea';
+    g.fillStyle = '#e6eedf';
     g.fillRect(0, 0, S, S);
-    for (let i = 0; i < 3200; i++) {
-      const v = 212 + Math.floor(rng() * 40);
-      g.fillStyle = `rgb(${v - 8},${v + 3},${v - 12})`;
-      g.fillRect(rng() * S, rng() * S, 2 + rng() * 3, 2 + rng() * 3);
+    for (let i = 0; i < 26; i++) {                                                     // manchas mais secas e mais verdes
+      const x = rng() * S, y = rng() * S, r = 10 + rng() * 34, seca = rng() < 0.5;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, seca ? 'rgba(255,240,190,0.35)' : 'rgba(150,190,120,0.30)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr; g.fillRect(x - r, y - r, 2 * r, 2 * r);
     }
+    for (let i = 0; i < 5200; i++) {                                                   // folhas de capim (traços claros e sombras)
+      const v = 170 + Math.floor(rng() * 85), x = rng() * S, y = rng() * S;
+      g.strokeStyle = `rgba(${v - 20},${v},${v - 40},0.8)`; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rng() - 0.5) * 3, y - 2 - rng() * 4); g.stroke();
+    }
+    for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(150,120,80,${0.25 + rng() * 0.25})`; g.fillRect(rng() * S, rng() * S, 1 + rng() * 2, 1 + rng() * 2); }   // pontinhos de terra
   } else {
     // Superfície (calçada, concreto, reboco de paredes): granulação fina + juntas sutis
     g.fillStyle = '#f2f3f5';
@@ -237,6 +248,35 @@ export async function construirCidade({
   const texAsfalto = criarTexturaPadrao('asfalto');
   const texSuperficie = criarTexturaPadrao('superficie');
   const texGrama = criarTexturaPadrao('grama');
+  // ruído suave de baixa frequência para quebrar a repetição das texturas no chão (grama, calçada e asfalto)
+  const texMacro = (() => {
+    const S = 256, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'); const rng = aleatorio(909);
+    g.fillStyle = 'rgb(128,128,128)'; g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 220; i++) {
+      const x = rng() * S, y = rng() * S, r = 8 + rng() * 46, v = rng() < 0.5 ? 255 : 0;
+      for (const dx of [0, -S, S]) for (const dy of [0, -S, S]) { const gr = g.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, r); gr.addColorStop(0, `rgba(${v},${v},${v},0.34)`); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x + dx - r, y + dy - r, 2 * r, 2 * r); }
+    }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.NoColorSpace; return t;
+  })();
+  function variacaoNoChao(mat, forca = 1) {
+    const antigo = mat.onBeforeCompile;
+    const chave = 'macro' + forca + (antigo ? antigo.toString().length + antigo.toString().slice(0, 60) : '');
+    mat.customProgramCacheKey = () => chave;                                          // (senão o Three reaproveita o shader de outro material)
+    mat.onBeforeCompile = (sh, r) => {
+      antigo?.call(mat, sh, r);
+      sh.uniforms.tMacro = { value: texMacro };
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vMacroP; varying float vMacroN;')
+        .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvMacroP = (modelMatrix * vec4(transformed, 1.0)).xyz; vMacroN = normalize(mat3(modelMatrix) * objectNormal).y;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D tMacro; varying vec3 vMacroP; varying float vMacroN;')
+        .replace('#include <color_fragment>', `#include <color_fragment>
+  if (vMacroN > 0.85 && vMacroP.y < 0.6) {
+    float mac = texture2D(tMacro, vMacroP.xz * 0.0075).r * 0.62 + texture2D(tMacro, vMacroP.xz * 0.043).r * 0.38;
+    diffuseColor.rgb *= mix(1.0, mix(0.70, 1.20, mac), ${forca.toFixed(2)});
+    float lumC = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+    diffuseColor.rgb *= mix(1.0, 0.84, smoothstep(0.62, 0.92, lumC));               // concreto claro envelhecido (sem ofuscar)
+  }`);
+    };
+  }
   const texSelva = criarTexturaPadrao('grama');
   texGrama.repeat.set(320, 320);
 
@@ -264,6 +304,8 @@ export async function construirCidade({
     agua:      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.16, metalness: 0.18, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
   };
 
+  for (const m of [MAT_LAMBERT.fosco, MAT_LAMBERT.asfalto, MAT_PBR.fosco, MAT_PBR.asfalto]) variacaoNoChao(m, 1);
+  for (const m of [MAT_LAMBERT.selvaChao, MAT_PBR.selvaChao]) variacaoNoChao(m, 0.8);
   const matsLetreiro = new Set();
   let estadoNoite = noiteInicial;
   let estadoChuva = false;
@@ -303,6 +345,7 @@ export async function construirCidade({
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vMundoXZ;').replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvMundoXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vMundoXZ;').replace('void main() {', 'void main() {\n  if (vMundoXZ.x > 140.7 && vMundoXZ.x < 219.3 && vMundoXZ.y > -29.3 && vMundoXZ.y < 14.3) discard;');
   };
+  variacaoNoChao(chaoMat, 1.2);
   const chao = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600, 32, 32), chaoMat);
   chao.rotation.x = -Math.PI / 2;
   chao.position.set(300, -0.18, 300);
@@ -523,10 +566,30 @@ export async function construirCidade({
   }
   colocar('placa-rua-hryz', 9 * TILE + 4.8, 14 * TILE + 4.8, Math.PI / 4);
 
+  // Rede elétrica: postes de concreto de 9 m a cada 24 m numa das calçadas, com fiação entre eles (bem de rua brasileira)
+  {
+    const lado = 5.35, vao = 24;
+    for (const gz of [2, 8, 20, 26, 32]) {                                            // ruas leste-oeste (a avenida do meio fica com árvores)
+      const z = gz * TILE + lado * (gz % 4 === 0 ? 1 : -1), xs = [];
+      for (let x = 3 * TILE + 6; x <= 33 * TILE - 6; x += vao) if (!naRot(Math.round(x / TILE), gz)) xs.push(x);
+      xs.forEach((x, i) => { colocar(i % 5 === 2 ? 'poste-energia-transformador' : 'poste-energia', x, z, 0, CALCADA, { colisor: true, folga: 0.2 }); if (i < xs.length - 1 && xs[i + 1] - x === vao) colocar('fio-vao-24', x, z, 0, CALCADA, { colisor: false, sombra: 'nunca' }); });
+    }
+    for (const gx of [3, 15, 27, 33]) {                                               // ruas norte-sul
+      const x = gx * TILE + lado * (gx % 2 ? -1 : 1), zs = [];
+      for (let z = 32 * TILE - 6; z >= 2 * TILE + 6; z -= vao) if (!naRot(gx, Math.round(z / TILE))) zs.push(z);
+      zs.forEach((z, i) => { colocar(i % 5 === 2 ? 'poste-energia-transformador' : 'poste-energia', x, z, Math.PI / 2, CALCADA, { colisor: true, folga: 0.2 }); if (i < zs.length - 1 && z - zs[i + 1] === vao) colocar('fio-vao-24', x, z, Math.PI / 2, CALCADA, { colisor: false, sombra: 'nunca' }); });
+    }
+  }
+  // Avenida do meio (z = 168) arborizada dos dois lados, entre os postes de luz
+  for (let x = 3 * TILE + 6; x <= 33 * TILE - 6; x += 24) {
+    const gx = Math.round(x / TILE); if (naRot(gx, 14)) continue;
+    for (const s of [1, -1]) if (R() < 0.85) colocar('arvore-frondosa', x, 14 * TILE + 5.4 * s, R() * 6.28, CALCADA, { escala: 0.42 + R() * 0.12, colisor: false });
+  }
+
   // Carros estacionados (camada decorativa)
   for (const [c, t] of Object.entries(TIPO)) {
     const [gx, gz] = c.split(',').map(Number);
-    if (t.nome !== 'rua-reta' || gz === 14 || R() > 0.14) continue;
+    if (t.nome !== 'rua-reta' || gz === 14 || R() > 0.26) continue;                  // (mais carros parados: rua de cidade de verdade)
     const vert = t.l.includes('N'), sentido = R() < 0.5 ? 1 : -1;
     const p = kit.naPista(gx, gz, vert ? 0 : 1, sentido, (R() - 0.5) * 6);
     carro(escolha(CARROS_ESTAC), p.x, p.z, p.ry);

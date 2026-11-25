@@ -40,7 +40,7 @@ export function criar(opc = {}) {
   add(C.zebrado(larg - 0.1, 0.18), tampa).position.set(0, -alt + 0.2, -0.07); tampa.children[tampa.children.length - 1].rotation.y = Math.PI;
   // carga de terra (monte que escorrega e sai quando a caçamba sobe)
   const gT = new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2); gT.scale(larg * 0.46, 0.55, comp * 0.46);
-  const terra = add(new THREE.Mesh(gT, mats.terra), cac); terra.position.set(0, alt * 0.75, (z0 + z1) / 2); terra.castShadow = true;
+  const terra = add(new THREE.Mesh(gT, mats.terra), cac); terra.position.set(0, alt * 0.75, (z0 + z1) / 2); terra.castShadow = true; terra.userData.dinamico = true;
   const cilT = add(C.cilindroHidraulico(0.14, 0.08, 1.2, mats));
   // ---------------- rodas: dianteira simples, tandem traseiro com rodado duplo
   const rd = K.rodas(G, [{ z: zF, x: 1.05, d: true }, { z: zF, x: -1.05, d: true },

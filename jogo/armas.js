@@ -81,7 +81,7 @@ export class Armas {
     // efeitos compartilhados
     this.clarao = new THREE.Sprite(new THREE.SpriteMaterial({ map: texClarao(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
     this.clarao.visible = false; this.scene.add(this.clarao);
-    this.luz = new THREE.PointLight(0xffc070, 0, 9, 2); this.scene.add(this.luz);
+    this.luz = new THREE.PointLight(0xffc070, 0, 9, 2);   // (fora da cena: luz pontual sempre presente encarece todo pixel; o clarão fica no sprite)
     this.geoCapsula = new THREE.CylinderGeometry(0.0048, 0.0048, 0.020, 8); this.matCapsula = new THREE.MeshStandardMaterial({ color: 0xc89b3c, metalness: 1, roughness: 0.25 });
     this.matRastro = new THREE.MeshBasicMaterial({ color: 0xfff0b0, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
     this.geoRastro = new THREE.BoxGeometry(0.025, 0.025, 1);

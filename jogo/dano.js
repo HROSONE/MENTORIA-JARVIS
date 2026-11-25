@@ -18,7 +18,7 @@ export class Efeitos {
   constructor(scene) {
     this.scene = scene; this.lista = [];
     this.tex = { cinza: texPuff('rgba(170,170,170,0.8)'), preta: texPuff('rgba(30,30,30,0.85)'), fogo: texPuff('rgba(255,150,40,1)'), poeira: texPuff('rgba(150,120,85,0.8)'), terra: texPuff('rgba(110,80,50,0.95)') };
-    this.luz = new THREE.PointLight(0xffa040, 0, 30, 2); scene.add(this.luz); this.tLuz = 0;
+    this.luz = new THREE.PointLight(0xffa040, 0, 30, 2); this.tLuz = 0;   // (fora da cena, pelo mesmo motivo: a bola de fogo já brilha)
   }
   /** uma partícula: tipo ('cinza'|'preta'|'fogo'|'poeira'|'terra'), posição, velocidade, vida, tamanho inicial e crescimento */
   emitir(tipo, p, v, vida = 1.5, tam = 0.6, cresce = 1.2, gravidade = 0) {
