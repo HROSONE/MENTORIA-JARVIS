@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Câmara de ar sem tirar a roda (Short)</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#000}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<script type="module">
+// O vídeo inteiro é uma função do tempo: window.__setTime(t) / window.__frame(t, opções).
+import { renderer, scene, cam, capturar } from './js/cena.js';
+import { construir, atualizar, efeitos, plano } from './js/cena.js';
+
+const Q = new URLSearchParams(location.search);
+const T = await construir();
+function desenhar(t) { atualizar(t); renderer.render(scene, cam); }
+window.__setTime = t => desenhar(t);
+window.__frame = (t, opc = {}) => {
+  const e = efeitos(t), pl = plano(t), lo = pl.t0, hi = pl.t1 - 1e-4;
+  const des = tk => desenhar(Math.min(Math.max(tk, lo), hi));
+  return capturar(des, t, { subs: opc.subs ?? e.subs, obturador: 0.6, flash: e.flash, jpeg: opc.jpeg ?? 0.92 });
+};
+window.__total = T.total;
+window.__ready = true;
+desenhar(Q.has('t') ? +Q.get('t') : 0);
+</script>
+</body>
+</html>

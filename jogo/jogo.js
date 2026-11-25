@@ -33,8 +33,12 @@ import { Missao, TORRE } from './missao.js';
 import { BalaCam } from './balacam.js';
 import { Loja } from './loja.js';
 import { PoderesKael } from './poderes.js';
+import { PilotoMoto } from './pilotar.js';
+import * as MotoGLB from '../videos/biblioteca3d/veiculos/moto/motoGLB.js';
+import * as MotoProc from '../videos/biblioteca3d/veiculos/moto/moto.js';
 
 const BASE_BIB = './videos/biblioteca3d';
+const clamp01 = x => Math.min(1, Math.max(0, x));
 
 const PERSONAGENS_DEF = [
   { id: 'policial',   nome: 'Policial',      tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/policial.glb` },
@@ -951,12 +955,17 @@ export async function iniciarJogo() {
   //    Os SpotLights/PointLights de cada carro são removidos no jogo (cada luz a mais encarece o shader de toda a cena);
   //    faróis, lanternas e giroflex continuam acendendo pelos materiais emissivos.
   atualizarProgresso(0.90, 'Estacionando a frota do canal…');
+  let cenaMoto = null;                                                             // moto do Blender (GLB) — a do Three.js é feita em código
+  try { cenaMoto = await MotoGLB.carregar(`${BASE_BIB}/veiculos/moto/moto.glb`); } catch (e) { console.warn('moto.glb não carregou', e); }
   const frotaCanal = [
     { id: 'hatch', nome: 'Hatch Hryz',        criar: () => Hatch.criar(),     x: 172, z: 166.2, ry: Math.PI / 2,  acel: 21, velMax: 44, raio: 2.0, camDist: 6.6, camAlt: 2.4, capoY: 1.30, capoZ: 0.3 },
     { id: 'taxi', nome: 'Táxi da Praça',     criar: () => Taxi.criar(),      x: 218, z: 169.8, ry: -Math.PI / 2, acel: 20, velMax: 42, raio: 2.2, camDist: 7.0, camAlt: 2.5, capoY: 1.32, capoZ: 0.4 },
     { id: 'picape', nome: 'Picape Cabine Dupla', criar: () => Picape.criar(),  x: 240, z: 169.8, ry: -Math.PI / 2, acel: 19, velMax: 42, raio: 2.6, camDist: 8.0, camAlt: 2.9, capoY: 1.75, capoZ: 0.6 },
     { id: 'onibus', nome: 'Ônibus Escolar',    criar: () => Onibus.criar(),    x: 292, z: 166.2, ry: Math.PI / 2,  acel: 11, velMax: 28, raio: 3.4, camDist: 13.5, camAlt: 4.6, capoY: 2.35, capoZ: 4.3 },
     { id: 'bombeiros', nome: 'Caminhão de Bombeiros', criar: () => Bombeiros.criar(), x: 128, z: 98, ry: Math.PI / 2, acel: 14, velMax: 34, raio: 3.1, camDist: 12.0, camAlt: 4.3, capoY: 2.40, capoZ: 3.3, sirene: true },
+    // motos esportivas vermelhas (a mesma moto: modelo do Blender e versão procedural em Three.js), paradas no descanso
+    { id: 'moto', nome: 'Moto HRYZ 600 RS',        criar: () => MotoGLB.criar(cenaMoto), x: 181, z: 166.1, ry: Math.PI / 2, acel: 24, velMax: 58, raio: 1.0, camDist: 4.6, camAlt: 1.8, capoY: 1.32, capoZ: -0.05, moto: true },
+    { id: 'moto_threejs', nome: 'Moto HRYZ (Three.js)', criar: () => MotoProc.criar(), x: 181, z: 164.3, ry: Math.PI / 2, acel: 24, velMax: 58, raio: 1.0, camDist: 4.6, camAlt: 1.8, capoY: 1.32, capoZ: -0.05, moto: true },
     { id: 'ambulancia', nome: 'Ambulância',        criar: () => criarAmbulancia(), x: 148, z: 98,    ry: Math.PI / 2,  acel: 17, velMax: 40, raio: 2.8, camDist: 9.5, camAlt: 3.6, capoY: 2.05, capoZ: 2.0, sirene: true },
     // máquinas de obra (canteiro ao norte): lentas, com ferramentas nos eixos 1–8
     { id: 'escavadeira', nome: 'Escavadeira',     criar: () => Escavadeira.criar(),  x: 158, z: -16, ry: 0.35, acel: 5, velMax: 7, velRe: 5, raio: 3.3, camDist: 13, camAlt: 5.2, capoY: 3.3, capoZ: 0.6, maquina: true },
@@ -992,7 +1001,7 @@ export async function iniciarJogo() {
         x: f.x, z: f.z, ry: f.ry,
         vel: 0, steer: 0, dist: 0,
         acel: f.acel, velMax: f.velMax, velRe: f.velRe ?? 12, freio: 30, raio: f.raio,
-        sirene: false, farois: false, ehPolicia: false, temSirene: !!f.sirene, maquina: !!f.maquina,
+        sirene: false, farois: false, ehPolicia: false, temSirene: !!f.sirene, maquina: !!f.maquina, moto: !!f.moto, incl: 0,
         camDist: f.camDist, camAlt: f.camAlt, capoY: f.capoY, capoZ: f.capoZ, detalhado: true,
       });
     } catch (e) { console.warn('veículo do canal não montou', f.nome, e); }
@@ -1394,6 +1403,7 @@ export async function iniciarJogo() {
       jogador.veiculo = null;
       if (v.api?.freio) v.api.freio(false);
       if (v.api?.re) v.api.re(false);
+      if (v.moto) { v.vel = 0; estacionarMoto(v); persAtual.inst.obj.quaternion.identity(); persAtual.inst.obj.rotation.set(0, v.ry, 0); }
       persAtual.inst.obj.visible = true;
       persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
       tocarAcao('ParadoPro');
@@ -1403,14 +1413,15 @@ export async function iniciarJogo() {
       const perto = acharVeiculoPerto();
       if (!perto) return;
       jogador.veiculo = perto;
-      persAtual.inst.obj.visible = false;
+      persAtual.inst.obj.visible = !!perto.moto;
+      if (perto.moto) { perto.api?.descanso?.(false); perto.incl = 0; armas.ativa && trocarArma(null); }
       camYaw = perto.ry;
       som.tocarPorta();
       if (perto.api?.ferr) {
         const ex = perto.api.ferr.eixos;
         mostrarToast(`${perto.nome} · ` + (ex[0].id === 'vibracao' ? '1: liga/desliga a vibração' : ex.map((e, i) => `${2 * i + 1}/${2 * i + 2} ${e.nome}`).join(' · ')));
         touch.ferrEixo = 0; atualizarBotaoEixo();
-      } else mostrarToast(`Dirigindo: ${perto.nome}${perto.temSirene ? ' (L = Sirene)' : ''}`);
+      } else mostrarToast(perto.moto ? `Pilotando: ${perto.nome} · Shift + W: grau · B: babalu · Espaço + W parado: queima pneu` : `Dirigindo: ${perto.nome}${perto.temSirene ? ' (L = Sirene)' : ''}`);
     }
     touch.acel = touch.freio = touch.esq = touch.dir = touch.drift = touch.pular = false;
     atualizarHudModo();
@@ -1418,6 +1429,7 @@ export async function iniciarJogo() {
 
   function atualizarHudModo() {
     const dir = !!jogador.veiculo;
+    document.body.classList.toggle('na-moto', !!jogador.veiculo?.moto);
     elVel.classList.toggle('oculto', !dir);
     elModoPe.classList.toggle('oculto', dir);
     // Alterna controles touch entre modo a pé (joystick) e dirigindo (volante + pedais)
@@ -1832,7 +1844,7 @@ export async function iniciarJogo() {
     if (!teclas.has(code)) {
       if (modo !== 'jogo') { /* abertura e sala tratam as próprias teclas */ }
       else if (code === 'KeyE') { const it = interacaoAtual(); if (it) it.fazer(); else entrarOuSairVeiculo(); }
-      else if (code === 'KeyB' || code === 'ControlLeft' || code === 'ControlRight') alternarAgachar();
+      else if ((code === 'KeyB' || code === 'ControlLeft' || code === 'ControlRight') && !jogador.veiculo) alternarAgachar();
       else if (code === 'AltLeft' || code === 'AltRight') iniciarRolamento();
       else if (code === 'ShiftLeft' || code === 'ShiftRight') {
         if (jogador.agachado) { jogador.agachado = false; sincronizarBotoesPata(); }
@@ -2002,6 +2014,8 @@ export async function iniciarJogo() {
   $('touch-recarregar').onclick = () => { som.desbloquear(); armas.recarregar(); };
   $('touch-sair').onclick = entrarOuSairVeiculo;
   bindSegurar('touch-pular', v => { touch.pular = v; });
+  bindSegurar('touch-grau', v => { touch.grau = v; });
+  bindSegurar('touch-babalu', v => { touch.babalu = v; });
   let tToqueCorrer = 0;
   bindSegurar('touch-correr', v => {
     touch.correr = v;
@@ -2151,6 +2165,7 @@ export async function iniciarJogo() {
   let modo = 'jogo';
   let camFixa = null;                                                       // câmera parada (miniaturas e testes)
   for (const v of veiculos) v.vaga = { x: v.x, z: v.z, ry: v.ry };          // vaga original de cada veículo
+  for (const v of veiculos) if (v.moto) estacionarMoto(v);
   for (const v of veiculos) {
     danoVeiculo(v, efeitos, { aoExplodir: q => {
       const dj = Math.hypot(jogador.x - q.x, jogador.z - q.z);
@@ -2180,15 +2195,20 @@ export async function iniciarJogo() {
     return r;
   };
 
+  // moto parada: descanso lateral abaixado e inclinada para a esquerda, apoiada nele
+  function estacionarMoto(v) { v.incl = 0; v.obj.rotation.set(0, v.ry, -0.11, 'YXZ'); v.api?.descanso?.(true); v.api?.esterco?.(0.35); }
+  const piloto = new PilotoMoto();
   function colocarVeiculo(v, x, z, ry) {
     v.x = x; v.z = z; v.ry = ry; v.vel = 0; v.steer = 0; v.sirene = false;
     v.obj.position.set(x, 0, z); v.obj.rotation.set(0, ry, 0);
+    if (v.moto) estacionarMoto(v);
     v.api?.freio?.(false); v.api?.re?.(false);
   }
   function sairSemAnimar() {
     const v = jogador.veiculo; if (!v) return;
     jogador.veiculo = null; v.vel = 0; v.sirene = false;
     v.api?.freio?.(false); v.api?.re?.(false);
+    if (v.moto) { estacionarMoto(v); persAtual?.inst.obj.rotation.set(0, v.ry, 0); }
     atualizarHudModo();
   }
   // põe o veículo escolhido no ponto do local (os outros voltam às vagas; quem estiver no caminho troca de vaga com ele)
@@ -2265,7 +2285,7 @@ export async function iniciarJogo() {
       sala.fechar();
       modo = 'jogo';
       const v = veiculos.find(o => o.id === esc.veic);
-      if (v) { jogador.veiculo = v; persAtual.inst.obj.visible = false; jogador.x = v.x; jogador.z = v.z; }
+      if (v) { jogador.veiculo = v; persAtual.inst.obj.visible = !!v.moto; if (v.moto) { v.api?.descanso?.(false); v.incl = 0; v.obj.rotation.set(0, v.ry, 0, 'YXZ'); } jogador.x = v.x; jogador.z = v.z; }
       camYaw = v ? v.ry : jogador.ry; camPitch = 0.32; snapCam = true; minimapTimer = 99;
       atualizarHudModo();
       som.desbloquear();
@@ -2399,19 +2419,40 @@ export async function iniciarJogo() {
         if (Math.abs(v.vel) < 0.08) v.vel = 0;
       }
 
+      // moto: grau (empina na roda de trás), babalu (levanta a traseira na freada) e queimar pneu (acelera parado segurando o freio da frente)
+      const grauIn = v.moto && jogando && (teclas.has('ShiftLeft') || teclas.has('ShiftRight') || touch.grau);
+      const babaluIn = v.moto && jogando && (teclas.has('KeyB') || touch.babalu);
+      const queimando = v.moto && espaco && gas > 0.2 && Math.abs(v.vel) < 3;
+      if (v.moto) {
+        v.grau = v.grau || 0; v.babalu = v.babalu || 0; v.queima = v.queima || 0;
+        const alvoG = grauIn && gas > 0.15 && v.vel > 2 && v.babalu < 0.02 ? 0.92 + 0.06 * Math.sin(tTotal * 2.3) : 0;   // equilíbrio do grau (~53°), oscilando de leve
+        const alvoB = babaluIn && v.vel > 4 && v.grau < 0.02 ? 0.5 : 0;
+        const antes = v.grau;
+        v.grau += (alvoG - v.grau) * Math.min(1, dt * (alvoG > v.grau ? 2.4 : 3.2));
+        v.babalu += (alvoB - v.babalu) * Math.min(1, dt * (alvoB > v.babalu ? 3.0 : 4.0));
+        if (v.grau > 0.3) v.vel = Math.min(v.vel, 27);                            // no grau ela não passa de ~97 km/h
+        if (v.babalu > 0.05) v.vel = Math.max(0, v.vel - 7 * dt);                  // babalu é freada forte só na roda da frente
+        if (antes > 0.25 && v.grau < 0.08 && !v.pousou) { v.pousou = true; tremor = Math.max(tremor, 0.25); efeitos.emitir('poeira', new THREE.Vector3(v.x + Math.sin(v.ry) * 0.7, 0.2, v.z + Math.cos(v.ry) * 0.7), new THREE.Vector3(0, 0.8, 0), 0.8, 0.5, 1.4); }
+        if (v.grau > 0.3) v.pousou = false;
+        if (queimando) {                                                           // queima pneu: roda de trás girando no lugar, fumaça
+          v.vel = 0; v.queima += dt * 70;
+          fumacaDrift.emitir(v.x - Math.sin(v.ry) * 0.75, v.z - Math.cos(v.ry) * 0.75, v.ry, dt * 2);
+        }
+      }
+
       // Freio de mão / drift + fumaça leve de pneu
-      if (espaco) {
+      if (espaco && !queimando) {
         v.vel *= Math.exp(-3.8 * dt);
         if (Math.abs(v.vel) > 7) fumacaDrift.emitir(v.x, v.z, v.ry, dt);
       }
 
       // Esterçamento suave dependente da velocidade
-      const maxSteer = 0.56 / (1 + Math.abs(v.vel) * 0.032);
+      const maxSteer = v.moto ? 0.62 / (1 + Math.abs(v.vel) * 0.06) * (1 - 0.6 * clamp01((v.grau || 0) + (v.babalu || 0))) : 0.56 / (1 + Math.abs(v.vel) * 0.032);
       const steerAlvo = dirInput * maxSteer;
       v.steer += (steerAlvo - v.steer) * Math.min(1, dt * 10);
 
       const fatorDrift = espaco && Math.abs(v.vel) > 8 ? 1.55 : 1.0;
-      const entreeixos = 2.9;
+      const entreeixos = v.moto ? 1.375 : 2.9;
       if (Math.abs(v.vel) > 0.1) {
         const omega = (v.vel / entreeixos) * Math.tan(v.steer) * fatorDrift;
         v.ry += omega * dt;
@@ -2442,11 +2483,30 @@ export async function iniciarJogo() {
       v.dist += v.vel * dt;
       v.obj.position.set(v.x, (alturaChao(v.x, v.z) ?? 0.03) - 0.03, v.z);       // no canteiro a máquina desce no buraco / sobe no monte
       v.obj.rotation.set(0, v.ry, 0, 'YXZ');
-      // Inclinação leve de suspensão na curva e na aceleração
-      const roll = -v.steer * Math.min(Math.abs(v.vel) / 25, 1) * 0.08;
-      const pitch = (gas > 0.1 ? -0.015 : (gas < -0.1 && v.vel > 2 ? 0.024 : 0));
-      v.obj.rotation.z = roll;
-      v.obj.rotation.x = pitch;
+      if (v.moto) {
+        // moto: inclina para dentro da curva (ângulo de equilíbrio atan(v·ω/g)), levanta um pouco a frente ao acelerar e afunda ao frear
+        const omega = Math.abs(v.vel) > 0.1 ? (v.vel / entreeixos) * Math.tan(v.steer) : 0;
+        const alvo = THREE.MathUtils.clamp(Math.atan(v.vel * omega / 9.8), -0.85, 0.85);
+        v.incl += (alvo - v.incl) * Math.min(1, dt * 5);
+        const arfagem = gas > 0.1 && v.vel > 1 && v.vel < 25 ? -0.035 * gas : (gas < -0.1 && v.vel > 2 ? 0.03 : 0);
+        v.arf = (v.arf || 0) + (arfagem - (v.arf || 0)) * Math.min(1, dt * 6);
+        v.obj.rotation.z = -v.incl * (1 - clamp01(v.grau * 1.5)); v.obj.rotation.x = v.arf - v.grau + v.babalu;
+        // grau gira em volta do pneu de trás, babalu em volta do da frente: o contato com o chão fica parado
+        const sc = v.sombraChao ?? (v.sombraChao = v.obj.getObjectByName('sombraChao') || null); if (sc) sc.visible = v.grau + v.babalu < 0.04;   // a sombra de contato não inclina junto
+        const piv = v.grau > 1e-3 ? -0.685 : (v.babalu > 1e-3 ? 0.69 : 0);
+        if (piv) {
+          v.obj.updateMatrixWorld(true);
+          const w = v.obj.localToWorld(new THREE.Vector3(0, 0, piv)), base = v.obj.position.y;
+          v.obj.position.x += v.x + Math.sin(v.ry) * piv - w.x; v.obj.position.z += v.z + Math.cos(v.ry) * piv - w.z; v.obj.position.y += base - w.y;
+        }
+        v.api?.suspensao?.(THREE.MathUtils.clamp(v.arf * 1.5, -0.06, 0.06));
+      } else {
+        // Inclinação leve de suspensão na curva e na aceleração
+        const roll = -v.steer * Math.min(Math.abs(v.vel) / 25, 1) * 0.08;
+        const pitch = (gas > 0.1 ? -0.015 : (gas < -0.1 && v.vel > 2 ? 0.024 : 0));
+        v.obj.rotation.z = roll;
+        v.obj.rotation.x = pitch;
+      }
 
       // ferramentas da máquina de obra: 1/2 primeiro eixo, 3/4 segundo, 5/6 terceiro, 7/8 quarto (no celular: ▲ ▼ e o eixo escolhido)
       if (v.api?.ferr) {
@@ -2481,8 +2541,8 @@ export async function iniciarJogo() {
         }
       }
       if (v.api) {
-        v.api.rodar(v.dist);
-        v.api.esterco(v.steer);
+        if (v.moto) v.api.rodar(v.dist, v.queima || 0); else v.api.rodar(v.dist);
+        v.api.esterco(v.moto ? v.steer * (1 / (1 + Math.abs(v.vel) * 0.05)) : v.steer);
         v.api.freio((gas < -0.05 && v.vel > 0.5) || espaco);
         v.api.re(v.vel < -0.2);
         v.api.seta(1, dirInput > 0.45 && Math.floor(tTotal * 2.6) % 2 === 0);
@@ -2490,7 +2550,14 @@ export async function iniciarJogo() {
       }
 
       jogador.x = v.x; jogador.z = v.z; jogador.ry = v.ry;
-      focoX = v.x; focoY = 1.3; focoZ = v.z; focoYaw = v.ry;
+      if (v.moto && persAtual) {                                                    // piloto montado (sentado, mãos no guidão, pés nas pedaleiras)
+        const inst = persAtual.inst;
+        if (!usandoPersLeve && v.api?.pontos) {
+          inst.obj.visible = true; tocarAcao('ParadoPro', 0.2); inst.atualizar(dt);
+          if (!piloto.aplicar(inst, v.obj, v.api.pontos)) inst.obj.visible = false;
+        } else inst.obj.visible = false;
+      }
+      focoX = v.x; focoY = v.moto ? 1.15 : 1.3; focoZ = v.z; focoYaw = v.ry;
       velAbs = Math.abs(v.vel);
 
       const kmh = Math.round(velAbs * 3.6);

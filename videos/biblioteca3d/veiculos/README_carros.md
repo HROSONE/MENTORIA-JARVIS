@@ -52,3 +52,50 @@ as sapatas descem sozinhas quando a retro abre) · pá carregadeira (Braços, Ca
 chame `v.vibrar(dt)` a cada quadro) · basculante (Caçamba; `v.carregar()` repõe a terra). Bancada: `bancada.html?v=escavadeira&ferr=0.55,0.2,0.3,0.6`.
 
 No jogo elas ficam no **Canteiro de Obras** (campo ao norte, `jogo/canteiro.js`), dirigíveis; as teclas 1–8 mexem os eixos (no celular: Eixo, ▲, ▼).
+
+## Moto esportiva vermelha (`moto/`): Blender + Three.js
+
+A mesma moto em duas versões, com as mesmas medidas. É uma esportiva genérica da classe 600 cc, fictícia ("HRYZ 600 RS"), e não copia nenhum modelo real.
+
+**Medidas típicas da categoria:**
+- entre-eixos 1,375 m, comprimento ~2,03 m e banco a ~0,83 m;
+- cáster de 24° e trail de ~97 mm;
+- pneus 120/70 ZR17 (Ø ~0,60 m) e 180/55 ZR17 (Ø ~0,63 m);
+- discos dianteiros duplos de 310 mm.
+
+**Peças:**
+- quadro de alumínio de dupla viga e subchassi tubular;
+- garfo invertido dourado com mesas e semiguidões;
+- manetes, manoplas e retrovisores;
+- motor de 4 cilindros inclinado, com radiador e mangueiras;
+- escape 4-em-1 de titânio com ponteira curta à direita;
+- balança de alumínio com mono-amortecedor e mola amarela;
+- corrente com elos, pinhão e coroa;
+- discos furados com flange e botões flutuantes, e pinças radiais vermelhas;
+- rodas pretas de 6 raios em Y, com friso vermelho;
+- pneus com sulcos;
+- carenagem vermelha contínua, com faixa branca, saídas de ar e winglets;
+- faróis de LED, bolha fumê, painel TFT, tanque, banco e garupa;
+- rabeta com lanterna, suporte de placa e piscas.
+
+### Blender (`criar_moto.py` → `moto.glb`)
+- Para gerar: `blender -b -P criar_moto.py -- --glb moto.glb [--blend moto.blend] [--render pasta --amostras 64 --vistas tres_quartos,lado,frente,traseira,detalhe]`.
+- O arquivo tem ~156 mil triângulos e 4,9 MB.
+- **Nós móveis:**
+  - `Direcao`: gira no eixo da coluna, que é o Y local no glTF;
+  - `RodaDianteira` e `RodaTraseira`: giram em X;
+  - `Balanca`: gira em X no pivô e leva a roda traseira e a pinça;
+  - `Descanso`.
+- **Marcadores:** `Farol`, `Lanterna`, `Assento`, `PeD`/`PeE` e `MaoD`/`MaoE`.
+- **Renders:** em `moto/previews/moto-blender-*.webp`.
+
+### Three.js (`moto/moto.js`, kit de veículos)
+- É procedural (só código), com ~94 mil triângulos, e é criado em ~0,5 s.
+- **Eixos:** usa a convenção do kit, com frente em +Z.
+- **API do kit:**
+  - `rodar(m)`: gira as duas rodas, cada uma com o seu raio;
+  - `esterco(rad)`: gira a direção inteira em volta do eixo da coluna;
+  - `farois`, `freio`, `seta` e `posicao`.
+- **Extras:** `suspensao(rad)` (balança), `descanso(true/false)` e `pontos` (assento, pés e mãos).
+- **Prévias:** em `moto/previews/moto-threejs-*.webp`.
+- **Bancada:** `bancada.html?v=moto`.

@@ -36,9 +36,12 @@ async function abrir(projDir, pagina, larg = 1080, alt = 1920, esperar = true) {
   const proj = path.relative(RAIZ, projDir).split(path.sep).join('/');
   const srv = await servidor();
   const porta = srv.address().port;
-  const b = await chromium.launch({
-    args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
-  });
+  // Desenho por software: o Mesa llvmpipe (ANGLE sobre EGL) é ~6x mais rápido que o SwiftShader nesta máquina sem GPU
+  // (Short da câmara de ar: 14,1 s → 2,2 s por quadro 1080x1920, imagem igual: diferença média < 1/255). RENDER_GL=swiftshader volta ao antigo.
+  const args = process.env.RENDER_GL === 'swiftshader'
+    ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist']
+    : ['--use-gl=angle', '--use-angle=gl-egl', '--ignore-gpu-blocklist'];
+  const b = await chromium.launch({ args });
   const ctx = await b.newContext({ viewport: { width: larg, height: alt } });
   const p = await ctx.newPage();
   let falha = null;

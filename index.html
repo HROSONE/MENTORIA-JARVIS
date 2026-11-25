@@ -479,6 +479,7 @@
   #mc-texto { font-size: 14px; line-height: 1.45; color: #e2e8f0; }
   #mc-texto .c-s { color: #4ade80; } #mc-texto .c-t { color: #38bdf8; } #mc-texto .c-l { color: #facc15; }
   #mc-botao { margin-top: 14px; width: 100%; padding: 12px; border: 0; border-radius: 10px; background: linear-gradient(90deg, #22c55e, #16a34a); color: #fff; font-weight: 900; font-size: 16px; letter-spacing: 1px; cursor: pointer; }
+  .moto-btn { display: none !important; } body.na-moto .moto-btn { display: inline-flex !important; background: rgba(185, 28, 28, 0.86); }
   .kael-btn { display: none !important; pointer-events: auto; }
   body.pers-kael .kael-btn { display: inline-flex !important; background: rgba(185, 28, 28, 0.86); border-color: #fca5a5; }
   #hud-carga { position: fixed; left: 50%; bottom: 24%; transform: translateX(-50%); z-index: 20; pointer-events: none; text-align: center; color: #fff; font: 900 12px system-ui, sans-serif; letter-spacing: 2px; text-shadow: 0 1px 3px #000; }
@@ -650,6 +651,8 @@
       <div class="touch-col">
         <button class="tbtn" id="touch-sair">Sair</button>
         <button class="tbtn" id="touch-drift">Drift</button>
+        <button class="tbtn moto-btn" id="touch-grau">Grau</button>
+        <button class="tbtn moto-btn" id="touch-babalu">Babalu</button>
         <span id="touch-ferr" class="oculto"><button class="tbtn" id="touch-ferr-eixo">Eixo</button><button class="tbtn" id="touch-ferr-mais">▲</button><button class="tbtn" id="touch-ferr-menos">▼</button></span>
       </div>
       <button class="tbtn-pedal tbtn-freio" id="touch-freio"><span>▼</span><span>RÉ</span></button>
@@ -676,6 +679,7 @@
         <kbd>P</kbd><span>Voltar para a sala (trocar personagem, carro e local)</span>
         <kbd>F</kbd><span>Faróis do carro · com o Kael a pé: rajada vermelha ✋</span>
         <kbd>T</kbd><span>Kael: levantar o carro mais perto / arremessar 💪</span>
+        <kbd>Shift / B</kbd><span>Na moto: Shift + acelerar dá grau (empina na roda de trás) · B na freada dá babalu (traseira no ar) · Espaço + W parado queima pneu</span>
         <kbd>Espaço (segurar)</kbd><span>Kael: super pulo (quanto mais segurar, mais alto; pousa nos telhados)</span>
         <kbd>❤️</kbd><span>Vida: tiro, queda (de mais de 3,5 m), mordida do T. rex, batida e explosão machucam; sem vida você acorda no hospital</span>
         <kbd>1 a 8</kbd><span>Máquinas de obra: mexem a ferramenta (1/2 lança ou pá · 3/4 braço ou caçamba · 5/6 · 7/8); no rolo, 1 liga a vibração · com a ponta da caçamba no chão do canteiro ela cava; abrindo a caçamba, despeja (no basculante, se estiver embaixo)</span>
