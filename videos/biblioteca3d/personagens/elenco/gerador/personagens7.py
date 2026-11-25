@@ -108,7 +108,7 @@ def kael():
                 'munheq': ('#b0202c', .8), 'bota': ('#1c2340', .6), 'sola': ('#9e1e2a', .85), 'bota_det': ('#9e1e2a', .65), 'delineado': ('#111322', .6)})
     pal['labio'] = ('#c4876f', .6)
     yh, yf = alinhar_hem(cp, -0.30, 0.08)
-    afina = lambda t: 0.80 + 0.20 * min(1.0, max(0.0, (t + 0.05) / 0.65)) ** 0.8          # tronco em V: largo no peito, fino na faixa
+    afina = lambda t: (0.80 + 0.20 * min(1.0, max(0.0, (t + 0.05) / 0.65)) ** 0.8) if t > -0.06 else 0.80 + 0.55 * min(0.22, -0.06 - t)   # V em cima; abaixo da faixa a calça abre no quadril
 
     # gola em V: recorte na frente do quimono (abre do peito até o pescoço) mostrando o peito
     yv0, ytop = cp.torso(0.50)[0][1], cp.torso(0.99)[0][1]
@@ -149,11 +149,13 @@ def kael():
         pts.append((x, c[1], z + 0.002))
     loft(S, np.array(pts), np.full(len(ts), 0.0065), np.full(len(ts), 0.0030), ts, cp.pesos_torso(), 'debrum', n=2.4, sub=2, nseg=8, frame='auto', fecha=(True, True))
     # faixa na cintura com o nó do lado esquerdo e as duas pontas caindo
-    cp.casca_torso(S, -0.14, 0.10, 1.36, 0.022, 'faixa', n_an=16, perfil_extra=afina, flare=lambda t: (0.010 * max(0.0, (-0.04 - t) / 0.26) + 0.006 + 0.004 * abs(math.sin((t + 0.14) / 0.24 * 3 * math.pi)),) * 2)   # faixa grossa de várias voltas
+    cp.casca_torso(S, -0.12, 0.09, 1.30, 0.022, 'faixa', n_an=14, perfil_extra=lambda t: 0.98, fecha=(True, True))
+    for tv in (-0.07, 0.0, 0.065):                                                                 # voltas da faixa (relevo leve)
+        cp.casca_torso(S, tv - 0.012, tv + 0.012, 1.315, 0.022, 'faixa', n_an=4, perfil_extra=lambda t: 0.98, fecha=(True, True))   # faixa grossa de várias voltas
     c, rx, rz = cp.torso(-0.02)
     wq = osso(e.nb, e.idx, Quadril=1)
     ang = 0.75
-    pn = c + np.array([rx * 1.38 * afina(-0.02) * math.sin(ang), 0.0, rz * 1.38 * afina(-0.02) * math.cos(ang)])
+    pn = c + np.array([(rx * 1.33 * 0.98 + 0.022) * math.sin(ang), 0.0, (rz * 1.33 * 0.98 + 0.022) * math.cos(ang)])
     elipsoide(S, pn, X_, Y_, Z_, 0.026, 0.022, 0.016, wq, 'faixa', aneis=8, nseg=14, n=2.2)
     for k, (dx, comp) in enumerate(((0.012, 0.20), (-0.010, 0.16))):
         p = [pn + np.array([dx, -0.01, 0.006]), pn + np.array([dx * 1.8 + 0.008, -comp * 0.5, 0.012]), pn + np.array([dx * 2.4 + 0.018, -comp, 0.008])]
@@ -167,8 +169,8 @@ def kael():
         cp.membro(S, 'braco', lado, 1.70, 1.97, 1.18, 0.006, 'munheq', n_an=8)                          # munhequeira
         cp.mao(S, lado)
         # calça larga que estufa na canela e entra no cano da bota
-        cp.membro(S, 'perna', lado, -0.12, 1.36, 1.26, 0.014, 'calca', n_an=26,
-                  extra=lambda ss: 0.86 + 0.14 * np.clip(ss / 0.5, 0, 1) + 0.30 * np.clip((ss - 0.7) / 0.55, 0, 1) - 0.30 * np.clip((ss - 1.24) / 0.12, 0, 1) + 0.03 * np.sin(ss * 14))   # calça bem larga que embola
+        cp.membro(S, 'perna', lado, -0.12, 1.36, 1.32, 0.014, 'calca', n_an=26,
+                  extra=lambda ss: 0.80 + 0.20 * np.clip((ss - 0.02) / 0.30, 0, 1) + 0.30 * np.clip((ss - 0.7) / 0.55, 0, 1) - 0.30 * np.clip((ss - 1.24) / 0.12, 0, 1) + 0.03 * np.sin(ss * 14))   # calça bem larga que embola
         cp.sapato(S, lado, 'bota', 'bota', 'sola', 'bota_det', cano=False)
         cp.membro(S, 'perna', lado, 1.22, 1.98, 1.12, 0.010, 'bota', n_an=14)                            # cano alto da bota
         cp.membro(S, 'perna', lado, 1.40, 1.45, 1.17, 0.010, 'cordao', n_an=3)                           # cordão amarrado no cano
