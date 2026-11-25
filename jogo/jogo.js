@@ -38,6 +38,7 @@ import * as MotoGLB from '../videos/biblioteca3d/veiculos/moto/motoGLB.js';
 import * as MotoProc from '../videos/biblioteca3d/veiculos/moto/moto.js';
 
 const BASE_BIB = './videos/biblioteca3d';
+const clamp01 = x => Math.min(1, Math.max(0, x));
 
 const PERSONAGENS_DEF = [
   { id: 'policial',   nome: 'Policial',      tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/policial.glb` },
@@ -1420,7 +1421,7 @@ export async function iniciarJogo() {
         const ex = perto.api.ferr.eixos;
         mostrarToast(`${perto.nome} · ` + (ex[0].id === 'vibracao' ? '1: liga/desliga a vibração' : ex.map((e, i) => `${2 * i + 1}/${2 * i + 2} ${e.nome}`).join(' · ')));
         touch.ferrEixo = 0; atualizarBotaoEixo();
-      } else mostrarToast(perto.moto ? `Pilotando: ${perto.nome} · W acelera, S freia, A/D inclina na curva` : `Dirigindo: ${perto.nome}${perto.temSirene ? ' (L = Sirene)' : ''}`);
+      } else mostrarToast(perto.moto ? `Pilotando: ${perto.nome} · Shift + W: grau · B: babalu · Espaço + W parado: queima pneu` : `Dirigindo: ${perto.nome}${perto.temSirene ? ' (L = Sirene)' : ''}`);
     }
     touch.acel = touch.freio = touch.esq = touch.dir = touch.drift = touch.pular = false;
     atualizarHudModo();
@@ -1428,6 +1429,7 @@ export async function iniciarJogo() {
 
   function atualizarHudModo() {
     const dir = !!jogador.veiculo;
+    document.body.classList.toggle('na-moto', !!jogador.veiculo?.moto);
     elVel.classList.toggle('oculto', !dir);
     elModoPe.classList.toggle('oculto', dir);
     // Alterna controles touch entre modo a pé (joystick) e dirigindo (volante + pedais)
@@ -1842,7 +1844,7 @@ export async function iniciarJogo() {
     if (!teclas.has(code)) {
       if (modo !== 'jogo') { /* abertura e sala tratam as próprias teclas */ }
       else if (code === 'KeyE') { const it = interacaoAtual(); if (it) it.fazer(); else entrarOuSairVeiculo(); }
-      else if (code === 'KeyB' || code === 'ControlLeft' || code === 'ControlRight') alternarAgachar();
+      else if ((code === 'KeyB' || code === 'ControlLeft' || code === 'ControlRight') && !jogador.veiculo) alternarAgachar();
       else if (code === 'AltLeft' || code === 'AltRight') iniciarRolamento();
       else if (code === 'ShiftLeft' || code === 'ShiftRight') {
         if (jogador.agachado) { jogador.agachado = false; sincronizarBotoesPata(); }
@@ -2012,6 +2014,8 @@ export async function iniciarJogo() {
   $('touch-recarregar').onclick = () => { som.desbloquear(); armas.recarregar(); };
   $('touch-sair').onclick = entrarOuSairVeiculo;
   bindSegurar('touch-pular', v => { touch.pular = v; });
+  bindSegurar('touch-grau', v => { touch.grau = v; });
+  bindSegurar('touch-babalu', v => { touch.babalu = v; });
   let tToqueCorrer = 0;
   bindSegurar('touch-correr', v => {
     touch.correr = v;
@@ -2415,14 +2419,35 @@ export async function iniciarJogo() {
         if (Math.abs(v.vel) < 0.08) v.vel = 0;
       }
 
+      // moto: grau (empina na roda de trás), babalu (levanta a traseira na freada) e queimar pneu (acelera parado segurando o freio da frente)
+      const grauIn = v.moto && jogando && (teclas.has('ShiftLeft') || teclas.has('ShiftRight') || touch.grau);
+      const babaluIn = v.moto && jogando && (teclas.has('KeyB') || touch.babalu);
+      const queimando = v.moto && espaco && gas > 0.2 && Math.abs(v.vel) < 3;
+      if (v.moto) {
+        v.grau = v.grau || 0; v.babalu = v.babalu || 0; v.queima = v.queima || 0;
+        const alvoG = grauIn && gas > 0.15 && v.vel > 2 && v.babalu < 0.02 ? 0.92 + 0.06 * Math.sin(tTotal * 2.3) : 0;   // equilíbrio do grau (~53°), oscilando de leve
+        const alvoB = babaluIn && v.vel > 4 && v.grau < 0.02 ? 0.5 : 0;
+        const antes = v.grau;
+        v.grau += (alvoG - v.grau) * Math.min(1, dt * (alvoG > v.grau ? 2.4 : 3.2));
+        v.babalu += (alvoB - v.babalu) * Math.min(1, dt * (alvoB > v.babalu ? 3.0 : 4.0));
+        if (v.grau > 0.3) v.vel = Math.min(v.vel, 27);                            // no grau ela não passa de ~97 km/h
+        if (v.babalu > 0.05) v.vel = Math.max(0, v.vel - 7 * dt);                  // babalu é freada forte só na roda da frente
+        if (antes > 0.25 && v.grau < 0.08 && !v.pousou) { v.pousou = true; tremor = Math.max(tremor, 0.25); efeitos.emitir('poeira', new THREE.Vector3(v.x + Math.sin(v.ry) * 0.7, 0.2, v.z + Math.cos(v.ry) * 0.7), new THREE.Vector3(0, 0.8, 0), 0.8, 0.5, 1.4); }
+        if (v.grau > 0.3) v.pousou = false;
+        if (queimando) {                                                           // queima pneu: roda de trás girando no lugar, fumaça
+          v.vel = 0; v.queima += dt * 70;
+          fumacaDrift.emitir(v.x - Math.sin(v.ry) * 0.75, v.z - Math.cos(v.ry) * 0.75, v.ry, dt * 2);
+        }
+      }
+
       // Freio de mão / drift + fumaça leve de pneu
-      if (espaco) {
+      if (espaco && !queimando) {
         v.vel *= Math.exp(-3.8 * dt);
         if (Math.abs(v.vel) > 7) fumacaDrift.emitir(v.x, v.z, v.ry, dt);
       }
 
       // Esterçamento suave dependente da velocidade
-      const maxSteer = v.moto ? 0.62 / (1 + Math.abs(v.vel) * 0.06) : 0.56 / (1 + Math.abs(v.vel) * 0.032);
+      const maxSteer = v.moto ? 0.62 / (1 + Math.abs(v.vel) * 0.06) * (1 - 0.6 * clamp01((v.grau || 0) + (v.babalu || 0))) : 0.56 / (1 + Math.abs(v.vel) * 0.032);
       const steerAlvo = dirInput * maxSteer;
       v.steer += (steerAlvo - v.steer) * Math.min(1, dt * 10);
 
@@ -2465,7 +2490,15 @@ export async function iniciarJogo() {
         v.incl += (alvo - v.incl) * Math.min(1, dt * 5);
         const arfagem = gas > 0.1 && v.vel > 1 && v.vel < 25 ? -0.035 * gas : (gas < -0.1 && v.vel > 2 ? 0.03 : 0);
         v.arf = (v.arf || 0) + (arfagem - (v.arf || 0)) * Math.min(1, dt * 6);
-        v.obj.rotation.z = -v.incl; v.obj.rotation.x = v.arf;
+        v.obj.rotation.z = -v.incl * (1 - clamp01(v.grau * 1.5)); v.obj.rotation.x = v.arf - v.grau + v.babalu;
+        // grau gira em volta do pneu de trás, babalu em volta do da frente: o contato com o chão fica parado
+        const sc = v.sombraChao ?? (v.sombraChao = v.obj.getObjectByName('sombraChao') || null); if (sc) sc.visible = v.grau + v.babalu < 0.04;   // a sombra de contato não inclina junto
+        const piv = v.grau > 1e-3 ? -0.685 : (v.babalu > 1e-3 ? 0.69 : 0);
+        if (piv) {
+          v.obj.updateMatrixWorld(true);
+          const w = v.obj.localToWorld(new THREE.Vector3(0, 0, piv)), base = v.obj.position.y;
+          v.obj.position.x += v.x + Math.sin(v.ry) * piv - w.x; v.obj.position.z += v.z + Math.cos(v.ry) * piv - w.z; v.obj.position.y += base - w.y;
+        }
         v.api?.suspensao?.(THREE.MathUtils.clamp(v.arf * 1.5, -0.06, 0.06));
       } else {
         // Inclinação leve de suspensão na curva e na aceleração
@@ -2508,7 +2541,7 @@ export async function iniciarJogo() {
         }
       }
       if (v.api) {
-        v.api.rodar(v.dist);
+        if (v.moto) v.api.rodar(v.dist, v.queima || 0); else v.api.rodar(v.dist);
         v.api.esterco(v.moto ? v.steer * (1 / (1 + Math.abs(v.vel) * 0.05)) : v.steer);
         v.api.freio((gas < -0.05 && v.vel > 0.5) || espaco);
         v.api.re(v.vel < -0.2);

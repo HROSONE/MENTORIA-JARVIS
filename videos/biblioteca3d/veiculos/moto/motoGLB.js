@@ -40,12 +40,12 @@ export function criar(cena, opc = {}) {
       else mt.emissiveIntensity = 0.8;                                    // painel sempre aceso
     }
   });
-  if (opc.sombraChao !== false) G.add(K.sombraChao(M.L * 0.9, 0.55));
+  if (opc.sombraChao !== false) { const sc = K.sombraChao(M.L * 0.9, 0.55); sc.name = 'sombraChao'; G.add(sc); }
   const pontos = { assento: no('Assento'), peE: no('PeE'), peD: no('PeD'), maoE: no('MaoE'), maoD: no('MaoD') };
   dir.attach(pontos.maoE); dir.attach(pontos.maoD);                     // as mãos acompanham o guidão
   return K.api(G, { L: M.L, W: M.W, H: M.H, R: M.RF, luzes, rodas: [], extra: {
     moto: true, pontos,
-    rodar(metros) { rd.quaternion.copy(q0.rd).multiply(qx(metros / M.RF)); rt.quaternion.copy(q0.rt).multiply(qx(metros / M.RT)); },
+    rodar(metros, extraTras = 0) { rd.quaternion.copy(q0.rd).multiply(qx(metros / M.RF)); rt.quaternion.copy(q0.rt).multiply(qx(metros / M.RT + extraTras)); },
     esterco(rad) { dir.quaternion.copy(q0.dir).multiply(new THREE.Quaternion().setFromAxisAngle(eixoDir, THREE.MathUtils.clamp(rad, -0.6, 0.6))); },
     suspensao(rad) { bal.quaternion.copy(q0.bal).multiply(qx(rad)); },
     descanso(baixo) { desc.quaternion.copy(q0.desc); if (baixo) desc.quaternion.premultiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-1.15, 0, -0.35))); },

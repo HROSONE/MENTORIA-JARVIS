@@ -35,3 +35,8 @@ Mundo aberto em Three.js r160, publicado na Vercel. A página inicial do site é
 - Entre-eixos de 1,375 m e esterço menor em alta.
 - Inclinação de equilíbrio na curva: `atan(v·ω/g)`, limitada a ±0,85 rad e suavizada. Ela levanta a frente um pouco ao acelerar e afunda ao frear.
 - Parada: descanso abaixado e inclinada 0,11 rad para a esquerda (`estacionarMoto`).
+- **Manobras:**
+  - **Grau** (Shift + W, ou botão Grau): empina na roda de trás até ~53°, com oscilação, e limita a ~97 km/h. Gira em volta do contato do pneu traseiro.
+  - **Babalu** (B na freada, ou botão Babalu): traseira no ar, freando forte. Gira em volta do pneu da frente.
+  - **Queimar pneu** (Espaço + W parado): a roda de trás gira no lugar e solta fumaça.
+  - A sombra de contato some enquanto a moto está empinada.
