@@ -18,6 +18,9 @@ export class TerrenoCavavel {
       const i = Math.round((this.pos.getX(v) - area.x0) / passo), j = Math.round((this.pos.getZ(v) - area.z0) / passo);
       this.idx[j * this.nx + i] = v;
     }
+    // cor por vértice: terra cavada mais escura e úmida, terra amontoada mais clara e solta
+    this.cor = new THREE.BufferAttribute(new Float32Array(this.pos.count * 3).fill(1), 3); g.setAttribute('color', this.cor);
+    material = material.clone(); material.vertexColors = true;
     this.malha = new THREE.Mesh(g, material); this.malha.receiveShadow = true; this.malha.name = 'terrenoCavavel';
     scene.add(this.malha);
     this.sujo = false; this.tSujo = 0;
@@ -88,7 +91,11 @@ export class TerrenoCavavel {
     this.tSujo += dt;
     if (!this.sujo || this.tSujo < 0.08) return;
     this.tSujo = 0; this.sujo = false;
-    for (let k = 0; k < this.h.length; k++) this.pos.setY(this.idx[k], this.yBase + this.h[k]);
-    this.pos.needsUpdate = true; this.geo.computeVertexNormals(); this.geo.computeBoundingSphere();
+    for (let k = 0; k < this.h.length; k++) {
+      const v = this.idx[k], h = this.h[k]; this.pos.setY(v, this.yBase + h);
+      const c = h < 0 ? Math.max(0.42, 1 + h * 0.45) : Math.min(1.25, 1 + h * 0.12);
+      this.cor.setXYZ(v, c * (h < 0 ? 0.92 : 1.0), c * (h < 0 ? 0.86 : 0.97), c * (h < 0 ? 0.82 : 0.9));
+    }
+    this.pos.needsUpdate = true; this.cor.needsUpdate = true; this.geo.computeVertexNormals(); this.geo.computeBoundingSphere();
   }
 }

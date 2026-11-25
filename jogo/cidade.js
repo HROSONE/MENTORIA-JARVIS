@@ -297,6 +297,11 @@ export async function construirCidade({
     polygonOffsetUnits: 2,
   });
   texGrama.repeat.set(140, 140);
+  // recorte no chão da cidade sobre o terreno cavável do canteiro (jogo/terreno.js), para os buracos aparecerem
+  chaoMat.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vMundoXZ;').replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvMundoXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vMundoXZ;').replace('void main() {', 'void main() {\n  if (vMundoXZ.x > 140.7 && vMundoXZ.x < 219.3 && vMundoXZ.y > -29.3 && vMundoXZ.y < 14.3) discard;');
+  };
   const chao = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600, 32, 32), chaoMat);
   chao.rotation.x = -Math.PI / 2;
   chao.position.set(300, -0.18, 300);

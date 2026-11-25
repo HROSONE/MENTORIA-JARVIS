@@ -2484,6 +2484,7 @@ export async function iniciarJogo() {
       cargas: veiculos.filter(v => v.api?.cacambas || v.api?.cargaAtual).map(v => [v.id, ...(v.api.cacambas || []).map(c => +c.carga.toFixed(2)), v.api.cargaAtual ? +v.api.cargaAtual().toFixed(2) : null]),
       queimados: veiculos.filter(v => v.queimado).map(v => v.id), hp: veiculos.filter(v => v.hp < 100).map(v => [v.id, Math.round(v.hp)]), trex: trexState.hp }),
     danoTrex: n => danoTrex(n),
+    veiculo: id => veiculos.find(v => v.id === id),
     missao, loja, balacam, mira: () => ({ ...mira }),
     irParaPos: (x, z, ry = 0, terraco = false) => irPara({ x, z, ry }, terraco === 'manter' ? jogador.plataforma : terraco ? TORRE.terraco : null),
     mirar: (yaw, pitch, fov) => { if (!mira.ativa) entrarMira(true); mira.yaw = yaw; mira.pitch = pitch; if (fov) mira.fov = fov; },
