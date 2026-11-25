@@ -227,7 +227,7 @@ export class Armas {
       this.scene.add(mk); this.marcas.push(mk); if (this.marcas.length > 80) this.scene.remove(this.marcas.shift());
     }
     this._som('tiro', d.volume);
-    if (this.aoAtirar) this.aoAtirar(ponto, this.atual);
+    if (this.aoAtirar) this.aoAtirar(ponto, this.atual, h?.object || null);
   }
 
   _efeitos(dt) {

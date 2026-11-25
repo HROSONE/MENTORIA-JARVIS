@@ -479,6 +479,9 @@
   #mc-texto { font-size: 14px; line-height: 1.45; color: #e2e8f0; }
   #mc-texto .c-s { color: #4ade80; } #mc-texto .c-t { color: #38bdf8; } #mc-texto .c-l { color: #facc15; }
   #mc-botao { margin-top: 14px; width: 100%; padding: 12px; border: 0; border-radius: 10px; background: linear-gradient(90deg, #22c55e, #16a34a); color: #fff; font-weight: 900; font-size: 16px; letter-spacing: 1px; cursor: pointer; }
+  #hud-vida { gap: 6px; } #hud-vida b { min-width: 24px; text-align: right; font-size: 12px; }
+  .vida-barra { display: inline-block; width: 64px; height: 7px; border-radius: 4px; background: rgba(255,255,255,.15); overflow: hidden; vertical-align: middle; }
+  .vida-barra i { display: block; height: 100%; background: #22c55e; transform-origin: 0 0; transition: transform .2s, background .3s; }
   #baloes-missao { position: fixed; inset: 0; z-index: 22; pointer-events: none; }
   #baloes-missao .balao { font-size: 13px; padding: 7px 11px 8px; max-width: min(260px, 60vw); }
   .balao.b-bandido { background: #fee2e2; } .balao.b-bandido::after { border-top-color: #fee2e2; } .balao.b-bandido .b-nome { color: #b91c1c; }
@@ -550,6 +553,7 @@
       <div id="hud-alvo">Praça Central</div>
     </div>
     <div class="stats-row">
+      <div class="glass pill" id="hud-vida" title="Vida">❤️ <span class="vida-barra"><i></i></span><b>100</b></div>
       <div class="glass pill"><span class="dot-gold"></span><span id="hud-score">0 pts</span></div>
       <div class="glass pill">🏎️ <span id="hud-maxvel">0 km/h</span></div>
       <div class="glass pill"><span id="hud-fps">-- FPS</span></div>
@@ -637,6 +641,7 @@
       <div class="touch-col">
         <button class="tbtn" id="touch-sair">Sair</button>
         <button class="tbtn" id="touch-drift">Drift</button>
+        <span id="touch-ferr" class="oculto"><button class="tbtn" id="touch-ferr-eixo">Eixo</button><button class="tbtn" id="touch-ferr-mais">▲</button><button class="tbtn" id="touch-ferr-menos">▼</button></span>
       </div>
       <button class="tbtn-pedal tbtn-freio" id="touch-freio"><span>▼</span><span>RÉ</span></button>
       <button class="tbtn-pedal tbtn-acel" id="touch-acel"><span>▲</span><span>GÁS</span></button>
@@ -661,6 +666,8 @@
         <kbd>L</kbd><span>Giroflex e sirene (viatura, ambulância e bombeiros)</span>
         <kbd>P</kbd><span>Voltar para a sala (trocar personagem, carro e local)</span>
         <kbd>F</kbd><span>Faróis do carro</span>
+        <kbd>❤️</kbd><span>Vida: tiro, queda (de mais de 3,5 m), mordida do T. rex, batida e explosão machucam; sem vida você acorda no hospital</span>
+        <kbd>1 a 8</kbd><span>Máquinas de obra: mexem a ferramenta (1/2 lança ou pá · 3/4 braço ou caçamba · 5/6 · 7/8); no rolo, 1 liga a vibração · com a ponta da caçamba no chão do canteiro ela cava; abrindo a caçamba, despeja (no basculante, se estiver embaixo)</span>
         <kbd>V</kbd><span>Alternar câmera (3ª pessoa / Capô / Aérea)</span>
         <kbd>C</kbd><span>Trocar personagem jogável</span>
         <kbd>Q</kbd><span>Alternar qualidade gráfica (Leve / Médio / Alto)</span>

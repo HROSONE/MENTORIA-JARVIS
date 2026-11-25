@@ -45,7 +45,7 @@ export class BalaCam {
     // 1. onde a bala vai bater
     this.rc.set(origem, dir); this.rc.far = 700; this.rc.camera = this.camera;
     const mundo = this.rc.intersectObjects(this.armas.alvos(), true).find(h => h.object.visible && h.distance > 2.6)          // o cano passa da mureta: ignora o que está colado no olho;
-    let res = mundo ? { tipo: 'mundo', parte: '', ponto: mundo.point.clone(), dist: mundo.distance, normal: mundo.face ? mundo.face.normal.clone().transformDirection(mundo.object.matrixWorld) : dir.clone().negate() }
+    let res = mundo ? { tipo: 'mundo', parte: '', objeto: mundo.object, ponto: mundo.point.clone(), dist: mundo.distance, normal: mundo.face ? mundo.face.normal.clone().transformDirection(mundo.object.matrixWorld) : dir.clone().negate() }
       : { tipo: 'nada', parte: '', ponto: origem.clone().addScaledVector(dir, 400), dist: 400, normal: dir.clone().negate() };
     for (const a of this.alvosEspeciais()) {
       const oc = a.centro.clone().sub(origem), tc = oc.dot(dir); if (tc <= 0) continue;

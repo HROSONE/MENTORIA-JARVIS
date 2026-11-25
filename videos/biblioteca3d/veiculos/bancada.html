@@ -12,7 +12,7 @@
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 </head>
 <body>
-<div id="info">Bancada de veículos · ?v=taxi|hatch|picape|onibus|bombeiros · ?cam=lado|frente|tras|topo|tq|tqt|baixo · ?ort=1 (ortográfica, ?h=altura visível) · ?grade=1 · ?pos=x,y,z&alvo=x,y,z&fov=40 · ?livery=… · ?still</div>
+<div id="info">Bancada de veículos · ?v=taxi|hatch|picape|onibus|bombeiros|escavadeira|retroescavadeira|carregadeira|rolo|basculante · ?ferr=a,b,c (eixos das máquinas) · ?cam=lado|frente|tras|topo|tq|tqt|baixo · ?ort=1 (ortográfica, ?h=altura visível) · ?grade=1 · ?pos=x,y,z&alvo=x,y,z&fov=40 · ?livery=… · ?still</div>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -73,6 +73,7 @@ ctl.addEventListener('change', frame);
 if (Q.has('farois')) v.farois(true); if (Q.has('freio')) v.freio(true); if (Q.has('re')) v.re(true); if (Q.has('seta')) v.seta(+Q.get('seta') || 1, true); if (Q.has('cena') && v.cena) v.cena(true); if (Q.has('posicao')) v.posicao(true);
 if (Q.has('noite')) { scene.background = new THREE.Color(0x0b1220); scene.environmentIntensity = 0.05; sun.intensity = 0.06; chao.material.color.set(0x2a2d30); const lua = new THREE.HemisphereLight(0x5a6c90, 0x101010, 0.18); scene.add(lua); }
 if (Q.has('luzes')) v.luzes(+(Q.get('t') || 0), Q.get('luzes') || 'ligado');
+if (Q.has('ferr') && v.ferr) Q.get('ferr').split(',').forEach((x, i) => { if (x !== '') v.ferr.definir(i, +x); });   // ?ferr=lança,braço,…  (máquinas de obra)
 frame(); window.__ready = true;
 </script>
 </body>
