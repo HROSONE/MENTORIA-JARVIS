@@ -10,6 +10,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Kit, TILE, CALCADA, ESCALA_VEICULO } from '../videos/biblioteca3d/cidade/kit.js';
 import { Personagem } from '../videos/biblioteca3d/personagens/elenco/elenco.js';
+import { instalarAnimacoesUniversal } from '../videos/biblioteca3d/animacoes/universal.js';
 
 const BASE_BIB = './videos/biblioteca3d';
 const CHUNK_TAM = 110;
@@ -208,14 +209,14 @@ export const PONTOS_TELEPORTE = [
 ];
 
 const NPCS_DEFS = [
-  { arq: 'homem',      acao: 'Andar',  cx: 18 * TILE, cz: 11 * TILE, raio: 12, fase: 0.0 },
-  { arq: 'policial',   acao: 'Parado', x: 132.5, z: 163.5, ang: 0.2, estatico: true },
-  { arq: 'mae',        acao: 'Andar',  cx: 18 * TILE, cz: 11 * TILE, raio: 15, fase: 2.1 },
-  { arq: 'davi',       acao: 'Correr', cx: 18 * TILE, cz: 11 * TILE, raio: 10, fase: 4.0 },
-  { arq: 'jovem_b',    acao: 'Andar',  cx: 18 * TILE, cz: 11 * TILE, raio: 19, fase: 1.1 },
-  { arq: 'entregador', acao: 'Andar',  x: 17 * TILE, z: 14 * TILE + 4.8, ang: -Math.PI / 2, estatico: true },
-  { arq: 'velha',      acao: 'Parado', x: 18 * TILE + 6, z: 11 * TILE + 7, ang: 2.8, estatico: true },
-  { arq: 'lia',        acao: 'Parado', x: 15 * TILE - 10, z: 441 - 22, ang: Math.PI, estatico: true },
+  { arq: 'homem',      acao: 'AndarPro',         vel: 1.5, cx: 18 * TILE, cz: 11 * TILE, raio: 12, fase: 0.0 },
+  { arq: 'policial',   acao: 'BracosCruzados',   x: 132.5, z: 163.5, ang: 0.2, estatico: true },
+  { arq: 'mae',        acao: 'AndarPro',         vel: 1.4, cx: 18 * TILE, cz: 11 * TILE, raio: 15, fase: 2.1 },
+  { arq: 'davi',       acao: 'Trotar',           vel: 3.1, cx: 18 * TILE, cz: 11 * TILE, raio: 10, fase: 4.0 },
+  { arq: 'jovem_b',    acao: 'AndarPro',         vel: 1.55, cx: 18 * TILE, cz: 11 * TILE, raio: 19, fase: 1.1 },
+  { arq: 'entregador', acao: 'ConversarCelular', x: 17 * TILE, z: 14 * TILE + 4.8, ang: -Math.PI / 2, estatico: true },
+  { arq: 'velha',      acao: 'ConversarEmPe',    x: 18 * TILE + 6, z: 11 * TILE + 7, ang: 2.8, estatico: true },
+  { arq: 'lia',        acao: 'ParadoPro',        x: 15 * TILE - 10, z: 441 - 22, ang: Math.PI, estatico: true },
 ];
 
 export async function construirCidade({
@@ -1355,6 +1356,7 @@ export async function construirCidade({
         try {
           const p = await Personagem.carregar(`${BASE_BIB}/personagens/elenco/${d.arq}.glb`);
           p.obj.traverse(m => { if (m.isMesh) { m.castShadow = false; m.receiveShadow = true; } });
+          try { await instalarAnimacoesUniversal(p, { preCarregar: [d.acao] }); } catch (_) {}
           p.tocar(d.acao);
           p.piscarAuto(true);
           if (d.estatico) {
@@ -1363,7 +1365,7 @@ export async function construirCidade({
           }
           p.obj.visible = false;
           mundo.add(p.obj);
-          const vel = (p.info(d.acao).velocidade || (d.acao === 'Correr' ? 4.2 : 1.4));
+          const vel = d.vel || (p.info(d.acao).velocidade || (d.acao.includes('Correr') || d.acao === 'Trotar' ? 3.2 : 1.45));
           npcs.push({ idx: i, p, ...d, vel });
         } catch (e) {
           console.warn('NPC skip:', d.arq, e);

@@ -105,7 +105,7 @@
   #mira::before, #mira::after { content: ''; position: absolute; background: #fff; box-shadow: 0 0 2px #000; }
   #mira::before { left: 12px; top: 0; width: 2px; height: 26px; clip-path: polygon(0 0,100% 0,100% 30%,0 30%,0 70%,100% 70%,100% 100%,0 100%); }
   #mira::after { top: 12px; left: 0; height: 2px; width: 26px; clip-path: polygon(0 0,30% 0,30% 100%,0 100%,0 0,70% 0,100% 0,100% 100%,70% 100%,70% 0); }
-  #hud-arma { position: fixed; right: 16px; bottom: 150px; z-index: 15; font-weight: 700; }
+  #hud-arma { position: fixed; right: 16px; bottom: 228px; z-index: 15; font-weight: 700; }
   #prompt-acao {
     position: fixed; left: 50%; bottom: 88px; transform: translateX(-50%); z-index: 25;
     padding: 10px 18px; font-size: 14px; font-weight: 800; letter-spacing: 0.3px;
@@ -127,6 +127,7 @@
   #hud-base-dir {
     position: fixed; right: 16px; bottom: 16px; z-index: 20; pointer-events: none;
   }
+  body.modo-touch #hud-pe { display: none; }
   #velocimetro {
     padding: 12px 18px; min-width: 190px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
   }
@@ -148,7 +149,7 @@
     position: fixed; inset: 0; z-index: 60; background: rgba(2, 6, 23, 0.72);
     display: flex; align-items: center; justify-content: center; padding: 16px;
   }
-  .ajuda-card { width: min(460px, 94vw); padding: 22px; }
+  .ajuda-card { width: min(480px, 94vw); padding: 22px; max-height: 90vh; overflow-y: auto; }
   .ajuda-card h2 { font-size: 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
   .ajuda-grid { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 13px; align-items: center; }
   kbd {
@@ -191,13 +192,16 @@
     pointer-events: auto; touch-action: none;
   }
   #joy-base {
-    width: 112px; height: 112px; border-radius: 50%;
-    background: rgba(15, 23, 42, 0.58); border: 2px solid rgba(255, 255, 255, 0.28);
+    width: 114px; height: 114px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(15, 23, 42, 0.35) 0%, rgba(15, 23, 42, 0.72) 100%);
+    border: 2px solid rgba(255, 255, 255, 0.28);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), inset 0 0 14px rgba(56, 189, 248, 0.14);
     display: flex; align-items: center; justify-content: center; touch-action: none;
   }
   #joy-knob {
     width: 46px; height: 46px; border-radius: 50%;
-    background: rgba(56, 189, 248, 0.88); box-shadow: 0 0 14px rgba(56, 189, 248, 0.45);
+    background: radial-gradient(circle at 35% 35%, #7dd3fc, #0284c7);
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.55);
   }
 
   /* Volante esquerda/direita no carro (esquerda) */
@@ -212,7 +216,7 @@
   }
   .tbtn-dir.ativo, .tbtn-dir:active { background: rgba(56, 189, 248, 0.6); border-color: var(--accent); transform: scale(0.95); }
 
-  /* Botões direita (a pé e dirigindo) */
+  /* Botões direita (dirigindo + base compartilhada) */
   .touch-btns {
     position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom));
     display: flex; gap: 10px; align-items: flex-end; pointer-events: auto; touch-action: none;
@@ -221,9 +225,98 @@
     width: 60px; height: 60px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.32);
     background: rgba(15, 23, 42, 0.78); color: #fff; font-weight: 800; font-size: 11px;
     display: flex; align-items: center; justify-content: center; text-align: center; touch-action: none;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    transition: transform 0.1s ease, background 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
   }
-  .tbtn.ativo, .tbtn:active { background: rgba(56, 189, 248, 0.55); border-color: var(--accent); transform: scale(0.94); }
-  .tbtn-destaque { border-color: var(--accent); background: rgba(14, 165, 233, 0.42); box-shadow: 0 0 14px rgba(56, 189, 248, 0.45); }
+  .tbtn.ativo, .tbtn.travado, .tbtn:active {
+    background: rgba(56, 189, 248, 0.58); border-color: var(--accent);
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.5); transform: scale(0.94);
+  }
+  .tbtn-destaque {
+    border-color: #38bdf8 !important; background: rgba(14, 165, 233, 0.48) !important;
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.6) !important;
+  }
+
+  /* Pata de Cachorro (Dog-Paw Action Cluster) — modo a pé */
+  #touch-pe-dir {
+    position: fixed;
+    right: max(14px, env(safe-area-inset-right));
+    bottom: max(14px, env(safe-area-inset-bottom));
+    width: 196px; height: 204px;
+    pointer-events: none; touch-action: none;
+  }
+  #touch-pe-dir::before {
+    content: ''; position: absolute; right: -4px; bottom: -4px; width: 158px; height: 162px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 68% 68%, rgba(56, 189, 248, 0.13) 0%, rgba(15, 23, 42, 0.0) 72%);
+    pointer-events: none;
+  }
+  #touch-pe-dir button { pointer-events: auto; cursor: pointer; user-select: none; -webkit-user-select: none; }
+
+  /* Almofada central da pata: habilidade principal (Soco / Atirar) */
+  .pata-central {
+    position: absolute; right: 4px; bottom: 6px;
+    width: 84px; height: 84px; border-radius: 50%;
+    border: 2.5px solid rgba(56, 189, 248, 0.85);
+    background: radial-gradient(circle at 36% 32%, rgba(56, 189, 248, 0.52), rgba(15, 23, 42, 0.90) 75%);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5), 0 0 18px rgba(56, 189, 248, 0.34), inset 0 0 12px rgba(125, 211, 252, 0.25);
+    color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    touch-action: none;
+    transition: transform 0.09s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  .pata-central .pata-ico { font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+  .pata-central .pata-txt { font-size: 10px; font-weight: 900; letter-spacing: 0.7px; text-transform: uppercase; color: #e0f2fe; }
+  .pata-central.ativo, .pata-central:active {
+    transform: scale(0.92);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.55), 0 0 24px rgba(56, 189, 248, 0.75);
+  }
+  .pata-central.armado {
+    border-color: rgba(251, 146, 60, 0.92);
+    background: radial-gradient(circle at 36% 32%, rgba(249, 115, 22, 0.62), rgba(30, 15, 20, 0.92) 76%);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.52), 0 0 20px rgba(249, 115, 22, 0.42), inset 0 0 12px rgba(253, 186, 116, 0.28);
+  }
+  .pata-central.armado .pata-txt { color: #ffedd5; }
+  .pata-central.armado.ativo, .pata-central.armado:active {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.55), 0 0 26px rgba(249, 115, 22, 0.85);
+  }
+
+  /* 4 dedos da pata em arco ao redor da roda central */
+  .pata-dedo {
+    position: absolute;
+    width: 48px; height: 48px; border-radius: 50%;
+    border: 1.8px solid rgba(255, 255, 255, 0.34);
+    background: rgba(15, 23, 42, 0.82);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    color: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    padding: 0; touch-action: none;
+  }
+  .pata-dedo .d-ico { font-size: 15px; line-height: 1; }
+  .pata-dedo .d-txt { font-size: 8.5px; font-weight: 800; letter-spacing: 0.2px; color: #cbd5e1; line-height: 1.05; }
+  .pata-dedo.ativo .d-txt, .pata-dedo.travado .d-txt { color: #fff; }
+  #touch-pular   { right: 13px;  bottom: 108px; }
+  #touch-correr  { right: 67px;  bottom: 95px; }
+  #touch-agachar { right: 101px; bottom: 53px; }
+  #touch-rolar   { right: 102px; bottom: 0px; }
+
+  /* Barra tática auxiliar logo acima da pata (Entrar, Arma, Recarregar, Mirar) */
+  #touch-pe-aux {
+    position: absolute; right: 2px; bottom: 164px;
+    display: flex; gap: 6px; align-items: center; justify-content: flex-end;
+    pointer-events: none;
+  }
+  .tbtn-aux {
+    height: 34px; min-width: 38px; padding: 0 10px; border-radius: 999px;
+    border: 1.5px solid rgba(255, 255, 255, 0.28);
+    background: rgba(15, 23, 42, 0.82); color: #f8fafc;
+    font-size: 11px; font-weight: 800; white-space: nowrap;
+    display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+    touch-action: none;
+  }
+  .tbtn-aux.ativo, .tbtn-aux:active {
+    background: rgba(56, 189, 248, 0.58); border-color: var(--accent); transform: scale(0.95);
+  }
+
   .tbtn-pedal {
     width: 68px; height: 84px; border-radius: 16px; border: 2px solid rgba(255,255,255,0.35);
     color: #fff; font-weight: 900; font-size: 12px; display: flex; flex-direction: column;
@@ -251,6 +344,13 @@
     }
     .btn-hud, #select-teleporte { padding: 4px 6px; font-size: 10px; border-radius: 8px; }
 
+    /* Contador de munição centralizado acima do prompt para nunca colidir com a pata */
+    #hud-arma {
+      left: 50%; right: auto; transform: translateX(-50%);
+      bottom: max(12px, env(safe-area-inset-bottom));
+      font-size: 11px; padding: 4px 10px;
+    }
+
     /* Velocímetro limpo no centro-inferior para nunca cobrir os botões touch */
     #hud-base-dir {
       left: 50%; right: auto; transform: translateX(-50%);
@@ -262,8 +362,8 @@
     #vel-nome { font-size: 10px; }
     #hud-pe { display: none; }
     .dica-mini { display: none; }
-    #prompt-acao { bottom: 96px; font-size: 12px; padding: 6px 12px; }
-    #toast { top: 48px; font-size: 11px; padding: 6px 12px; }
+    #prompt-acao { bottom: 52px; font-size: 12px; padding: 6px 12px; }
+    #toast { top: 44px; font-size: 11px; padding: 6px 12px; }
   }
   /* ---------- Abertura (cutscene pulável) e Sala de entrada ---------- */
   body.em-cine #hud-esq, body.em-cine #prompt-acao, body.em-cine #mira, body.em-cine #hud-arma,
@@ -503,7 +603,7 @@
     </div>
     <div id="hud-pe" class="glass">
       <div id="pers-nome">Policial</div>
-      <div class="dica-mini">WASD Andar · Shift Correr · Espaço Pular · E Entrar no Carro · 1/2 Armas · Clique Atira · X Recarrega</div>
+      <div class="dica-mini">WASD Andar · Shift Correr · Ctrl/B Agachar · Alt Rolar · Espaço Pular · E Interagir · Clique Soco/Tiro</div>
     </div>
   </div>
 
@@ -519,14 +619,22 @@
       <button class="tbtn-dir" id="touch-dir">▶</button>
     </div>
 
-    <!-- A pé: botões à direita -->
-    <div class="touch-btns" id="touch-pe-dir">
-      <button class="tbtn" id="touch-correr">Correr</button>
-      <button class="tbtn" id="touch-pular">Pular</button>
-      <button class="tbtn" id="touch-entrar">Entrar</button>
-      <button class="tbtn" id="touch-arma">Arma</button>
-      <button class="tbtn" id="touch-atirar">Atirar</button>
-      <button class="tbtn" id="touch-mirar">Mirar</button>
+    <!-- A pé: Pata de Cachorro (habilidade central + 4 botões em arco + barra tática) -->
+    <div id="touch-pe-dir">
+      <div id="touch-pe-aux">
+        <button class="tbtn-aux" id="touch-entrar" title="Entrar / Interagir (E)">🚗 Entrar</button>
+        <button class="tbtn-aux" id="touch-arma" title="Trocar Arma">🔫 Arma</button>
+        <button class="tbtn-aux oculto" id="touch-recarregar" title="Recarregar (X)">🔄</button>
+        <button class="tbtn-aux oculto" id="touch-mirar" title="Mirar / Luneta (Z)">🎯 Mirar</button>
+      </div>
+      <button class="tbtn pata-dedo" id="touch-pular" title="Pular (Espaço)"><span class="d-ico">🦘</span><span class="d-txt">Pular</span></button>
+      <button class="tbtn pata-dedo" id="touch-correr" title="Correr (segure ou toque para travar)"><span class="d-ico">🏃</span><span class="d-txt">Correr</span></button>
+      <button class="tbtn pata-dedo" id="touch-agachar" title="Agachar furtivo (Ctrl / B)"><span class="d-ico">🧎</span><span class="d-txt">Agachar</span></button>
+      <button class="tbtn pata-dedo" id="touch-rolar" title="Rolar / Esquivar (Alt)"><span class="d-ico">🌀</span><span class="d-txt">Rolar</span></button>
+      <button class="pata-central" id="touch-atirar" title="Habilidade Principal: Soco / Atirar">
+        <span class="pata-ico" id="pata-icone">👊</span>
+        <span class="pata-txt" id="pata-rotulo">Soco</span>
+      </button>
     </div>
     <!-- Dirigindo: pedais + drift/sair à direita -->
     <div class="touch-btns oculto" id="touch-carro-dir">
@@ -546,12 +654,14 @@
       <h2>Controles · Hryz City <button class="btn-hud" id="fechar-ajuda">✕</button></h2>
       <div class="ajuda-grid">
         <kbd>W A S D</kbd><span>Andar / Dirigir (ou Setas)</span>
-        <kbd>Shift</kbd><span>Correr a pé</span>
+        <kbd>Shift</kbd><span>Correr Sprint a pé</span>
+        <kbd>Ctrl / B</kbd><span>Agachar / Andar furtivo</span>
+        <kbd>Alt</kbd><span>Rolar / Esquiva acrobática</span>
         <kbd>Espaço</kbd><span>Pular a pé / Freio de mão (drift) no carro</span>
         <kbd>E</kbd><span>Entrar/sair do veículo · subir no terraço · entrar na loja</span>
         <kbd>1 / 2 / 3</kbd><span>Pistola / Metralhadora / Sniper (G guarda) · só depois de pegar no mapa</span>
         <kbd>Botão direito</kbd><span>Luneta da sniper (segure) · Z liga/desliga · roda = zoom</span>
-        <kbd>Clique</kbd><span>Atirar (segure para rajada na metralhadora)</span>
+        <kbd>Clique</kbd><span>Combo de Soco (desarmado) ou Atirar (armado)</span>
         <kbd>X</kbd><span>Recarregar (usa a munição de reserva; compre mais na Loja $)</span>
         <kbd>L</kbd><span>Giroflex e sirene (viatura, ambulância e bombeiros)</span>
         <kbd>P</kbd><span>Voltar para a sala (trocar personagem, carro e local)</span>
