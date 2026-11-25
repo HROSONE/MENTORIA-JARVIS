@@ -98,7 +98,7 @@ def _delineado(S, cab, e, mat):
 def kael():
     """herói protagonista: Kael, 19 anos, quimono de treino sem mangas azul-marinho com debrum carmim, faixa carmim, calça areia, botas"""
     e, cab, cp, S, _ = base_personagem(
-        dict(perna=1.24, tronco=0.72, braco=0.93, pescoco=0.92, cabeca=1.12, ombros=1.06, quadril=1.02, pe=1.08, abre_braco=10.0),
+        dict(perna=1.24, tronco=0.72, braco=0.93, pescoco=0.92, cabeca=1.12, ombros=1.06, quadril=0.94, pe=1.08, abre_braco=10.0),
         dict(res=2.0, sx=0.98, sz=1.0, mand=-0.002, queixo=0.002, bochecha=-0.008, olho_r=0.0168, olho_fundo=0.80, olho_x=0.0340, lid_aberta=17,
              iris=0.62, pupila=0.24, nariz_comp=0.0075, nariz_larg=0.0040, nariz_ponta=0.0042, narina=0.0008, nariz_ponte=0.45, boca_larg=0.0170, labio=0.0018,
              sobr_esp=0.0110, sobr_larg=0.044, sobr_incl=2.3, sobr_u=0.090, barba=0.0, rubor=0.10, dentes=6),
@@ -108,7 +108,7 @@ def kael():
                 'munheq': ('#b0202c', .8), 'bota': ('#1c2340', .6), 'sola': ('#9e1e2a', .85), 'bota_det': ('#9e1e2a', .65), 'delineado': ('#111322', .6)})
     pal['labio'] = ('#c4876f', .6)
     yh, yf = alinhar_hem(cp, -0.30, 0.08)
-    afina = lambda t: (0.80 + 0.20 * min(1.0, max(0.0, (t + 0.05) / 0.65)) ** 0.8) if t > -0.06 else 0.80 + 0.55 * min(0.22, -0.06 - t)   # V em cima; abaixo da faixa a calça abre no quadril
+    afina = lambda t: (0.80 + 0.20 * min(1.0, max(0.0, (t + 0.05) / 0.65)) ** 0.8) if t > -0.06 else 0.74   # V em cima; abaixo da faixa a calça abre no quadril
 
     # gola em V: recorte na frente do quimono (abre do peito até o pescoço) mostrando o peito
     yv0, ytop = cp.torso(0.50)[0][1], cp.torso(0.99)[0][1]
@@ -169,8 +169,8 @@ def kael():
         cp.membro(S, 'braco', lado, 1.70, 1.97, 1.18, 0.006, 'munheq', n_an=8)                          # munhequeira
         cp.mao(S, lado)
         # calça larga que estufa na canela e entra no cano da bota
-        cp.membro(S, 'perna', lado, -0.12, 1.36, 1.32, 0.014, 'calca', n_an=26,
-                  extra=lambda ss: 0.80 + 0.20 * np.clip((ss - 0.02) / 0.30, 0, 1) + 0.30 * np.clip((ss - 0.7) / 0.55, 0, 1) - 0.30 * np.clip((ss - 1.24) / 0.12, 0, 1) + 0.03 * np.sin(ss * 14))   # calça bem larga que embola
+        cp.membro(S, 'perna', lado, -0.12, 1.36, 1.17, 0.012, 'calca', n_an=26,
+                  extra=lambda ss: 0.84 + 0.04 * np.clip((ss - 0.02) / 0.30, 0, 1) + 0.12 * np.clip((ss - 0.5) / 0.5, 0, 1) + 0.48 * np.clip((ss - 0.8) / 0.45, 0, 1) - 0.40 * np.clip((ss - 1.24) / 0.12, 0, 1) + 0.03 * np.sin(ss * 14))   # calça bem larga que embola
         cp.sapato(S, lado, 'bota', 'bota', 'sola', 'bota_det', cano=False)
         cp.membro(S, 'perna', lado, 1.22, 1.98, 1.12, 0.010, 'bota', n_an=14)                            # cano alto da bota
         cp.membro(S, 'perna', lado, 1.40, 1.45, 1.17, 0.010, 'cordao', n_an=3)                           # cordão amarrado no cano
