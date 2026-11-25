@@ -7,10 +7,18 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export function mesclarEstaticos(raiz) {
+  // cada grupo junta só os seus filhos diretos (as peças que giram/andam são grupos e continuam separadas)
+  const grupos = []; raiz.traverse(o => { if (!o.isMesh && o.children.length) grupos.push(o); });
+  let antes = 0, depois = 0;
+  for (const g of grupos) { const r = mesclarFilhos(g); antes += r.antes; depois += r.depois; }
+  return { antes, depois };
+}
+
+function mesclarFilhos(raiz) {
   raiz.updateMatrix(); raiz.updateMatrixWorld(true);
   const porMat = new Map();
   for (const m of [...raiz.children]) {
-    if (!m.isMesh || m.isInstancedMesh || m.isSkinnedMesh || Array.isArray(m.material) || m.children.length) continue;
+    if (!m.isMesh || m.isInstancedMesh || m.isSkinnedMesh || Array.isArray(m.material) || m.children.length || m.userData.dinamico || !m.visible) continue;
     if (m.material.transparent && m.material.opacity < 1 && m.renderOrder) continue;          // decalques com ordem própria
     const lista = porMat.get(m.material) || []; lista.push(m); porMat.set(m.material, lista);
   }

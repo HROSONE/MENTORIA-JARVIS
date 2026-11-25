@@ -51,7 +51,7 @@ export function criar(opc = {}) {
   add(K.caixa(2.96, 0.05, 0.22, mats.desgaste, 0.01, [0, -0.62, 1.38]), cac);                                                // lâmina de corte
   const cilE = [1, -1].map(s => add(C.cilindroHidraulico(0.10, 0.06, 1.2, mats), frente));
   const cilC = add(C.cilindroHidraulico(0.11, 0.065, 1.15, mats), frente);
-  const tirante = add(K.caixa(0.12, 0.12, 1, mats.aco, 0.02), bracos);
+  const tirante = add(K.caixa(0.12, 0.12, 1, mats.aco, 0.02), bracos); tirante.userData.dinamico = true;
   // ---------------- rodas
   const rdT = K.rodas(tras, [{ z: zT, x: bit / 2 }, { z: zT, x: -bit / 2 }], R, 0.60, mats, { estilo: 'pesada', aro: 0.55 });
   const rdF = K.rodas(frente, [{ z: M.EE / 2, x: bit / 2 }, { z: M.EE / 2, x: -bit / 2 }], R, 0.60, mats, { estilo: 'pesada', aro: 0.55 });

@@ -86,7 +86,7 @@ export class Missao {
     const gl = new GLTFLoader(), B = this.base, E = `${B}/personagens/elenco`;
     const [band, refem, pol] = await Promise.all([Personagem.carregar(`${E}/maniaco.glb`), Personagem.carregar(`${E}/mae.glb`), Personagem.carregar(`${E}/policial.glb`)]);
     this.bandido = band; this.refem = refem; this.policiais = [pol, pol.clonar(), pol.clonar(), pol.clonar(), pol.clonar()];
-    for (const p of [band, refem, ...this.policiais]) { p.obj.rotation.order = 'YXZ'; p.obj.traverse(m => { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; } }); this.scene.add(p.obj); p.piscarAuto(true); }
+    for (const p of [band, refem, ...this.policiais]) { p.obj.rotation.order = 'YXZ'; p.obj.traverse(m => { if (m.isMesh) { m.castShadow = p === band || p === refem; m.frustumCulled = false; } }); this.scene.add(p.obj); p.piscarAuto(true); }   // (só a dupla faz sombra: menos passes de sombra com esqueleto)
     const pistolaBase = this.armas.modelos.pistola.raiz;
     const copiaPistola = () => { const c = pistolaBase.clone(true); c.visible = true; this.scene.add(c); return c; };
     this.armaBandido = copiaPistola();
@@ -157,6 +157,7 @@ export class Missao {
   }
 
   _mostrar(v) {
+    this._atoresVisiveis = v;
     for (const o of [this.bandido.obj, this.refem.obj, ...this.policiais.map(p => p.obj), this.armaBandido, ...this.armasPol, ...(this.viaturas || []), ...this.giros, ...(this.cones || []), ...(this.faixas || []), this.heli, this.holofote]) if (o) o.visible = v;
     for (const p of this.pegaveis) p.g.visible = v && !this.armas.possui.has(p.id);
     this.marcTorre.visible = this.marcAlcapao.visible = v;
@@ -320,7 +321,11 @@ export class Missao {
     }
     // atores
     // longe da cena (e sem cena de câmera) os atores ficam parados: poupa CPU (7 esqueletos com IK)
-    const longe = this.camera.position.distanceTo(V(CENA.x, 1, CENA.z)) > 170 && this.estado !== 'intro' && this.estado !== 'percebeu' && this.estado !== 'vitoria';
+    const dCam = this.camera.position.distanceTo(V(CENA.x, 1, CENA.z));
+    const longe = dCam > 170 && this.estado !== 'intro' && this.estado !== 'percebeu' && this.estado !== 'vitoria';
+    // de longe os personagens completos (≈27 chamadas e 85 mil triângulos cada) nem são desenhados; as viaturas e o helicóptero continuam
+    const mostrarAtores = this.estado !== 'inativa' && (dCam < 90 || this.camera.fov < 25);
+    if (mostrarAtores !== this._atoresVisiveis) { this._atoresVisiveis = mostrarAtores; for (const o of [this.bandido.obj, this.refem.obj, this.armaBandido, ...this.policiais.map(p => p.obj), ...this.armasPol]) o.visible = mostrarAtores; }
     if (!longe || (this._q = (this._q || 0) + 1) % 30 === 0) this._animarAtores(longe ? dt * 30 : dt, t);
     if (this.estado === 'ativa') {
       this.nervoso = Math.max(0, this.nervoso - dt); this.graca = Math.max(0, (this.graca || 0) - dt);

@@ -227,7 +227,7 @@ const QUALIDADES = {
     viaturaCompleta: true, personagemCompleto: true,
     sombras: true, sombraRaio: 65,
     sombraPrincipal: true, sombraDetalhe: true,
-    viewDist: 420, camFar: 520, fogNear: 190, fogFar: 490,
+    viewDist: 280, camFar: 360, fogNear: 150, fogFar: 330,                      // (era 420 m: a cidade inteira; esquentava o celular)
     npcsMax: 5, npcDist: 75, trafegoMax: 16,
     rainN: 900, minimapInterval: 0.05,
   },
