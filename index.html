@@ -479,6 +479,12 @@
   #mc-texto { font-size: 14px; line-height: 1.45; color: #e2e8f0; }
   #mc-texto .c-s { color: #4ade80; } #mc-texto .c-t { color: #38bdf8; } #mc-texto .c-l { color: #facc15; }
   #mc-botao { margin-top: 14px; width: 100%; padding: 12px; border: 0; border-radius: 10px; background: linear-gradient(90deg, #22c55e, #16a34a); color: #fff; font-weight: 900; font-size: 16px; letter-spacing: 1px; cursor: pointer; }
+  .kael-btn { display: none !important; pointer-events: auto; }
+  body.pers-kael .kael-btn { display: inline-flex !important; background: rgba(185, 28, 28, 0.86); border-color: #fca5a5; }
+  #hud-carga { position: fixed; left: 50%; bottom: 24%; transform: translateX(-50%); z-index: 20; pointer-events: none; text-align: center; color: #fff; font: 900 12px system-ui, sans-serif; letter-spacing: 2px; text-shadow: 0 1px 3px #000; }
+  #hud-carga span { display: block; margin-bottom: 5px; }
+  #hud-carga b { display: block; width: 180px; height: 9px; border-radius: 5px; background: rgba(0,0,0,.45); overflow: hidden; border: 1px solid rgba(255,255,255,.4); }
+  #hud-carga i { display: block; height: 100%; background: linear-gradient(90deg, #f97316, #ef4444); transform-origin: 0 0; transform: scaleX(0); }
   #hud-vida { gap: 6px; } #hud-vida b { min-width: 24px; text-align: right; font-size: 12px; }
   .vida-barra { display: inline-block; width: 64px; height: 7px; border-radius: 4px; background: rgba(255,255,255,.15); overflow: hidden; vertical-align: middle; }
   .vida-barra i { display: block; height: 100%; background: #22c55e; transform-origin: 0 0; transition: transform .2s, background .3s; }
@@ -553,6 +559,7 @@
       <div id="hud-alvo">Praça Central</div>
     </div>
     <div class="stats-row">
+      <div id="hud-carga" class="oculto"><span>SUPER PULO</span><b><i></i></b></div>
       <div class="glass pill" id="hud-vida" title="Vida">❤️ <span class="vida-barra"><i></i></span><b>100</b></div>
       <div class="glass pill"><span class="dot-gold"></span><span id="hud-score">0 pts</span></div>
       <div class="glass pill">🏎️ <span id="hud-maxvel">0 km/h</span></div>
@@ -626,6 +633,8 @@
         <button class="tbtn-aux" id="touch-arma" title="Trocar Arma">🔫 Arma</button>
         <button class="tbtn-aux oculto" id="touch-recarregar" title="Recarregar (X)">🔄</button>
         <button class="tbtn-aux oculto" id="touch-mirar" title="Mirar / Luneta (Z)">🎯 Mirar</button>
+        <button class="tbtn-aux kael-btn" id="touch-forca" title="Super força: levantar / arremessar carro (T)">💪 Força</button>
+        <button class="tbtn-aux kael-btn" id="touch-rajada" title="Rajada vermelha (F)">✋ Rajada</button>
       </div>
       <button class="tbtn pata-dedo" id="touch-pular" title="Pular (Espaço)"><span class="d-ico">🦘</span><span class="d-txt">Pular</span></button>
       <button class="tbtn pata-dedo" id="touch-correr" title="Correr (segure ou toque para travar)"><span class="d-ico">🏃</span><span class="d-txt">Correr</span></button>
@@ -665,7 +674,9 @@
         <kbd>X</kbd><span>Recarregar (usa a munição de reserva; compre mais na Loja $)</span>
         <kbd>L</kbd><span>Giroflex e sirene (viatura, ambulância e bombeiros)</span>
         <kbd>P</kbd><span>Voltar para a sala (trocar personagem, carro e local)</span>
-        <kbd>F</kbd><span>Faróis do carro</span>
+        <kbd>F</kbd><span>Faróis do carro · com o Kael a pé: rajada vermelha ✋</span>
+        <kbd>T</kbd><span>Kael: levantar o carro mais perto / arremessar 💪</span>
+        <kbd>Espaço (segurar)</kbd><span>Kael: super pulo (quanto mais segurar, mais alto; pousa nos telhados)</span>
         <kbd>❤️</kbd><span>Vida: tiro, queda (de mais de 3,5 m), mordida do T. rex, batida e explosão machucam; sem vida você acorda no hospital</span>
         <kbd>1 a 8</kbd><span>Máquinas de obra: mexem a ferramenta (1/2 lança ou pá · 3/4 braço ou caçamba · 5/6 · 7/8); no rolo, 1 liga a vibração · com a ponta da caçamba no chão do canteiro ela cava; abrindo a caçamba, despeja (no basculante, se estiver embaixo)</span>
         <kbd>V</kbd><span>Alternar câmera (3ª pessoa / Capô / Aérea)</span>
