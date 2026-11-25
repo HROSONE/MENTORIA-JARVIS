@@ -250,30 +250,73 @@ function obterTexSombraBlob() {
 }
 
 // Céu leve com gradiente, sol/lua e horizonte suave (1 draw call, < 0,1 ms!)
+// Panorama pintado uma vez num canvas (azimute x elevação de -0,05 a +0,60): R = nuvens, G = serra distante, B = morros mais perto.
+// No céu é só uma leitura de textura por pixel (barato), e fica fora da neblina: a cidade não "acaba" num branco liso.
+function criarPanoramaCeu() {
+  const W = 2048, H = 512, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  let sem = 7; const rnd = () => ((sem = (sem * 16807) % 2147483647) / 2147483647);
+  const yEl = el => H - (el + 0.05) / 0.65 * H;                                      // elevação → linha do canvas
+  g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+  // serras: perfis por deslocamento do ponto médio (contínuos na emenda do azimute)
+  const serra = (canal, base, amp, rug, sementeExtra) => {
+    const N = 256, h = new Float32Array(N + 1); h[0] = h[N] = 0.5; let passo = N, k = amp;
+    while (passo > 1) { for (let i = passo / 2; i < N; i += passo) h[i] = (h[i - passo / 2] + h[i + passo / 2]) / 2 + (rnd() - 0.5) * k; passo /= 2; k *= rug; }
+    g.globalCompositeOperation = 'lighter'; g.fillStyle = canal; g.beginPath(); g.moveTo(0, H);
+    for (let i = 0; i <= N; i++) g.lineTo(i / N * W, yEl(base + Math.max(0, h[i]) * sementeExtra));
+    g.lineTo(W, H); g.closePath(); g.fill();
+  };
+  serra('rgb(0,255,0)', -0.004, 0.9, 0.55, 0.075);                                   // serra distante (alta e azulada)
+  serra('rgb(0,0,255)', -0.010, 0.8, 0.6, 0.034);                                    // morros mais perto
+  // nuvens: cúmulos (grupos de bolhas macias) concentrados perto do horizonte, poucas no alto
+  g.globalCompositeOperation = 'lighter';
+  for (let n = 0; n < 70; n++) {
+    const cx = rnd() * W, el = 0.03 + Math.pow(rnd(), 1.8) * 0.42, cy = yEl(el), larg = (60 + rnd() * 170) * (1 - el * 0.8), alt = larg * (0.28 + rnd() * 0.18);
+    for (let b = 0; b < 14; b++) {
+      const bx = cx + (rnd() - 0.5) * larg, by = cy - rnd() * alt + alt * 0.2, r = alt * (0.35 + rnd() * 0.5);
+      for (const dx of [0, -W, W]) { const gr = g.createRadialGradient(bx + dx, by, 0, bx + dx, by, r); gr.addColorStop(0, 'rgba(70,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.arc(bx + dx, by, r, 0, Math.PI * 2); g.fill(); }
+    }
+  }
+  const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; t.colorSpace = THREE.NoColorSpace; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter;
+  return t;
+}
+
 function criarCeuLeve() {
+  const panorama = criarPanoramaCeu();
   const mat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     depthWrite: false,
     fog: false,
     uniforms: {
       uTopo: { value: new THREE.Color(0x2867c7) },
-      uHor:  { value: new THREE.Color(0xbce0f7) },
+      uHor:  { value: new THREE.Color(0xb9d4ea) },
       uChao: { value: new THREE.Color(0x526b5c) },
       uSolDir: { value: new THREE.Vector3(-0.55, 0.58, 0.45).normalize() },
       uSolCor: { value: new THREE.Color(0xfff5d6) },
       uSolForca: { value: 1.0 },
+      tPan: { value: panorama },
+      uNuvem: { value: new THREE.Color(0xffffff) }, uNuvemSombra: { value: new THREE.Color(0xb8c4d4) }, uNuvemK: { value: 0.9 },
+      uSerra: { value: new THREE.Color(0x8fa9c4) }, uMorro: { value: new THREE.Color(0x6f8a86) },
     },
     vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
     fragmentShader: `
       varying vec3 vD;
-      uniform vec3 uTopo, uHor, uChao, uSolDir, uSolCor;
-      uniform float uSolForca;
+      uniform vec3 uTopo, uHor, uChao, uSolDir, uSolCor, uNuvem, uNuvemSombra, uSerra, uMorro;
+      uniform float uSolForca, uNuvemK;
+      uniform sampler2D tPan;
       void main() {
         vec3 d = normalize(vD);
         float h = d.y;
         vec3 c = h >= 0.0
           ? mix(uHor, uTopo, pow(clamp(h, 0.0, 1.0), 0.58))
           : mix(uHor, uChao, clamp(-h * 4.0, 0.0, 1.0));
+        float v = (h + 0.05) / 0.65;
+        if (v > 0.0 && v < 1.0) {
+          vec4 p = texture2D(tPan, vec2(atan(d.z, d.x) / 6.2831853 + 0.5, v));
+          c = mix(c, mix(uHor, uSerra, 0.75), p.g);                                 // serra distante (some na névoa)
+          c = mix(c, mix(uHor, uMorro, 0.6), p.b);                                  // morros mais perto (também com névoa)
+          float n = smoothstep(0.05, 0.75, p.r) * uNuvemK;
+          c = mix(c, mix(uNuvemSombra, uNuvem, smoothstep(0.2, 0.9, p.r)), n);      // nuvens com base mais escura
+        }
         if (h > -0.02 && uSolForca > 0.01) {
           float s = max(dot(d, uSolDir), 0.0);
           c += uSolCor * (pow(s, 18.0) * 0.25 + pow(s, 360.0) * 1.8) * uSolForca;
@@ -295,18 +338,24 @@ function criarCeuLeve() {
         mat.uniforms.uSolDir.value.set(0.45, 0.52, -0.55).normalize();
         mat.uniforms.uSolCor.value.setHex(0xcbdcff);
         mat.uniforms.uSolForca.value = 0.55;
+        mat.uniforms.uNuvem.value.setHex(0x2c3a5e); mat.uniforms.uNuvemSombra.value.setHex(0x141c33); mat.uniforms.uNuvemK.value = 0.55;
+        mat.uniforms.uSerra.value.setHex(0x0f1830); mat.uniforms.uMorro.value.setHex(0x0a1020);
       } else if (chuva) {
         mat.uniforms.uTopo.value.setHex(0x4c6073);
         mat.uniforms.uHor.value.setHex(0x8fa3b5);
         mat.uniforms.uChao.value.setHex(0x4a5966);
         mat.uniforms.uSolForca.value = 0.08;
+        mat.uniforms.uNuvem.value.setHex(0x9aa8b6); mat.uniforms.uNuvemSombra.value.setHex(0x5d6b79); mat.uniforms.uNuvemK.value = 1.0;
+        mat.uniforms.uSerra.value.setHex(0x7a8d9e); mat.uniforms.uMorro.value.setHex(0x5f6f74);
       } else {
         mat.uniforms.uTopo.value.setHex(0x2867c7);
-        mat.uniforms.uHor.value.setHex(0xbce0f7);
+        mat.uniforms.uHor.value.setHex(0xb9d4ea);
         mat.uniforms.uChao.value.setHex(0x526b5c);
         mat.uniforms.uSolDir.value.set(-0.55, 0.58, 0.45).normalize();
         mat.uniforms.uSolCor.value.setHex(0xfff5d6);
         mat.uniforms.uSolForca.value = 1.0;
+        mat.uniforms.uNuvem.value.setHex(0xffffff); mat.uniforms.uNuvemSombra.value.setHex(0xb4c1d2); mat.uniforms.uNuvemK.value = 0.9;
+        mat.uniforms.uSerra.value.setHex(0x86a3c2); mat.uniforms.uMorro.value.setHex(0x64806f);
       }
     },
   };
@@ -782,21 +831,22 @@ export async function iniciarJogo() {
   });
 
   function aplicarClima() {
-    const fundo = ehNoite ? 0x0e1833 : (ehChuva ? 0x7c92a6 : 0xbce0f7);
+    const fundo = ehNoite ? 0x0e1833 : (ehChuva ? 0x7c92a6 : 0xb9d4ea);                   // névoa um pouco mais azulada (ar ao longe)
     scene.background = new THREE.Color(fundo);
     ceu.definir({ noite: ehNoite, chuva: ehChuva });
     const fNear = ehChuva ? Math.min(qualAtual.fogNear, 65) : qualAtual.fogNear;
     const fFar = ehChuva ? Math.min(qualAtual.fogFar, 220) : qualAtual.fogFar;
     scene.fog = new THREE.Fog(fundo, fNear, fFar);
     scene.environment = qualAtual.pbr ? obterAmbiente(ehNoite) : null;
-    renderer.toneMapping = qualAtual.pbr ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
-    renderer.toneMappingExposure = ehNoite ? 1.18 : (ehChuva ? 0.98 : 1.05);
+    // cor: tone mapping cinematográfico (também no Médio), sol mais quente e forte e luz ambiente mais fraca → contraste e volume
+    renderer.toneMapping = qualAtual.id !== 'leve' ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
+    renderer.toneMappingExposure = ehNoite ? 1.18 : (ehChuva ? 0.98 : (qualAtual.pbr ? 1.0 : 1.12));
 
-    hemi.color.setHex(ehNoite ? 0x5c77b8 : (ehChuva ? 0x9fb2c4 : 0xffffff));
-    hemi.groundColor.setHex(ehNoite ? 0x182136 : 0x7e94a8);
-    hemi.intensity = ehNoite ? 1.05 : (ehChuva ? 1.15 : (qualAtual.pbr ? 1.45 : 1.15));
-    sun.color.setHex(ehNoite ? 0x9db4ea : 0xfff4e0);
-    sun.intensity = ehNoite ? 0.85 : (ehChuva ? 1.2 : (qualAtual.pbr ? 2.6 : 1.85));
+    hemi.color.setHex(ehNoite ? 0x5c77b8 : (ehChuva ? 0x9fb2c4 : 0xdfeaff));
+    hemi.groundColor.setHex(ehNoite ? 0x182136 : (ehChuva ? 0x6b7680 : 0x8a7d62));        // luz que volta do chão: quente
+    hemi.intensity = ehNoite ? 1.05 : (ehChuva ? 1.15 : (qualAtual.pbr ? 1.05 : 1.0));
+    sun.color.setHex(ehNoite ? 0x9db4ea : 0xffe6c4);
+    sun.intensity = ehNoite ? 0.85 : (ehChuva ? 1.2 : (qualAtual.pbr ? 3.1 : 2.25));
 
     cidade.alternarNoite(ehNoite);
     cidade.alternarChuva(ehChuva);
