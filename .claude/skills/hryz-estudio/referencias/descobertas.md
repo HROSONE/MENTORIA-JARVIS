@@ -28,6 +28,16 @@ Registro do que funcionou e do que não funcionou, para não repetir erro. As re
 - O dono descreve a ação física, e eu sigo à risca. Ex.: a câmara de ar entra **deitada**, **por cima** do pneu, puxada **por trás**.
 - A demora irrita: medir e acelerar antes de deixar o render rodando por horas. Avisar o tempo real (medido), não o estimado.
 
+## Voz e narração
+- **26/11:** pela primeira vez, o dono pediu uma voz criada por mim. Testei estas vozes em português:
+  - Piper: faber, cadu, jeff;
+  - Kokoro: pm_alex, pm_santa, pf_dora.
+- **Teste de clareza:** passei cada voz no Whisper. O Kokoro deu a transcrição mais confiável (logprob médio de −0,14, contra −0,25 do Piper).
+- **A "voz Hryz":** mistura dos vetores de estilo (`0.7*pm_alex + 0.3*pm_santa`) a 1,08×.
+- **Pronúncia:** escrever como se fala o que o modelo erra. Exemplos: "llvmpipe" → "éli éli vi em paipe", "FFmpeg" → "éfe éfe ém pég", "Three.js" → "Trí djêi ési".
+- **Sincronia:** o `voz.py` gera o `tempos.json` com o tempo de cada palavra (Whisper `word_timestamps`) e o `envelope.json`. As batidas da animação usam `P('palavra')`; o orbe-narrador pulsa com o envelope.
+- **Mixagem:** a voz entra como base na `Mesa` (`m.por(array, 0)`), com efeitos curtos de −17 a −27 dB, e o `finalizar(media=-19.5)`.
+
 ## Processo
 - Antes de prometer tempo, renderizar 3 quadros e cronometrar.
 - Stills em 540×960 para revisar e folha de contato; teste de 4 s antes do vídeo inteiro.

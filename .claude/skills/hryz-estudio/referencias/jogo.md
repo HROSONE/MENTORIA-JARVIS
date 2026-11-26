@@ -31,6 +31,20 @@ Mundo aberto em Three.js r160, publicado na Vercel. A página inicial do site é
 - Veículos com o mesmo raio de colisão estacionados em fila empurram um ao outro: estacionar lado a lado, com distância maior que `(r1 + r2) * 0,72`.
 - Celular esquentando: o limite de 60 qps, a resolução dinâmica, a sombra a cada 2 quadros, a mescla de malhas paradas e menos NPCs no Alto resolveram.
 
+## Trânsito, mapa e progresso (26/11)
+- **Trânsito da rodovia:** `cidade.trafego`, cada carro com `va`, que é a velocidade atual.
+  - Segue o carro da frente e freia para os obstáculos que o jogo passa em `cidade.atualizar(..., obstaculosTransito())`.
+  - Buzina quando para por causa do jogador.
+- **`interagirTransito`:** batida de verdade, uma por encontro (`tBatida`). Atropela quem está a pé na faixa e derruba pedestres acima de ~18 km/h.
+- **`lugarLivre(x, z, r)`:** procura em espiral o ponto livre mais próximo. É usado no início, no teleporte e na sala, para ninguém nascer dentro de carro ou poste.
+- **Mapa:** `fundoMapa` é desenhado uma vez (ruas, rodovia, aeroporto, selva e os prédios a partir de `cidade.colisores`, com a cor pela altura).
+  - O minimapa é redondo, gira com `camYaw` e muda de zoom pela velocidade.
+  - O mapa grande abre com Tab ou toque e tem os pontos clicáveis que teleportam.
+- **Sombra:** só as peças de veículo com raio de 0,3 m ou mais projetam sombra (`projetaSombra`). Isso cortou ~68% das peças no passe de sombra.
+- **Progresso:** pontos e checkpoint ficam em `localStorage` (`hryz_progresso_v1`).
+- **Diagnóstico:** perfil por CDP (`Profiler.start`) mais a contagem de malhas visíveis por grupo da cena (`__jogo.cena()`).
+  - No teste use `--ignore-gpu-blocklist` junto do llvmpipe, senão a página não sobe.
+
 ## Física da moto (jogo.js)
 - Entre-eixos de 1,375 m e esterço menor em alta.
 - Inclinação de equilíbrio na curva: `atan(v·ω/g)`, limitada a ±0,85 rad e suavizada. Ela levanta a frente um pouco ao acelerar e afunda ao frear.

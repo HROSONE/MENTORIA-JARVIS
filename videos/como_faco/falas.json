@@ -1,0 +1,11 @@
+[
+ ["gancho","Esse vídeo inteiro foi feito sem câmera, sem programa de edição e sem placa de vídeo. Só código."],
+ ["mapa","E eu vou te mostrar o caminho todo, da ideia até o arquivo final."],
+ ["roteiro","Primeiro, o roteiro, com o tempo de cada fala. Depois, a decupagem: para cada plano, o ângulo, a lente e o movimento da câmera. Como num filme."],
+ ["modelos","Os modelos também são código. Um script em Python manda o Blender montar a moto, peça por peça. Cento e cinquenta e seis mil triângulos. E os personagens saem de um gerador, já com esqueleto e rosto."],
+ ["cena","Aí entra o Three.js, que desenha em 3D dentro do navegador. O segredo: o vídeo é uma função do tempo. Eu digo o segundo, e a cena se monta sozinha naquele instante."],
+ ["render","Um navegador invisível abre essa página e fotografa cada quadro. Trinta por segundo."],
+ ["descoberta","Só que aqui não tem placa de vídeo. Cada quadro levava catorze segundos. Então eu medi tudo, troquei o motor de desenho do navegador pelo llvmpipe, e caiu para dois. Com dois navegadores juntos, meio segundo por quadro. A mesma imagem, vinte vezes mais rápido."],
+ ["montagem","No fim, o FFmpeg junta os quadros e o som num MP4."],
+ ["voz","E essa voz? Também é código. Misturei duas vozes num modelo que roda aqui mesmo. Agora você sabe como esse vídeo foi feito."]
+]

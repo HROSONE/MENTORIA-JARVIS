@@ -62,7 +62,17 @@
     display: flex; flex-direction: column; gap: 8px; pointer-events: none;
   }
   .mm-box { padding: 6px; width: 164px; }
-  #minimap { width: 150px; height: 150px; border-radius: 8px; display: block; border: 1px solid rgba(255,255,255,0.12); }
+  #minimap { width: 150px; height: 150px; border-radius: 50%; display: block; cursor: pointer; }
+  #mapa-grande { position: fixed; inset: 0; z-index: 60; background: rgba(2,6,23,0.72); display: flex; align-items: center; justify-content: center; }
+  #mapa-grande.oculto { display: none; }
+  #mapa-grande .quadro { position: relative; width: min(94vw, 90vh); height: min(90vh, 94vw); border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.18); }
+  #mapa-grande-cv { width: 100%; height: 100%; display: block; }
+  #mapa-grande-pts { position: absolute; inset: 0; pointer-events: none; }
+  .mapa-pino { position: absolute; transform: translate(-50%, -50%); width: 16px; height: 16px; border-radius: 50%; background: #facc15; border: 2px solid #0b1220; pointer-events: auto; cursor: pointer; padding: 0; }
+  .mapa-pt { position: absolute; pointer-events: auto; background: rgba(15,23,42,0.88); color: #f8fafc; border: 1px solid #facc15; border-radius: 999px; font: 700 12px system-ui, sans-serif; padding: 4px 9px; cursor: pointer; white-space: nowrap; }
+  .mapa-pt:hover { background: #facc15; color: #0b1220; }
+  #mapa-grande-fechar { position: absolute; top: 8px; right: 8px; z-index: 2; background: rgba(15,23,42,0.9); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; width: 34px; height: 34px; font-size: 16px; cursor: pointer; }
+  #mapa-grande .dica { position: absolute; left: 10px; bottom: 8px; color: #cbd5e1; font: 600 12px system-ui; background: rgba(15,23,42,0.75); padding: 4px 8px; border-radius: 8px; }
   .mm-legenda { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); padding: 4px 2px 0; }
   .stats-row { display: flex; gap: 6px; flex-wrap: wrap; }
   .pill { padding: 5px 10px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
@@ -332,7 +342,7 @@
   @media (pointer: coarse), (max-height: 540px) {
     #hud-esq { top: max(8px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); gap: 5px; }
     .mm-box { width: 96px; padding: 4px; }
-    #minimap { width: 86px; height: 86px; }
+    #minimap { width: 92px; height: 92px; }
     .mm-legenda { display: none; }
     #hud-alvo-box { padding: 4px 8px; font-size: 10px; max-width: 145px; }
     #hud-alvo-box .rot { font-size: 9px; }
@@ -552,8 +562,8 @@
   <!-- HUD Topo Esquerdo: Minimapa e Objetivos -->
   <div id="hud-esq">
     <div class="glass mm-box">
-      <canvas id="minimap" width="150" height="150"></canvas>
-      <div class="mm-legenda"><span>🔵 P71</span><span>🔴 T. rex</span><span>🟡 Alvo</span></div>
+      <canvas id="minimap" width="300" height="300" title="Abrir o mapa (Tab)"></canvas>
+      <div class="mm-legenda"><span>⭐ Alvo</span><span>🔴 T. rex</span><span>🗺️ Tab</span></div>
     </div>
     <div class="glass" id="hud-alvo-box">
       <div class="rot" id="hud-alvo-rot">Próximo Checkpoint</div>
@@ -661,6 +671,14 @@
   </div>
 
   <!-- Modal de Controles -->
+  <div id="mapa-grande" class="oculto">
+    <div class="quadro">
+      <canvas id="mapa-grande-cv"></canvas>
+      <div id="mapa-grande-pts"></div>
+      <button id="mapa-grande-fechar" title="Fechar (Tab ou Esc)">✕</button>
+      <div class="dica">Toque num lugar para ir até lá · Tab fecha</div>
+    </div>
+  </div>
   <div id="modal-ajuda" class="oculto">
     <div class="glass ajuda-card">
       <h2>Controles · Hryz City <button class="btn-hud" id="fechar-ajuda">✕</button></h2>
@@ -677,6 +695,7 @@
         <kbd>X</kbd><span>Recarregar (usa a munição de reserva; compre mais na Loja $)</span>
         <kbd>L</kbd><span>Giroflex e sirene (viatura, ambulância e bombeiros)</span>
         <kbd>P</kbd><span>Voltar para a sala (trocar personagem, carro e local)</span>
+        <kbd>Tab</kbd><span>Mapa da cidade (ou toque no minimapa): toque num lugar para viajar até lá</span>
         <kbd>F</kbd><span>Faróis do carro · com o Kael a pé: rajada vermelha ✋</span>
         <kbd>T</kbd><span>Kael: levantar o carro mais perto / arremessar 💪</span>
         <kbd>Shift / B</kbd><span>Na moto: Shift + acelerar dá grau (empina na roda de trás) · B na freada dá babalu (traseira no ar) · Espaço + W parado queima pneu</span>

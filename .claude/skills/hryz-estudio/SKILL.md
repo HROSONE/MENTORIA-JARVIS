@@ -33,6 +33,9 @@ Antes de qualquer vídeo, as regras do dono valem acima de tudo: `CLAUDE.md`, `v
 - **Playwright + Chromium** headless para renderizar quadros e testar o jogo. A máquina não tem GPU: o desenho é por software, com **Mesa llvmpipe** (ver abaixo).
 - **Python 3 + numpy** para gerar personagens (malha, esqueleto, pesos, rosto, animações) e exportar GLB. **Pillow** para folhas de contato e miniaturas, **soundfile/scipy** para sons.
 - **Blender 4.2 LTS** em modo script (`-b -P`) para modelos detalhados (moto, armas) e renders Cycles. O binário não está no repositório: baixar o tarball 4.2 LTS de download.blender.org e chamar pelo caminho completo.
+- **Voz sintética (narração)**: Kokoro-82M via `kokoro-onnx`, que roda na CPU, sem serviço externo. A voz do canal mistura 70% de `pm_alex` com 30% de `pm_santa`.
+  - O **faster-whisper** confere a pronúncia e dá o tempo de cada palavra, que sincroniza a animação.
+  - Exemplo: `videos/como_faco/voz.py`.
 - **FFmpeg** para montar o MP4 (H.264 ~2,5–3,5 Mbps + AAC) e acabamento (`core/montar.sh`: `padrao`, `bloom`, `vivo`).
 - **Vercel** publica o site (`vercel.json` com headers de `.glb`). GitHub: branch de trabalho + PR; o dono decide o merge.
 
