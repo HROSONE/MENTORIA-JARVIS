@@ -1,0 +1,20 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Pneu (bancada)</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#4a6f9f}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { criarRoda } from './pneu.js';
+const Q = new URLSearchParams(location.search);
+const W = +(Q.get('w') || 1080), H = +(Q.get('h') || 1080);
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); r.setSize(W, H); r.toneMapping = THREE.ACESFilmicToneMapping; r.shadowMap.enabled = true; document.body.appendChild(r.domElement);
+const s = new THREE.Scene(); s.background = new THREE.Color(0x4a6f9f); s.environment = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(), 0.04).texture; s.environmentIntensity = 0.7;
+const sol = new THREE.DirectionalLight(0xffffff, 2.5); sol.position.set(1, 2, 1.5); sol.castShadow = true; s.add(sol);
+const chao = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.MeshStandardMaterial({ color: 0x5679a8 })); chao.rotation.x = -Math.PI / 2; chao.receiveShadow = true; s.add(chao);
+const roda = criarRoda({ corte: +(Q.get('corte') || 0) }); roda.grupo.position.y = 0.135; s.add(roda.grupo);
+roda.assentar(+(Q.get('k') ?? 1));
+const c = new THREE.PerspectiveCamera(+(Q.get('fov') || 35), W / H, 0.01, 50);
+const [cx, cy, cz] = (Q.get('cam') || '0.9,0.8,0.9').split(',').map(Number); const [ax, ay, az] = (Q.get('alvo') || '0,0.13,0').split(',').map(Number);
+c.position.set(cx, cy, cz); c.lookAt(ax, ay, az);
+r.render(s, c); window.__ok = true; window.__ready = true;
+</script></body></html>
