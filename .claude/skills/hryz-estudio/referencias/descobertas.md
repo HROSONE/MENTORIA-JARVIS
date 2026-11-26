@@ -7,6 +7,18 @@ Registro do que funcionou e do que não funcionou, para não repetir erro. As re
 - **25/11:** Mesa llvmpipe em vez de SwiftShader deixou o render 20x mais rápido, sem perder qualidade. Detalhes em [render-rapido.md](render-rapido.md).
 - **25/11:** paralelo no SwiftShader não ajuda (4 navegadores = mesmo tempo); no llvmpipe, 2 trabalhadores rendem bem.
 - **25/11:** o mapa de ambiente PMREM era o item mais caro no SwiftShader (~65% do quadro).
+- **26/11: o llvmpipe não acelera o Blender.** O ganho era do navegador, que deixou o SwiftShader pelo Mesa llvmpipe.
+  - O Cycles calcula direto na CPU, sem OpenGL, então nada muda para ele.
+  - O Eevee Next (4.2) roda sem tela por EGL no próprio Mesa: o aviso `EGL_BAD_MATCH` aparece, mas o render funciona.
+  - Medido no boi, a 1080×1920:
+
+    | Motor | Tempo por quadro |
+    |---|---|
+    | Eevee (16 amostras) | ~8,4 s (o 1º tem a compilação dos shaders) |
+    | Cycles (32 amostras, com denoise) | ~16,5 s |
+    | Three.js (llvmpipe, 2 navegadores) | ~0,4–0,8 s |
+
+  - Regra: vídeo inteiro no Three.js. Blender para modelar e para stills. Se o vídeo tiver que sair do Blender, usar Eevee (2× o Cycles).
 - **17/11 (T. rex):** vegetação instanciada era 93% do custo. A correção foi recorte por campo de visão, LOD e sombra só na janela da câmera (`trex_corrida/js/corte.js`).
 - **Blender Cycles no Colab (T4):** ~3 h para 1080 quadros 720p e com defeitos. Para vídeo inteiro, Three.js sai melhor.
 - **Jogo no celular:** limite de 60 qps, resolução dinâmica (piso por qualidade), sombra a cada 2 quadros, mescla de peças paradas por material e sem luzes pontuais permanentes.
