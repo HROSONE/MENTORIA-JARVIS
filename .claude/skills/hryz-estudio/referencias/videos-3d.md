@@ -3,6 +3,12 @@
 Exemplo completo e recente: `videos/camara_ar/` (moto do Blender, fundo azul, câmara de ar que deforma, raio-x, 8 planos, 37 s).
 Outros: `elevador/`, `trex_corrida/`, `lucas_poder/` (nível cinema, com pós), `mestres_gravidade/`.
 
+Motion design (2D em canvas + 3D por cima, narrado por voz sintética): `videos/como_faco/`.
+- O canvas 2D é a tela principal.
+- O Three.js renderiza numa camada transparente (`alpha: true`), que entra no 2D com `drawImage(R.domElement, 0, 0, W, H)`.
+  - Sempre passar `W, H`, senão a prévia em 540×960 sai pela metade.
+- Planos sem 3D ficam baratos: ~0,1 s por quadro.
+
 ## Esqueleto de um projeto
 ```
 videos/<nome>/
