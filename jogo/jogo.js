@@ -1902,7 +1902,7 @@ export async function iniciarJogo() {
 
   addEventListener('keydown', e => {
     const code = e.code;
-    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'AltLeft', 'AltRight'].includes(code)) e.preventDefault();
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'AltLeft', 'AltRight', 'Tab'].includes(code)) e.preventDefault();
     if (!teclas.has(code)) {
       if (modo !== 'jogo') { /* abertura e sala tratam as próprias teclas */ }
       else if (code === 'KeyE') { const it = interacaoAtual(); if (it) it.fazer(); else entrarOuSairVeiculo(); }
@@ -1946,6 +1946,8 @@ export async function iniciarJogo() {
         mostrarToast(som.mudo ? 'Som silenciado' : 'Som ligado');
       }
       else if (code === 'KeyH') $('modal-ajuda').classList.toggle('oculto');
+      else if (code === 'Tab') alternarMapa();
+      else if (code === 'Escape' && mapaAberto) fecharMapa();
     }
     teclas.add(code);
   });
@@ -2115,113 +2117,127 @@ export async function iniciarJogo() {
     else if (v) desferirGolpe();
   });
 
-  // ---- Minimapa (Canvas 2D)
-  function desenharMinimapa(px, pz, pyaw) {
-    const W = elMinimap.width, H = elMinimap.height;
-    mmCtx.clearRect(0, 0, W, H);
-    mmCtx.fillStyle = ehNoite ? '#0f172a' : '#1e293b';
-    mmCtx.fillRect(0, 0, W, H);
-
-    // Mapeia área da cidade (-30..560 em X, -30..610 em Z) no canvas
-    const esc = 0.25;
-    const toMM = (wx, wz) => [W / 2 + (wx - px) * esc, H / 2 + (wz - pz) * esc];
-
-    // Rodovia
-    mmCtx.fillStyle = '#475569';
-    const [rx0, rz0] = toMM(12 - 16, -260);
-    mmCtx.fillRect(rx0, rz0, 32 * esc, 1020 * esc);
-
-    // Grade de ruas
-    mmCtx.fillStyle = '#64748b';
-    for (const gx of cidade.mapaInfo.VX) {
-      const [sx, sz] = toMM(gx * TILE - 4, 2 * TILE);
-      mmCtx.fillRect(sx, sz, 8 * esc, 30 * TILE * esc);
+  // ---- Mapa: fundo da cidade desenhado uma vez (ruas, rodovia, aeroporto, quadras, prédios pela altura), minimapa redondo que gira
+  //      com a câmera e aproxima/afasta com a velocidade, e o mapa grande (Tab ou toque no minimapa) com teleporte pelos pontos.
+  const MAPA = { x0: -90, z0: -280, x1: 640, z1: 700, px: 2 };
+  const fundoMapa = (() => {
+    const c = document.createElement('canvas'); c.width = (MAPA.x1 - MAPA.x0) * MAPA.px; c.height = (MAPA.z1 - MAPA.z0) * MAPA.px;
+    const g = c.getContext('2d'), P = MAPA.px, X = x => (x - MAPA.x0) * P, Z = z => (z - MAPA.z0) * P, info = cidade.mapaInfo;
+    g.fillStyle = '#1d3a2a'; g.fillRect(0, 0, c.width, c.height);                                   // campo
+    g.fillStyle = '#2f4f3a'; g.fillRect(X(2.5 * TILE), Z(1.5 * TILE), 31.5 * TILE * P, 33.5 * TILE * P);   // bairros
+    g.fillStyle = '#4b5563';                                                                           // ruas (células de 12 m)
+    for (const cel of info.RUA) { const [gx, gz] = cel.split(',').map(Number); g.fillRect(X(gx * TILE - TILE / 2), Z(gz * TILE - TILE / 2), TILE * P + 1, TILE * P + 1); }
+    g.beginPath(); g.arc(X(info.ROT[0] * TILE), Z(info.ROT[1] * TILE), 1.5 * TILE * P, 0, 7); g.fill();
+    g.fillStyle = '#2f4f3a'; g.beginPath(); g.arc(X(info.ROT[0] * TILE), Z(info.ROT[1] * TILE), 0.7 * TILE * P, 0, 7); g.fill();
+    g.fillStyle = '#374151'; g.fillRect(X(info.RX - 16), Z(-260), 32 * P, 1020 * P);                // rodovia
+    g.strokeStyle = '#facc15'; g.lineWidth = 2; g.beginPath(); g.moveTo(X(info.RX), Z(-260)); g.lineTo(X(info.RX), Z(760)); g.stroke();
+    g.fillStyle = '#6b7280'; g.fillRect(X(60), Z(info.PISTA - 16), 480 * P, 32 * P);                // pista do aeroporto
+    g.strokeStyle = '#e5e7eb'; g.setLineDash([14, 10]); g.beginPath(); g.moveTo(X(70), Z(info.PISTA)); g.lineTo(X(530), Z(info.PISTA)); g.stroke(); g.setLineDash([]);
+    const sv = info.selva;                                                                             // selva, clareira e lagoa
+    if (sv) { g.fillStyle = '#14532d'; g.fillRect(X(sv.minX), Z(sv.minZ), (sv.maxX - sv.minX) * P, (sv.maxZ - sv.minZ) * P);
+      g.fillStyle = '#785c3e'; g.beginPath(); g.arc(X(sv.cx), Z(sv.cz), (sv.clareiraR || 32) * P, 0, 7); g.fill();
+      g.fillStyle = '#0d9488'; g.beginPath(); g.arc(X(sv.lagoX), Z(sv.lagoZ), sv.lagoR * P, 0, 7); g.fill(); }
+    g.fillStyle = '#8a6a48'; g.fillRect(X(140), Z(-30), 80 * P, 45 * P);                            // canteiro
+    g.fillStyle = '#16a34a'; g.fillRect(X(40.5 * TILE - 48), Z(7 * TILE - 36), 96 * P, 72 * P);     // estádio
+    // prédios e obstáculos pela altura (só o que tem área de prédio: postes e árvores ficam de fora)
+    for (const b of cidade.colisores) {
+      const w = b.maxX - b.minX, d = b.maxZ - b.minZ; if (w * d < 8) continue;
+      const h = b.maxY ?? 4, k = Math.min(1, h / 40);
+      g.fillStyle = `rgb(${Math.round(150 - 70 * k)},${Math.round(160 - 60 * k)},${Math.round(180 - 40 * k)})`;
+      g.fillRect(X(b.minX), Z(b.minZ), w * P, d * P);
+      g.strokeStyle = 'rgba(15,23,42,0.6)'; g.lineWidth = 1; g.strokeRect(X(b.minX), Z(b.minZ), w * P, d * P);
     }
-    for (const gz of cidade.mapaInfo.HZ) {
-      const [sx, sz] = toMM(3 * TILE, gz * TILE - 4);
-      mmCtx.fillRect(sx, sz, 30 * TILE * esc, 8 * esc);
-    }
-
-    // Pista do aeroporto
-    mmCtx.fillStyle = '#94a3b8';
-    const [ax, az] = toMM(60, 567 - 16);
-    mmCtx.fillRect(ax, az, 480 * esc, 32 * esc);
-
-    // Estádio
-    mmCtx.fillStyle = '#22c55e';
-    const [ex, ez] = toMM(40.5 * TILE - 48, 7 * TILE - 36);
-    mmCtx.fillRect(ex, ez, 96 * esc, 72 * esc);
-
-    // Selva Jurássica (reserva verde-escura + clareira + lagoa + marcador do T. rex)
-    if (cidade.mapaInfo.selva) {
-      const sv = cidade.mapaInfo.selva;
-      const [sx0, sz0] = toMM(sv.minX, sv.minZ);
-      mmCtx.fillStyle = '#14532d';
-      mmCtx.fillRect(sx0, sz0, (sv.maxX - sv.minX) * esc, (sv.maxZ - sv.minZ) * esc);
-      const [scx, scz] = toMM(sv.cx, sv.cz);
-      mmCtx.fillStyle = '#785c3e';
-      mmCtx.beginPath();
-      mmCtx.arc(scx, scz, 32 * esc, 0, Math.PI * 2);
-      mmCtx.fill();
-      const [slx, slz] = toMM(sv.lagoX, sv.lagoZ);
-      mmCtx.fillStyle = '#0d9488';
-      mmCtx.beginPath();
-      mmCtx.arc(slx, slz, sv.lagoR * esc, 0, Math.PI * 2);
-      mmCtx.fill();
-    }
-
-    // Canteiro de obras
-    {
-      const [kx, kz] = toMM(140, -30); mmCtx.fillStyle = '#8a6a48'; mmCtx.fillRect(kx, kz, 80 * esc, 45 * esc);
-    }
-    // Veículos dirigíveis
-    for (const v of veiculos) {
-      const [vx, vz] = toMM(v.x, v.z);
-      mmCtx.fillStyle = v.ehPolicia ? '#38bdf8' : '#f59e0b';
-      mmCtx.beginPath();
-      mmCtx.arc(vx, vz, v.ehPolicia ? 4 : 2.8, 0, Math.PI * 2);
-      mmCtx.fill();
-    }
-
-    // T. rex (ponto vermelho pulsante na selva)
-    {
-      const [tx, tz] = toMM(trexState.x, trexState.z);
-      mmCtx.fillStyle = '#ef4444';
-      mmCtx.beginPath();
-      mmCtx.arc(tx, tz, 4.4, 0, Math.PI * 2);
-      mmCtx.fill();
-      mmCtx.strokeStyle = '#fecaca';
-      mmCtx.lineWidth = 1.2;
-      mmCtx.stroke();
-    }
-
-    missao.desenharMinimapa(mmCtx, toMM, W, H);
-    // Checkpoint ativo (pulsante)
-    const cp = CHECKPOINTS[cpIdx];
-    if (!missaoEmCurso()) {
-    const [cpx, cpz] = toMM(cp.x, cp.z);
-    const clampedX = Math.max(8, Math.min(W - 8, cpx));
-    const clampedZ = Math.max(8, Math.min(H - 8, cpz));
-    mmCtx.fillStyle = '#facc15';
-    mmCtx.beginPath();
-    mmCtx.arc(clampedX, clampedZ, 5, 0, Math.PI * 2);
-    mmCtx.fill();
-    }
-
-    // Seta do jogador no centro
-    mmCtx.save();
-    mmCtx.translate(W / 2, H / 2);
-    mmCtx.rotate(-pyaw + Math.PI);
-    mmCtx.fillStyle = '#ffffff';
-    mmCtx.beginPath();
-    mmCtx.moveTo(0, -7);
-    mmCtx.lineTo(5, 6);
-    mmCtx.lineTo(0, 3);
-    mmCtx.lineTo(-5, 6);
-    mmCtx.closePath();
-    mmCtx.fill();
-    mmCtx.restore();
+    return c;
+  })();
+  // ícone redondo com letra/emoji, preso à borda quando fora do mapa
+  function iconeMapa(ctx, x, y, cor, letra, r, W, H, prender = true) {
+    if (prender) { x = Math.max(r + 2, Math.min(W - r - 2, x)); y = Math.max(r + 2, Math.min(H - r - 2, y)); }
+    ctx.fillStyle = cor; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 1.5; ctx.stroke();
+    if (letra) { ctx.fillStyle = '#0b1220'; ctx.font = `900 ${Math.round(r * 1.3)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(letra, x, y + 0.5); }
   }
+  function marcadoresMapa(ctx, toMM, W, H, esc, prender) {
+    for (const v of veiculos) {                                                      // veículos dirigíveis
+      if (v === jogador.veiculo) continue;
+      const [vx, vz] = toMM(v.x, v.z); if (!prender && (vx < 0 || vz < 0 || vx > W || vz > H)) continue;
+      if (vx < -10 || vz < -10 || vx > W + 10 || vz > H + 10) continue;
+      ctx.fillStyle = v.ehPolicia ? '#38bdf8' : v.moto ? '#f43f5e' : v.maquina ? '#f59e0b' : '#fbbf24';
+      ctx.beginPath(); ctx.arc(vx, vz, Math.max(2.6, esc * 1.4), 0, Math.PI * 2); ctx.fill();
+    }
+    const [tx, tz] = toMM(trexState.x, trexState.z);                                // T. rex
+    iconeMapa(ctx, tx, tz, '#ef4444', '', 4.5 + Math.sin(performance.now() / 200), W, H, false);
+    missao.desenharMinimapa(ctx, toMM, W, H);
+    if (!missaoEmCurso()) {                                                          // checkpoint ativo, preso na borda quando longe
+      const cp = CHECKPOINTS[cpIdx], [cx, cz] = toMM(cp.x, cp.z);
+      iconeMapa(ctx, cx, cz, '#facc15', '★', 7, W, H, true);
+    }
+  }
+  function desenharMinimapa(px, pz) {
+    const W = elMinimap.width, H = elMinimap.height, ctx = mmCtx;
+    const vel = Math.abs(jogador.veiculo?.vel || 0);
+    const esc = (W / 150) * THREE.MathUtils.lerp(1.05, 0.5, Math.min(1, vel / 35));   // px por metro: afasta quando corre
+    const yaw = camYaw, fx = Math.sin(yaw), fz = Math.cos(yaw), rx = -Math.cos(yaw), rz = Math.sin(yaw);
+    const toMM = (wx, wz) => { const dx = wx - px, dz = wz - pz; return [W / 2 + (dx * rx + dz * rz) * esc, H / 2 - (dx * fx + dz * fz) * esc]; };
+    ctx.save(); ctx.clearRect(0, 0, W, H);
+    ctx.beginPath(); ctx.arc(W / 2, H / 2, W / 2 - 1, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = '#1d3a2a'; ctx.fillRect(0, 0, W, H);
+    // fundo: mesma transformação do toMM aplicada à imagem (mundo → tela)
+    ctx.save();
+    ctx.setTransform(rx * esc, -fx * esc, rz * esc, -fz * esc, W / 2 - (px * rx + pz * rz) * esc, H / 2 + (px * fx + pz * fz) * esc);
+    ctx.drawImage(fundoMapa, MAPA.x0, MAPA.z0, MAPA.x1 - MAPA.x0, MAPA.z1 - MAPA.z0);
+    ctx.restore();
+    if (ehNoite) { ctx.fillStyle = 'rgba(2,6,23,0.35)'; ctx.fillRect(0, 0, W, H); }
+    marcadoresMapa(ctx, toMM, W, H, esc, true);
+    // jogador no centro, apontando para onde ele (ou o veículo) olha em relação à câmera
+    const ang = (jogador.veiculo ? jogador.veiculo.ry : jogador.ry) - yaw;
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(-ang); const s = W / 150;
+    ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#0b1220'; ctx.lineWidth = 2 * s;
+    ctx.beginPath(); ctx.moveTo(0, -8 * s); ctx.lineTo(6 * s, 7 * s); ctx.lineTo(0, 3.5 * s); ctx.lineTo(-6 * s, 7 * s); ctx.closePath(); ctx.stroke(); ctx.fill();
+    ctx.restore();
+    // norte
+    const [nx, ny] = [W / 2 + (0 * rx - 1 * rz) * (W / 2 - 10 * s), H / 2 - (0 * fx - 1 * fz) * (W / 2 - 10 * s)];
+    iconeMapa(ctx, nx, ny, 'rgba(15,23,42,0.85)', '', 8 * s, W, H, false);
+    ctx.fillStyle = '#f8fafc'; ctx.font = `900 ${Math.round(10 * s)}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('N', nx, ny + 0.5);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(W / 2, H / 2, W / 2 - 1, 0, Math.PI * 2); ctx.stroke();
+  }
+  // mapa grande (norte para cima) com os pontos de teleporte clicáveis
+  const elMapaG = $('mapa-grande'), cvMapaG = $('mapa-grande-cv'), elMapaPts = $('mapa-grande-pts');
+  let mapaAberto = false;
+  function desenharMapaGrande() {
+    const r = cvMapaG.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+    cvMapaG.width = Math.round(r.width * dpr); cvMapaG.height = Math.round(r.height * dpr);
+    const W = cvMapaG.width, H = cvMapaG.height, ctx = cvMapaG.getContext('2d');
+    const V = { x0: -40, x1: 620, z0: -50, z1: 610 };                               // recorte com a cidade, a selva e o aeroporto
+    const esc = Math.min(W / (V.x1 - V.x0), H / (V.z1 - V.z0)), ox = (W - (V.x1 - V.x0) * esc) / 2 - (V.x0 - MAPA.x0) * esc, oz = (H - (V.z1 - V.z0) * esc) / 2 - (V.z0 - MAPA.z0) * esc;
+    const toMM = (wx, wz) => [ox + (wx - MAPA.x0) * esc, oz + (wz - MAPA.z0) * esc];
+    ctx.fillStyle = '#1d3a2a'; ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(fundoMapa, ox, oz, (MAPA.x1 - MAPA.x0) * esc, (MAPA.z1 - MAPA.z0) * esc);
+    marcadoresMapa(ctx, toMM, W, H, esc, false);
+    const [jx, jz] = toMM(jogador.veiculo ? jogador.veiculo.x : jogador.x, jogador.veiculo ? jogador.veiculo.z : jogador.z), a = jogador.veiculo ? jogador.veiculo.ry : jogador.ry;
+    ctx.save(); ctx.translate(jx, jz); ctx.rotate(-a + Math.PI); ctx.fillStyle = '#fff'; ctx.strokeStyle = '#0b1220'; ctx.lineWidth = 2.5 * dpr; const k = 1.6 * dpr;
+    ctx.beginPath(); ctx.moveTo(0, -9 * k); ctx.lineTo(7 * k, 8 * k); ctx.lineTo(0, 4 * k); ctx.lineTo(-7 * k, 8 * k); ctx.closePath(); ctx.stroke(); ctx.fill(); ctx.restore();
+    // botões dos pontos (HTML por cima do canvas, para o toque)
+    // um ponto clicável em cada lugar e o nome ao lado, sem um nome cobrir o outro (tenta acima, abaixo, direita, esquerda)
+    elMapaPts.innerHTML = ''; const ocup = [];
+    for (const pt of PONTOS_TELEPORTE) {
+      const [x, y] = toMM(pt.x, pt.z), cx = x / dpr, cy = y / dpr;
+      const ir = ev => { ev.stopPropagation(); if (missaoEmCurso()) { mostrarToast('Termine a missão antes de viajar.'); return; } fecharMapa(); teleportar(pt); };
+      const pino = document.createElement('button'); pino.className = 'mapa-pino'; pino.style.left = cx + 'px'; pino.style.top = cy + 'px'; pino.title = pt.nome; pino.onclick = ir; elMapaPts.appendChild(pino);
+      const b = document.createElement('button'); b.className = 'mapa-pt'; b.textContent = pt.nome; b.onclick = ir; elMapaPts.appendChild(b);
+      const w = b.offsetWidth + 4, h = b.offsetHeight + 2;
+      const opc = [[cx - w / 2, cy - h - 9], [cx - w / 2, cy + 9], [cx + 10, cy - h / 2], [cx - w - 10, cy - h / 2], [cx - w / 2, cy - 2 * h - 12], [cx - w / 2, cy + h + 12]];
+      let [bx, by] = opc[0];
+      for (const [qx, qy] of opc) { if (!ocup.some(o => qx < o[0] + o[2] && qx + w > o[0] && qy < o[1] + o[3] && qy + h > o[1])) { bx = qx; by = qy; break; } }
+      ocup.push([bx, by, w, h]); b.style.left = bx + 'px'; b.style.top = by + 'px';
+    }
+  }
+  function abrirMapa() { if (modo !== 'jogo') return; mapaAberto = true; elMapaG.classList.remove('oculto'); desenharMapaGrande(); }
+  function fecharMapa() { mapaAberto = false; elMapaG.classList.add('oculto'); }
+  function alternarMapa() { mapaAberto ? fecharMapa() : abrirMapa(); }
+  elMinimap.addEventListener('click', abrirMapa);
+  elMapaG.addEventListener('click', e => { if (e.target === elMapaG || e.target.id === 'mapa-grande-fechar') fecharMapa(); });
+  addEventListener('resize', () => { if (mapaAberto) desenharMapaGrande(); });
 
   // ---- Abertura (passeio pulável pela cidade) → Sala (personagem, veículo e local) → Jogo
   let modo = 'jogo';
@@ -2393,7 +2409,7 @@ export async function iniciarJogo() {
   const alvoCam = new THREE.Vector3();
   const posCamDesejada = new THREE.Vector3();
   let tTotal = 0;
-  let minimapTimer = 1;
+  let minimapTimer = 1, tMapaG = 0;
   let fpsQuadros = 0;
   let fpsAcum = 0;
   let fpsAtual = 60;
@@ -2872,7 +2888,8 @@ export async function iniciarJogo() {
     minimapTimer += dt;
     if (minimapTimer >= qualAtual.minimapInterval) {
       minimapTimer = 0;
-      desenharMinimapa(focoX, focoZ, focoYaw);
+      desenharMinimapa(focoX, focoZ);
+      if (mapaAberto && (tMapaG += qualAtual.minimapInterval) > 0.5) { tMapaG = 0; desenharMapaGrande(); }
     }
     // sombras: o mapa de sombra é redesenhado a cada 2 quadros (metade do custo do passe de sombra)
     if (qualAtual.sombras) { renderer.shadowMap.autoUpdate = false; if ((quadroSombra = (quadroSombra + 1) % 2) === 0 || snapSombra) { renderer.shadowMap.needsUpdate = true; snapSombra = false; } }
