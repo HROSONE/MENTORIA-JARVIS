@@ -1389,7 +1389,7 @@ export async function construirCidade({
     o.rotation.y = td.ry;
     o.traverse(m => { if (m.isMesh) { m.castShadow = false; m.receiveShadow = false; } });
     mundo.add(o);
-    trafego.push({ o, x: td.x, sent: td.sent, vel: td.vel, min: -280, max: 760 });
+    trafego.push({ o, x: td.x, sent: td.sent, vel: td.vel, va: td.vel, parado: 0, min: -280, max: 760 });
   }
 
   // ====================================================================================================
@@ -1507,7 +1507,9 @@ export async function construirCidade({
     n.p.piscarAuto(true); n.p.rosto?.({ expressao: 'neutro', forca: 1, piscar: 0 }); n.p.tocar(n.acao);
   }
 
-  function atualizar(dt, t, focoX = 146, focoZ = 166) {
+  let obstaculos = [];                                                           // {x, z, r}: o jogo informa a cada quadro (jogador, veículo dele)
+  function atualizar(dt, t, focoX = 146, focoZ = 166, obs = null) {
+    if (obs) obstaculos = obs;
     atualizarChunks(focoX, focoZ, false);
 
     const maxT = Math.min(cfgQual.trafegoMax, trafego.length);
@@ -1515,7 +1517,24 @@ export async function construirCidade({
     for (let i = 0; i < trafego.length; i++) {
       const c = trafego[i];
       if (i >= maxT) { c.o.visible = false; continue; }
-      c.o.position.z += c.sent * c.vel * dt;
+      // segue a faixa mantendo distância: freia para o carro da frente e para obstáculos (jogador, veículos) na faixa
+      const cz = c.o.position.z; let livre = 1e9;
+      for (let j = 0; j < maxT; j++) {
+        if (j === i) continue; const o = trafego[j];
+        if (Math.abs(o.x - c.x) > 1.5) continue;
+        const d = (o.o.position.z - cz) * c.sent; if (d > 0 && d < livre) livre = d;
+      }
+      let porObs = false;
+      for (const ob of obstaculos) {
+        if (Math.abs(ob.x - c.x) > 1.3 + ob.r) continue;
+        const d = (ob.z - cz) * c.sent - ob.r; if (d > -2.5 && d < livre) { livre = Math.max(0, d); porObs = true; }
+      }
+      c.parado = Math.max(0, c.parado - dt);
+      // distância de parada ~ v²/(2·7 m/s²) + 7 m de folga
+      const alvo = c.parado > 0 ? 0 : Math.max(0, Math.min(c.vel, Math.sqrt(Math.max(0, livre - 7) * 2 * 7)));
+      c.va += Math.max(-14 * dt, Math.min(4 * dt, alvo - c.va));
+      c.buzina = porObs && livre < 16;                                              // parado ou freando por causa do jogador: buzina
+      c.o.position.z += c.sent * c.va * dt;
       if (c.sent > 0 && c.o.position.z > c.max) c.o.position.z = c.min;
       if (c.sent < 0 && c.o.position.z < c.min) c.o.position.z = c.max;
       const dx = c.x - focoX, dz = c.o.position.z - focoZ;
@@ -1587,6 +1606,7 @@ export async function construirCidade({
     aplicarQualidade,
     atualizar,
     npcs,
+    trafego,
     atingirNpc,
     getStats: () => ({ chunksVisiveis, chunksTotal: chunks.length, npcsCarregados: npcs.length }),
     mapaInfo: { RUA, VX, HZ, ROT, RX, TX, TZ, PISTA, selva: SELVA_INFO },

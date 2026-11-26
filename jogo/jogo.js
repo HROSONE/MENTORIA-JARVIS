@@ -1321,6 +1321,67 @@ export async function iniciarJogo() {
   }
   posicionarCheckpoint();
 
+  // ---- Trânsito da rodovia e pedestres x jogador: os carros freiam para quem está na faixa, batem de verdade e atropelam
+  const _obs = [];
+  function obstaculosTransito() {
+    _obs.length = 0;
+    const v = jogador.veiculo;
+    if (v) _obs.push({ x: v.x, z: v.z, r: v.raio * 0.6 });
+    else if (jogador.y < 2.5) _obs.push({ x: jogador.x, z: jogador.z, r: 0.4 });
+    for (const o of veiculos) if (o !== v && !o.voando && o.obj.visible && Math.abs(o.x - cidade.mapaInfo.RX) < 20) _obs.push({ x: o.x, z: o.z, r: o.raio * 0.6 });
+    return _obs;
+  }
+  let buzinaT = 0;
+  function interagirTransito(dt) {
+    const v = jogador.veiculo, R_TRAF = 2.0;
+    buzinaT -= dt;
+    for (const c of cidade.trafego || []) {
+      if (!c.o.visible) continue;
+      const cx = c.x, cz = c.o.position.z;
+      if (c.buzina && buzinaT <= 0 && Math.hypot(cx - (v ? v.x : jogador.x), cz - (v ? v.z : jogador.z)) < 22) { som.tocarBeep?.(392, 0.22, 0.05); setTimeout(() => som.tocarBeep?.(392, 0.3, 0.05), 260); buzinaT = 2.5; }
+      if (v) {
+        const dx = v.x - cx, dz = v.z - cz, d = Math.hypot(dx, dz), min = v.raio * 0.62 + R_TRAF * 0.8;
+        if (d >= min || d < 1e-3) continue;
+        const nx = dx / d, nz = dz / d;
+        v.x = cx + nx * min; v.z = cz + nz * min; v.obj.position.x = v.x; v.obj.position.z = v.z;
+        // velocidade relativa ao longo da normal (o carro do trânsito anda em z)
+        const rel = Math.sin(v.ry) * v.vel * nx + (Math.cos(v.ry) * v.vel - c.sent * c.va) * nz;
+        const imp = Math.max(0, -rel);
+        c.tBatida = Math.max(0, (c.tBatida || 0) - dt);
+        if (imp > 4 && c.tBatida <= 0) {                                         // batida de verdade (uma por encontro, não a cada quadro encostado)
+          v.dano?.(imp * 1.6); if (imp > 9) vida.dano((imp - 9) * 1.4, 'batida'); som.tocarBeep?.(90, 0.12, 0.25); tremor = Math.max(tremor, Math.min(0.5, imp * 0.03));
+          v.vel *= -0.3; c.tBatida = 0.8; c.parado = 6;
+        } else { if (rel < 0) v.vel *= 0.5; c.parado = Math.max(c.parado, 1.5); }    // encostado: empurra sem bater de novo
+        c.va = 0;
+      } else if (jogador.y < 2.5) {
+        const dx = jogador.x - cx, dz = jogador.z - cz, d = Math.hypot(dx, dz), min = R_TRAF * 0.75 + 0.35;
+        if (d >= min || d < 1e-3) continue;
+        jogador.x = cx + dx / d * min; jogador.z = cz + dz / d * min;
+        if (c.va > 5) { vida.dano(Math.min(60, c.va * 2.2), 'atropelado'); jogador.vy = 5; jogador.noChao = false; jogador.yPico = jogador.y; c.parado = 4; }
+      }
+    }
+    // atropelar pedestres: acima de ~18 km/h o pedestre cai (volta depois de 30 s, como na rajada)
+    if (v && Math.abs(v.vel) > 5 && cidade.npcs) {
+      for (const n of cidade.npcs) {
+        if (n.morto || !n.p.obj.visible) continue;
+        const p = n.p.obj.position, d = Math.hypot(p.x - v.x, p.z - v.z);
+        if (d < v.raio * 0.72 + 0.35) { cidade.atingirNpc(n, 2); v.vel *= 0.9; som.tocarBeep?.(140, 0.1, 0.2); }
+      }
+    }
+  }
+
+  // ponto livre mais próximo (nada de nascer dentro de um carro, poste ou parede): espiral de 0,8 m em 0,8 m até 12 m
+  function lugarLivre(x, z, r) {
+    const livre = (px, pz) => {
+      const c = resolverColisoes(px, pz, r); if (Math.hypot(c.x - px, c.z - pz) > 1e-3) return false;
+      return !veiculos.some(o => !o.voando && o.obj.visible && Math.hypot(o.x - px, o.z - pz) < o.raio * 0.78 + r + 0.1);
+    };
+    if (livre(x, z)) return [x, z];
+    for (let raio = 0.8; raio <= 12; raio += 0.8)
+      for (let k = 0, n = Math.ceil(raio * 8); k < n; k++) { const a = k / n * Math.PI * 2, px = x + Math.cos(a) * raio, pz = z + Math.sin(a) * raio; if (livre(px, pz)) return [px, pz]; }
+    return [x, z];
+  }
+
   // ---- Colisão círculo vs AABB com deslizamento suave
   function resolverColisoes(x, z, raio, y = -1e9) {
     let nx = Math.max(-90, Math.min(640, x));
@@ -1686,7 +1747,8 @@ export async function iniciarJogo() {
       v.obj.position.set(v.x, 0, v.z);
       v.obj.rotation.set(0, v.ry, 0);
     } else {
-      jogador.x = pt.x; jogador.z = pt.z; jogador.y = CALCADA; jogador.vy = 0; jogador.ry = pt.ang;
+      const [lx, lz] = lugarLivre(pt.x, pt.z, 0.45);
+      jogador.x = lx; jogador.z = lz; jogador.y = CALCADA; jogador.vy = 0; jogador.ry = pt.ang;
     }
     camYaw = pt.ang;
     snapCam = true;
@@ -2166,6 +2228,7 @@ export async function iniciarJogo() {
   let camFixa = null;                                                       // câmera parada (miniaturas e testes)
   for (const v of veiculos) v.vaga = { x: v.x, z: v.z, ry: v.ry };          // vaga original de cada veículo
   for (const v of veiculos) if (v.moto) estacionarMoto(v);
+  [jogador.x, jogador.z] = lugarLivre(jogador.x, jogador.z, 0.45);              // começo do jogo fora dos carros estacionados
   for (const v of veiculos) {
     danoVeiculo(v, efeitos, { aoExplodir: q => {
       const dj = Math.hypot(jogador.x - q.x, jogador.z - q.z);
@@ -2224,9 +2287,8 @@ export async function iniciarJogo() {
       // personagem junto ao para-lama dianteiro esquerdo, de frente para a câmera (que fica à frente e à direita)
       const meio = v.api?.dims?.L ? v.api.dims.L / 2 : v.raio * 1.15, larg = v.api?.dims?.W ? v.api.dims.W / 2 : v.raio * 0.45;
       const fx = Math.sin(pt.ang), fz = Math.cos(pt.ang), ex = Math.cos(pt.ang), ez = -Math.sin(pt.ang);
-      const res = resolverColisoes(pt.x + fx * meio * 0.55 + ex * (larg + 0.9), pt.z + fz * meio * 0.55 + ez * (larg + 0.9), 0.45);
-      jogador.x = res.x; jogador.z = res.z;
-    } else { jogador.x = pt.x; jogador.z = pt.z; }
+      [jogador.x, jogador.z] = lugarLivre(pt.x + fx * meio * 0.55 + ex * (larg + 0.9), pt.z + fz * meio * 0.55 + ez * (larg + 0.9), 0.45);
+    } else { [jogador.x, jogador.z] = lugarLivre(pt.x, pt.z, 0.45); }
     jogador.y = CALCADA; jogador.vy = 0; jogador.noChao = true; jogador.ry = pt.ang - 0.45;
     persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
     persAtual.inst.obj.rotation.y = jogador.ry;
@@ -2697,8 +2759,9 @@ export async function iniciarJogo() {
       atualizarTrex(dt, tTotal, ta[0], ta[1], ta[2]);
       focoX = fx; focoZ = fz;
     } else {
-      cidade.atualizar(dt, tTotal, focoX, focoZ);
+      cidade.atualizar(dt, tTotal, focoX, focoZ, obstaculosTransito());
       atualizarTrex(dt, tTotal, focoX, focoY, focoZ);
+      if (jogando) interagirTransito(dt);
     }
     const vDist2 = (qualAtual.viewDist + 20) * (qualAtual.viewDist + 20);
     for (let i = 0; i < veiculos.length; i++) {
@@ -2844,6 +2907,7 @@ export async function iniciarJogo() {
       npcs: (cidade.npcs || []).map(n => ({ x: +n.p.obj.position.x.toFixed(1), z: +n.p.obj.position.z.toFixed(1), vis: n.p.obj.visible, acertos: n.acertos || 0, morto: !!n.morto })),
       queimados: veiculos.filter(v => v.queimado).map(v => v.id) }),
     poderesObj: () => poderes,
+    cena: () => scene, cam: () => camera, cidade: () => cidade,
     modo: () => modo,
     fisica: () => ({ vida: vida.hp, terrenoMin: terreno ? Math.min(...terreno.h) : null, terrenoMax: terreno ? Math.max(...terreno.h) : null,
       cargas: veiculos.filter(v => v.api?.cacambas || v.api?.cargaAtual).map(v => [v.id, ...(v.api.cacambas || []).map(c => +c.carga.toFixed(2)), v.api.cargaAtual ? +v.api.cargaAtual().toFixed(2) : null]),
