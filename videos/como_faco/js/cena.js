@@ -286,7 +286,7 @@ let FLASH = 0, CHOQUE = 0;
 function corte(t, t0, d = 0.18) { return 1 - inv(t0, t0 + d, t); }
 
 // ---- 1. Gancho: moto em close, código atrás, ícones riscados, vira arame em "só código"
-function orbitaMoto(t, a0 = 0.62, va = 0.07) {
+function orbitaMoto(t, a0 = 0.62, va = 0.035) {
   const a = a0 + t * va, r = 4.7;
   cam.fov = 34; cam.updateProjectionMatrix();
   cam.position.set(Math.sin(a) * r, 0.32 + Math.sin(t * 0.5) * 0.03, Math.cos(a) * r);
@@ -416,7 +416,7 @@ function pModelos(t) {
   const tWhip = tPers - 0.25, kW = inv(tWhip - 0.18, tWhip + 0.18, t);
   if (t < tWhip) {
     // moto se montando
-    mostrar({ m: true, f: t > tMontar - 0.6 }); gm().position.set(0, 0, 0); fantasma.grupo ? 0 : 0;
+    mostrar({ m: true, f: true }); gm().position.set(0, 0, 0); fantasma.grupo ? 0 : 0;
     (fantasma.grupo || fantasma).position.set(0, 0, 0);
     const k = inv(tMontar - 0.1, tTri - 0.05, t);
     motoMontagem(t < tMontar - 0.1 ? 0 : k);
