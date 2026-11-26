@@ -48,6 +48,12 @@ Mundo aberto em Three.js r160, publicado na Vercel. A página inicial do site é
 ## Física da moto (jogo.js)
 - Entre-eixos de 1,375 m e esterço menor em alta.
 - Inclinação de equilíbrio na curva: `atan(v·ω/g)`, limitada a ±0,85 rad e suavizada. Ela levanta a frente um pouco ao acelerar e afunda ao frear.
+- **Velocidade (todos os veículos, 26/11):**
+  - **Motor:** `0,4·acel·gás·(1 − (v/vmax)³)`, o que dá 0–100 km/h em ~3 s na moto.
+  - **Solto:** perde `0,4 + 0,035v + 0,0006v²` m/s² (o triplo nas máquinas). Vai embalado: na moto, de 169 para 129 km/h em 4 s.
+  - **Freio:** `0,3·freio` (~9–10 m/s²). O acelerador sobe em rampa (`gasS`).
+  - **Antes:** acelerava a 24 m/s² e parava em 4 s, e o dono reclamou.
+- **Botões de toque dirigindo:** ficam em arco em volta do GÁS. Grau fica em cima do GÁS, Babalu em cima do RÉ e Drift à esquerda do RÉ. No carro, o Drift passa para cima do GÁS.
 - Parada: descanso abaixado e inclinada 0,11 rad para a esquerda (`estacionarMoto`).
 - **Manobras:**
   - **Grau** (Shift + W, ou botão Grau): empina na roda de trás até ~53°, com oscilação, e limita a ~97 km/h. Gira em volta do contato do pneu traseiro.

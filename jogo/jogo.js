@@ -2502,16 +2502,21 @@ export async function iniciarJogo() {
       const gas = v.queimado ? 0 : Math.max(-1, Math.min(1, frente));
       const dirInput = Math.max(-1, Math.min(1, -lado)); // + = esquerda
 
-      if (gas > 0.05) {
-        if (v.vel < -0.5) v.vel += v.freio * dt;
-        else v.vel = Math.min(v.velMax, v.vel + v.acel * gas * dt);
-      } else if (gas < -0.05) {
-        if (v.vel > 0.5) v.vel -= v.freio * dt;
-        else v.vel = Math.max(-v.velRe, v.vel + v.acel * 0.65 * gas * dt);
-      } else {
-        // Atrito natural
-        v.vel *= Math.exp(-1.55 * dt);
-        if (Math.abs(v.vel) < 0.08) v.vel = 0;
+      // Velocidade com física de verdade (26/11, o dono achou a moto "acelera e para rápido demais"):
+      // - motor: força máxima saindo do lugar e caindo perto da final (1 − (v/vmax)³); 0,4 × acel ≈ 0–100 km/h em ~3 s na moto
+      // - solto: freio-motor + rolamento + vento (≈ 1,8 m/s² a 100 km/h), a moto vai embalada em vez de parar em 4 s
+      // - freio: ~0,3 × freio (≈ 9–10 m/s², uma freada forte de verdade); o acelerador sobe e desce em rampa curta
+      v.gasS = (v.gasS || 0) + (gas - (v.gasS || 0)) * Math.min(1, dt * (Math.abs(gas) > Math.abs(v.gasS || 0) ? 5 : 9));
+      const g_ = v.gasS, va = Math.abs(v.vel), A0 = v.acel * 0.4;
+      const solto = (0.4 + 0.035 * va + 0.0006 * va * va) * (v.maquina ? 3 : 1);
+      if (g_ > 0.03 && v.vel > -0.5) {
+        const k = Math.max(0, 1 - Math.pow(Math.max(0, v.vel) / v.velMax, 3));
+        v.vel = Math.min(v.velMax, v.vel + (A0 * g_ * k - solto * (1 - g_)) * dt);
+      } else if (g_ > 0.03) v.vel = Math.min(0, v.vel + v.freio * 0.3 * g_ * dt);                 // estava de ré: freia
+      else if (g_ < -0.03 && v.vel > 0.5) v.vel = Math.max(0, v.vel + v.freio * 0.3 * g_ * dt);    // freio
+      else if (g_ < -0.03) v.vel = Math.max(-v.velRe, v.vel + (A0 * 0.6 * g_ + (v.vel < 0 ? solto * (1 + g_) : 0)) * dt);   // ré
+      else {                                                                                       // solto: embala
+        const d = solto * dt; v.vel = Math.abs(v.vel) <= d ? 0 : v.vel - Math.sign(v.vel) * d;
       }
 
       // moto: grau (empina na roda de trás), babalu (levanta a traseira na freada) e queimar pneu (acelera parado segurando o freio da frente)

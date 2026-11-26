@@ -337,6 +337,22 @@
   .tbtn-freio { background: rgba(239, 68, 68, 0.68); border-color: rgba(248, 113, 113, 0.85); height: 68px; }
   .tbtn-freio.ativo, .tbtn-freio:active { background: rgba(239, 68, 68, 0.95); transform: scale(0.95); }
   .touch-col { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  /* Dirigindo: botões em arco em volta do GÁS (o polegar alcança todos sem sair do pedal) */
+  #touch-carro-dir { display: block; width: 214px; height: 172px; }
+  #touch-carro-dir .touch-col { display: contents; }
+  #touch-carro-dir .tbtn, #touch-carro-dir .tbtn-pedal { position: absolute; }
+  #touch-carro-dir .tbtn { width: 56px; height: 56px; font-size: 11px; }
+  #touch-acel { right: 0; bottom: 0; width: 70px; height: 90px; }
+  #touch-freio { right: 80px; bottom: 0; width: 66px; height: 66px; }
+  #touch-grau { right: 7px; bottom: 100px; }
+  #touch-babalu { right: 85px; bottom: 76px; }
+  #touch-drift { right: 156px; bottom: 6px; }
+  #touch-sair { right: 156px; bottom: 76px; width: 48px !important; height: 48px !important; font-size: 10px !important; }
+  body:not(.na-moto) #touch-drift { right: 7px; bottom: 100px; }        /* carro: drift em cima do GÁS */
+  body:not(.na-moto) #touch-sair { right: 85px; bottom: 76px; }
+  #touch-ferr { position: absolute; right: 0; bottom: 162px; display: flex; gap: 6px; }
+  #touch-ferr.oculto { display: none; }
+  #touch-ferr .tbtn { position: static; width: 48px; height: 48px; }
 
   /* Layout super compacto para celular horizontal (landscape) e telas baixas */
   @media (pointer: coarse), (max-height: 540px) {
