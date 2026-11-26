@@ -1,4 +1,4 @@
-# "Encher pneu com fogo": Short 3D (rascunho para aprovação)
+# "Encher pneu com fogo": Short 3D
 
 - **Formato:** vertical 1080×1920, 30 qps, cerca de 45 s.
 - **Tema:** como o spray inflamável e o fogo encaixam o talão do pneu no aro, e por que isso é perigoso.
@@ -44,6 +44,25 @@
   - Névoa do spray em partículas.
   - Frente de chama em volta do anel, com shader de fogo (há base no `vulcao_milharal/js/vulcao.js` e no `lucas_poder/js/efeitos.js`).
   - Moléculas instanciadas (frias = lentas; quentes = rápidas e laranja), setas de pressão, fumaça depois do estalo e manômetro diegético.
-- **Cenário:** chão de borracharia (concreto com manchas) num estúdio escuro com luz de recorte. Ou o azul neutro, se você preferir.
+- **Cenário:** estúdio azul neutro (escolha do dono).
 - **Som (só gravações CC0):** spray (aerossol), isqueiro, "whoomp" do fogo, o estalo do talão, compressor e chiado de ar. Sem música.
 - **Render:** Three.js com llvmpipe (o caminho rápido), sem tremor de câmera.
+
+## Versão final (o que foi feito)
+- **Pneu:** procedural em Three.js (`biblioteca3d/veiculos/pneu/pneu.js`), não no Blender: o talão precisa mudar de forma (solto ↔ assentado) e o corte precisa abrir em tempo real.
+- **Operador:** captura real CMU 69_70 (agachar) + IK nas duas mãos; a lata e o isqueiro ficam presos à mão.
+- **Marca:** "HRYZ ANIMATION" no flanco do pneu, na lata de spray, no calibrador e na placa final.
+
+| t (s) | O que aparece |
+|---|---|
+| 0–3 | Gancho: o pneu solto no aro, as línguas de fogo saem pela fresta e o talão estala no lugar (0,8 s); fumaça |
+| 3–8 | O operador agachado borrifa o spray na fresta (geral, depois close de 3/4) |
+| 8–14 | Corte: o vapor (azul) se espalha e se mistura ao ar (branco) dentro do pneu |
+| 14–15,5 | O isqueiro acende (14,6 s) e o vapor pega fogo na fresta ("uuf", 15,0 s) |
+| 15,5–19 | Raio-x de cima: duas frentes de fogo correm pelo anel e se encontram no corte |
+| 19–26 | A seção em chamas, as moléculas agitadas, as setas de pressão, o talão sobe na aba: POP (21,6 s); o calibrador dispara |
+| 26–32 | O gás esfria, as moléculas param, o ponteiro cai; a mangueira do compressor encaixa e o ar chia |
+| 32–41 | Simulação em tom vermelho: o pneu estoura e o aro voa (34,2 s); a placa "NÃO TENTE EM CASA · HRYZ ANIMATION" |
+| 41–45 | Loop: volta à imagem do começo |
+
+**Som** (`sfx.py`, só gravações CC0): spray, isqueiro, boca de fogão acendendo (o "uuf"), incêndio de gasolina, estalo, vazamento de ar e compressor.

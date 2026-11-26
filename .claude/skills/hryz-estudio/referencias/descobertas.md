@@ -57,6 +57,16 @@ Registro do que funcionou e do que não funcionou, para não repetir erro. As re
 - **Vertical 9:16:** a largura visível é estreita (~22° com fov 40), então o objeto e o contador precisam estar quase na mesma linha de visão. Pôr o contador como objeto ao lado (cronômetro na mesa), e não um painel ao fundo.
 - **Mundo micro legível:** fibra finita com a ponta cortada de frente para a câmera em 3/4, mitocôndrias nos vãos do arranjo e rentes à membrana, casca de vidro com fresnel e cristas que acendem (`emissiveIntensity` pela média das acesas).
 
+## Fogo e raio-x (26/11, vídeo do pneu com fogo)
+- **Overlay com `MultiplyBlending` + `premultipliedAlpha` e opacidade 0 deixa o quadro PRETO** (multiplica por preto). Esconder o objeto (`visible = false`) quando não estiver em uso.
+- **Tamanho de partícula (`gl_PointSize`) tem que acompanhar a resolução**: `tam * projectionMatrix[1][1] * alturaDoQuadro * 0.5 / -mv.z`. Com um número fixo, a prévia em 540×960 e o render em 1080×1920 saem diferentes (metade do tamanho).
+- **Fogo bom sem textura:** partícula em gota no fragment shader (afina em cima, núcleo mais quente), mistura aditiva pura (`One, One`) e cor esfriando com a idade (amarelo → laranja → vermelho escuro). Textura de canvas com manchas virou "bolinhas quadradas".
+- **Seção em chamas:** uma malha plana na forma da cavidade, na face do corte, com fbm deformado correndo para fora. Lê muito melhor que partículas sozinhas.
+- **Raio-x:** borracha com `transparent`, opacidade ~0,3 e `depthWrite = false`, e as partículas com `renderOrder` maior (desenhadas depois). Sem isso o fogo dentro some.
+- **LatheGeometry:** o ponto é `(r·sen θ, y, r·cos θ)`. Partículas posicionadas com `(r·cos, r·sen)` caem do lado errado do corte.
+- **Objeto na mão:** fazer o IK do pulso e prender o objeto na mão (posição do osso + direção do antebraço), não o contrário.
+- Luz pontual de fogo perto de borracha preta tinge tudo de laranja: intensidade bem baixa (0,25) e o brilho vem das partículas.
+
 ## Voz e narração
 - **26/11:** pela primeira vez, o dono pediu uma voz criada por mim. Testei estas vozes em português:
   - Piper: faber, cadu, jeff;
