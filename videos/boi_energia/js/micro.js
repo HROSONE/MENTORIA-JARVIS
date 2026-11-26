@@ -100,8 +100,23 @@ export function criarMicro() {
   const matCr = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, emissive: 0xff7a20, emissiveIntensity: 1 });
   const cristas = new THREE.InstancedMesh(geoCr, matCr, NMI * NCR); cristas.frustumCulled = false; g.add(cristas);
   // glicogênio (grânulos escuros em rosetas) e partículas em suspensão
-  const NG = 160, glic = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.07, 1), new THREE.MeshStandardMaterial({ color: 0x5a1a20, roughness: 0.6 }), NG); glic.frustumCulled = false; g.add(glic);
-  const G = []; for (let i = 0; i < NG; i++) { const a = r() * Math.PI * 2, d = r() * (RFIB - 0.3); G.push(V((r() - 0.5) * 22, CENTRO.y + Math.sin(a) * d, CENTRO.z + Math.cos(a) * d)); }
+  const NG = 420, glic = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.075, 1), new THREE.MeshStandardMaterial({ color: 0xc89a3a, roughness: 0.45, emissive: 0x7a4a08, emissiveIntensity: 0.6 }), NG); glic.frustumCulled = false; g.add(glic);
+  const G = []; for (let i = 0; i < NG; i++) {                                  // rosetas: 6 grânulos em volta de um centro, nos vãos entre as miofibrilas
+    const ro = Math.floor(i / 6), rr2 = mulberry32(1000 + ro), a = rr2() * Math.PI * 2, d = 0.3 + rr2() * (RFIB - 0.6), cx = 3 + rr2() * 8.8, ca = (i % 6) / 6 * Math.PI * 2;
+    G.push({ p: V(cx + Math.cos(ca) * 0.12, CENTRO.y + Math.sin(a) * d + Math.sin(ca) * 0.12, CENTRO.z + Math.cos(a) * d + 0.05 * Math.cos(ca * 2)), ordem: (ro * 0.618034) % 1 });
+  }
+  // capilar (vaso de sangue) ao lado da fibra, com hemácias passando, e glicose saindo do sangue para dentro da fibra
+  const CAP = { y: CENTRO.y - 2.2, z: CENTRO.z + 3.3, r: 0.75 };
+  const vaso = new THREE.Mesh(new THREE.CylinderGeometry(CAP.r, CAP.r, 40, 48, 1, true).rotateZ(Math.PI / 2), matVidro(0xff5a5a, 0.25, 1.4)); vaso.position.set(2, CAP.y, CAP.z); g.add(vaso);
+  const geoHem = new THREE.TorusGeometry(0.22, 0.12, 12, 24); const NH = 40;
+  const hem = new THREE.InstancedMesh(geoHem, new THREE.MeshStandardMaterial({ color: 0xc8102a, roughness: 0.35, emissive: 0x500008, emissiveIntensity: 0.4 }), NH); hem.frustumCulled = false; g.add(hem);
+  const HM = []; for (let i = 0; i < NH; i++) HM.push({ f: r(), a: r() * Math.PI * 2, d: r() * 0.4, rot: new THREE.Euler(r() * 3, r() * 3, r() * 3) });
+  const NGL = 140, posG = new Float32Array(NGL * 3), tamG = new Float32Array(NGL);
+  const geoGl = new THREE.BufferGeometry(); geoGl.setAttribute('position', new THREE.BufferAttribute(posG, 3)); geoGl.setAttribute('tam', new THREE.BufferAttribute(tamG, 1));
+  const glic0 = new THREE.Points(geoGl, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { mapa: { value: texBrilho('255,250,220') } },
+    vertexShader: 'attribute float tam; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = tam * 900.0 / -mv.z; gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'uniform sampler2D mapa; void main(){ vec4 c = texture2D(mapa, gl_PointCoord); gl_FragColor = vec4(c.rgb * 1.3, c.a); }' }));
+  glic0.frustumCulled = false; g.add(glic0);
   // tampa do corte: disco escuro levemente translúcido (citoplasma) na ponta da fibra
   const tampa = new THREE.Mesh(new THREE.CircleGeometry(RFIB, 64).rotateY(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x5a1520, roughness: 0.6, transparent: true, opacity: 0.55, depthWrite: false })); tampa.position.set(11.95, CENTRO.y, CENTRO.z); g.add(tampa);
   const NP = 120, poeira = new THREE.InstancedMesh(new THREE.SphereGeometry(0.03, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffb0a0, transparent: true, opacity: 0.35 }), NP); poeira.frustumCulled = false; g.add(poeira);
@@ -114,14 +129,14 @@ export function criarMicro() {
     fragmentShader: 'uniform sampler2D mapa; void main(){ vec4 c = texture2D(mapa, gl_PointCoord); gl_FragColor = vec4(c.rgb * 1.6, c.a); }' });
   const atp = new THREE.Points(geoA, matA); atp.frustumCulled = false; g.add(atp);
   // medidor de ATP (diegético)
-  const med = new THREE.Group(); g.add(med); med.position.set(6.5, 4.2, -9); med.rotation.y = 0.75; med.scale.setScalar(0.8);
+  const med = new THREE.Group(); med.position.set(0.30, 0.50, -2.4); med.scale.setScalar(0.06);              // preso à câmera: canto de cima à direita
   med.add(new THREE.Mesh(new THREE.BoxGeometry(1.2, 7.2, 0.3), new THREE.MeshStandardMaterial({ color: 0x0b1020, roughness: 0.4, transparent: true, opacity: 0.85 })));
   const barra = new THREE.Mesh(new THREE.BoxGeometry(0.9, 6.8, 0.32), new THREE.MeshBasicMaterial({ color: 0xffd23f })); med.add(barra);
   const rot = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.1), new THREE.MeshBasicMaterial({ map: canvasTex(256, 120, (c, w, h) => { c.fillStyle = '#ffd23f'; c.font = '900 92px Inter, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('ATP', w / 2, h / 2 + 4); }), transparent: true }));
   rot.position.set(0, 4.4, 0.2); med.add(rot);
   return {
-    grupo: g, medidor: med,
-    atualizar(t, { energia = 1, contr = 0, med: mv = 1 } = {}) {
+    grupo: g, medidor: med, prenderMedidor(cam) { cam.add(med); },
+    atualizar(t, { energia = 1, contr = 0, med: mv = 1, carga = 0, estoque = energia } = {}) {
       for (const m of [mViz, mMio]) { m.userData.uni.uT.value = t; m.userData.uni.uContr.value = contr; }
       const lig = MI.map(o => clamp((energia - o.limiar * 0.98) / 0.04));
       for (let i = 0; i < NMI; i++) {
@@ -138,7 +153,17 @@ export function criarMicro() {
       }
       for (const im of [casca, miolo, cristas]) { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }
       const media = lig.reduce((a, b) => a + b, 0) / NMI; matCr.emissiveIntensity = 1.4 * media; matMiolo.emissiveIntensity = 0.35 * media;
-      for (let i = 0; i < NG; i++) { const p = G[i]; M.compose(V(p.x + 0.05 * Math.sin(t + i), p.y, p.z), Q.identity(), V(1, 1, 1).multiplyScalar(0.6 + energia * 0.5)); glic.setMatrixAt(i, M); }
+      for (let i = 0; i < NG; i++) { const o = G[i], k = clamp((estoque - o.ordem * 0.97) / 0.05); M.compose(o.p, Q.identity(), V(1, 1, 1).multiplyScalar(Math.max(0.001, k * (0.9 + 0.1 * Math.sin(t * 2 + i))))); glic.setMatrixAt(i, M); }
+      // hemácias correndo no capilar
+      for (let i = 0; i < NH; i++) { const o = HM[i], x = -16 + ((o.f * 36 + t * 3.2) % 36); Q.setFromEuler(new THREE.Euler(o.rot.x + t * 0.8, o.rot.y, o.rot.z)); M.compose(V(x, CAP.y + Math.sin(o.a) * o.d, CAP.z + Math.cos(o.a) * o.d), Q, V(1, 1, 0.55)); hem.setMatrixAt(i, M); }
+      hem.instanceMatrix.needsUpdate = true;
+      // glicose: sai do capilar e entra na fibra, indo até as mitocôndrias
+      for (let i = 0; i < NGL; i++) {
+        const o = MI[i % NMI], fase = (i * 0.618034) % 1, c = (t * 0.55 + fase) % 1;
+        const de = V(o.p.x + (fase - 0.5) * 3, CAP.y + 0.5, CAP.z - 0.4), p = de.lerp(o.p, c); p.y += Math.sin(c * Math.PI) * 0.4;
+        posG[i * 3] = p.x; posG[i * 3 + 1] = p.y; posG[i * 3 + 2] = p.z; tamG[i] = 0.32 * carga * Math.sin(c * Math.PI);
+      }
+      geoGl.attributes.position.needsUpdate = true; geoGl.attributes.tam.needsUpdate = true;
       glic.instanceMatrix.needsUpdate = true;
       for (let i = 0; i < NP; i++) { const p = PP[i]; M.compose(V(p.x + Math.sin(t * 0.2 + i) * 0.4, p.y + Math.sin(t * 0.3 + i * 1.3) * 0.3, p.z), Q.identity(), V(1, 1, 1)); poeira.setMatrixAt(i, M); }
       poeira.instanceMatrix.needsUpdate = true;
@@ -151,7 +176,7 @@ export function criarMicro() {
       }
       geoA.attributes.position.needsUpdate = true; geoA.attributes.tam.needsUpdate = true;
       barra.scale.y = Math.max(0.001, energia); barra.position.y = -3.4 + 3.4 * energia; barra.material.color.setHSL(0.13 * clamp(energia * 1.4), 0.95, 0.55);
-      med.visible = mv > 0.01; med.scale.setScalar(Math.max(0.001, mv) * 0.8);
+      med.visible = mv > 0.01; med.scale.setScalar(Math.max(0.001, mv) * 0.06);
     },
   };
 }

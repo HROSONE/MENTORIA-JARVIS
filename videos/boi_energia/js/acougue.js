@@ -188,6 +188,64 @@ function aplicarCorpo(homem, O, rest, clip, t, origem) {
   }
 }
 
+// ------------------------------------------------------------------------------------------------ bife herói
+// Contorno do bife (u = comprimento, v = largura, metros); a capa de gordura fica do lado +v.
+const BL = 0.105, BW = 0.068, BESP = 0.026;
+function contornoBife(a) { return [Math.cos(a) * BL * (1 + 0.05 * Math.sin(3 * a) + 0.03 * Math.cos(5 * a)), Math.sin(a) * BW * (1 + 0.06 * Math.cos(2 * a) - 0.04 * Math.sin(4 * a))]; }
+const GLSL_BIFE = `
+  float sdBife(vec2 p){ float a = atan(p.y, p.x); vec2 c = vec2(cos(a) * ${BL} * (1.0 + 0.05 * sin(3.0 * a) + 0.03 * cos(5.0 * a)), sin(a) * ${BW} * (1.0 + 0.06 * cos(2.0 * a) - 0.04 * sin(4.0 * a)));
+    return length(p) - length(c); }
+  // relevo animado: "fervilhar" (bolhinhas rápidas e finas) + abalos (feixes que contraem e soltam) + ondas que correm pelas fibras
+  float relevoBife(vec2 p, float t, float en){
+    vec3 q = vec3(p * 140.0, 0.0);
+    float ferv = n3(q * 1.6 + vec3(0.0, 0.0, t * 6.0)) - 0.5;
+    float ab = 0.0;
+    for (int i = 0; i < 4; i++) { float fi = float(i); vec2 c = vec2(sin(t * (0.37 + 0.11 * fi) + fi * 2.1) * 0.06, cos(t * (0.29 + 0.07 * fi) + fi * 1.3) * 0.035);
+      float pulso = pow(max(0.0, sin(t * (5.0 + 1.7 * fi) + fi * 1.9)), 3.0); ab += exp(-dot(p - c, p - c) / 0.00045) * pulso; }
+    float onda = sin(p.x * 260.0 - t * 14.0 + n3(vec3(p * 40.0, t)) * 5.0) * 0.5 + 0.5;
+    float contr = sin(t * 2.6) * 0.5 + 0.5;                                     // a peça inteira contrai e solta devagar
+    return en * (0.0016 * ferv + 0.0052 * ab + 0.0009 * onda + 0.0012 * contr * (1.0 - dot(p / vec2(0.1, 0.065), p / vec2(0.1, 0.065))));
+  }`;
+function criarBifeHeroi() {
+  const grupo = new THREE.Group();
+  const forma = new THREE.Shape(); for (let i = 0; i <= 96; i++) { const [x, y] = contornoBife(i / 96 * Math.PI * 2); i ? forma.lineTo(x, y) : forma.moveTo(x, y); }
+  const corpo = new THREE.Mesh(new THREE.ExtrudeGeometry(forma, { depth: BESP - 0.004, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 4, curveSegments: 96 }).rotateX(-Math.PI / 2).translate(0, 0.002, 0),
+    [matCarne(21, 'corte'), matCarne(21, 'lado')]);
+  corpo.castShadow = corpo.receiveShadow = true; grupo.add(corpo);
+  // face de corte densa por cima (descarta o que fica fora do contorno)
+  const geo = new THREE.PlaneGeometry(BL * 2.2, BW * 2.3, 260, 170).rotateX(-Math.PI / 2);
+  const uni = { uT: UNI_CARNE.uT, uEn: UNI_CARNE.uEn, uRigor: UNI_CARNE.uRigor };
+  const m = new THREE.MeshPhysicalMaterial({ map: TEX.corte.clone(), normalMap: TEX.corteN.clone(), normalScale: new THREE.Vector2(0.35, 0.35), roughnessMap: TEX.corteR.clone(), roughness: 1.0,
+    clearcoat: 0.6, clearcoatRoughness: 0.32, sheen: 0.4, sheenColor: new THREE.Color(0.6, 0.12, 0.1) });
+  for (const tx of [m.map, m.normalMap, m.roughnessMap]) { tx.needsUpdate = true; tx.repeat.set(1.15, 0.75); tx.offset.set(0.31, 0.17); }
+  const gord = TEX.gord.clone(); gord.needsUpdate = true;
+  m.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, uni); sh.uniforms.uGord = { value: gord };
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uT, uEn, uRigor; varying vec2 vB; ' + GLSL_RUIDO + GLSL_BIFE)
+      .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
+        { vec2 p = vec2(position.x, -position.z); float e = 0.0006, h0 = relevoBife(p, uT, uEn);
+          float hx = relevoBife(p + vec2(e, 0.0), uT, uEn) - h0, hz = relevoBife(p + vec2(0.0, e), uT, uEn) - h0;
+          objectNormal = normalize(vec3(-hx / e, 1.0, hz / e)); }`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        vB = vec2(position.x, -position.z);
+        float borda = smoothstep(0.0, -0.006, sdBife(vB));                        // na borda não sobe (fica colado ao corpo)
+        transformed.y += BESP_Y + relevoBife(vB, uT, uEn) * borda - 0.0015 * uRigor;`.replace('BESP_Y', (BESP + 0.0028).toFixed(4)));
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uT, uEn, uRigor; uniform sampler2D uGord; varying vec2 vB; ' + GLSL_RUIDO + GLSL_BIFE)
+      .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n if (sdBife(vB) > 0.0) discard;')
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        float v = vB.y / ${BW.toFixed(3)} + 0.08 * (n3(vec3(vB * 60.0, 1.0)) - 0.5);
+        float capa = smoothstep(0.80, 0.86, v), fascia = smoothstep(0.74, 0.80, v) * (1.0 - capa);
+        diffuseColor.rgb *= vec3(0.86, 0.80, 0.82);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.80, 0.80, 0.86), fascia * 0.8);
+        diffuseColor.rgb = mix(diffuseColor.rgb, texture2D(uGord, vB * 6.0).rgb, capa);
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.6, 0.45, 0.5), uRigor * 0.45);
+        diffuseColor.rgb *= 1.0 - 0.10 * smoothstep(0.0015, 0.004, relevoBife(vB, uT, uEn));   // onde o feixe contrai, escurece`);
+  };
+  m.customProgramCacheKey = () => 'bifeHeroi';
+  const face = new THREE.Mesh(geo, m); face.receiveShadow = true; grupo.add(face);
+  return { grupo };
+}
+
 // ------------------------------------------------------------------------------------------------ montagem
 export async function criarAcougue() {
   const g = new THREE.Group();
@@ -215,10 +273,10 @@ export async function criarAcougue() {
     m.userData.x0 = -0.05 + i * (ESP + 0.0005); m.position.set(m.userData.x0, TABUA_Y, 0.02); g.add(m); fatias.push(m);
   }
   const bifes = [];
-  for (let i = 0; i < 3; i++) {
-    const m = new THREE.Mesh(gf, matsCarne(10 + i)); m.castShadow = true; m.receiveShadow = true;
-    m.rotation.z = Math.PI / 2; m.rotation.y = 0.3 * (i - 1); m.position.set(-0.27 + i * 0.012, TABUA_Y + ESP / 2 + 0.004 + i * 0.002, -0.08 + i * 0.09); g.add(m); bifes.push(m);
-  }
+  // um bife de apoio atrás (cortado antes)
+  { const m = new THREE.Mesh(gf, matsCarne(11)); m.castShadow = m.receiveShadow = true; m.rotation.set(0, 0.5, Math.PI / 2); m.position.set(-0.36, TABUA_Y + ESP / 2 + 0.004, -0.10); g.add(m); bifes.push(m); }
+  // BIFE HERÓI: deitado, a face de corte é uma malha densa que borbulha e contrai de verdade (geometria), vista de frente
+  const heroi = criarBifeHeroi(); heroi.grupo.position.set(-0.27, TABUA_Y, 0.07); heroi.grupo.rotation.y = Math.PI / 2 + 0.12; g.add(heroi.grupo);
   // cutelo: lâmina retangular com furo, gume afiado, cabo de polipropileno preto com 3 rebites. Origem = ponto da pegada (meio do cabo)
   const cutelo = new THREE.Group(); g.add(cutelo);
   const lam = new THREE.Shape(); lam.moveTo(0.03, -0.004); lam.lineTo(0.215, -0.004); lam.quadraticCurveTo(0.235, -0.004, 0.235, 0.02); lam.lineTo(0.232, 0.10); lam.lineTo(0.03, 0.10); lam.lineTo(0.03, -0.004);
@@ -239,7 +297,7 @@ export async function criarAcougue() {
   // cronômetro de cozinha em cima da mesa, ao lado da carne: "tempo desde o abate"
   const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 400; const cx = cv.getContext('2d');
   const texRel = new THREE.CanvasTexture(cv); texRel.colorSpace = THREE.SRGBColorSpace;
-  const painel = new THREE.Group(); g.add(painel); painel.position.set(-0.14, TABUA_Y + 0.03, 0.19); painel.rotation.set(-0.45, 0.10, 0, 'YXZ'); painel.scale.setScalar(0.15);
+  const painel = new THREE.Group(); g.add(painel); painel.position.set(-0.25, TABUA_Y + 0.03, 0.235); painel.rotation.set(-0.55, 0, 0, 'YXZ'); painel.scale.setScalar(0.15);
   const caixaR = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.36, 0.14), new THREE.MeshStandardMaterial({ color: 0x111418, roughness: 0.4 })); painel.add(caixaR);
   const tela = new THREE.Mesh(new THREE.PlaneGeometry(0.76, 0.297), new THREE.MeshBasicMaterial({ map: texRel, toneMapped: false })); tela.position.z = 0.071; painel.add(tela);
   const pe = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.06, 0.30), new THREE.MeshStandardMaterial({ color: 0x1b1e22, roughness: 0.5 })); pe.position.set(0, -0.19, -0.10); painel.add(pe);   // base inclinada

@@ -65,13 +65,13 @@ export async function construir() {
   pasto = criarPasto(); pasto.grupo.position.set(0.6, 0, 0); mA().add(pasto.grupo);
   boi = await new Boi().carregar('../biblioteca3d/animais/boi/boi.glb'); mA().add(boi.grupo);
   // M: dentro do músculo
-  micro = criarMicro(); mM().add(micro.grupo);
+  micro = criarMicro(); mM().add(micro.grupo); micro.prenderMedidor(cam);
   const lm = new THREE.PointLight(0xffd9b0, 400, 60); lm.position.set(4, 8, 10); mM().add(lm); mM().add(new THREE.AmbientLight(0x803040, 1.2));
   const lm2 = new THREE.DirectionalLight(0xff9aa0, 1.2); lm2.position.set(-5, -3, 6); mM().add(lm2);
   // C: açougue
   estudio(mC()); luzes(mC(), V(0, 1.0, 0), 2.2);
   acougue = await criarAcougue(); mC().add(acougue.grupo);
-  window.__dbg = { acougue, boi, micro, cam };
+  window.__dbg = { acougue, boi, micro, cam, renderer, scene };
   return { total: TOTAL };
 }
 
@@ -85,7 +85,7 @@ function mover(t, t0, t1, p0, a0, p1, a1, fov0 = 40, fov1 = fov0, e = suave) {
 export function atualizar(t) {
   const pl = plano(t);
   const mundo = { gancho: 'C', pasto: 'A', digestao: 'A', celulas: 'M', abate: 'A', acougue: 'C', fervilha: (t > 39 && t < 43) ? 'M' : 'C', rigor: (t > 49.5 && t < 52) ? 'M' : 'C' }[pl.id];
-  mA().visible = mundo === 'A'; mM().visible = mundo === 'M'; mC().visible = mundo === 'C';
+  mA().visible = mundo === 'A'; mM().visible = mundo === 'M'; mC().visible = mundo === 'C'; micro.medidor.visible = mundo === 'M';
   const min = minutos(t);
   if (mundo === 'A') {
     const vivo = t < T_TIRO + 0.05;
@@ -111,9 +111,10 @@ export function atualizar(t) {
     }
   } else if (mundo === 'M') {
     let energia = 1, contr = 0.4;
-    if (pl.id === 'celulas') { energia = lerp(0.12, 1, suave(inv(17.2, 21, t))); contr = 0.25; }
-    else { energia = atp(min); contr = tremorCarne(min) * 1.2; }
-    micro.atualizar(t, { energia, contr, med: pl.id === 'celulas' ? suave(inv(17, 17.8, t)) : 1 });
+    let carga = 0, estoque;
+    if (pl.id === 'celulas') { carga = suave(inv(16.4, 17.2, t)) * (1 - suave(inv(21.2, 22, t))); energia = lerp(0.05, 1, suave(inv(17.4, 20.2, t))); estoque = lerp(0.0, 1, suave(inv(18.6, 21.6, t))); contr = 0.2; }
+    else { energia = atp(min); estoque = energia; contr = tremorCarne(min) * 1.2; }
+    micro.atualizar(t, { energia, contr, carga, estoque, med: pl.id === 'celulas' ? suave(inv(16.8, 17.4, t)) : 1 });
   } else {
     const en = pl.id === 'gancho' ? 1.0 : tremorCarne(min);
     const rigor = suave(inv(360, 720, min));
@@ -130,8 +131,8 @@ const BOI_C = V(0.3, 0.85, 0);
 function camera(t, pl) {
   const u = t - pl.t0;
   switch (pl.id) {
-    case 'gancho':   // plano detalhe da carne que pulsa, com o relógio atrás (push-in)
-      mover(t, 0, 3.5, V(-0.17, 1.33, 0.50), V(-0.17, 0.95, 0.07), V(-0.17, 1.26, 0.43), V(-0.17, 0.95, 0.07), 40, 37); break;
+    case 'gancho':   // o bife herói de frente, o cronômetro logo à frente (push-in lento)
+      mover(t, 0, 3.5, V(-0.25, 1.27, 0.40), V(-0.25, 0.925, 0.155), V(-0.25, 1.23, 0.36), V(-0.25, 0.925, 0.150), 40, 38); break;
     case 'pasto':
       if (t < 6.6) mover(t, 3.5, 6.6, V(3.9, 0.75, 3.1), V(0.3, 0.75, 0), V(3.5, 0.65, 1.8), V(0.45, 0.7, 0), 38);         // contra-plongée, órbita
       else mover(t, 6.6, 9.5, V(2.2, 0.85, 1.2), V(0.95, 0.42, 0.0), V(1.65, 0.68, 0.68), V(0.96, 0.38, 0.0), 38, 34);      // push-in na boca
@@ -144,32 +145,31 @@ function camera(t, pl) {
       } else mover(t, 15.0, 16, V(2.4, 1.9, -5.0), V(0.0, 0.95, -0.1), V(-0.55, 1.0, -0.75), V(-0.75, 0.98, -0.25), 40, 28, x => x * x);   // mergulho no músculo
       break;
     }
-    case 'celulas':
-      if (t < 18.8) mover(t, 16, 18.8, V(34, 12, 22), V(5, 0, -4), V(19, 3.5, 5.5), V(9, 0, -4), 40, 40, x => 1 - (1 - x) ** 2);
-      else mover(t, 18.8, 22, V(19, 3.5, 5.5), V(9, 0, -4), V(12.6, 1.4, 0.6), V(8.6, 0.1, -3.7), 40, 38);
+    case 'celulas':  // capilar → glicose entrando → mitocôndrias acendendo → glicogênio (estoque) enchendo
+      if (t < 18.2) mover(t, 16, 18.2, V(26, 4, 14), V(8, -1.0, -3), V(19.5, 2.0, 8.5), V(8.5, -0.9, -3), 40, 40, x => 1 - (1 - x) ** 2);
+      else mover(t, 18.2, 22, V(19.5, 2.0, 8.5), V(8.5, -0.9, -3), V(13.6, 1.0, 1.4), V(9, -0.3, -3.6), 40, 40);
       break;
     case 'abate':
       if (t < T_TIRO) mover(t, 22, T_TIRO, V(0.85, 1.95, 1.05), V(1.22, 1.22, 0), V(0.95, 1.85, 0.85), V(1.22, 1.22, 0), 40, 36);   // por cima e por trás da cabeça (testa, chifres e a pistola)
-      else mover(t, T_TIRO, 26.5, V(3.8, 0.75, 2.9), V(0.2, 0.55, 0.2), V(3.3, 0.6, 2.6), V(0.2, 0.45, 0.3), 40, 40);
+      else { const q = suave(inv(T_TIRO + 0.15, T_TIRO + 1.9, t));                 // a câmera acompanha o corpo do boi em pé até ele no chão
+        olhar(V(4.4, 1.7, 3.8).lerp(V(3.7, 1.5, 3.4), suave(inv(T_TIRO, 26.5, t))), V(0.35, 0.85, 0.1).lerp(V(0.0, 0.35, 1.05), q), 40); }
       break;
     case 'acougue':
       if (t < 30.4) mover(t, 26.5, 30.4, V(0.55, 1.0, 2.1), V(0.0, 1.2, -0.3), V(0.45, 1.05, 1.7), V(0.0, 1.15, -0.25), 40, 40);
       else mover(t, 30.4, 34, V(-0.50, 1.14, 0.36), V(-0.03, 1.0, -0.02), V(-0.42, 1.10, 0.30), V(-0.03, 0.99, -0.02), 40, 38);   // de lado (o lado do cutelo): a lâmina cai entre as fatias
       break;
     case 'fervilha':
-      if (t < 39) mover(t, 34, 39, V(-0.12, 1.07, 0.25), V(0.03, 0.96, 0.02), V(-0.08, 1.03, 0.17), V(0.03, 0.96, 0.02), 40, 34);
-      else if (t < 43) mover(t, 39, 43, V(12.6, 1.4, 0.6), V(8.6, 0.1, -3.7), V(16.5, 2.6, 3.8), V(9, 0, -4), 38, 40);
-      else mover(t, 43, 47, V(-0.19, 1.28, 0.45), V(-0.20, 0.95, 0.05), V(-0.19, 1.25, 0.42), V(-0.20, 0.95, 0.05), 40, 38);
+      if (t < 39) mover(t, 34, 39, V(-0.25, 1.14, 0.22), V(-0.25, 0.935, 0.07), V(-0.25, 1.10, 0.19), V(-0.25, 0.935, 0.07), 40, 38);       // macro: a face de corte fervilhando
+      else if (t < 43) mover(t, 39, 43, V(13.2, 1.0, 1.2), V(9, -0.2, -3.6), V(15.5, 1.8, 3.2), V(9, -0.4, -3.8), 40, 40);                 // células apagando
+      else mover(t, 43, 47, V(-0.25, 1.25, 0.38), V(-0.25, 0.925, 0.15), V(-0.25, 1.23, 0.36), V(-0.25, 0.925, 0.15), 40, 39);
       break;
     case 'rigor':
-      if (t < 49.5) mover(t, 47, 49.5, V(-0.06, 1.07, 0.42), V(-0.12, 0.97, 0.18), V(-0.065, 1.05, 0.39), V(-0.12, 0.97, 0.18), 40, 38);
-      else if (t < 52) mover(t, 49.5, 52, V(16.5, 2.6, 3.8), V(9, 0, -4), V(13.5, 1.6, 1.2), V(8.8, 0.1, -3.8), 40, 40);
-      else mover(t, 52, 55, V(-0.19, 1.16, 0.34), V(-0.20, 0.95, 0.05), V(-0.19, 1.31, 0.47), V(-0.20, 0.95, 0.05), 36, 40);   // volta ao quadro 0 (pull-out até a mesma posição)
+      if (t < 49.5) mover(t, 47, 49.5, V(-0.25, 1.12, 0.50), V(-0.25, 0.975, 0.225), V(-0.25, 1.11, 0.48), V(-0.25, 0.975, 0.225), 40, 38);    // o cronômetro correndo até 12 h
+      else if (t < 52) mover(t, 49.5, 52, V(15.5, 1.8, 3.2), V(9, -0.4, -3.8), V(13.6, 1.1, 1.6), V(9, -0.2, -3.6), 40, 40);             // a última mitocôndria apaga
+      else mover(t, 52, 55, V(-0.25, 1.15, 0.26), V(-0.25, 0.93, 0.10), V(-0.25, 1.27, 0.40), V(-0.25, 0.925, 0.155), 38, 40);              // volta ao quadro 0
       break;
   }
-  // câmera na mão leve sempre; o tiro tem o único tremor forte
-  const forte = pl.id === 'abate' && t > T_TIRO ? 4 * Math.exp(-(t - T_TIRO) * 1.6) * (t < T_TIRO + 2.4 ? 1 : 0.2) : 0;
-  tremor(cam, t, (pl.id === 'celulas' ? 0.6 : 0.35) + forte, 1, 3);
+  // sem tremor de câmera (pedido do dono, 26/11): só movimentos suaves
 }
 
 export function efeitos(t) {

@@ -73,3 +73,5 @@ Os `.ogg` não vão para o git; para baixar de novo: `sh baixar.sh`. Página de 
 | 2891 | Bird flight | 2,6 s | trex_corrida: pássaros fugindo do rugido |
 | 2893 | Bird flight | 1,9 s | trex_corrida: pássaros fugindo |
 | 3616 | Forest ambience, sika deer rut calls | — | trex_corrida: bramido do rugido |
+| 0986 | Horse eating grass #1 | 54 s | boi_energia: arrancar e mastigar capim |
+| 0990 | Horse eating grass #2 | 21 s | boi_energia: mastigar de perto |
