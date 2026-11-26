@@ -1,4 +1,4 @@
-# "A carne que ainda se mexe": Short 3D (rascunho para aprovação)
+# "A carne que ainda se mexe": Short 3D
 
 - **Formato:** vertical 1080×1920, 30 qps, ~55 s.
 - **Cenário:** fundo azul neutro de estúdio (o mesmo do vídeo da câmara de ar), com uma ilha de pasto e depois a mesa do açougueiro.
@@ -37,3 +37,27 @@
 - **Cutelo, mesa de inox e tábua de polietileno, peças de carne** com fibras, gordura entremeada e brilho úmido, e uma superfície que pulsa com shader de contração.
 - **Células e mitocôndrias** procedurais (cristas internas), com o ATP como pontos de luz.
 - **Já existem:** fundo azul de estúdio (`camara_ar`), capim (`tufos-capim` e gramados da cidade), mesa-madeira (base), núcleo de render rápido (llvmpipe) e a voz Hryz (`como_faco/voz.py`).
+
+## Versão final (55 s, sem narração): tempos para o dono narrar
+| t (s) | O que aparece | Fala sugerida |
+|---|---|---|
+| 0,0–3,5 | Bifes de contra-filé na tábua; o cronômetro marca 07:00 desde o abate | "Essa carne foi cortada há 7 minutos... e ainda está viva por dentro." |
+| 3,5–9,5 | O Nelore pastando; o close mostra a boca arrancando o capim | "Tudo começa no pasto." |
+| 9,5–16 | Raio-x: o capim desce pelo esôfago até o rúmen, que fermenta, e a energia vai para os músculos | "O capim fermenta no rúmen e vira combustível para cada músculo." |
+| 16–22 | Dentro da fibra: as mitocôndrias acendem e o medidor de ATP enche | "As mitocôndrias guardam essa energia em forma de ATP." |
+| 22–26,5 | A pistola de dardo cativo encosta na testa; clarão; o boi cai | "Depois do abate, o sangue para..." |
+| 26,5–34 | O açougueiro corta os bifes com o cutelo | "...mas as células ainda têm ATP." |
+| 34–47 | A carne treme e se contrai; as mitocôndrias apagam uma a uma; o cronômetro chega a ~1 h | "Enquanto sobra energia, o músculo se contrai sozinho: minutos, às vezes perto de uma hora." |
+| 47–55 | O cronômetro vai a 12 h; a carne para e escurece (rigor mortis); volta à imagem do começo | "Quando o ATP acaba de vez, umas 12 horas depois, vem o rigor mortis. E a carne para." |
+
+## Como foi feito
+- **Boi:** `biblioteca3d/animais/boi/criar_boi.py` (Blender, por script) gera o `boi.glb`, com 90 mil faces, 31 ossos, pelo curto no shader e cor por vértice. As poses são feitas no `js/boi.js`.
+- **Açougueiro:** `biblioteca3d/personagens/elenco/gerador/personagens8.py` gera o `acougueiro.glb`.
+  - O corpo usa uma captura real da CMU (62_08, "martelando"), aplicada por retarget.
+  - O braço do cutelo e a mão da luva usam IK (`js/acougue.js`).
+- **Carne:** texturas geradas por `biblioteca3d/objetos/carne/gerar_texturas.py`.
+  - Face de corte: feixes de fibra, tecido conjuntivo e marmoreio.
+  - Lateral: grão das fibras.
+  - O tremor é um relevo animado no shader, com amplitude igual ao ATP que resta.
+- **Células:** `js/micro.js` (fibra aberta, miofibrilas com sarcômeros, mitocôndrias com cristas, ATP, glicogênio).
+- **Som:** `sfx.py`, só com gravações CC0 do BigSoundBank (mugido 2383, quedas e impactos) e estalos curtos.

@@ -28,6 +28,23 @@ Registro do que funcionou e do que não funcionou, para não repetir erro. As re
 - O dono descreve a ação física, e eu sigo à risca. Ex.: a câmara de ar entra **deitada**, **por cima** do pneu, puxada **por trás**.
 - A demora irrita: medir e acelerar antes de deixar o render rodando por horas. Avisar o tempo real (medido), não o estimado.
 
+## Detalhe e movimento (26/11, vídeo do boi: o dono achou as imagens "com poucos detalhes")
+- **Carne procedural no shader saiu com cara de plástico**, e o voronoi forte ficou parecendo azulejo.
+  - O que resolveu foi gerar as texturas em Python, com numpy e Pillow:
+    - feixes de fibra com bordas curvas (deformação em duas escalas);
+    - tecido conjuntivo bem discreto;
+    - marmoreio em veios ramificados (ruído "crista");
+    - normal e rugosidade próprias.
+  - O tremor ficou como relevo animado na normal, pelas derivadas de tela (`dFdx(-vViewPosition)`, como o bump do three).
+  - O `modelMatrix` não existe no fragment shader.
+- **Mixamo pede login da Adobe.** No lugar, usar as capturas da CMU que o projeto já baixa (`biblioteca3d/mocap/baixar.py`).
+  - Para o elenco: retarget por direção com os nomes de ossos do elenco (`aplicarCorpo` no `boi_energia/js/acougue.js`), ancorado no lugar.
+  - A ação forte (o golpe do cutelo) vai por IK, com preparação, golpe acelerando, parada no impacto e recuperação.
+  - Uma captura de martelar dá o peso e a cabeça olhando a peça.
+- **Posicionar a raiz do personagem:** somar a diferença (raiz − quadril no mundo) em 2 passadas. A cópia direta deixava o boneco 1 m abaixo do chão.
+- **Vertical 9:16:** a largura visível é estreita (~22° com fov 40), então o objeto e o contador precisam estar quase na mesma linha de visão. Pôr o contador como objeto ao lado (cronômetro na mesa), e não um painel ao fundo.
+- **Mundo micro legível:** fibra finita com a ponta cortada de frente para a câmera em 3/4, mitocôndrias nos vãos do arranjo e rentes à membrana, casca de vidro com fresnel e cristas que acendem (`emissiveIntensity` pela média das acesas).
+
 ## Voz e narração
 - **26/11:** pela primeira vez, o dono pediu uma voz criada por mim. Testei estas vozes em português:
   - Piper: faber, cadu, jeff;
