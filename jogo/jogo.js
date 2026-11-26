@@ -595,6 +595,18 @@ function converterParaLambert(root) {
 // Viatura Ford Crown Victoria P71 otimizada para tempo real:
 // Mantém a carroceria, pintura "POLICE · HRYZ CITY 117", pushbar, giroflex e rodas que giram/esterçam,
 // mas corta ~85.000 triângulos e ~80 draw calls (troca as 4 rodas de 18k tris por rodas leves, oculta interior invisível e troca clearcoat por Phong brilhoso).
+// Sombra só nas peças grandes: parafusos, lâmpadas, emblemas e grades pequenas não mudam a sombra, mas cada uma custava uma
+// chamada de desenho a mais no passe de sombra. Raio da peça (no mundo) abaixo de 0,3 m não projeta sombra.
+function projetaSombra(m) {
+  if (m.userData.sombraOk === undefined) {
+    if (m.name === 'sombraChao' || m.parent?.name === 'sombraChao') return (m.userData.sombraOk = false);
+    const g = m.geometry; if (!g.boundingSphere) g.computeBoundingSphere();
+    const e = new THREE.Vector3(); m.updateWorldMatrix(true, false); m.matrixWorld.decompose(new THREE.Vector3(), new THREE.Quaternion(), e);
+    m.userData.sombraOk = (g.boundingSphere?.radius || 0) * Math.max(e.x, e.y, e.z) >= 0.3;
+  }
+  return m.userData.sombraOk;
+}
+
 function criarViaturaP71Otimizada(modoCompleto = false) {
   const p71 = criarViatura({
     livery: 'preto-branco',
@@ -695,7 +707,7 @@ function criarViaturaP71Otimizada(modoCompleto = false) {
         m.material = pbrAtivo ? m.userData.matPbr : m.userData.matLeve;
       }
       if (m.name !== 'sombraChao' && m !== facho) {
-        m.castShadow = sombraAtiva;
+        m.castShadow = sombraAtiva && projetaSombra(m);
       }
     });
     for (const l of luzesDinamicas) l.visible = pbrAtivo;
@@ -933,7 +945,7 @@ export async function iniciarJogo() {
       o.traverse(m => {
         if (m.isMesh) {
           if (!qualAtual.pbr && m.userData.matLeve) m.material = m.userData.matLeve;
-          m.castShadow = qualAtual.sombraPrincipal;
+          m.castShadow = qualAtual.sombraPrincipal && projetaSombra(m);
           m.receiveShadow = true;
         }
       });
@@ -982,7 +994,7 @@ export async function iniciarJogo() {
       o.traverse(m => {
         if (m.isLight) { luzesRemover.push(m); return; }
         if (!m.isMesh) return;
-        m.castShadow = qualAtual.sombraPrincipal; m.receiveShadow = true;
+        m.castShadow = qualAtual.sombraPrincipal && projetaSombra(m); m.receiveShadow = true;
         const mat = m.material;
         // versão leve (Lambert) só para o que não acende: lâmpadas, faróis e giroflex mantêm o material emissivo do modelo
         if (mat && !Array.isArray(mat) && mat.isMeshStandardMaterial && !(mat.emissive && mat.emissive.getHex() !== 0)) {
@@ -1297,7 +1309,12 @@ export async function iniciarJogo() {
 
   // ---- Checkpoint Tour (anéis dourados nos marcos da cidade)
   let cpIdx = 0;
+  // progresso salvo no aparelho: pontos e o próximo checkpoint voltam na próxima vez que o jogo abrir
+  const CHAVE_PROG = 'hryz_progresso_v1';
+  function salvarProgresso() { try { localStorage.setItem(CHAVE_PROG, JSON.stringify({ score, cpIdx })); } catch (_) {} }
   let score = 0;
+  try { const pg = JSON.parse(localStorage.getItem('hryz_progresso_v1') || 'null'); if (pg && Number.isFinite(pg.score)) { score = Math.max(0, pg.score | 0); cpIdx = Math.max(0, pg.cpIdx | 0) % CHECKPOINTS.length; } } catch (_) {}
+  elScore.textContent = `${score} pts`;
   let maxVelKmh = 0;
   const cpGrupo = new THREE.Group();
   const cpAnel = new THREE.Mesh(
@@ -1787,7 +1804,7 @@ export async function iniciarJogo() {
       if (!v.ehPolicia) {
         v.obj.traverse(m => {
           if (m.isMesh) {
-            m.castShadow = q.sombraPrincipal;
+            m.castShadow = q.sombraPrincipal && projetaSombra(m);
             if (m.userData.matPbr && m.userData.matLeve) {
               m.material = q.pbr ? m.userData.matPbr : m.userData.matLeve;
             }
@@ -2807,6 +2824,7 @@ export async function iniciarJogo() {
       mostrarToast(`⭐ Checkpoint: ${cp.nome} (+100 pts)`);
       cpIdx = (cpIdx + 1) % CHECKPOINTS.length;
       posicionarCheckpoint();
+      salvarProgresso();
     }
 
     // ---- Chuva 3D acompanha o jogador
