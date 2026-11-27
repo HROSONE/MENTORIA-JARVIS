@@ -229,7 +229,7 @@ const QUALIDADES = {
   },
   alto: {
     id: 'alto', rotulo: 'Alto',
-    pixelRatio: 1.5,
+    pixelRatio: 1.25,                                                               // (era 1,5: no celular de tela densa pesava e travava)
     pbr: true, mostrarDecor: true,
     viaturaCompleta: true, personagemCompleto: true,
     sombras: true, sombraRaio: 65,
@@ -1318,8 +1318,13 @@ export async function iniciarJogo() {
   }
   // ambiente da Lua: céu preto, sem névoa, sol branco e rasante, só a luz que volta do chão (regolito)
   let camFarTerra = null;
+  const escondidosNaLua = [];
   function ambienteLua(on) {
     lua.ativa = on;
+    if (on) {
+      const manter = new Set([lua.raiz, sun, sun.target, hemi, persAtual.inst.obj, camera]);
+      for (const o of scene.children) if (o.visible && !manter.has(o) && !o.isLight && !o.isPoints) { o.visible = false; escondidosNaLua.push(o); }
+    } else { for (const o of escondidosNaLua) o.visible = true; escondidosNaLua.length = 0; }
     if (on) {
       camFarTerra = camera.far; camera.far = 9000; camera.updateProjectionMatrix();
       ceu.mesh.visible = false; scene.background = new THREE.Color(0x000000); scene.fog = null; scene.environment = null;
@@ -2488,6 +2493,7 @@ export async function iniciarJogo() {
   const alvoCam = new THREE.Vector3();
   const posCamDesejada = new THREE.Vector3();
   let tTotal = 0;
+  const vSol = new THREE.Vector3(), vDirL = new THREE.Vector3(), vDirR = new THREE.Vector3(), vDirU = new THREE.Vector3(), vCima = new THREE.Vector3(0, 1, 0), vFoco = new THREE.Vector3();
   let minimapTimer = 1, tMapaG = 0;
   let fpsQuadros = 0;
   let fpsAcum = 0;
@@ -2963,13 +2969,15 @@ export async function iniciarJogo() {
 
     // ---- Sombra dinâmica segue o jogador (somente quando sombras estão ligadas)
     if (qualAtual.sombras) {
-      sun.target.position.set(focoX, 0, focoZ);
-      if (lua.ativa) sun.position.set(focoX - 130, 70, focoZ + 110);                // Lua: sol a ~23° do horizonte, de frente para a base, sombras compridas
-      else sun.position.set(
-        focoX + (ehNoite ? 55 : -75),
-        ehNoite ? 110 : 130,
-        focoZ + (ehNoite ? -65 : 60)
-      );
+      // Lua: sol a ~23° do horizonte, de frente para a base, sombras compridas
+      const off = lua.ativa ? vSol.set(-130, 70, 110) : vSol.set(ehNoite ? 55 : -75, ehNoite ? 110 : 130, ehNoite ? -65 : 60);
+      // a câmera da sombra anda em passos de 1 texel no plano da luz: sem isso a sombra "nada" e cintila a cada passo do jogador
+      const dirL = vDirL.copy(off).normalize(), dirR = vDirR.crossVectors(vCima, dirL).normalize(), dirU = vDirU.crossVectors(dirL, dirR);
+      const texel = 2 * qualAtual.sombraRaio / sun.shadow.mapSize.x, fy = lua.ativa ? focoY : 0;
+      vFoco.set(focoX, fy, focoZ);
+      const a = Math.round(vFoco.dot(dirR) / texel) * texel, b = Math.round(vFoco.dot(dirU) / texel) * texel, c = vFoco.dot(dirL);
+      sun.target.position.copy(dirR).multiplyScalar(a).addScaledVector(dirU, b).addScaledVector(dirL, c);
+      sun.position.copy(sun.target.position).add(off);
     }
 
     // ---- Céu acompanha a câmera + Minimapa (em frequência reduzida) + Render
@@ -2983,19 +2991,21 @@ export async function iniciarJogo() {
       if (mapaAberto && (tMapaG += qualAtual.minimapInterval) > 0.5) { tMapaG = 0; desenharMapaGrande(); }
     }
     // sombras: o mapa de sombra é redesenhado a cada 2 quadros (metade do custo do passe de sombra)
-    if (qualAtual.sombras) { renderer.shadowMap.autoUpdate = false; if ((quadroSombra = (quadroSombra + 1) % 2) === 0 || snapSombra) { renderer.shadowMap.needsUpdate = true; snapSombra = false; } }
+    // a cada 2 quadros quando está calmo; a cada quadro com movimento rápido (moto/carro, pulo, viagem do foguete), senão a sombra do que anda treme
+    const rapido = (jogador.veiculo && Math.abs(jogador.veiculo.vel) > 3) || !jogador.noChao || lua.cineAtiva;
+    if (qualAtual.sombras) { renderer.shadowMap.autoUpdate = false; if ((quadroSombra = (quadroSombra + 1) % 2) === 0 || snapSombra || rapido) { renderer.shadowMap.needsUpdate = true; snapSombra = false; } }
     tremor *= Math.max(0, 1 - dt * 6);
     renderer.render(scene, camera);
   }
 
   // ---- Laço com limite de 60 quadros/s (celulares de 120 Hz desenhavam o dobro) e resolução dinâmica:
   //      se o aparelho não segura ~50 qps, a resolução interna baixa um pouco (até um piso por qualidade) e volta quando sobra folga.
-  let quadroSombra = 0, ultimoQuadro = 0, janelaT = 0, janelaN = 0;
+  let quadroSombra = 0, ultimoQuadro = 0, janelaT = 0, janelaN = 0, boasSeguidas = 0;
   const PISO_PR = { leve: 0.6, medio: 0.8, alto: 0.95 };
   function loop(agora = performance.now()) {
     requestAnimationFrame(loop);
     if (pausado) return;
-    if (agora - ultimoQuadro < 1000 / 61) return;                                   // no máximo ~60 qps
+    if (agora - ultimoQuadro < 1000 / 60 - 4) return;                               // no máximo ~60 qps (em tela de 120 Hz pula 1 de 2; em 60 Hz nunca pula)
     const dtq = ultimoQuadro ? agora - ultimoQuadro : 16.7; ultimoQuadro = agora;
     passo();
     janelaT += dtq; janelaN++;
@@ -3003,8 +3013,9 @@ export async function iniciarJogo() {
       const qps = janelaN * 1000 / janelaT; janelaT = 0; janelaN = 0;
       const teto = Math.min(devicePixelRatio, qualAtual.pixelRatio), piso = Math.min(teto, PISO_PR[qualAtual.id] ?? 0.8);
       let novo = prAtual;
-      if (qps < 48 && prAtual > piso) novo = Math.max(piso, prAtual - 0.12);
-      else if (qps > 57 && prAtual < teto) novo = Math.min(teto, prAtual + 0.06);
+      boasSeguidas = qps > 58 ? boasSeguidas + 1 : 0;
+      if (qps < 46 && prAtual > piso) { novo = Math.max(piso, prAtual - 0.12); boasSeguidas = -3; }    // depois de descer, espera ~12 s para tentar subir
+      else if (boasSeguidas >= 3 && prAtual < teto) { novo = Math.min(teto, prAtual + 0.06); boasSeguidas = 0; }
       if (Math.abs(novo - prAtual) > 0.01) { prAtual = novo; renderer.setPixelRatio(prAtual); }
     }
   }
