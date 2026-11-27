@@ -25,6 +25,7 @@ import { TerrenoCavavel } from './terreno.js';
 import { Efeitos, VidaJogador, danoVeiculo } from './dano.js';
 import { mesclarEstaticos } from './otimizar.js';
 import { construirCidade, PONTOS_TELEPORTE, SELVA_INFO } from './cidade.js';
+import { criarFaseLua, G_LUA } from './lua.js';
 import { criarTrex } from './trex.js';
 import { Armas } from './armas.js';
 import { Abertura } from './abertura.js';
@@ -849,6 +850,7 @@ export async function iniciarJogo() {
   });
 
   function aplicarClima() {
+    if (lua.ativa) return;                                                          // na Lua não há clima (ver ambienteLua)
     const fundo = ehNoite ? 0x0e1833 : (ehChuva ? 0x7c92a6 : 0xb9d4ea);                   // névoa um pouco mais azulada (ar ao longe)
     scene.background = new THREE.Color(fundo);
     ceu.definir({ noite: ehNoite, chuva: ehChuva });
@@ -1027,7 +1029,10 @@ export async function iniciarJogo() {
     canteiro.chao.visible = false;
     terreno = new TerrenoCavavel(canteiro.grupo, { x0: 140.5, x1: 219.5, z0: -29.5, z1: 14.5 }, canteiro.materialTerra);
   }
-  const alturaChao = (x, z) => terreno?.altura(x, z) ?? null;
+  // ---- Fase da Lua: plataforma de lançamento com o foguete HRYZ-1 na cidade; a Lua fica longe (lua.ORIGEM), na mesma cena
+  const PAD = { x: 590, z: 520, ry: -Math.PI / 2 };
+  const lua = criarFaseLua({ scene, base: BASE_BIB, padX: PAD.x, padZ: PAD.z, padRy: PAD.ry });
+  const alturaChao = (x, z) => lua.ativa ? lua.altura(x, z) : (lua.alturaPad(x, z) ?? terreno?.altura(x, z) ?? null);
   const efeitos = new Efeitos(scene);
   let entulho = 0;                                                                 // terra despejada fora do canteiro (vira monte a cada 3 m³)
   function despejarTerra(x, z, m3, r = 1.2) {
@@ -1304,7 +1309,58 @@ export async function iniciarJogo() {
   const missaoEmCurso = () => ['ativa', 'percebeu', 'falha', 'vitoria'].includes(missao.estado);
   function interacaoAtual() {
     if (modo !== 'jogo' || travado || balacam.ativa) return null;
-    return loja.interacao() || missao.interacao();
+    return loja.interacao() || missao.interacao() || interacaoFoguete();
+  }
+  function interacaoFoguete() {
+    if (jogador.veiculo || lua.cineAtiva || !lua.perto(jogador.x, jogador.z, lua.ativa)) return null;
+    if (!lua.ativa && !lua.fogTerra()) return null;
+    return lua.ativa ? { texto: '[E] 🚀 Voltar para a Terra', fazer: () => viajar('terra') } : { texto: '[E] 🚀 Embarcar no foguete para a Lua', fazer: () => viajar('lua') };
+  }
+  // ambiente da Lua: céu preto, sem névoa, sol branco e rasante, só a luz que volta do chão (regolito)
+  let camFarTerra = null;
+  function ambienteLua(on) {
+    lua.ativa = on;
+    if (on) {
+      camFarTerra = camera.far; camera.far = 9000; camera.updateProjectionMatrix();
+      ceu.mesh.visible = false; scene.background = new THREE.Color(0x000000); scene.fog = null; scene.environment = null;
+      hemi.color.setHex(0x1a1d24); hemi.groundColor.setHex(0x6d6a66); hemi.intensity = 0.55;
+      sun.color.setHex(0xfffaf2); sun.intensity = qualAtual.pbr ? 3.4 : 2.6;
+      renderer.toneMappingExposure = 1.2; sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.12;
+      for (const el of [elMinimap.parentElement, $('hud-alvo-box')]) if (el) el.style.display = 'none';
+    } else {
+      if (camFarTerra) { camera.far = camFarTerra; camera.updateProjectionMatrix(); }
+      sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.05;
+      ceu.mesh.visible = true; for (const el of [elMinimap.parentElement, $('hud-alvo-box')]) if (el) el.style.display = ''; aplicarClima();
+    }
+    snapCam = true;
+  }
+  /** começa direto na Lua (sala ou teste), sem a viagem */
+  async function irParaLua() {
+    mostrarToast('🌙 Preparando a Lua…');
+    await lua.carregar();
+    if (persAtual.def.id !== 'astronauta') { const i = PERSONAGENS_DEF.findIndex(d => d.id === 'astronauta'); if (i >= 0) await carregarPersonagem(i); }
+    ambienteLua(true);
+    const p = lua.peEscada(true); jogador.veiculo = null; jogador.x = p.x; jogador.z = p.z + 1.5; jogador.ry = 0; camYaw = Math.PI;
+    jogador.y = alturaChao(jogador.x, jogador.z); jogador.vy = 0; jogador.noChao = true; jogador.yPico = jogador.y;
+    persAtual.inst.obj.visible = true; snapCam = true; atualizarHudModo();
+    lua.fogLua()?.escotilha(1);
+    mostrarToast('🌙 Você está na Lua! A gravidade é 1/6: pule e veja.');
+  }
+  async function viajar(destino) {
+    if (lua.cineAtiva) return;
+    if (destino === 'lua' && !lua.carregado) { mostrarToast('🌙 Preparando a Lua…'); await lua.carregar(); }
+    if (persAtual.def.id !== 'astronauta') { mostrarToast('👩‍🚀 Vestindo o traje espacial…'); const i = PERSONAGENS_DEF.findIndex(d => d.id === 'astronauta'); if (i >= 0) await carregarPersonagem(i); }
+    if (mira.ativa) sairMira();
+    travado = true; persAtual.inst.obj.visible = false;
+    lua.embarcar(destino, d => {                                                  // no meio da tela preta: troca de mundo
+      ambienteLua(d === 'lua');
+      const p = lua.peEscada(d === 'lua'); jogador.x = p.x; jogador.z = p.z; jogador.y = alturaChao(p.x, p.z) ?? CALCADA; jogador.vy = 0; jogador.noChao = true;
+    }, d => {
+      const p = lua.peEscada(d === 'lua'); jogador.x = p.x; jogador.z = p.z; jogador.ry = p.ang; camYaw = p.ang + Math.PI;   // a câmera fica de costas para o foguete
+      jogador.y = alturaChao(p.x, p.z) ?? CALCADA; jogador.yPico = jogador.y;
+      persAtual.inst.obj.visible = true; travado = false; snapCam = true;
+      mostrarToast(d === 'lua' ? '🌙 Você está na Lua! A gravidade é 1/6: pule e veja.' : '🏙️ De volta a Hryz City');
+    });
   }
 
   // ---- Checkpoint Tour (anéis dourados nos marcos da cidade)
@@ -1401,6 +1457,8 @@ export async function iniciarJogo() {
 
   // ---- Colisão círculo vs AABB com deslizamento suave
   function resolverColisoes(x, z, raio, y = -1e9) {
+    if (lua.ativa) return { ...lua.colidir(x, z, raio), bateu: false };
+    ({ x, z } = lua.colidirPad(x, z, raio));
     let nx = Math.max(-90, Math.min(640, x));
     let nz = Math.max(-220, Math.min(680, z));
     let bateu = false;
@@ -1757,6 +1815,7 @@ export async function iniciarJogo() {
 
   function teleportar(pt) {
     sairMira(); jogador.plataforma = null;
+    if (lua.ativa && !lua.cineAtiva) ambienteLua(false);
     if (loja.dentro) { loja.dentro = false; loja.grupo.visible = false; }
     if (jogador.veiculo) {
       const v = jogador.veiculo;
@@ -2372,7 +2431,8 @@ export async function iniciarJogo() {
     pers: PERSONAGENS_DEF.map(d => ({ id: d.id, nome: d.nome, desc: DESC_PERS[d.id] || '', icone: ICONE_PERS[d.id] || '🧍', img: `${MINI}/pers-${d.id}.webp` })),
     veic: [{ id: 'nenhum', nome: 'A pé', desc: 'Começar andando', icone: '🚶' },
       ...veiculos.map(v => ({ id: v.id, nome: v.nome, desc: v.temSirene ? 'Com sirene (L)' : '', icone: '🚗', img: `${MINI}/veic-${v.id}.webp` }))],
-    local: PONTOS_TELEPORTE.map(p => ({ id: p.id, nome: p.nome.replace(/^\S+\s(?=Selva)/, ''), icone: '📍', img: `${MINI}/local-${p.id}.webp` })),
+    local: [...PONTOS_TELEPORTE.map(p => ({ id: p.id, nome: p.nome.replace(/^\S+\s(?=Selva)/, ''), icone: '📍', img: `${MINI}/local-${p.id}.webp` })),
+      { id: 'lua', nome: '🌙 Lua', icone: '🌙', img: `${MINI}/local-lua.webp` }],
   }, { pers: 'policial', veic: 'p71', local: 'delegacia' }, {
     aoMudar: esc => aplicarEscolha(esc),
     aoJogar: async esc => {
@@ -2385,6 +2445,7 @@ export async function iniciarJogo() {
       atualizarHudModo();
       som.desbloquear();
       const pt = PONTOS_TELEPORTE.find(p => p.id === esc.local);
+      if (esc.local === 'lua') { if (jogador.veiculo) jogador.veiculo = null; await irParaLua(); return; }
       if (missao.estado === 'inativa') missao.iniciar();
       mostrarToast(v ? `Bem-vindo a Hryz City! ${v.nome} · ${pt?.nome ?? ''}${v.temSirene ? ' · L = sirene' : ''}` : `Bem-vindo a Hryz City! ${pt?.nome ?? ''}`);
     },
@@ -2420,6 +2481,7 @@ export async function iniciarJogo() {
   else iniciarAbertura();
   // Baixa o T. rex em segundo plano logo após o jogo abrir para estar pronto ao visitar a Selva
   setTimeout(() => garantirTrex(false), 900);
+  setTimeout(() => lua.carregarFoguete().catch(e => console.warn('foguete', e)), 1500);
 
   // ---- Loop principal (60 FPS)
   const relogio = new THREE.Clock();
@@ -2482,6 +2544,8 @@ export async function iniciarJogo() {
     if (rLoja) cine = { foco: rLoja.foco, trexAlvo: [1e5, 0, 1e5] };
     const rMis = modo === 'jogo' ? missao.camCena() : null;
     if (rMis) { if (mira.ativa) sairMira(); camera.position.copy(rMis.p); camera.lookAt(rMis.a); const fv = rMis.fov || 46; if (camera.fov !== fv) { camera.fov = fv; camera.updateProjectionMatrix(); } cine = { foco: { x: rMis.a.x, z: rMis.a.z }, trexAlvo: [jogador.x, jogador.y, jogador.z] }; }
+    const rLua = lua.cineAtiva ? lua.atualizarCine(dt) : null;
+    if (rLua) { camera.position.copy(rLua.p); camera.lookAt(rLua.a); if (camera.fov !== rLua.fov) { camera.fov = rLua.fov; camera.updateProjectionMatrix(); } cine = { foco: { x: rLua.a.x, z: rLua.a.z }, trexAlvo: [1e5, 0, 1e5] }; }
     if (camFixa) { camera.position.copy(camFixa.p); camera.lookAt(camFixa.a); cine = { foco: { x: camFixa.a.x, z: camFixa.a.z }, trexAlvo: [1e5, 0, 1e5] }; }
     let frente = !jogando ? 0 : (teclas.has('KeyW') || teclas.has('ArrowUp') ? 1 : 0) - (teclas.has('KeyS') || teclas.has('ArrowDown') ? 1 : 0) + tFrente;
     let lado = !jogando ? 0 : (teclas.has('KeyD') || teclas.has('ArrowRight') ? 1 : 0) - (teclas.has('KeyA') || teclas.has('ArrowLeft') ? 1 : 0) + tLado;
@@ -2730,18 +2794,19 @@ export async function iniciarJogo() {
       } else if (espaco && jogador.noChao && jogador.rolando <= 0 && !kael) {
         if (jogador.agachado) { jogador.agachado = false; sincronizarBotoesPata(); }
         jogador.golpeando = 0;
-        jogador.vy = 6.3;
+        jogador.vy = lua.ativa ? 4.7 : 6.3;                                           // na Lua: ~3,8 m de altura e ~3 s no ar
         jogador.noChao = false; jogador.yPico = jogador.y;
         tocarAcao('PularAr', 0.08, { loop: false });
       }
       if (!jogador.noChao && jogador.carga) { jogador.carga = 0; elCarga.classList.add('oculto'); }
       if (!jogador.noChao) {
-        jogador.vy -= 17.5 * dt;
+        jogador.vy -= (lua.ativa ? G_LUA : 17.5) * dt;
         jogador.y += jogador.vy * dt;
         jogador.yPico = Math.max(jogador.yPico ?? jogador.y, jogador.y);
         const chao = jogador.plataforma ? jogador.plataforma.y : (kael ? chaoComTelhado(jogador.x, jogador.z, jogador.y - jogador.vy * dt) : (alturaChao(jogador.x, jogador.z) ?? CALCADA));
         if (jogador.y <= chao) {
-          const queda = (jogador.yPico ?? chao) - chao;                             // dano de queda: a partir de 3,5 m; ~15 m é fatal (o Kael não se machuca)
+          const queda = ((jogador.yPico ?? chao) - chao) * (lua.ativa ? G_LUA / 17.5 : 1);   // dano de queda: a partir de 3,5 m; ~15 m é fatal (o Kael não se machuca); na Lua conta a energia (gravidade menor)
+          if (lua.ativa) lua.atualizarJogador(dt, jogador, false, true, (jogador.yPico ?? chao) - chao);
           if (kael) poderes.pouso(jogador.x, chao, jogador.z, queda);
           else if (queda > 3.5) { vida.dano((queda - 3.5) * 9, 'queda'); if (queda < 14) mostrarToast(`Queda de ${queda.toFixed(0)} m!`); }
           jogador.y = chao; jogador.vy = 0; jogador.noChao = true; jogador.yPico = chao;
@@ -2757,6 +2822,7 @@ export async function iniciarJogo() {
         else tocarAcao('AndarPro', 0.18);
       }
 
+      if (lua.ativa) lua.atualizarJogador(dt, jogador, movendo, jogador.noChao, 0);
       if (mira.ativa) jogador.ry = mira.yaw;
       else if (armas.ativa && jogador.rolando <= 0) jogador.ry += anguloDiff(jogador.ry, camYaw) * Math.min(1, dt * 14);   // armado: o corpo vira para onde a câmera mira
       persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
@@ -2784,6 +2850,7 @@ export async function iniciarJogo() {
     atualizarHudArma();
     missao.atualizar(dt, tTotal);
     balacam.atualizarEfeitos(dt);
+    lua.atualizar(dt);
     efeitos.atualizar(dt); vida.atualizar(dt); terreno?.atualizar(dt); poderes.atualizar(dt);
     for (const v of veiculos) v.atualizarDano?.(dt);
 
@@ -2897,7 +2964,8 @@ export async function iniciarJogo() {
     // ---- Sombra dinâmica segue o jogador (somente quando sombras estão ligadas)
     if (qualAtual.sombras) {
       sun.target.position.set(focoX, 0, focoZ);
-      sun.position.set(
+      if (lua.ativa) sun.position.set(focoX - 130, 70, focoZ + 110);                // Lua: sol a ~23° do horizonte, de frente para a base, sombras compridas
+      else sun.position.set(
         focoX + (ehNoite ? 55 : -75),
         ehNoite ? 110 : 130,
         focoZ + (ehNoite ? -65 : 60)
@@ -2972,6 +3040,7 @@ export async function iniciarJogo() {
     entrar: () => { entrarOuSairVeiculo(); snapCam = true; },
     teleportar: id => { const pt = PONTOS_TELEPORTE.find(p => p.id === id); if (pt) teleportar(pt); },
     irPara: (x, z, ang = 0) => teleportar({ id: 'custom', nome: 'Custom', x, z, ang }),
+    lua: () => lua, viajar: d => viajar(d), irParaLua: () => irParaLua(),
     noite: v => { ehNoite = v; aplicarClima(); },
     chuva: v => { ehChuva = v; rainLines.visible = ehChuva; aplicarClima(); },
     qualidade: id => aplicarQualidade(id, false),

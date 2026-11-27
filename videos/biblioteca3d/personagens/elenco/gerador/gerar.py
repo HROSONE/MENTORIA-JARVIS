@@ -13,6 +13,7 @@ import personagens4 as P4                                               # noqa: 
 import personagens5 as P5                                               # noqa: E402
 import personagens6 as P6                                               # noqa: E402
 import personagens7 as P7                                               # noqa: E402
+import personagens8 as P8                                               # noqa: E402
 
 SAIDA = os.path.normpath(os.path.join(AQUI, '..'))
 ELENCO = ['davi', 'teo', 'lia', 'nina', 'maniaco', 'velha']
@@ -22,12 +23,13 @@ ELENCO4 = ['soldado', 'aviador']
 ELENCO5 = ['astronauta', 'astronauta_viseira']
 ELENCO6 = ['operador']
 ELENCO7 = ['kael']
+ELENCO8 = ['acougueiro']
 
 if __name__ == '__main__':
-    nomes = sys.argv[1:] or ELENCO + ELENCO2 + ELENCO3 + ELENCO4 + ELENCO5 + ELENCO6 + ELENCO7
+    nomes = sys.argv[1:] or ELENCO + ELENCO2 + ELENCO3 + ELENCO4 + ELENCO5 + ELENCO6 + ELENCO7 + ELENCO8
     for n in nomes:
         t = time.time()
-        e, S, pal, ex = (getattr(P, n, None) or getattr(P2, n, None) or getattr(P3, n, None) or getattr(P4, n, None) or getattr(P5, n, None) or getattr(P6, n, None) or getattr(P7, n))()
+        e, S, pal, ex = (getattr(P, n, None) or getattr(P2, n, None) or getattr(P3, n, None) or getattr(P4, n, None) or getattr(P5, n, None) or getattr(P6, n, None) or getattr(P7, n, None) or getattr(P8, n))()
         clipes = A.todos_os_clipes(e, ex.get('anim'))
         ex['pe'] = {'calcanhar': [float(v) for v in e.PE_CALC], 'bola': [float(v) for v in e.PE_BOLA], 'junta': [float(v) for v in e.PE_JUNTA]}
         ex['altura_m'] = round(e.altura, 3)
