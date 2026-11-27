@@ -122,6 +122,7 @@ CI, CJ = np.meshgrid(c, c, indexing='ij')
 HJ = map_coordinates(Hs, [CI, CJ], order=1, mode='nearest').astype(np.float32)
 HJ.tofile('gerado/altura_jogo.bin')
 json.dump({'L': L, 'n': NJ, 'rochas': rochas, 'fonte': 'gerar_terreno.py'}, open('gerado/rochas.json', 'w'))
+json.dump({'L': L, 'n': NJ, 'rochas': rochas, 'fonte': 'gerar_terreno.py'}, open('rochas.json', 'w'), separators=(',', ':'))   # o jogo lê esta
 # detalhe que repete (4 m, 512 px): grão do regolito + microcrateras, periódico
 Nd, Ld = 512, 4.0; dd = Ld / Nd
 fd = np.fft.fftfreq(Nd, d=dd); FX, FZ = np.meshgrid(fd, fd); fr = np.hypot(FX, FZ) + 1e-9
@@ -133,5 +134,5 @@ for _ in range(160):                                     # microcrateras rasas e
     hd += -0.07 * rr * R.uniform(0.3, 1.0) * np.exp(-r ** 2 * 1.6) + 0.012 * rr * np.exp(-((r - 1.1) / 0.3) ** 2)
 gz, gx = np.gradient(hd, dd)
 nd = np.dstack([-gx, gz, np.ones_like(hd)]); nd /= np.linalg.norm(nd, axis=2, keepdims=True)
-Image.fromarray(((nd * 0.5 + 0.5) * 255 + 0.5).astype(np.uint8)).save('gerado/detalhe_normal.png')
+Image.fromarray(((nd * 0.5 + 0.5) * 255 + 0.5).astype(np.uint8)).save('gerado/detalhe_normal.png'); Image.open('gerado/detalhe_normal.png').save('lua_detalhe_normal.jpg', quality=92)   # o jogo usa esta
 print('crateras', len(crateras), 'rochas', len(rochas), 'altura', round(float(H.min()), 1), round(float(H.max()), 1))

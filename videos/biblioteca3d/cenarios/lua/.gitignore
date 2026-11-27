@@ -2,3 +2,5 @@ gerado/
 *.blend
 *.blend1
 previas/*.png
+!terra.jpg
+!lua_detalhe_normal.jpg

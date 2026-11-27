@@ -60,3 +60,10 @@ Mundo aberto em Three.js r160, publicado na Vercel. A página inicial do site é
   - **Babalu** (B na freada, ou botão Babalu): traseira no ar, freando forte. Gira em volta do pneu da frente.
   - **Queimar pneu** (Espaço + W parado): a roda de trás gira no lugar e solta fumaça.
   - A sombra de contato some enquanto a moto está empinada.
+
+## Fase da Lua e foguete (27/11)
+- `jogo/lua.js` (`criarFaseLua`). A Lua fica na mesma cena, longe (`ORIGEM` = 30 km): com o jogador lá, a cidade sai do alcance da câmera. `lua.ativa` troca o chão (`alturaChao`), as colisões (`resolverColisoes` → `lua.colidir`: rochas grandes, foguete, borda) e o ambiente (`ambienteLua`: céu preto, sem névoa, sem env map, sol branco a ~23°, `camera.far` = 9000, sem minimapa).
+- Plataforma na cidade em (590, 520), ao lado do aeroporto (ponto "🚀 Base de Lançamento"). `[E]` perto do pé da escada: `viajar('lua'|'terra')` veste o astronauta, esconde o jogador e roda a cena (`lua.atualizarCine`: contagem, decolagem com fumaça, pernas dobrando, tela preta, pouso com poeira, escotilha abre). A sala tem o local "🌙 Lua" (`irParaLua`, sem a viagem).
+- Gravidade na Lua `G_LUA` = 2,9 (1/6 dos 17,5 do jogo), pulo 4,7 m/s (~3,8 m, ~3 s no ar); a queda conta a energia (altura × g/17,5). Pegadas (InstancedMesh de 500) e poeira balística (sem ar: arco e cai, não faz nuvem).
+- Teste: `__jogo.irParaLua()`, `__jogo.viajar('lua')`, `__jogo.lua()`; o terreno (8,8 MB) só baixa na primeira viagem; o foguete (1,7 MB) baixa 1,5 s depois do início.
+- Lições: o normal map do terreno só pode ter o detalhe que a malha não tem (senão as sombras dobram); a pintura de um cilindro deve ser desenhada em pixel quadrado e depois reduzida; câmera ao sair do foguete com `camYaw` virado para ele (senão nasce dentro do casco); sol de frente para a base (contraluz deixou tudo escuro).

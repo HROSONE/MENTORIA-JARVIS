@@ -217,6 +217,7 @@ export const PONTOS_TELEPORTE = [
   { id: 'condominio', nome: 'Jardim Hryz',      x: 246,   z: 312,   ang: Math.PI / 2 },
   { id: 'parque',     nome: 'Parque',           x: 336,   z: 166.2, ang: Math.PI },
   { id: 'canteiro',   nome: 'Canteiro de Obras', x: 180,   z: 22.2,  ang: Math.PI / 2 },
+  { id: 'foguete',    nome: '🚀 Base de Lançamento', x: 580, z: 520, ang: Math.PI / 2 },
 ];
 
 const NPCS_DEFS = [
