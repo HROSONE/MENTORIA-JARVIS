@@ -67,3 +67,11 @@ Mundo aberto em Three.js r160, publicado na Vercel. A página inicial do site é
 - Gravidade na Lua `G_LUA` = 2,9 (1/6 dos 17,5 do jogo), pulo 4,7 m/s (~3,8 m, ~3 s no ar); a queda conta a energia (altura × g/17,5). Pegadas (InstancedMesh de 500) e poeira balística (sem ar: arco e cai, não faz nuvem).
 - Teste: `__jogo.irParaLua()`, `__jogo.viajar('lua')`, `__jogo.lua()`; o terreno (8,8 MB) só baixa na primeira viagem; o foguete (1,7 MB) baixa 1,5 s depois do início.
 - Lições: o normal map do terreno só pode ter o detalhe que a malha não tem (senão as sombras dobram); a pintura de um cilindro deve ser desenhada em pixel quadrado e depois reduzida; câmera ao sair do foguete com `camYaw` virado para ele (senão nasce dentro do casco); sol de frente para a base (contraluz deixou tudo escuro).
+
+## Tremor e travadas no Alto (27/11)
+- **Sombra cintilando ("tremendo"):** a câmera da sombra seguia o jogador em qualquer fração de texel. Agora ela anda em passos de 1 texel no plano da luz (alvo projetado nos eixos da luz e arredondado). Isso também vale na Lua (sol baixo).
+- **Sombra do que anda pulando:** o mapa era redesenhado a cada 2 quadros. Agora é a cada quadro quando há movimento rápido: veículo acima de 3 m/s, pulo ou viagem do foguete.
+- **Engasgo de 33 ms:** o limite de 60 qps descartava quadros de 16,2 ms (o rAF oscila ±1 ms). A folga agora é de 4 ms.
+- **Resolução dinâmica oscilando:** cada troca causa um engasgo. Ela desce abaixo de 46 qps e só sobe depois de 3 janelas seguidas acima de 58 (nunca logo depois de descer).
+- **Alto:** a resolução passou de 1,5× para 1,25×.
+- **Lua:** a cidade inteira some da cena (`escondidosNaLua`).
