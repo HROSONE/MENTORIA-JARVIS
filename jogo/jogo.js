@@ -291,6 +291,30 @@ class SomJogo {
     const notas = [523.25, 659.25, 783.99, 1046.5];
     notas.forEach((f, i) => setTimeout(() => this.tocarBeep(f, 0.18, 0.07), i * 95));
   }
+  tocarBoomSonico() {
+    if (!this.ctx || this.mudo) return;
+    const now = this.ctx.currentTime;
+    // Sub-grave de impacto + onda de pressão
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(165, now);
+    o.frequency.exponentialRampToValueAtTime(28, now + 0.55);
+    const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 380;
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.28, now + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.62);
+    o.connect(lp); lp.connect(g); g.connect(this.ctx.destination);
+    o.start(now); o.stop(now + 0.65);
+    // Estouro de ar
+    const len = Math.floor(this.ctx.sampleRate * 0.45);
+    const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2);
+    const src = this.ctx.createBufferSource(); src.buffer = buf;
+    const g2 = this.ctx.createGain(); g2.gain.setValueAtTime(0.24, now);
+    src.connect(g2); g2.connect(this.ctx.destination);
+    src.start(now);
+  }
   tocarFarejo() {
     if (!this.ctx || this.mudo) return;
     const now = this.ctx.currentTime;
@@ -538,43 +562,69 @@ function criarFumacaDrift(scene) {
 
 // Pool ultra-leve de faíscas/rastro azul-safira para super-corrida e pulo ninja do Ciber-Herói (14 sprites reciclados, zero GC!)
 function criarRastroCiber(scene) {
-  const N = 14;
+  const N = 32;
   const c = document.createElement('canvas'); c.width = c.height = 64;
   const g = c.getContext('2d');
   const gr = g.createRadialGradient(32, 32, 2, 32, 32, 30);
-  gr.addColorStop(0, 'rgba(180,245,255,0.95)');
-  gr.addColorStop(0.35, 'rgba(38,162,255,0.72)');
+  gr.addColorStop(0, 'rgba(220,250,255,0.98)');
+  gr.addColorStop(0.35, 'rgba(56,189,248,0.78)');
   gr.addColorStop(1, 'rgba(12,72,220,0)');
   g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
   const tex = new THREE.CanvasTexture(c);
 
   const pool = [];
   for (let i = 0; i < N; i++) {
-    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+    const mat = new THREE.SpriteMaterial({ map: tex, color: 0x38bdf8, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
     const sp = new THREE.Sprite(mat);
     sp.visible = false;
     scene.add(sp);
-    pool.push({ sp, mat, vida: 0, maxVida: 0.32, vx: 0, vy: 0, vz: 0 });
+    pool.push({ sp, mat, vida: 0, maxVida: 0.30, tamBase: 0.45, vx: 0, vy: 0, vz: 0 });
   }
   let idx = 0, cooldown = 0;
   return {
-    emitir(x, y, z, ry, dt, forte = false) {
+    emitir(x, y, z, ry, dt, forte = false, velKmh = 0) {
+      const kVel = Math.min(1, velKmh / 2000);
       cooldown -= dt;
       if (cooldown > 0) return;
-      cooldown = forte ? 0.022 : 0.036;
-      const p = pool[idx++ % N];
-      const offL = (Math.random() - 0.5) * 0.42;
-      p.sp.position.set(
-        x - Math.sin(ry) * 0.25 + Math.cos(ry) * offL,
-        y + 0.35 + Math.random() * 0.95,
-        z - Math.cos(ry) * 0.25 - Math.sin(ry) * offL
-      );
-      p.sp.scale.setScalar(forte ? 0.52 : 0.38);
-      p.sp.visible = true;
-      p.vida = p.maxVida = 0.28;
-      p.vx = -Math.sin(ry) * 1.4 + (Math.random() - 0.5) * 0.7;
-      p.vy = 0.35 + Math.random() * 0.6;
-      p.vz = -Math.cos(ry) * 1.4 + (Math.random() - 0.5) * 0.7;
+      cooldown = forte || kVel > 0.2 ? Math.max(0.008, 0.022 - kVel * 0.014) : 0.036;
+      const qtd = kVel > 0.5 ? 2 : 1;
+      for (let q = 0; q < qtd; q++) {
+        const p = pool[idx++ % N];
+        const offL = (Math.random() - 0.5) * (0.44 + kVel * 0.48);
+        p.sp.position.set(
+          x - Math.sin(ry) * (0.25 + q * 0.45) + Math.cos(ry) * offL,
+          y + 0.32 + Math.random() * 1.05,
+          z - Math.cos(ry) * (0.25 + q * 0.45) - Math.sin(ry) * offL
+        );
+        p.tamBase = (forte ? 0.54 : 0.40) + kVel * 0.65;
+        p.sp.scale.setScalar(p.tamBase);
+        // Acima de Mach 1 mistura flashes vermelho-relâmpago + branco-ciano!
+        const cor = velKmh >= 1235
+          ? (Math.random() < 0.38 ? 0xf43f5e : (Math.random() < 0.5 ? 0xe0f2fe : 0x38bdf8))
+          : (velKmh >= 450 && Math.random() < 0.25 ? 0xfb7185 : 0x38bdf8);
+        p.mat.color.setHex(cor);
+        p.sp.visible = true;
+        p.vida = p.maxVida = 0.24 + kVel * 0.16;
+        const emp = 1.6 + kVel * 9.0;
+        p.vx = -Math.sin(ry) * emp + (Math.random() - 0.5) * 0.9;
+        p.vy = 0.35 + Math.random() * 0.7;
+        p.vz = -Math.cos(ry) * emp + (Math.random() - 0.5) * 0.9;
+      }
+    },
+    boomSonico(x, y, z) {
+      for (let i = 0; i < 14; i++) {
+        const a = (i / 14) * Math.PI * 2;
+        const p = pool[idx++ % N];
+        p.sp.position.set(x + Math.cos(a) * 0.5, y + 0.95, z + Math.sin(a) * 0.5);
+        p.tamBase = 1.15;
+        p.sp.scale.setScalar(p.tamBase);
+        p.mat.color.setHex(i % 2 ? 0xe0f2fe : 0xf43f5e);
+        p.sp.visible = true;
+        p.vida = p.maxVida = 0.42;
+        p.vx = Math.cos(a) * 14;
+        p.vy = (Math.random() - 0.3) * 3.5;
+        p.vz = Math.sin(a) * 14;
+      }
     },
     atualizar(dt) {
       for (let i = 0; i < N; i++) {
@@ -586,8 +636,8 @@ function criarRastroCiber(scene) {
         p.sp.position.x += p.vx * dt;
         p.sp.position.y += p.vy * dt;
         p.sp.position.z += p.vz * dt;
-        p.sp.scale.setScalar((1 - u * 0.55) * 0.46);
-        p.mat.opacity = (1 - u) * 0.85;
+        p.sp.scale.setScalar((1 - u * 0.45) * p.tamBase);
+        p.mat.opacity = (1 - u) * 0.88;
       }
     },
   };
@@ -918,6 +968,11 @@ export async function iniciarJogo() {
   const elScore = $('hud-score');
   const elMaxVel = $('hud-maxvel');
   const elFps = $('hud-fps');
+  const elSpeedLines = $('speed-lines');
+  const elHudVelCiber = $('hud-velocista');
+  const elVcNum = $('vc-num');
+  const elVcBarra = $('vc-barra');
+  const elVcTag = $('vc-tag');
   const elAlvoNome = $('hud-alvo');
   const elMinimap = $('minimap');
   const mmCtx = elMinimap.getContext('2d');
@@ -1232,6 +1287,8 @@ export async function iniciarJogo() {
     comboIdx: 0,
     comboReset: 0,
     sprintTravado: false,
+    velCiber: 0,
+    machQuebrado: false,
     focoAlt: 1.45,
   };
 
@@ -2671,7 +2728,7 @@ export async function iniciarJogo() {
     kael: '✋', policial: '👮', jovem_a: '🧑', bombeiro: '🧑‍🚒', astronauta: '👩‍🚀', operador: '👷', corredor: '🏃', silhueta: '👤',
   };
   const DESC_PERS = {
-    ciber_heroi: 'Super-corrida e pulo ninja',
+    ciber_heroi: 'Velocista: 200 km/h em 1s · até 2.000 km/h',
     caramelo: 'Vida de Cachorro: faro, lixo e matilha',
     pastor: 'Cão farejador rápido e forte',
     dalmata: 'Cão ágil, simpático e pintado',
@@ -3007,6 +3064,26 @@ export async function iniciarJogo() {
       const defAtual = persAtual?.def || {};
       const ehCiber = defAtual.id === 'ciber_heroi';
       const velMult = defAtual.velMult || 1;
+      const VEL_200 = 200 / 3.6;    // 55.56 m/s (atinge 200 km/h no 1º segundo!)
+      const VEL_2000 = 2000 / 3.6;  // 555.56 m/s (velocidade máxima gradual de 2.000 km/h!)
+
+      // Curva de super-velocidade do Ciber-Herói (velocista):
+      // - 0 -> 200 km/h no 1º segundo (56 m/s²)
+      // - 200 -> 2.000 km/h crescendo gradualmente (~10–12 s de corrida contínua!)
+      if (ehCiber && !jogador.agachado && sprint && movendo && jogador.rolando <= 0) {
+        const diffAng = Math.abs(anguloDiff(jogador.ry, dirMundo));
+        if (diffAng > 1.35 && jogador.velCiber > VEL_200) jogador.velCiber *= Math.max(0.55, 1 - dt * 2.2);
+        const acel = jogador.velCiber < VEL_200
+          ? 56.0
+          : (40.0 + 26.0 * (jogador.velCiber / VEL_2000));
+        jogador.velCiber = Math.min(VEL_2000, Math.max(9.0, jogador.velCiber) + acel * dt * Math.min(1, mag));
+      } else {
+        // Freio suave com inércia ao soltar sprint ou parar
+        const freio = ehCiber ? (movendo ? 130.0 : 220.0) : 999.0;
+        jogador.velCiber = Math.max(0, (jogador.velCiber || 0) - freio * dt);
+        if (jogador.velCiber < 1235 / 3.6 * 0.72) jogador.machQuebrado = false;
+      }
+
       if (jogador.rolando > 0) {
         if (movendo) jogador.ry += anguloDiff(jogador.ry, dirMundo) * Math.min(1, dt * 6);
         const velRolar = 7.2 * (ehCiber ? 1.28 : 1) * (0.62 + 0.38 * (jogador.rolando / 0.66));
@@ -3015,23 +3092,55 @@ export async function iniciarJogo() {
         const col = jogador.plataforma ? moverNaPlataforma(nx, nz, 0.38) : resolverColisoes(nx, nz, 0.42);
         jogador.x = col.x; jogador.z = col.z;
         velAbs = velRolar;
-      } else if (movendo) {
-        jogador.ry += anguloDiff(jogador.ry, dirMundo) * Math.min(1, dt * 11);
-        const velBase = (jogador.agachado ? 1.95 : (sprint ? 6.5 * velMult : (mag > 0.62 ? 3.85 * Math.min(velMult, 1.18) : 2.45))) * (ehKael() && !jogador.noChao ? 2.2 : 1);   // Kael: plana no ar do super pulo
+      } else if (movendo || (ehCiber && jogador.velCiber > 9.5)) {
+        if (movendo) jogador.ry += anguloDiff(jogador.ry, dirMundo) * Math.min(1, dt * (ehCiber && jogador.velCiber > VEL_200 ? 7.5 : 11));
+        const dirMover = movendo ? dirMundo : jogador.ry;
+        const velPadrao = (jogador.agachado ? 1.95 : (sprint ? 6.5 * velMult : (mag > 0.62 ? 3.85 * Math.min(velMult, 1.18) : 2.45))) * (ehKael() && !jogador.noChao ? 2.2 : 1);
+        const velBase = (ehCiber && jogador.velCiber > velPadrao) ? jogador.velCiber : velPadrao;
         const fatorGolpe = jogador.golpeando > 0 ? 0.35 : 1;
-        const passo = velBase * fatorGolpe * Math.min(1, mag) * dt;
-        const nx = jogador.x + Math.sin(dirMundo) * passo, nz = jogador.z + Math.cos(dirMundo) * passo;
+        const passo = velBase * fatorGolpe * (movendo ? Math.min(1, mag) : 1) * dt;
         const pl = jogador.plataforma;
-        // pulou por cima da mureta do terraço (no ar, acima dela, saindo do retângulo): cai do prédio
-        if (pl && !pl.interior && !jogador.noChao && jogador.y > pl.y + 0.95 && (nx < pl.minX + 0.4 || nx > pl.maxX - 0.4 || nz < pl.minZ + 0.4 || nz > pl.maxZ - 0.4)) { jogador.plataforma = null; mostrarToast('Você pulou do terraço!'); }
-        const col = jogador.plataforma ? moverNaPlataforma(nx, nz, 0.38) : resolverColisoes(nx, nz, 0.42, ehKael() ? jogador.y : -1e9);
-        jogador.x = col.x; jogador.z = col.z;
+
+        // Sub-stepping anti-tunneling: a 2.000 km/h o herói percorre ~9 m/quadro, então dividimos em sub-passos de até 1,1 m!
+        const nSub = Math.min(28, Math.max(1, Math.ceil(passo / 1.1)));
+        const sub = passo / nSub;
+        const sx = Math.sin(dirMover) * sub, sz = Math.cos(dirMover) * sub;
+        let bateuParede = false;
+        for (let s = 0; s < nSub; s++) {
+          const nx = jogador.x + sx, nz = jogador.z + sz;
+          if (pl && !pl.interior && !jogador.noChao && jogador.y > pl.y + 0.95 && (nx < pl.minX + 0.4 || nx > pl.maxX - 0.4 || nz < pl.minZ + 0.4 || nz > pl.maxZ - 0.4)) {
+            jogador.plataforma = null; mostrarToast('Você pulou do terraço!');
+          }
+          const col = jogador.plataforma ? moverNaPlataforma(nx, nz, 0.38) : resolverColisoes(nx, nz, 0.42, ehKael() ? jogador.y : -1e9);
+          const dReal = Math.hypot(col.x - jogador.x, col.z - jogador.z);
+          jogador.x = Math.max(-240, Math.min(740, col.x));
+          jogador.z = Math.max(-260, Math.min(740, col.z));
+          if (sub > 0.3 && dReal < sub * 0.32) { bateuParede = true; break; }
+        }
+        if (bateuParede && ehCiber && jogador.velCiber > 35) {
+          jogador.velCiber *= 0.42;
+          tremor = Math.max(tremor, 0.16);
+        }
         if (!jogador.plataforma) for (const o of veiculos) {                       // não atravessa os carros
           if (o.voando || jogador.y > 2.5) continue;
           const ddx = jogador.x - o.x, ddz = jogador.z - o.z, d = Math.hypot(ddx, ddz), min = o.raio * 0.78 + 0.35;
           if (d < min && d > 1e-3) { jogador.x = o.x + ddx / d * min; jogador.z = o.z + ddz / d * min; }
         }
-        velAbs = velBase * fatorGolpe * Math.min(1, mag);
+        velAbs = velBase * fatorGolpe * (movendo ? Math.min(1, mag) : 1);
+      }
+
+      // Estouro Sônico (Mach 1 = 1.235 km/h) + Recorde de Velocidade do Velocista!
+      const velCiberKmh = ehCiber ? Math.round((jogador.velCiber || 0) * 3.6) : 0;
+      if (ehCiber && velCiberKmh > maxVelKmh) {
+        maxVelKmh = velCiberKmh;
+        elMaxVel.textContent = `${maxVelKmh} km/h`;
+      }
+      if (ehCiber && velCiberKmh >= 1235 && !jogador.machQuebrado) {
+        jogador.machQuebrado = true;
+        som.tocarBoomSonico();
+        rastroCiber.boomSonico(jogador.x, jogador.y, jogador.z);
+        tremor = Math.max(tremor, 0.32);
+        mostrarToast('💥 BARREIRA DO SOM QUEBRADA! MACH 1 (1.235 km/h)!');
       }
 
       const kael = ehKael();
@@ -3077,15 +3186,40 @@ export async function iniciarJogo() {
         if (jogador.rolando > 0) { /* mantém AcrobaciaRolar */ }
         else if (jogador.golpeando > 0) { /* mantém Soco atual */ }
         else if (jogador.agachado) tocarAcao(movendo ? 'AgacharAndar' : 'AgacharParado', 0.16);
-        else if (!movendo) tocarAcao('ParadoPro', 0.20);
-        else if (sprint) tocarAcao('CorrerSprint', 0.16, { velocidade: ehCiber ? 1.24 : 1 });
+        else if (!movendo && !(ehCiber && jogador.velCiber > 9.5)) tocarAcao('ParadoPro', 0.20);
+        else if (sprint || (ehCiber && jogador.velCiber > 14)) {
+          const velAnimCiber = ehCiber ? (1.28 + Math.min(1, velCiberKmh / 2000) * 2.2) : 1;
+          tocarAcao('CorrerSprint', 0.16, { velocidade: velAnimCiber });
+          if (ehCiber) persAtual?.inst?.acao?.setEffectiveTimeScale?.(velAnimCiber);
+        }
         else if (mag > 0.62) tocarAcao('Trotar', 0.18);
         else tocarAcao('AndarPro', 0.18);
       }
 
-      // Rastro elétrico azul-safira quando o Ciber-Herói dá super-corrida, pulo ninja ou rolamento!
-      if (ehCiber && ((sprint && movendo) || !jogador.noChao || jogador.rolando > 0)) {
-        rastroCiber.emitir(jogador.x, jogador.y, jogador.z, jogador.ry, dt, !jogador.noChao || jogador.rolando > 0);
+      // Rastro elétrico azul-safira / relâmpago quando o Ciber-Herói dá super-corrida, pulo ninja ou rolamento!
+      if (ehCiber && ((sprint && movendo) || velCiberKmh > 35 || !jogador.noChao || jogador.rolando > 0)) {
+        rastroCiber.emitir(jogador.x, jogador.y, jogador.z, jogador.ry, dt, !jogador.noChao || jogador.rolando > 0 || velCiberKmh > 250, velCiberKmh);
+      }
+
+      // Velocímetro digital + linhas de velocidade do Velocista
+      if (elHudVelCiber) {
+        const mostrarVc = ehCiber && jogando && velCiberKmh >= 25;
+        elHudVelCiber.classList.toggle('oculto', !mostrarVc);
+        if (mostrarVc) {
+          const mach = velCiberKmh >= 1235;
+          elHudVelCiber.classList.toggle('mach', mach);
+          elVcNum.textContent = velCiberKmh.toLocaleString('pt-BR');
+          elVcBarra.style.transform = `scaleX(${Math.min(1, velCiberKmh / 2000).toFixed(3)})`;
+          elVcTag.textContent = velCiberKmh >= 1980
+            ? '🔥 VELOCIDADE MÁXIMA · MACH 1.6'
+            : (mach ? `💥 SUPERSÔNICO · MACH ${(velCiberKmh / 1235).toFixed(2)}`
+              : (velCiberKmh >= 600 ? '⚡⚡ HIPERVELOCIDADE'
+                : (velCiberKmh >= 200 ? '⚡ SUPER-VELOCIDADE' : '⚡ ACELERANDO')));
+        }
+      }
+      if (elSpeedLines) {
+        const opSL = (ehCiber && jogando && velCiberKmh > 140) ? Math.min(0.62, ((velCiberKmh - 140) / 1860) * 0.62) : 0;
+        elSpeedLines.style.opacity = opSL.toFixed(3);
       }
 
       if (lua.ativa) lua.atualizarJogador(dt, jogador, movendo, jogador.noChao, 0);
@@ -3114,7 +3248,12 @@ export async function iniciarJogo() {
       }
     }
 
-    if (jogador.veiculo) armas.atualizar(dt, tTotal, null, false);
+    if (jogador.veiculo) {
+      armas.atualizar(dt, tTotal, null, false);
+      jogador.velCiber = 0; jogador.machQuebrado = false;
+      if (elHudVelCiber) elHudVelCiber.classList.add('oculto');
+      if (elSpeedLines) elSpeedLines.style.opacity = '0';
+    }
     atualizarHudArma();
     missao.atualizar(dt, tTotal);
     balacam.atualizarEfeitos(dt);
@@ -3186,7 +3325,13 @@ export async function iniciarJogo() {
     }
 
     // ---- Câmera (abertura/sala já posicionaram a câmera; senão 3ª pessoa / Capô / Aérea)
-    if (!cine && !mira.ativa && (camera.fov !== 56 || camera.near !== 0.4)) { camera.fov = 56; camera.near = 0.4; camera.updateProjectionMatrix(); }
+    const ciberKmhCam = (!jogador.veiculo && persAtual?.def?.id === 'ciber_heroi') ? (jogador.velCiber || 0) * 3.6 : 0;
+    const fovDesejado = ciberKmhCam > 40 ? 56 + Math.min(1, ciberKmhCam / 2000) * 28 : 56;
+    if (!cine && !mira.ativa && (Math.abs(camera.fov - fovDesejado) > 0.08 || camera.near !== 0.4)) {
+      camera.fov += (fovDesejado - camera.fov) * Math.min(1, dt * 8);
+      camera.near = 0.4;
+      camera.updateProjectionMatrix();
+    }
     if (cine) {
       // nada: a câmera da cena já foi posicionada
     } else if (mira.ativa) {
@@ -3209,7 +3354,10 @@ export async function iniciarJogo() {
       const ombro = armas.ativa && !jogador.veiculo ? 0.62 : 0;                       // armado: câmera sobre o ombro direito
       if (ombro) posCamDesejada.add(new THREE.Vector3(-Math.cos(camYaw) * ombro, 0, Math.sin(camYaw) * ombro));
       if (snapCam) { camera.position.copy(posCamDesejada); snapCam = false; }
-      else camera.position.lerp(posCamDesejada, Math.min(1, dt * 9));
+      else {
+        const lerpCam = ciberKmhCam > 150 ? Math.min(1, dt * (18 + (ciberKmhCam / 2000) * 35)) : Math.min(1, dt * 9);
+        camera.position.lerp(posCamDesejada, lerpCam);
+      }
       alvoCam.set(focoX, focoY + (jogador.veiculo ? 0.5 : 0.1), focoZ);
       if (ombro) alvoCam.add(new THREE.Vector3(-Math.cos(camYaw) * ombro + Math.sin(camYaw) * 3, 0.15, Math.sin(camYaw) * ombro + Math.cos(camYaw) * 3));
       camera.lookAt(alvoCam);
@@ -3301,7 +3449,8 @@ export async function iniciarJogo() {
     irParaPos: (x, z, ry = 0, terraco = false) => irPara({ x, z, ry }, terraco === 'manter' ? jogador.plataforma : terraco ? TORRE.terraco : null),
     mirar: (yaw, pitch, fov) => { if (!mira.ativa) entrarMira(true); mira.yaw = yaw; mira.pitch = pitch; if (fov) mira.fov = fov; },
     camFixa: (p, a) => { camFixa = p ? { p: new THREE.Vector3(...p), a: new THREE.Vector3(...a) } : null; },
-    pose: () => ({ jogador: { x: jogador.x, y: jogador.y, z: jogador.z, ry: jogador.ry, acao: persAcao, agachado: jogador.agachado, rolando: jogador.rolando, golpeando: jogador.golpeando, sprintTravado: jogador.sprintTravado }, veiculos: veiculos.map(v => ({ id: v.id, x: v.x, z: v.z, ry: v.ry, raio: v.raio })) }),
+    pose: () => ({ jogador: { x: jogador.x, y: jogador.y, z: jogador.z, ry: jogador.ry, acao: persAcao, agachado: jogador.agachado, rolando: jogador.rolando, golpeando: jogador.golpeando, sprintTravado: jogador.sprintTravado, velCiberKmh: Math.round((jogador.velCiber || 0) * 3.6), machQuebrado: !!jogador.machQuebrado }, veiculos: veiculos.map(v => ({ id: v.id, x: v.x, z: v.z, ry: v.ry, raio: v.raio })) }),
+    tecla: (code, on) => { if (on) teclas.add(code); else teclas.delete(code); },
     acoes: {
       agachar: v => alternarAgachar(v),
       rolar: () => iniciarRolamento(),

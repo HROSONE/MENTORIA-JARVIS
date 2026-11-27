@@ -585,6 +585,33 @@
   }
   body.cine-cao #hud-esq, body.cine-cao #hud-dir, body.cine-cao #hud-base-dir,
   body.cine-cao #controles-touch, body.cine-cao #prompt-acao, body.cine-cao #toast { display: none !important; }
+
+  /* Super-Velocidade do Ciber-Herói (até 2.000 km/h) */
+  #speed-lines {
+    position: fixed; inset: 0; z-index: 11; pointer-events: none; opacity: 0;
+    background: radial-gradient(circle at 50% 50%, transparent 48%, rgba(56, 189, 248, 0.22) 82%, rgba(244, 63, 94, 0.36) 100%);
+    transition: opacity 0.12s linear;
+  }
+  #hud-velocista {
+    position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom));
+    transform: translateX(-50%); z-index: 21; pointer-events: none;
+    padding: 8px 16px; min-width: 196px; text-align: center;
+    border: 1.5px solid rgba(56, 189, 248, 0.65);
+    box-shadow: 0 6px 24px rgba(2, 132, 199, 0.35), inset 0 0 14px rgba(56, 189, 248, 0.16);
+  }
+  #hud-velocista.mach {
+    border-color: rgba(248, 113, 113, 0.85);
+    box-shadow: 0 6px 28px rgba(239, 68, 68, 0.45), inset 0 0 16px rgba(248, 113, 113, 0.22);
+  }
+  .vc-top { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
+  #vc-num { font-size: 34px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; color: #e0f2fe; text-shadow: 0 0 14px rgba(56, 189, 248, 0.7); }
+  #hud-velocista.mach #vc-num { color: #fecaca; text-shadow: 0 0 16px rgba(239, 68, 68, 0.85); }
+  .vc-unit { font-size: 12px; font-weight: 800; color: #7dd3fc; }
+  #vc-barra-wrap { height: 6px; border-radius: 999px; background: rgba(255,255,255,0.14); overflow: hidden; margin: 5px 0 4px; }
+  #vc-barra { display: block; height: 100%; background: linear-gradient(90deg, #38bdf8, #818cf8, #f43f5e); transform-origin: 0 0; transform: scaleX(0); }
+  #vc-tag { font-size: 10px; font-weight: 900; letter-spacing: 1px; color: #bae6fd; text-transform: uppercase; }
+  #hud-velocista.mach #vc-tag { color: #fca5a5; }
+  body.em-cine #hud-velocista, body.em-cine #speed-lines { display: none !important; }
 </style>
 </head>
 <body>
@@ -696,6 +723,12 @@
   </div>
 
   <!-- Prompt contextual e Toast -->
+  <div id="speed-lines"></div>
+  <div id="hud-velocista" class="glass oculto">
+    <div class="vc-top"><span id="vc-num">0</span><span class="vc-unit">km/h</span></div>
+    <div id="vc-barra-wrap"><i id="vc-barra"></i></div>
+    <div id="vc-tag">⚡ SUPER-VELOCIDADE</div>
+  </div>
   <div id="prompt-acao" class="glass oculto">[E] Entrar no veículo</div>
   <div id="mira" class="oculto"></div>
   <div id="hud-arma" class="glass pill oculto"></div>
