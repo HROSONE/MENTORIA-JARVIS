@@ -211,6 +211,8 @@ export function criarFaseLua({ scene, base, padX, padZ, padRy = 0 }) {
           Q.setFromEuler(E.set(0, rot, 0)); M4.compose(VEC.set(x, altura(x + ORIGEM.x, z + ORIGEM.z) - 0.12 * s, z), Q, S1.set(s, s, s)); im.setMatrixAt(i, M4);
           if (s > 0.55) rochasCol.push([x + ORIGEM.x, z + ORIGEM.z, s * 0.95]);
         });
+        im.instanceMatrix.needsUpdate = true;
+        im.computeBoundingSphere();
         raiz.add(im);
       }
       raiz.add(criarCeu());

@@ -2167,7 +2167,8 @@ export async function iniciarJogo() {
 
     renderer.setPixelRatio(Math.min(devicePixelRatio, q.pixelRatio)); prAtual = renderer.getPixelRatio(); snapSombra = true;
     renderer.setSize(innerWidth, innerHeight);
-    camera.far = q.camFar;
+    if (lua.ativa) { camFarTerra = q.camFar; camera.far = 9000; }
+    else camera.far = q.camFar;
     camera.updateProjectionMatrix();
 
     sun.castShadow = q.sombras;
@@ -3187,15 +3188,20 @@ export async function iniciarJogo() {
           }
           const col = jogador.plataforma ? moverNaPlataforma(nx, nz, 0.38) : resolverColisoes(nx, nz, 0.42, ehKael() ? jogador.y : -1e9);
           const dReal = Math.hypot(col.x - jogador.x, col.z - jogador.z);
-          jogador.x = Math.max(-240, Math.min(740, col.x));
-          jogador.z = Math.max(-260, Math.min(740, col.z));
+          if (lua.ativa) {
+            jogador.x = col.x;
+            jogador.z = col.z;
+          } else {
+            jogador.x = Math.max(-240, Math.min(740, col.x));
+            jogador.z = Math.max(-260, Math.min(740, col.z));
+          }
           if (sub > 0.3 && dReal < sub * 0.32) { bateuParede = true; break; }
         }
         if (bateuParede && ehCiber && jogador.velCiber > 35) {
           jogador.velCiber *= 0.42;
           tremor = Math.max(tremor, 0.16);
         }
-        if (!jogador.plataforma) for (const o of veiculos) {                       // não atravessa os carros
+        if (!jogador.plataforma && !lua.ativa) for (const o of veiculos) {           // não atravessa os carros (só na Terra)
           if (o.voando || jogador.y > 2.5) continue;
           const ddx = jogador.x - o.x, ddz = jogador.z - o.z, d = Math.hypot(ddx, ddz), min = o.raio * 0.78 + 0.35;
           if (d < min && d > 1e-3) { jogador.x = o.x + ddx / d * min; jogador.z = o.z + ddz / d * min; }
