@@ -134,7 +134,8 @@ export class Armas {
     const m = this.modelos[this.atual], d = DEF[this.atual];
     m.raiz.visible = visivel && !!pers && !this.luneta;                                    // na luneta a visão é do olho: a arma some
     if (!pers || !visivel) return;
-    const osso = n => pers.getObjectByName(n);
+    const MAPA_OSSO = { Peito: 'spine_03', BracoD: 'upperarm_r', AntebracoD: 'lowerarm_r', MaoD: 'hand_r', BracoE: 'upperarm_l', AntebracoE: 'lowerarm_l', MaoE: 'hand_l' };
+    const osso = n => pers.getObjectByName(n) || (MAPA_OSSO[n] && pers.getObjectByName(MAPA_OSSO[n]));
     // ponto de mira: o que está no centro da tela, a 40 m
     this.camera.getWorldDirection(_v); const mira = this.camera.getWorldPosition(V()).addScaledVector(_v, 40);
     // corpo: o peito e os ombros

@@ -10,6 +10,11 @@ const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion(), _m1 = new THREE.Matrix4(), _m2 = new THREE.Matrix4();
 const NECESSARIOS = ['Quadril', 'Coluna', 'Coluna2', 'Peito', 'Pescoco', 'Cabeca', 'BracoE', 'AntebracoE', 'MaoE', 'BracoD', 'AntebracoD', 'MaoD',
   'CoxaE', 'CanelaE', 'PeE', 'PonteiraE', 'CoxaD', 'CanelaD', 'PeD', 'PonteiraD'];
+const ALIAS_REAL = {
+  pelvis: 'Quadril', spine_01: 'Coluna', spine_02: 'Coluna2', spine_03: 'Peito', neck_01: 'Pescoco', head: 'Cabeca',
+  upperarm_l: 'BracoE', lowerarm_l: 'AntebracoE', hand_l: 'MaoE', upperarm_r: 'BracoD', lowerarm_r: 'AntebracoD', hand_r: 'MaoD',
+  thigh_l: 'CoxaE', calf_l: 'CanelaE', foot_l: 'PeE', ball_l: 'PonteiraE', thigh_r: 'CoxaD', calf_r: 'CanelaD', foot_r: 'PeD', ball_r: 'PonteiraD',
+};
 
 export class PilotoMoto {
   /** prepara (uma vez por personagem); devolve false se o esqueleto não tiver os ossos necessários */
@@ -19,7 +24,12 @@ export class PilotoMoto {
     let sk = null; inst.obj.traverse(o => { if (!sk && o.isSkinnedMesh) sk = o.skeleton; });
     if (!sk) return false;
     const q = {}, p = {}, ossos = {};
-    sk.bones.forEach((b, i) => { const m = _m1.copy(sk.boneInverses[i]).invert(), pp = V(), qq = new THREE.Quaternion(); m.decompose(pp, qq, V()); q[b.name] = qq; p[b.name] = pp; ossos[b.name] = b; });
+    sk.bones.forEach((b, i) => {
+      const m = _m1.copy(sk.boneInverses[i]).invert(), pp = V(), qq = new THREE.Quaternion();
+      m.decompose(pp, qq, V());
+      const nm = ALIAS_REAL[b.name] || b.name;
+      q[nm] = qq; p[nm] = pp; ossos[nm] = b;
+    });
     if (!NECESSARIOS.every(n => ossos[n])) return false;
     const local = (n, v) => v.clone().applyQuaternion(q[n].clone().invert()).normalize();
     const eixo = (a, b) => local(a, p[b].clone().sub(p[a]));

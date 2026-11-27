@@ -42,14 +42,15 @@ const BASE_BIB = './videos/biblioteca3d';
 const clamp01 = x => Math.min(1, Math.max(0, x));
 
 const PERSONAGENS_DEF = [
-  { id: 'policial',   nome: 'Policial',      tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/policial.glb` },
-  { id: 'kael',       nome: 'Kael',          tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/kael.glb`, anime: true },
-  { id: 'jovem_a',    nome: 'Jovem A',       tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/jovem_a.glb` },
-  { id: 'bombeiro',   nome: 'Bombeiro',      tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/bombeiro.glb` },
-  { id: 'astronauta', nome: 'Astronauta',    tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/astronauta.glb` },
-  { id: 'operador',   nome: 'Operador',      tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/operador.glb` },
-  { id: 'corredor',   nome: 'Corredor',      tipo: 'corredor', url: `${BASE_BIB}/personagens/corredor/corredor-colorido.glb` },
-  { id: 'silhueta',   nome: 'Silhueta Hryz', tipo: 'silhueta', url: `${BASE_BIB}/personagens/corredor/corredor.glb` },
+  { id: 'ciber_heroi', nome: 'Ciber-Herói',   tipo: 'realista', url: `${BASE_BIB}/personagens/ciber_heroi/ciber_heroi_jogo.glb`, velMult: 1.38, puloVy: 8.2, clipPulo: 'PuloNinja' },
+  { id: 'policial',    nome: 'Policial',      tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/policial.glb` },
+  { id: 'kael',        nome: 'Kael',          tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/kael.glb`, anime: true },
+  { id: 'jovem_a',     nome: 'Jovem A',       tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/jovem_a.glb` },
+  { id: 'bombeiro',    nome: 'Bombeiro',      tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/bombeiro.glb` },
+  { id: 'astronauta',  nome: 'Astronauta',    tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/astronauta.glb` },
+  { id: 'operador',    nome: 'Operador',      tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/operador.glb` },
+  { id: 'corredor',    nome: 'Corredor',      tipo: 'corredor', url: `${BASE_BIB}/personagens/corredor/corredor-colorido.glb` },
+  { id: 'silhueta',    nome: 'Silhueta Hryz', tipo: 'silhueta', url: `${BASE_BIB}/personagens/corredor/corredor.glb` },
 ];
 
 const CHECKPOINTS = [
@@ -199,7 +200,7 @@ class SomJogo {
 
 const CLIPES_JOGADOR = [
   'ParadoPro', 'AndarPro', 'Trotar', 'CorrerSprint',
-  'AgacharParado', 'AgacharAndar', 'PularAr', 'AcrobaciaRolar',
+  'AgacharParado', 'AgacharAndar', 'PularAr', 'PuloNinja', 'AcrobaciaRolar',
   'SocoJab', 'SocoDireto', 'SocoGancho',
 ];
 const COMBO_SOCOS = ['SocoJab', 'SocoDireto', 'SocoGancho'];
@@ -420,6 +421,63 @@ function criarFumacaDrift(scene) {
         p.sp.position.z += p.vz * dt;
         p.sp.scale.setScalar(0.65 + u * 1.85);
         p.mat.opacity = (1 - u) * 0.55;
+      }
+    },
+  };
+}
+
+// Pool ultra-leve de faíscas/rastro azul-safira para super-corrida e pulo ninja do Ciber-Herói (14 sprites reciclados, zero GC!)
+function criarRastroCiber(scene) {
+  const N = 14;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 2, 32, 32, 30);
+  gr.addColorStop(0, 'rgba(180,245,255,0.95)');
+  gr.addColorStop(0.35, 'rgba(38,162,255,0.72)');
+  gr.addColorStop(1, 'rgba(12,72,220,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c);
+
+  const pool = [];
+  for (let i = 0; i < N; i++) {
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+    const sp = new THREE.Sprite(mat);
+    sp.visible = false;
+    scene.add(sp);
+    pool.push({ sp, mat, vida: 0, maxVida: 0.32, vx: 0, vy: 0, vz: 0 });
+  }
+  let idx = 0, cooldown = 0;
+  return {
+    emitir(x, y, z, ry, dt, forte = false) {
+      cooldown -= dt;
+      if (cooldown > 0) return;
+      cooldown = forte ? 0.022 : 0.036;
+      const p = pool[idx++ % N];
+      const offL = (Math.random() - 0.5) * 0.42;
+      p.sp.position.set(
+        x - Math.sin(ry) * 0.25 + Math.cos(ry) * offL,
+        y + 0.35 + Math.random() * 0.95,
+        z - Math.cos(ry) * 0.25 - Math.sin(ry) * offL
+      );
+      p.sp.scale.setScalar(forte ? 0.52 : 0.38);
+      p.sp.visible = true;
+      p.vida = p.maxVida = 0.28;
+      p.vx = -Math.sin(ry) * 1.4 + (Math.random() - 0.5) * 0.7;
+      p.vy = 0.35 + Math.random() * 0.6;
+      p.vz = -Math.cos(ry) * 1.4 + (Math.random() - 0.5) * 0.7;
+    },
+    atualizar(dt) {
+      for (let i = 0; i < N; i++) {
+        const p = pool[i];
+        if (p.vida <= 0) continue;
+        p.vida -= dt;
+        if (p.vida <= 0) { p.sp.visible = false; continue; }
+        const u = 1 - p.vida / p.maxVida;
+        p.sp.position.x += p.vx * dt;
+        p.sp.position.y += p.vy * dt;
+        p.sp.position.z += p.vz * dt;
+        p.sp.scale.setScalar((1 - u * 0.55) * 0.46);
+        p.mat.opacity = (1 - u) * 0.85;
       }
     },
   };
@@ -800,6 +858,7 @@ export async function iniciarJogo() {
 
   // Fumaça leve de drift
   const fumacaDrift = criarFumacaDrift(scene);
+  const rastroCiber = criarRastroCiber(scene);
 
   const hemi = new THREE.HemisphereLight(0xffffff, 0x8fa3b5, 1.45);
   scene.add(hemi);
@@ -1104,7 +1163,30 @@ export async function iniciarJogo() {
     const def = PERSONAGENS_DEF[idx % PERSONAGENS_DEF.length];
     if (!cachePers.has(def.id)) {
       let inst;
-      if (def.tipo === 'elenco') {
+      if (def.tipo === 'realista') {
+        const gltf = await new GLTFLoader().loadAsync(def.url);
+        const sombraContato = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.92, 0.92),
+          new THREE.MeshBasicMaterial({ map: obterTexSombraBlob(), transparent: true, depthWrite: false })
+        );
+        sombraContato.rotation.x = -Math.PI / 2;
+        sombraContato.position.y = 0.015;
+        gltf.scene.add(sombraContato);
+        const envHeroi = obterAmbiente(ehNoite);
+        gltf.scene.traverse(m => {
+          if (m.isMesh && m.geometry?.type !== 'PlaneGeometry') {
+            m.frustumCulled = false;
+            const mats = Array.isArray(m.material) ? m.material : [m.material];
+            for (const mat of mats) {
+              if (!mat || !mat.isMeshStandardMaterial) continue;
+              mat.envMap = envHeroi;
+              mat.envMapIntensity = 0.92;
+              mat.needsUpdate = true;
+            }
+          }
+        });
+        inst = { obj: gltf.scene, gltf, clipes: gltf.animations || [] };
+      } else if (def.tipo === 'elenco') {
         inst = await Personagem.carregar(def.url);
         inst.piscarAuto(true);
         if (def.anime) visualAnime(inst);
@@ -1117,7 +1199,7 @@ export async function iniciarJogo() {
       } catch (e) {
         console.warn('Animações universais fallback:', e);
       }
-      inst.obj.traverse(m => { if (m.isMesh) { m.castShadow = qualAtual.sombraDetalhe; m.receiveShadow = true; } });
+      inst.obj.traverse(m => { if (m.isMesh && m.geometry?.type !== 'PlaneGeometry') { m.castShadow = qualAtual.sombraDetalhe; m.receiveShadow = true; } });
       inst.obj.visible = false;
       scene.add(inst.obj);
       cachePers.set(def.id, { inst, def });
@@ -1137,7 +1219,7 @@ export async function iniciarJogo() {
   function tocarAcao(nome, fade = 0.16, { loop = true, velocidade = 1, forcar = false } = {}) {
     if (!persAtual || (!forcar && persAcao === nome)) return;
     try {
-      const naoRepete = !loop || nome === 'Pular' || nome === 'PularAr' || nome === 'AcrobaciaRolar' || nome.startsWith('Soco');
+      const naoRepete = !loop || nome === 'Pular' || nome === 'PularAr' || nome === 'PuloNinja' || nome === 'AcrobaciaRolar' || nome.startsWith('Soco');
       persAtual.inst.tocar(nome, { fade, velocidade, loop: !naoRepete });
       persAcao = nome;
     } catch (_) {
@@ -2403,7 +2485,7 @@ export async function iniciarJogo() {
     sala.ocupado(true);
     try {
       const idx = Math.max(0, PERSONAGENS_DEF.findIndex(d => d.id === esc.pers));
-      if (idx === 0 && !qualAtual.personagemCompleto) { if (!usandoPersLeve) ativarPersonagemLeve(); }
+      if (esc.pers === 'policial' && !qualAtual.personagemCompleto) { if (!usandoPersLeve) ativarPersonagemLeve(); }
       else if (usandoPersLeve || persIdx !== idx || !persAtual) await carregarPersonagem(idx);
     } catch (e) { console.warn('personagem não carregou', e); }
     if (token !== tokenSala) return;
@@ -2430,15 +2512,15 @@ export async function iniciarJogo() {
   }
 
   const MINI = './jogo/sala/miniaturas';
-  const ICONE_PERS = { kael: '✋', policial: '👮', jovem_a: '🧑', bombeiro: '🧑‍🚒', astronauta: '👩‍🚀', corredor: '🏃', silhueta: '👤' };
-  const DESC_PERS = { kael: 'Herói: rajada, super força e super pulo', policial: 'Patrulha da cidade', jovem_a: 'Morador de Hryz', bombeiro: 'Corpo de bombeiros', astronauta: 'Visitante espacial', corredor: 'Rápido e colorido', silhueta: 'O vulto do canal' };
+  const ICONE_PERS = { ciber_heroi: '⚡', kael: '✋', policial: '👮', jovem_a: '🧑', bombeiro: '🧑‍🚒', astronauta: '👩‍🚀', operador: '👷', corredor: '🏃', silhueta: '👤' };
+  const DESC_PERS = { ciber_heroi: 'Super-corrida e pulo ninja', kael: 'Herói: rajada, super força e super pulo', policial: 'Patrulha da cidade', jovem_a: 'Morador de Hryz', bombeiro: 'Corpo de bombeiros', astronauta: 'Visitante espacial', operador: 'Operador de obras', corredor: 'Rápido e colorido', silhueta: 'O vulto do canal' };
   const sala = new Sala({
     pers: PERSONAGENS_DEF.map(d => ({ id: d.id, nome: d.nome, desc: DESC_PERS[d.id] || '', icone: ICONE_PERS[d.id] || '🧍', img: `${MINI}/pers-${d.id}.webp` })),
     veic: [{ id: 'nenhum', nome: 'A pé', desc: 'Começar andando', icone: '🚶' },
       ...veiculos.map(v => ({ id: v.id, nome: v.nome, desc: v.temSirene ? 'Com sirene (L)' : '', icone: '🚗', img: `${MINI}/veic-${v.id}.webp` }))],
     local: [...PONTOS_TELEPORTE.map(p => ({ id: p.id, nome: p.nome.replace(/^\S+\s(?=Selva)/, ''), icone: '📍', img: `${MINI}/local-${p.id}.webp` })),
       { id: 'lua', nome: '🌙 Lua', icone: '🌙', img: `${MINI}/local-lua.webp` }],
-  }, { pers: 'policial', veic: 'p71', local: 'delegacia' }, {
+  }, { pers: 'ciber_heroi', veic: 'p71', local: 'delegacia' }, {
     aoMudar: esc => aplicarEscolha(esc),
     aoJogar: async esc => {
       await aplicarEscolha(esc);
@@ -2754,9 +2836,12 @@ export async function iniciarJogo() {
         Math.cos(camYaw) * frente + Math.sin(camYaw) * lado
       ) : jogador.ry;
 
+      const defAtual = persAtual?.def || {};
+      const ehCiber = defAtual.id === 'ciber_heroi';
+      const velMult = defAtual.velMult || 1;
       if (jogador.rolando > 0) {
         if (movendo) jogador.ry += anguloDiff(jogador.ry, dirMundo) * Math.min(1, dt * 6);
-        const velRolar = 7.2 * (0.62 + 0.38 * (jogador.rolando / 0.66));
+        const velRolar = 7.2 * (ehCiber ? 1.28 : 1) * (0.62 + 0.38 * (jogador.rolando / 0.66));
         const passo = velRolar * dt;
         const nx = jogador.x + Math.sin(jogador.ry) * passo, nz = jogador.z + Math.cos(jogador.ry) * passo;
         const col = jogador.plataforma ? moverNaPlataforma(nx, nz, 0.38) : resolverColisoes(nx, nz, 0.42);
@@ -2764,7 +2849,7 @@ export async function iniciarJogo() {
         velAbs = velRolar;
       } else if (movendo) {
         jogador.ry += anguloDiff(jogador.ry, dirMundo) * Math.min(1, dt * 11);
-        const velBase = (jogador.agachado ? 1.95 : (sprint ? 6.5 : (mag > 0.62 ? 3.85 : 2.45))) * (ehKael() && !jogador.noChao ? 2.2 : 1);   // Kael: plana no ar do super pulo
+        const velBase = (jogador.agachado ? 1.95 : (sprint ? 6.5 * velMult : (mag > 0.62 ? 3.85 * Math.min(velMult, 1.18) : 2.45))) * (ehKael() && !jogador.noChao ? 2.2 : 1);   // Kael: plana no ar do super pulo
         const fatorGolpe = jogador.golpeando > 0 ? 0.35 : 1;
         const passo = velBase * fatorGolpe * Math.min(1, mag) * dt;
         const nx = jogador.x + Math.sin(dirMundo) * passo, nz = jogador.z + Math.cos(dirMundo) * passo;
@@ -2800,9 +2885,10 @@ export async function iniciarJogo() {
       } else if (espaco && jogador.noChao && jogador.rolando <= 0 && !kael) {
         if (jogador.agachado) { jogador.agachado = false; sincronizarBotoesPata(); }
         jogador.golpeando = 0;
-        jogador.vy = lua.ativa ? 4.7 : 6.3;                                           // na Lua: ~3,8 m de altura e ~3 s no ar
+        jogador.vy = lua.ativa ? (ehCiber ? 5.6 : 4.7) : (defAtual.puloVy || 6.3);
         jogador.noChao = false; jogador.yPico = jogador.y;
-        tocarAcao('PularAr', 0.08, { loop: false });
+        tocarAcao(defAtual.clipPulo || 'PularAr', 0.08, { loop: false });
+        if (ehCiber) som.tocarBeep(520, 0.12, 0.06);
       }
       if (!jogador.noChao && jogador.carga) { jogador.carga = 0; elCarga.classList.add('oculto'); }
       if (!jogador.noChao) {
@@ -2811,10 +2897,11 @@ export async function iniciarJogo() {
         jogador.yPico = Math.max(jogador.yPico ?? jogador.y, jogador.y);
         const chao = jogador.plataforma ? jogador.plataforma.y : (kael ? chaoComTelhado(jogador.x, jogador.z, jogador.y - jogador.vy * dt) : (alturaChao(jogador.x, jogador.z) ?? CALCADA));
         if (jogador.y <= chao) {
-          const queda = ((jogador.yPico ?? chao) - chao) * (lua.ativa ? G_LUA / 17.5 : 1);   // dano de queda: a partir de 3,5 m; ~15 m é fatal (o Kael não se machuca); na Lua conta a energia (gravidade menor)
+          const queda = ((jogador.yPico ?? chao) - chao) * (lua.ativa ? G_LUA / 17.5 : 1);
+          const limQueda = ehCiber ? 5.5 : 3.5;
           if (lua.ativa) lua.atualizarJogador(dt, jogador, false, true, (jogador.yPico ?? chao) - chao);
           if (kael) poderes.pouso(jogador.x, chao, jogador.z, queda);
-          else if (queda > 3.5) { vida.dano((queda - 3.5) * 9, 'queda'); if (queda < 14) mostrarToast(`Queda de ${queda.toFixed(0)} m!`); }
+          else if (queda > limQueda) { vida.dano((queda - limQueda) * 9, 'queda'); if (queda < 14) mostrarToast(`Queda de ${queda.toFixed(0)} m!`); }
           jogador.y = chao; jogador.vy = 0; jogador.noChao = true; jogador.yPico = chao;
         }
       }
@@ -2823,9 +2910,14 @@ export async function iniciarJogo() {
         else if (jogador.golpeando > 0) { /* mantém Soco atual */ }
         else if (jogador.agachado) tocarAcao(movendo ? 'AgacharAndar' : 'AgacharParado', 0.16);
         else if (!movendo) tocarAcao('ParadoPro', 0.20);
-        else if (sprint) tocarAcao('CorrerSprint', 0.16);
+        else if (sprint) tocarAcao('CorrerSprint', 0.16, { velocidade: ehCiber ? 1.24 : 1 });
         else if (mag > 0.62) tocarAcao('Trotar', 0.18);
         else tocarAcao('AndarPro', 0.18);
+      }
+
+      // Rastro elétrico azul-safira quando o Ciber-Herói dá super-corrida, pulo ninja ou rolamento!
+      if (ehCiber && ((sprint && movendo) || !jogador.noChao || jogador.rolando > 0)) {
+        rastroCiber.emitir(jogador.x, jogador.y, jogador.z, jogador.ry, dt, !jogador.noChao || jogador.rolando > 0);
       }
 
       if (lua.ativa) lua.atualizarJogador(dt, jogador, movendo, jogador.noChao, 0);
@@ -2860,8 +2952,9 @@ export async function iniciarJogo() {
     efeitos.atualizar(dt); vida.atualizar(dt); terreno?.atualizar(dt); poderes.atualizar(dt);
     for (const v of veiculos) v.atualizarDano?.(dt);
 
-    // Atualiza setores visíveis, trânsito, frota distante, T. rex da Selva, fumaça de drift e NPCs próximos
+    // Atualiza setores visíveis, trânsito, frota distante, T. rex da Selva, fumaça de drift, rastro ciber e NPCs próximos
     fumacaDrift.atualizar(dt);
+    rastroCiber.atualizar(dt);
     canteiro?.atualizar(dt, cine ? cine.foco.x : focoX, cine ? cine.foco.z : focoZ);
     if (cine) {
       const fx = cine.foco.x, fz = cine.foco.z;

@@ -165,8 +165,10 @@ export class Loja {
     const k = Math.min(1, c.ti / f.dur);
     const vend = this.vend, pj = this.jogo.pers();
     const G = (x, y, z) => V(O.x + x, y, O.z + z);
+    const MAPA_J = { Cabeca: 'head', BracoD: 'upperarm_r', AntebracoD: 'lowerarm_r', MaoD: 'hand_r', BracoE: 'upperarm_l', AntebracoE: 'lowerarm_l', MaoE: 'hand_l' };
+    const ossoJ = n => pj?.obj.getObjectByName(n) || (MAPA_J[n] && pj?.obj.getObjectByName(MAPA_J[n]));
     const cabV = vend.obj.getObjectByName('Cabeca').getWorldPosition(V()).add(V(0, 0.08, 0));
-    const cabJ = pj?.obj.getObjectByName('Cabeca')?.getWorldPosition(V()).add(V(0, 0.08, 0)) || G(0.2, 1.62, -1.15);
+    const cabJ = ossoJ('Cabeca')?.getWorldPosition(V()).add(V(0, 0.08, 0)) || G(0.2, 1.62, -1.15);
     // planos de câmera (cortes secos entre falas, com leve movimento dentro de cada uma)
     const cam = this.camera, P = {
       geral: [G(4.2, 2.1, -1.0), G(-0.2, 1.35, -2.3), 44, G(3.8, 2.0, -1.4)],
@@ -213,7 +215,7 @@ export class Loja {
     // jogador: cabeça e mãos acompanham a fala
     if (pj) {
       pj.atualizar?.(dt);
-      const nj = n => pj.obj.getObjectByName(n);
+      const nj = ossoJ;
       if (pj.rosto) pj.rosto({ boca: falandoJ ? Math.abs(Math.sin(t * 14)) * 0.5 : 0 });
       if (nj('Cabeca') && falandoJ) nj('Cabeca').rotation.x += Math.sin(c.ti * 5) * 0.08;
       if (f.gesto === 'entregar' && nj('MaoD')) {

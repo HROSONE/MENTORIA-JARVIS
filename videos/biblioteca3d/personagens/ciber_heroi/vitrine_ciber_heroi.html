@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>Vitrine — Ciber-Herói em Ação (Three.js + Animações Profissionais)</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#10151f;font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center}
+  canvas{display:block;max-width:100vw;max-height:100vh}
+  #legenda{position:fixed;bottom:18px;left:0;right:0;display:flex;justify-content:space-around;pointer-events:none;padding:0 7vw}
+  .tag{background:rgba(12,18,32,.82);border:1px solid rgba(56,160,255,.45);color:#eaf4ff;padding:6px 16px;border-radius:999px;font-weight:700;font-size:14px;letter-spacing:.04em;box-shadow:0 4px 18px rgba(0,0,0,.45)}
+  .tag span{color:#4cc3ff}
+</style>
+<script type="importmap">{"imports":{"three":"../../../node_modules/three/build/three.module.js","three/addons/":"../../../node_modules/three/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="legenda">
+  <div class="tag"><span>01</span> CORRIDA SPRINT</div>
+  <div class="tag"><span>02</span> SOCO DIRETO</div>
+  <div class="tag"><span>03</span> PULO NINJA / MIRA</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { carregarCiberHeroi } from './ciber_heroi.js';
+
+const Q = new URLSearchParams(location.search);
+const larg = +(Q.get('w') || 1360), alt = +(Q.get('h') || 765);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(larg, alt);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x161c28);
+scene.fog = new THREE.Fog(0x161c28, 10, 24);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.72;
+
+const cam = new THREE.PerspectiveCamera(33, larg / alt, 0.1, 40);
+cam.position.set(0, 1.28, 4.85);
+cam.lookAt(0, 0.92, 0);
+
+scene.add(new THREE.HemisphereLight(0xdceeff, 0x1a2234, 1.15));
+const key = new THREE.DirectionalLight(0xfff6ec, 2.2);
+key.position.set(-2.6, 5.2, 4.0);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { near: 1, far: 16, left: -3.5, right: 3.5, top: 3, bottom: -3 });
+scene.add(key);
+
+const rim = new THREE.DirectionalLight(0x5bb8ff, 1.9);
+rim.position.set(3.2, 3.4, -3.2);
+scene.add(rim);
+
+const rim2 = new THREE.DirectionalLight(0xff4d5a, 0.95);
+rim2.position.set(-3.4, 2.4, -2.8);
+scene.add(rim2);
+
+const piso = new THREE.Mesh(
+  new THREE.CircleGeometry(14, 64),
+  new THREE.MeshStandardMaterial({ color: 0x182030, roughness: 0.58, metalness: 0.16 })
+);
+piso.rotation.x = -Math.PI / 2;
+piso.receiveShadow = true;
+scene.add(piso);
+
+const cfg = [
+  { x: -1.28, yaw: 0.38, clip: 'CorrerSprint', t: 0.22 },
+  { x:  0.00, yaw: 0.26, clip: 'SocoDireto',   t: 0.34 },
+  { x:  1.28, yaw: -0.34, clip: 'MirarPistola', t: 0.25 },
+];
+
+const atores = [];
+for (const c of cfg) {
+  const h = await carregarCiberHeroi({ preCarregar: [c.clip] });
+  h.obj.position.set(c.x, 0, 0);
+  h.obj.rotation.y = c.yaw;
+  scene.add(h.obj);
+  await h.pose(c.clip, c.t);
+  atores.push({ h, c });
+}
+
+renderer.render(scene, cam);
+window.__PRONTO = true;
+
+if (Q.get('anim') !== '0') {
+  for (const { h, c } of atores) await h.tocar(c.clip);
+  let t0 = performance.now();
+  function loop(now) {
+    const dt = Math.min(0.05, (now - t0) / 1000);
+    t0 = now;
+    for (const { h } of atores) h.atualizar(dt);
+    renderer.render(scene, cam);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
