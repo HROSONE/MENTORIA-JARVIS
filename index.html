@@ -561,6 +561,30 @@
     .cao-topo { font-size: 10px; }
     .cao-obj { font-size: 9.5px; }
   }
+  /* Cutscene cinematográfica da Vida de Cachorro (letterbox + legenda de close-up) */
+  #cine-cao { position: fixed; inset: 0; z-index: 34; pointer-events: none; }
+  #cine-cao .faixa { position: absolute; left: 0; right: 0; height: 8.5vh; background: #000; }
+  #cine-cao .faixa.cima { top: 0; } #cine-cao .faixa.baixo { bottom: 0; }
+  #cine-cao-tag {
+    position: absolute; left: max(18px, 3vw); top: calc(8.5vh + 12px);
+    background: rgba(15, 23, 42, 0.82); border: 1px solid rgba(244, 114, 182, 0.55);
+    color: #fbcfe8; font-weight: 900; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 999px; box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+  }
+  #cine-cao-legenda {
+    position: absolute; left: 50%; bottom: calc(8.5vh + 14px); transform: translateX(-50%);
+    background: rgba(2, 6, 23, 0.82); border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; font-weight: 800; font-size: clamp(13px, 1.8vw, 17px);
+    padding: 8px 18px; border-radius: 12px; text-align: center; max-width: 88vw;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.55); text-shadow: 0 1px 4px #000;
+  }
+  #cine-cao-pular {
+    position: absolute; right: max(18px, 3vw); top: calc(8.5vh + 10px); pointer-events: auto;
+    padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.35);
+    background: rgba(0,0,0,0.55); color: #fff; font-weight: 800; font-size: 12px; cursor: pointer;
+  }
+  body.cine-cao #hud-esq, body.cine-cao #hud-dir, body.cine-cao #hud-base-dir,
+  body.cine-cao #controles-touch, body.cine-cao #prompt-acao, body.cine-cao #toast { display: none !important; }
 </style>
 </head>
 <body>
@@ -573,6 +597,13 @@
   <div id="baloes"></div>
   <div id="baloes-missao"></div>
   <div id="mi-intro" class="oculto"><div class="faixa cima"></div><div class="faixa baixo"></div><div class="mi-urgente"><span>URGENTE</span> Refém na Rotatória · ao vivo</div><button id="mi-pular">PULAR ⏭<small>Enter</small></button></div>
+  <div id="cine-cao" class="oculto">
+    <div class="faixa cima"></div>
+    <div class="faixa baixo"></div>
+    <div id="cine-cao-tag">🎬 CLOSE-UP CANINO · FARO</div>
+    <button id="cine-cao-pular" title="Pular cutscene">PULAR ⏭</button>
+    <div id="cine-cao-legenda">👃 Identificando o cheiro…</div>
+  </div>
   <div id="tela-dano"></div>
   <div id="tela-preta"></div>
   <div id="missao-card" class="oculto"><div class="glass mc-caixa"><div id="mc-titulo"></div><div id="mc-texto"></div><button id="mc-botao">OK</button></div></div>

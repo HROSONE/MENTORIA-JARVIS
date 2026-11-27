@@ -2726,7 +2726,7 @@ export async function iniciarJogo() {
     const rMis = modo === 'jogo' ? missao.camCena() : null;
     if (rMis) { if (mira.ativa) sairMira(); camera.position.copy(rMis.p); camera.lookAt(rMis.a); const fv = rMis.fov || 46; if (camera.fov !== fv) { camera.fov = fv; camera.updateProjectionMatrix(); } cine = { foco: { x: rMis.a.x, z: rMis.a.z }, trexAlvo: [jogador.x, jogador.y, jogador.z] }; }
     const rCao = modo === 'jogo' ? vidaCao.camCena() : null;
-    if (rCao) { if (mira.ativa) sairMira(); camera.position.copy(rCao.p); camera.lookAt(rCao.a); const fv = rCao.fov || 44; if (camera.fov !== fv) { camera.fov = fv; camera.updateProjectionMatrix(); } cine = { foco: rCao.foco, trexAlvo: [jogador.x, jogador.y, jogador.z] }; }
+    if (rCao) { if (mira.ativa) sairMira(); camera.position.copy(rCao.p); camera.lookAt(rCao.a); const fv = rCao.fov || 44, nr = rCao.near || 0.4; if (camera.fov !== fv || camera.near !== nr) { camera.fov = fv; camera.near = nr; camera.updateProjectionMatrix(); } cine = { foco: rCao.foco, trexAlvo: [jogador.x, jogador.y, jogador.z] }; }
     const rLua = lua.cineAtiva ? lua.atualizarCine(dt) : null;
     if (rLua) { camera.position.copy(rLua.p); camera.lookAt(rLua.a); if (camera.fov !== rLua.fov) { camera.fov = rLua.fov; camera.updateProjectionMatrix(); } cine = { foco: { x: rLua.a.x, z: rLua.a.z }, trexAlvo: [1e5, 0, 1e5] }; }
     if (camFixa) { camera.position.copy(camFixa.p); camera.lookAt(camFixa.a); cine = { foco: { x: camFixa.a.x, z: camFixa.a.z }, trexAlvo: [1e5, 0, 1e5] }; }

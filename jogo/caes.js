@@ -338,8 +338,25 @@ export class VidaCachorro {
     this.elObjOsso = document.getElementById('obj-cao-osso');
     this.elObjExtra = document.getElementById('obj-cao-extra');
     this.elBtnFaro = document.getElementById('touch-faro');
+    this.elCine = document.getElementById('cine-cao');
+    this.elCineTag = document.getElementById('cine-cao-tag');
+    this.elCineLeg = document.getElementById('cine-cao-legenda');
+    this.elCinePular = document.getElementById('cine-cao-pular');
+    this._pAnusTmp = new THREE.Vector3();
+    this._pFocTmp = new THREE.Vector3();
+    this._pMidTmp = new THREE.Vector3();
+    if (this.elCinePular) {
+      this.elCinePular.onclick = () => { if (this.cena?.tipo === 'socializar') this.cena.t = this.cena.dur; };
+    }
 
     this._atualizarHud();
+  }
+
+  _mostrarCine(visivel, tag = '', legenda = '') {
+    document.body.classList.toggle('cine-cao', !!visivel);
+    if (this.elCine) this.elCine.classList.toggle('oculto', !visivel);
+    if (visivel && this.elCineTag && tag) this.elCineTag.textContent = tag;
+    if (visivel && this.elCineLeg && legenda) this.elCineLeg.textContent = legenda;
   }
 
   _criarRastroFaro() {
@@ -411,6 +428,7 @@ export class VidaCachorro {
       this.faroAtivo = false;
       this.cena = null;
       this.balaoCena.classList.add('oculto');
+      this._mostrarCine(false);
       document.body.classList.remove('modo-faro');
     } else {
       this.carregarNpcs();
@@ -547,37 +565,44 @@ export class VidaCachorro {
     return null;
   }
 
-  // ==================== CENA 1: CHEIRAR O ÂNUS/TRASEIRO DO OUTRO CACHORRO ====================
+  // ==================== CENA 1: CUTSCENE CINEMATOGRÁFICA — CHEIRAR O ORIFÍCIO ANAL DO OUTRO CACHORRO ====================
   iniciarSocializacao(jogador, caoInst, npc) {
     if (this.cena || !npc) return;
     this.som?.desbloquear?.();
     this.som?.tocarFarejo?.();
 
-    // Posiciona o NPC de perfil firme e o jogador coladinho atrás do traseiro dele!
+    // Posiciona o NPC de perfil firme e calcula a distância exata entre o focinho do jogador e o orifício anal do NPC!
     const angNpc = Math.atan2(npc.x - jogador.x, npc.z - jogador.z);
     npc.ry = angNpc;
     npc.emCena = true;
 
+    const [, syNpc, szNpc] = npc.inst.def?.esc || [1, 1, 1];
+    const [, syJog, szJog] = caoInst.def?.esc || [1, 1, 1];
+    const flJog = caoInst.def?.fl ?? 0.115;
+    // Deixa ~9 cm nítidos entre a ponta do focinho preto e o orifício anal sob o rabo erguido!
+    const distClose = 0.354 * syNpc + (0.512 + flJog) * syJog + 0.085;
+    caoInst.pitchFaro = THREE.MathUtils.clamp((0.525 * szJog - 0.406 * szNpc) * 1.4 - 0.24, -0.45, 0.35);
+
     const fx = Math.sin(angNpc), fz = Math.cos(angNpc);
-    // Distância calibrada para o focinho do jogador encostar bem perto da base do rabo/ânus do outro cão!
-    const distTras = 0.86;
-    jogador.x = npc.x - fx * distTras;
-    jogador.z = npc.z - fz * distTras;
+    jogador.x = npc.x - fx * (distClose + 0.25);
+    jogador.z = npc.z - fz * (distClose + 0.25);
     jogador.ry = angNpc;
     jogador.agachado = false;
 
     this.cena = {
       tipo: 'socializar',
       t: 0,
-      dur: 4.5,
+      dur: 5.4,
       jogador,
       caoInst,
       npc,
       angBase: angNpc,
+      distClose,
       latiuFinal: false,
       farejou2: false,
+      farejou3: false,
     };
-    this.mostrarToast(`🐕 Socializando com ${npc.nome}: cheirando o traseiro!`);
+    this._mostrarCine(true, '🎬 CUTSCENE · SOCIALIZAÇÃO CANINA', `🐕 ${npc.nome} levantou o rabo para se apresentar…`);
   }
 
   // ==================== CENA 2: REVIRAR LIXO E COMER ====================
@@ -751,15 +776,46 @@ export class VidaCachorro {
   camCena() {
     if (!this.cena) return null;
     if (this.cena.tipo === 'socializar') {
-      const { npc, jogador, t, angBase } = this.cena;
-      const mx = (npc.x + jogador.x) * 0.5;
-      const mz = (npc.z + jogador.z) * 0.5;
-      // Câmera lateral em close-up médio enquadrando os dois cães (focinho no traseiro/rabo erguido!)
-      const ladoAng = angBase + Math.PI * 0.52 + Math.sin(t * 0.7) * 0.14;
-      const dist = t < 2.5 ? 2.15 : 2.55;
-      this._camP.set(mx + Math.sin(ladoAng) * dist, CALCADA + 0.88, mz + Math.cos(ladoAng) * dist);
-      this._camA.set(mx, CALCADA + 0.44, mz);
-      return { p: this._camP, a: this._camA, fov: 42, foco: { x: mx, z: mz } };
+      const { npc, jogador, caoInst, t, angBase } = this.cena;
+      const pAnus = npc.inst.anusMundo(this._pAnusTmp);
+      const pFoc = caoInst.focinhoMundo(this._pFocTmp);
+      const mid = this._pMidTmp.copy(pAnus).lerp(pFoc, 0.48);
+
+      if (t < 1.0) {
+        // PLANO 1 (0.0 -> 1.0s): Plano médio lateral mostrando aproximação e o rabo erguendo
+        const a = angBase + Math.PI * 0.56 - t * 0.14;
+        const dist = 1.95 - t * 0.35;
+        this._camP.set(mid.x + Math.sin(a) * dist, CALCADA + 0.72, mid.z + Math.cos(a) * dist);
+        this._camA.set(mid.x, CALCADA + 0.44, mid.z);
+        return { p: this._camP, a: this._camA, fov: 40, near: 0.12, foco: { x: mid.x, z: mid.z } };
+      }
+      if (t < 3.2) {
+        // PLANO 2 (1.0 -> 3.2s): MACRO CLOSE-UP EXTREMO — Focinho/olhos cheirando de perto + Orifício anal sob o rabo erguido!
+        const u = (t - 1.0) / 2.2;
+        const aMacro = angBase + Math.PI * 0.71 + Math.sin(u * Math.PI) * 0.12;
+        const distMacro = 0.80 - Math.sin(u * Math.PI) * 0.06;
+        this._camP.set(
+          mid.x + Math.sin(aMacro) * distMacro,
+          mid.y + 0.05 + Math.sin(u * Math.PI * 2) * 0.02,
+          mid.z + Math.cos(aMacro) * distMacro
+        );
+        this._camA.set(mid.x, mid.y + 0.03, mid.z);
+        return { p: this._camP, a: this._camA, fov: 34, near: 0.05, foco: { x: mid.x, z: mid.z } };
+      }
+      if (t < 4.15) {
+        // PLANO 3 (3.2 -> 4.15s): Close-up 3/4 de aprovação / cheiro reconhecido
+        const u = (t - 3.2) / 0.95;
+        const a = angBase + Math.PI * 0.42 + u * 0.55;
+        this._camP.set(npc.x + Math.sin(a) * 1.35, CALCADA + 0.72, npc.z + Math.cos(a) * 1.35);
+        this._camA.set((npc.x + jogador.x) * 0.5, CALCADA + 0.46, (npc.z + jogador.z) * 0.5);
+        return { p: this._camP, a: this._camA, fov: 38, near: 0.10, foco: { x: npc.x, z: npc.z } };
+      }
+      // PLANO 4 (4.15 -> 5.4s): Plano aberto com os dois cães na reverência de brincadeira!
+      const mx = (npc.x + jogador.x) * 0.5, mz = (npc.z + jogador.z) * 0.5;
+      const a = angBase + Math.PI * 0.50 + (t - 4.15) * 0.28;
+      this._camP.set(mx + Math.sin(a) * 2.35, CALCADA + 0.88, mz + Math.cos(a) * 2.35);
+      this._camA.set(mx, CALCADA + 0.42, mz);
+      return { p: this._camP, a: this._camA, fov: 44, near: 0.15, foco: { x: mx, z: mz } };
     }
     if (this.cena.tipo === 'lixo' || this.cena.tipo === 'marcar' || this.cena.tipo === 'cavar') {
       const { jogador, t } = this.cena;
@@ -844,44 +900,60 @@ export class VidaCachorro {
     const { jogador, caoInst } = c;
 
     if (c.tipo === 'socializar') {
-      const { npc, angBase } = c;
+      const { npc, angBase, distClose } = c;
       const fx = Math.sin(angBase), fz = Math.cos(angBase);
-      if (c.t < 2.6) {
-        // Fase 1: Cheirando o traseiro / ânus do outro cachorro!
+      this.balaoCena.classList.add('oculto');
+
+      if (c.t < 1.0) {
+        // PLANO 1: Aproximação + outro cão ergue bem o rabo!
+        const k = Math.min(1, c.t / 1.0);
+        const d = distClose + 0.25 * (1 - k);
+        npc.inst.tocar('serCheirado');
+        caoInst.tocar(k < 0.72 ? 'andar' : 'cheirarTraseiro');
+        jogador.x = npc.x - fx * d;
+        jogador.z = npc.z - fz * d;
+        jogador.ry = angBase;
+        this._mostrarCine(true, '🎬 CUTSCENE · SOCIALIZAÇÃO CANINA', `🐕 ${npc.nome} ergueu o rabo — hora do cumprimento canino!`);
+      } else if (c.t < 3.2) {
+        // PLANO 2: MACRO CLOSE-UP EXTREMO — Focinho cheirando bem de perto o orifício anal!
         npc.inst.tocar('serCheirado');
         caoInst.tocar('cheirarTraseiro');
-        jogador.x = npc.x - fx * 0.95;
-        jogador.z = npc.z - fz * 0.95;
+        // Pequeno vai-e-vem sutil do focinho ao farejar
+        const pulso = Math.sin((c.t - 1.0) * 9.5) * 0.018;
+        jogador.x = npc.x - fx * (distClose - pulso);
+        jogador.z = npc.z - fz * (distClose - pulso);
         jogador.ry = angBase;
-        if (!c.farejou2 && c.t > 1.2) {
-          c.farejou2 = true;
-          this.som?.tocarFarejo?.();
-        }
-        if (Math.random() < dt * 9) {
-          const pt = npc.inst.traseiroMundo(this._vTmp);
+        if (!c.farejou2 && c.t > 1.25) { c.farejou2 = true; this.som?.tocarFarejo?.(); }
+        if (!c.farejou3 && c.t > 2.25) { c.farejou3 = true; this.som?.tocarFarejo?.(); }
+
+        // Fumaças sutis de cheiro saindo do orifício anal e indo direto para a ponta do focinho preto!
+        if (Math.random() < dt * 16) {
+          const pA = npc.inst.anusMundo(this._pAnusTmp);
+          const pF = caoInst.focinhoMundo(this._pFocTmp);
+          const vx = (pF.x - pA.x) * 2.2 + (Math.random() - 0.5) * 0.06;
+          const vy = (pF.y - pA.y) * 2.2 + 0.06 + Math.random() * 0.05;
+          const vz = (pF.z - pA.z) * 2.2 + (Math.random() - 0.5) * 0.06;
           this.emitirParticula(
-            pt.x + (Math.random() - 0.5) * 0.14, pt.y + 0.05, pt.z + (Math.random() - 0.5) * 0.14,
-            (Math.random() - 0.5) * 0.35, 0.55 + Math.random() * 0.3, (Math.random() - 0.5) * 0.35,
-            COR_CHEIRO.cao, 0.24, 0.75
+            pA.x + (Math.random() - 0.5) * 0.015, pA.y + (Math.random() - 0.5) * 0.015, pA.z + (Math.random() - 0.5) * 0.015,
+            vx, vy, vz,
+            Math.random() < 0.65 ? COR_CHEIRO.cao : 0xfde047, 0.065, 0.42
           );
         }
-        this._posicionarBalao(camera, (npc.x + jogador.x) * 0.5, CALCADA + 0.92, (npc.z + jogador.z) * 0.5,
-          `👃 Cheirando ${npc.nome}…`, 'Socialização canina (cumprimento pelo faro!)');
-      } else if (c.t < 3.45) {
-        // Fase 2: Rodopio amigável lado a lado
-        const k = (c.t - 2.6) / 0.85;
+        this._mostrarCine(true, '🔍 CLOSE-UP DO FARO', `👃 Cheirando de perto o traseiro de ${npc.nome}… (snif, snif!)`);
+      } else if (c.t < 4.15) {
+        // PLANO 3: Rodopio amigável / Cheiro aprovado!
+        const k = (c.t - 3.2) / 0.95;
         const a = angBase + Math.PI + k * 1.45;
-        jogador.x = npc.x + Math.sin(a) * 0.92;
-        jogador.z = npc.z + Math.cos(a) * 0.92;
+        jogador.x = npc.x + Math.sin(a) * 0.98;
+        jogador.z = npc.z + Math.cos(a) * 0.98;
         jogador.ry = Math.atan2(npc.x - jogador.x, npc.z - jogador.z);
         npc.ry = Math.atan2(jogador.x - npc.x, jogador.z - npc.z);
         caoInst.tocar('andar');
         npc.inst.tocar('parado');
         npc.inst.alegria = 1;
-        this._posicionarBalao(camera, npc.x, CALCADA + 1.15, npc.z,
-          `💛 ${npc.nome}`, 'Cheiro aprovado! Viramos amigos!');
+        this._mostrarCine(true, '💛 CHEIRO APROVADO!', `🐾 ${npc.nome} reconheceu você! Viraram melhores amigos!`);
       } else {
-        // Fase 3: Reverência de brincadeira (play-bow) + latido alegre!
+        // PLANO 4: Reverência de brincadeira (play-bow) + latido alegre + Matilha!
         jogador.ry = Math.atan2(npc.x - jogador.x, npc.z - jogador.z);
         npc.ry = Math.atan2(jogador.x - npc.x, jogador.z - npc.z);
         caoInst.tocar('reverencia');
@@ -896,12 +968,11 @@ export class VidaCachorro {
             this.emitirParticula(
               (npc.x + jogador.x) * 0.5 + (Math.random() - 0.5) * 0.6, CALCADA + 0.7, (npc.z + jogador.z) * 0.5 + (Math.random() - 0.5) * 0.6,
               (Math.random() - 0.5) * 0.6, 1.1 + Math.random() * 0.5, (Math.random() - 0.5) * 0.6,
-              0xf43f5e, 0.28, 1.0
+              0xf43f5e, 0.24, 0.95
             );
           }
         }
-        this._posicionarBalao(camera, (npc.x + jogador.x) * 0.5, CALCADA + 1.18, (npc.z + jogador.z) * 0.5,
-          `🐾 ${npc.nome} entrou na Matilha!`, 'Au-au! Agora ele te segue pela cidade!');
+        this._mostrarCine(true, '🐾 NOVA MATILHA!', `🎉 ${npc.nome} entrou na sua Matilha e vai te seguir pela cidade!`);
       }
 
       npc.inst.obj.position.set(npc.x, npc.y, npc.z);
@@ -913,7 +984,9 @@ export class VidaCachorro {
 
       if (c.t >= c.dur) {
         npc.emCena = false;
+        caoInst.pitchFaro = 0;
         this.balaoCena.classList.add('oculto');
+        this._mostrarCine(false);
         if (!npc.socializado) {
           npc.socializado = true;
           npc.naMatilha = true;

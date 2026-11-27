@@ -22,10 +22,10 @@ const _eTmp = new THREE.Euler(0, 0, 0, 'XYZ');
 const _vTmp = new THREE.Vector3();
 
 export const RACAS_CAES = {
-  caramelo: { id: 'caramelo', nome: 'Caramelo',      desc: 'O lendário vira-lata brasileiro', icone: '🐕', arq: 'caramelo.glb', freqLatido: 410, velMult: 1.18, puloVy: 6.4 },
-  pastor:   { id: 'pastor',   nome: 'Pastor Alemão', desc: 'Rápido, forte e farejador nato',   icone: '🐕‍🦺', arq: 'pastor.glb',   freqLatido: 255, velMult: 1.32, puloVy: 7.2 },
-  dalmata:  { id: 'dalmata',  nome: 'Dálmata',       desc: 'Ágil, simpático e cheio de pintas', icone: '🐾', arq: 'dalmata.glb',  freqLatido: 360, velMult: 1.26, puloVy: 6.8 },
-  pug:      { id: 'pug',      nome: 'Pug',           desc: 'Baixinho, fofo e bom de faro',      icone: '🐶', arq: 'pug.glb',      freqLatido: 540, velMult: 0.96, puloVy: 5.4 },
+  caramelo: { id: 'caramelo', nome: 'Caramelo',      desc: 'O lendário vira-lata brasileiro', icone: '🐕', arq: 'caramelo.glb', freqLatido: 410, velMult: 1.18, puloVy: 6.4, esc: [1.00, 1.00, 1.00], fl: 0.115 },
+  pastor:   { id: 'pastor',   nome: 'Pastor Alemão', desc: 'Rápido, forte e farejador nato',   icone: '🐕‍🦺', arq: 'pastor.glb',   freqLatido: 255, velMult: 1.32, puloVy: 7.2, esc: [1.06, 1.15, 1.16], fl: 0.135 },
+  dalmata:  { id: 'dalmata',  nome: 'Dálmata',       desc: 'Ágil, simpático e cheio de pintas', icone: '🐾', arq: 'dalmata.glb',  freqLatido: 360, velMult: 1.26, puloVy: 6.8, esc: [0.95, 1.12, 1.10], fl: 0.125 },
+  pug:      { id: 'pug',      nome: 'Pug',           desc: 'Baixinho, fofo e bom de faro',      icone: '🐶', arq: 'pug.glb',      freqLatido: 540, velMult: 0.96, puloVy: 5.4, esc: [0.94, 0.74, 0.70], fl: 0.048 },
 };
 
 // Mapeia ações do Hryz City (universal.js / jogo.js) -> ações caninas nativas
@@ -58,6 +58,7 @@ export class Cao {
     this.alegria = 0.6;      // 0..1 (controla velocidade/amplitude do abanar de rabo)
     this.farejando = 0;      // 0..1 mistura de modo faro enquanto anda
     this.latindo = 0;        // temporizador de latido
+    this.pitchFaro = 0;      // ajuste fino de altura do focinho na cutscene de socialização
     this.itemBoca = null;
 
     obj.traverse(o => {
@@ -81,6 +82,42 @@ export class Cao {
       this.bocaNode.position.set(0, 0.45, 0.45);
       obj.add(this.bocaNode);
     }
+
+    // Pontos anatômicos precisos (ponta do focinho + orifício anal estilizado sob a raiz da cauda)
+    const [sx, sy, sz] = this.def.esc || [1, 1, 1];
+    const fl = this.def.fl ?? 0.115;
+    obj.updateMatrixWorld(true);
+
+    this.focinhoNode = new THREE.Group();
+    this.focinhoNode.name = 'PontaFocinho';
+    this.focinhoNode.position.set(0, 0.525 * sz, (0.512 + fl) * sy);
+    obj.add(this.focinhoNode);
+    if (this.ossos.Cabeca) this.ossos.Cabeca.attach(this.focinhoNode);
+
+    this.orificioNode = new THREE.Group();
+    this.orificioNode.name = 'OrificioAnal';
+    const rEsc = Math.min(sx, sz);
+    // Anel perineal raso e nivelado na pele + centro côncavo escuro + pregas sutis (sem parecer solto da malha!)
+    const matAnel = new THREE.MeshStandardMaterial({ color: 0x7a4844, roughness: 0.72, metalness: 0.0 });
+    const matCentro = new THREE.MeshStandardMaterial({ color: 0x261212, roughness: 0.85, metalness: 0.0 });
+    const anelExt = new THREE.Mesh(new THREE.TorusGeometry(0.0155 * rEsc, 0.0042 * rEsc, 10, 20), matAnel);
+    anelExt.scale.set(1.04, 0.96, 0.30);
+    this.orificioNode.add(anelExt);
+    const centro = new THREE.Mesh(new THREE.CircleGeometry(0.0135 * rEsc, 18), matCentro);
+    centro.position.z = 0.0005 * rEsc;
+    this.orificioNode.add(centro);
+    const pregaGeo = new THREE.BoxGeometry(0.0018 * rEsc, 0.0085 * rEsc, 0.0012 * rEsc);
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const pr = new THREE.Mesh(pregaGeo, matCentro);
+      pr.position.set(Math.cos(a) * 0.0105 * rEsc, Math.sin(a) * 0.0100 * rEsc, 0.0010 * rEsc);
+      pr.rotation.z = a + Math.PI / 2;
+      this.orificioNode.add(pr);
+    }
+    this.orificioNode.position.set(0, 0.422 * sz, -0.354 * sy);
+    this.orificioNode.rotation.set(0.05, Math.PI, 0); // rente à face traseira sob a base da cauda erguida!
+    obj.add(this.orificioNode);
+    if (this.ossos.Quadril) this.ossos.Quadril.attach(this.orificioNode);
   }
 
   tocar(nome, { velocidade = 1 } = {}) {
@@ -120,14 +157,18 @@ export class Cao {
     return this.bocaNode.getWorldPosition(out);
   }
 
-  traseiroMundo(out = new THREE.Vector3()) {
+  focinhoMundo(out = new THREE.Vector3()) {
     this.obj.updateMatrixWorld(true);
-    if (this.ossos.Rabo1) {
-      this.ossos.Rabo1.getWorldPosition(out);
-      out.y -= 0.055;
-      return out;
-    }
-    return this.obj.localToWorld(out.set(0, 0.40, -0.35));
+    return this.focinhoNode.getWorldPosition(out);
+  }
+
+  anusMundo(out = new THREE.Vector3()) {
+    this.obj.updateMatrixWorld(true);
+    return this.orificioNode.getWorldPosition(out);
+  }
+
+  traseiroMundo(out = new THREE.Vector3()) {
+    return this.anusMundo(out);
   }
 
   _rot(nome, rx, ry, rz, peso = 1) {
@@ -233,28 +274,28 @@ export class Cao {
       FE[0] = Math.sin(ph) * 0.16; FD[0] = -FE[0];
       TE[0] = -FE[0] * 0.8; TD[0] = FE[0] * 0.8;
     } else if (a === 'cheirarTraseiro') {
-      // Cena de socialização canina: focado no traseiro/base do rabo do outro cão, farejando rápido e abanando o rabo!
-      const snf = Math.sin(t * 17.5);
-      qDy = -0.02 + snf * 0.008;
-      qDz = 0.04 + Math.max(0, snf) * 0.025;
-      colRx = 0.08;
-      pescRx = 0.36 + snf * 0.08;
-      cabRx = 0.12 + snf * 0.11;
-      cabRy = Math.sin(t * 6.0) * 0.18;
-      orlE = 0.26; orlD = 0.26;
-      raboLift = 0.52; raboWagFreq = 11.5; raboWagAmp = 0.52;
-      FE[0] = 0.18; FD[0] = 0.14;
-      TE[0] = -0.10; TD[0] = -0.12;
+      // Cena de socialização canina: focinho estendido e alinhado direto ao orifício anal do outro cão, farejando em pulsos rápidos!
+      const snf = Math.sin(t * 16.5);
+      qDy = -0.02 + snf * 0.006;
+      qDz = 0.03 + Math.max(0, snf) * 0.022;
+      colRx = 0.04;
+      pescRx = 0.14 + this.pitchFaro * 0.55 + snf * 0.045;
+      cabRx = 0.04 + this.pitchFaro * 0.45 + snf * 0.065;
+      cabRy = Math.sin(t * 5.2) * 0.09;
+      orlE = 0.24; orlD = 0.24;
+      raboLift = 0.55; raboWagFreq = 11.5; raboWagAmp = 0.50;
+      FE[0] = 0.14; FD[0] = 0.12;
+      TE[0] = -0.08; TD[0] = -0.10;
     } else if (a === 'serCheirado') {
-      // Outro cão parado, rabo bem erguido abanando alegre, olhando curioso para trás por cima do ombro!
-      qDy = Math.sin(t * 4.5) * 0.008;
-      colRy = 0.18;
-      pescRy = 0.42;
-      cabRy = 0.36;
-      cabRz = -0.12;
-      orlE = 0.18; orlD = 0.18;
-      raboLift = 0.72; raboWagFreq = 13.0; raboWagAmp = 0.55;
-      mandRx = 0.18;
+      // Outro cão firme, rabo bem erguido expondo claramente a região anal sob a cauda, olhando curioso para trás!
+      qDy = Math.sin(t * 4.2) * 0.006;
+      colRy = 0.14;
+      pescRy = 0.38;
+      cabRy = 0.34;
+      cabRz = -0.10;
+      orlE = 0.16; orlD = 0.16;
+      raboLift = 1.08; raboWagFreq = 11.0; raboWagAmp = 0.28;
+      mandRx = 0.16;
     } else if (a === 'reverencia') {
       // Play-bow! Peito rente ao chão, patas dianteiras estendidas p/ frente, bumbum alto abanando muito!
       qDy = -0.02 + Math.sin(t * 10) * 0.015;
