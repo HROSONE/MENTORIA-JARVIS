@@ -9,7 +9,8 @@ import { carregarCao } from '../videos/biblioteca3d/animais/caes/cao.js';
 const COR_CHEIRO = {
   lixo: 0x4ade80,     // verde-dourado: comida no lixo
   cao: 0xf472b6,      // rosa: outros cães para socializar
-  hidrante: 0xfacc15, // amarelo: território
+  parceira: 0xf43f5e, // vermelho-rosa apaixonado: parceira (Luna)
+  hidrante: 0xfacc15, // amarelo: território (xixi)
   osso: 0xfb923c,     // laranja: osso enterrado
 };
 
@@ -44,6 +45,82 @@ function criarTexPuff() {
   g.fillStyle = gr;
   g.fillRect(0, 0, 64, 64);
   return new THREE.CanvasTexture(c);
+}
+
+function criarTexCoracao() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fb7185';
+  g.beginPath();
+  g.moveTo(32, 54);
+  g.bezierCurveTo(10, 38, 6, 22, 18, 13);
+  g.bezierCurveTo(26, 7, 32, 16, 32, 20);
+  g.bezierCurveTo(32, 16, 38, 7, 46, 13);
+  g.bezierCurveTo(58, 22, 54, 38, 32, 54);
+  g.closePath();
+  g.fill();
+  g.strokeStyle = '#fff1f2';
+  g.lineWidth = 2.5;
+  g.stroke();
+  return new THREE.CanvasTexture(c);
+}
+
+function criarLacoParceira() {
+  const g = new THREE.Group();
+  const matRosa = new THREE.MeshStandardMaterial({ color: 0xf43f5e, roughness: 0.35, metalness: 0.08 });
+  const matPerola = new THREE.MeshStandardMaterial({ color: 0xffe4e6, roughness: 0.25, metalness: 0.2 });
+  for (const sgn of [-1, 1]) {
+    const aba = new THREE.Mesh(new THREE.ConeGeometry(0.032, 0.062, 10), matRosa);
+    aba.rotation.z = sgn * (Math.PI / 2 - 0.18);
+    aba.position.set(sgn * 0.032, 0, 0);
+    aba.scale.set(1, 1, 0.55);
+    g.add(aba);
+  }
+  const no = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), matPerola);
+  g.add(no);
+  return g;
+}
+
+function criarJatoXixi() {
+  // Arco parabólico dourado translúcido de xixi (estendido ao longo de +X local!)
+  const pts = [];
+  for (let i = 0; i <= 14; i++) {
+    const u = i / 14;
+    pts.push(new THREE.Vector3(u * 0.58, 0.28 + Math.sin(u * Math.PI * 0.65) * 0.07 - u * u * 0.33, 0));
+  }
+  const curva = new THREE.CatmullRomCurve3(pts);
+  const geo = new THREE.TubeGeometry(curva, 16, 0.011, 8, false);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0xfde047, emissive: 0xeab308, emissiveIntensity: 0.35,
+    transparent: true, opacity: 0.88, roughness: 0.18,
+  });
+  const m = new THREE.Mesh(geo, mat);
+  m.visible = false;
+  return m;
+}
+
+function criarPocaXixi(x, z) {
+  const grp = new THREE.Group();
+  grp.position.set(x, CALCADA + 0.018, z);
+  const poca = new THREE.Mesh(
+    new THREE.CircleGeometry(0.32, 20),
+    new THREE.MeshStandardMaterial({
+      color: 0xfacc15, emissive: 0xca8a04, emissiveIntensity: 0.22,
+      roughness: 0.12, metalness: 0.15, transparent: true, opacity: 0.78, depthWrite: false,
+    })
+  );
+  poca.rotation.x = -Math.PI / 2;
+  poca.scale.set(1.18, 0.88, 1);
+  grp.add(poca);
+  const anel = new THREE.Mesh(
+    new THREE.RingGeometry(0.36, 0.44, 24),
+    new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false })
+  );
+  anel.rotation.x = -Math.PI / 2;
+  anel.position.y = 0.005;
+  grp.add(anel);
+  return { grp, poca, anel, x, z };
 }
 
 function criarMalhaOsso(escala = 1) {
@@ -249,6 +326,7 @@ export class VidaCachorro {
 
     this.texSombra = criarTexSombraCao();
     this.texPuff = criarTexPuff();
+    this.texCoracao = criarTexCoracao();
 
     // Estado do jogador canino
     this.ativo = false;
@@ -260,9 +338,19 @@ export class VidaCachorro {
     this.territoriosMarcados = 0;
     this.ossosCavados = 0;
     this.carinhosEBolinha = 0;
+    this.parceira = null;        // NPC Luna conquistada!
+    this.gestacao = 0;           // segundos até nascerem os filhotes
+    this.filhotes = [];          // 3 filhotinhos 3D que seguem a família
+    this.filhotesNascidos = false;
+    this._nascendo = false;
+    this.pocasXixi = [];         // poças amarelas permanentes de território
     this.todosConcluidos = false;
 
-    // Cena ativa (cheirar traseiro / revirar lixo / marcar território / cavar osso)
+    // Jato 3D parabólico de xixi reutilizável
+    this.jatoXixi = criarJatoXixi();
+    this.raiz.add(this.jatoXixi);
+
+    // Cena ativa (cheirar traseiro / parceira / nascimento / revirar lixo / marcar território / cavar osso)
     this.cena = null;
     this._camP = new THREE.Vector3();
     this._camA = new THREE.Vector3();
@@ -305,10 +393,11 @@ export class VidaCachorro {
     this.bolinha = criarBolinha3D(149.4, 163.7);
     this.raiz.add(this.bolinha.grp);
 
-    // 5 cães NPC autônomos espalhados pela vizinhança e Praça Central
+    // 6 cães NPC autônomos (incluindo Luna, a Parceira romântica com lacinho rosa!)
     this.caesNpc = [];
     this._definicoesNpc = [
       { nome: 'Pipoca',  raca: 'caramelo', x: 156.2, z: 163.4, ry: -1.35, raio: 6.5 },
+      { nome: 'Luna',    raca: 'caramelo', x: 164.0, z: 163.5, ry: -1.60, raio: 5.5, ehParceira: true },
       { nome: 'Rex',     raca: 'pastor',   x: 204.0, z: 152.0, ry: 0.7,   raio: 9.0 },
       { nome: 'Toby',    raca: 'dalmata',  x: 219.5, z: 136.0, ry: -2.1,  raio: 10.0 },
       { nome: 'Bolinha', raca: 'pug',      x: 199.0, z: 137.0, ry: 1.4,   raio: 8.0 },
@@ -332,9 +421,11 @@ export class VidaCachorro {
     this.elFomeBarra = document.getElementById('cao-fome-barra');
     this.elFomeVal = document.getElementById('cao-fome-val');
     this.elMatilha = document.getElementById('cao-matilha');
+    this.elFamilia = document.getElementById('cao-familia');
     this.elObjLixo = document.getElementById('obj-cao-lixo');
     this.elObjSocial = document.getElementById('obj-cao-social');
     this.elObjTerr = document.getElementById('obj-cao-terr');
+    this.elObjParceira = document.getElementById('obj-cao-parceira');
     this.elObjOsso = document.getElementById('obj-cao-osso');
     this.elObjExtra = document.getElementById('obj-cao-extra');
     this.elBtnFaro = document.getElementById('touch-faro');
@@ -346,7 +437,9 @@ export class VidaCachorro {
     this._pFocTmp = new THREE.Vector3();
     this._pMidTmp = new THREE.Vector3();
     if (this.elCinePular) {
-      this.elCinePular.onclick = () => { if (this.cena?.tipo === 'socializar') this.cena.t = this.cena.dur; };
+      this.elCinePular.onclick = () => {
+        if (this.cena && ['socializar', 'parceira', 'nascimento'].includes(this.cena.tipo)) this.cena.t = this.cena.dur;
+      };
     }
 
     this._atualizarHud();
@@ -392,12 +485,32 @@ export class VidaCachorro {
           sombra.rotation.x = -Math.PI / 2;
           sombra.position.y = 0.015;
           inst.obj.add(sombra);
+
+          let coracaoTopo = null;
+          if (def.ehParceira) {
+            // Lacinho rosa fofo na cabeça da Luna + coraçãozinho flutuante!
+            const laco = criarLacoParceira();
+            inst.obj.updateMatrixWorld(true);
+            laco.position.set(0, 0.675, 0.40);
+            inst.obj.add(laco);
+            if (inst.ossos.Cabeca) inst.ossos.Cabeca.attach(laco);
+
+            coracaoTopo = new THREE.Sprite(new THREE.SpriteMaterial({
+              map: this.texCoracao, transparent: true, opacity: 0.92, depthWrite: false,
+            }));
+            coracaoTopo.position.set(0, 0.96, 0.12);
+            coracaoTopo.scale.setScalar(0.24);
+            inst.obj.add(coracaoTopo);
+          }
+
           inst.obj.position.set(def.x, CALCADA, def.z);
           inst.obj.rotation.y = def.ry;
           this.raiz.add(inst.obj);
           this.caesNpc.push({
             nome: def.nome,
             raca: def.raca,
+            ehParceira: !!def.ehParceira,
+            coracaoTopo,
             inst,
             homeX: def.x,
             homeZ: def.z,
@@ -427,13 +540,14 @@ export class VidaCachorro {
     if (!this.ativo) {
       this.faroAtivo = false;
       this.cena = null;
+      this.jatoXixi.visible = false;
       this.balaoCena.classList.add('oculto');
       this._mostrarCine(false);
       document.body.classList.remove('modo-faro');
     } else {
       this.carregarNpcs();
       if (racaNome) {
-        this.mostrarToast(`🐾 Vida de Cachorro (${racaNome})! Aperte F para Modo Faro · E para cheirar cães, lixo e hidrantes`);
+        this.mostrarToast(`🐾 Vida de Cachorro (${racaNome})! F = Faro · T = Xixi · E = Cheirar cães, Luna (💕), lixo e hidrantes`);
       }
     }
     this._atualizarHud();
@@ -447,19 +561,19 @@ export class VidaCachorro {
     this.som?.tocarFarejo?.();
     this.mostrarToast(
       this.faroAtivo
-        ? '👃 Modo Faro ATIVO! Siga os cheiros: 🟢 Comida no lixo · 🩷 Outros cães · 🟡 Hidrantes · 🟠 Ossos'
+        ? '👃 Modo Faro ATIVO! 🟢 Lixo · 🩷 Cães · ❤️ Parceira (Luna) · 🟡 Hidrantes · 🟠 Ossos'
         : 'Modo Faro desligado'
     );
     return this.faroAtivo;
   }
 
-  emitirParticula(x, y, z, vx, vy, vz, cor, tam = 0.28, vida = 1.1) {
-    if (this.particulas.length > 90) return;
+  emitirParticula(x, y, z, vx, vy, vz, cor, tam = 0.28, vida = 1.1, coracao = false) {
+    if (this.particulas.length > 105) return;
     const mat = new THREE.SpriteMaterial({
-      map: this.texPuff,
-      color: cor,
+      map: coracao ? this.texCoracao : this.texPuff,
+      color: coracao ? 0xffffff : cor,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.92,
       depthWrite: false,
       blending: THREE.NormalBlending,
     });
@@ -480,19 +594,22 @@ export class VidaCachorro {
         melhor = { x, z, tipo, rotulo, dist: d, cor: COR_CHEIRO[tipo] };
       }
     };
+    if (!this.parceira) {
+      const luna = this.caesNpc.find(c => c.ehParceira);
+      if (luna) testar(luna.x, luna.z, 'parceira', 'Parceira Luna');
+    }
     if (this.lixoRevirado < 3) {
       for (const l of this.lixeiras) if (!l.revirada) testar(l.x, l.z, 'lixo', 'Comida no lixo');
     }
     if (this.caesSocializados < 2) {
-      for (const c of this.caesNpc) if (!c.socializado) testar(c.x, c.z, 'cao', `Cheirar ${c.nome}`);
+      for (const c of this.caesNpc) if (!c.socializado && !c.ehParceira) testar(c.x, c.z, 'cao', `Cheirar ${c.nome}`);
     }
     if (this.territoriosMarcados < 3) {
-      for (const h of this.hidrantes) if (!h.marcado) testar(h.x, h.z, 'hidrante', 'Hidrante');
+      for (const h of this.hidrantes) if (!h.marcado) testar(h.x, h.z, 'hidrante', 'Hidrante (Xixi)');
     }
     if (this.ossosCavados < 2) {
       for (const o of this.ossos) if (!o.cavado) testar(o.x, o.z, 'osso', 'Osso enterrado');
     }
-    // Se já completou tudo, aponta para qualquer item ainda livre
     if (!melhor) {
       for (const l of this.lixeiras) if (!l.revirada) testar(l.x, l.z, 'lixo', 'Lixo');
       for (const c of this.caesNpc) if (!c.socializado) testar(c.x, c.z, 'cao', c.nome);
@@ -504,14 +621,20 @@ export class VidaCachorro {
     if (!this.ativo || this.cena || jogador.veiculo) return null;
     const jx = jogador.x, jz = jogador.z;
 
-    // 1) Socializar com outro cão (cheirar o ânus/traseiro!)
+    // 1) Socializar com outro cão ou conquistar a Parceira (Luna)!
     let caoPerto = null, dCao = 2.8;
     for (const npc of this.caesNpc) {
       const d = Math.hypot(npc.x - jx, npc.z - jz);
       if (d < dCao) { dCao = d; caoPerto = npc; }
     }
     if (caoPerto) {
-      const tag = caoPerto.socializado ? 'Cumprimentar de novo' : 'Socializar · Matilha';
+      if (caoPerto.ehParceira && !this.parceira) {
+        return {
+          texto: `[E] 💕 Conquistar ${caoPerto.nome} (Encontrar Parceira!)`,
+          fazer: () => this.iniciarConquistaParceira(jogador, caoInst, caoPerto),
+        };
+      }
+      const tag = caoPerto.ehParceira ? 'Parceira 💕' : (caoPerto.socializado ? 'Cumprimentar de novo' : 'Socializar · Matilha');
       return {
         texto: `[E] 🐕 Cheirar traseiro de ${caoPerto.nome} (${tag})`,
         fazer: () => this.iniciarSocializacao(jogador, caoInst, caoPerto),
@@ -528,11 +651,11 @@ export class VidaCachorro {
       }
     }
 
-    // 3) Marcar território no hidrante
+    // 3) Fazer xixi / Marcar território no hidrante
     for (const h of this.hidrantes) {
-      if (!h.marcado && Math.hypot(h.x - jx, h.z - jz) < 2.1) {
+      if (!h.marcado && Math.hypot(h.x - jx, h.z - jz) < 2.2) {
         return {
-          texto: `[E] 🚒 Marcar território no hidrante`,
+          texto: `[E] 💦 Fazer xixi no hidrante (Marcar território)`,
           fazer: () => this.iniciarMarcarTerritorio(jogador, caoInst, h),
         };
       }
@@ -625,24 +748,163 @@ export class VidaCachorro {
     };
   }
 
-  // ==================== CENA 3: MARCAR TERRITÓRIO NO HIDRANTE ====================
-  iniciarMarcarTerritorio(jogador, caoInst, hidrante) {
-    if (this.cena) return;
+  // ==================== CENA 3: FAZER XIXI / MARCAR TERRITÓRIO (HIDRANTE OU QUALQUER LUGAR!) ====================
+  iniciarMarcarTerritorio(jogador, caoInst, hidrante = null) {
+    if (this.cena || !caoInst) return;
     this.som?.desbloquear?.();
-    const angH = Math.atan2(hidrante.x - jogador.x, hidrante.z - jogador.z);
-    // Alinha o cachorro de lado para o hidrante com a pata traseira esquerda voltada para ele!
-    const dirX = Math.sin(angH), dirZ = Math.cos(angH);
-    jogador.x = hidrante.x - dirX * 0.68;
-    jogador.z = hidrante.z - dirZ * 0.68;
-    jogador.ry = angH - Math.PI / 2;
+    let alvoX, alvoZ;
+    if (hidrante) {
+      const angH = Math.atan2(hidrante.x - jogador.x, hidrante.z - jogador.z);
+      const dirX = Math.sin(angH), dirZ = Math.cos(angH);
+      jogador.x = hidrante.x - dirX * 0.68;
+      jogador.z = hidrante.z - dirZ * 0.68;
+      jogador.ry = angH - Math.PI / 2;
+      alvoX = hidrante.x; alvoZ = hidrante.z;
+    } else {
+      // Xixi livre para a esquerda do cão (lado da pata traseira erguida!)
+      const esqX = Math.cos(jogador.ry), esqZ = -Math.sin(jogador.ry);
+      alvoX = jogador.x + esqX * 0.56;
+      alvoZ = jogador.z + esqZ * 0.56;
+    }
     this.cena = {
       tipo: 'marcar',
       t: 0,
-      dur: 2.2,
+      dur: 2.3,
       jogador,
       caoInst,
       hidrante,
+      alvoX,
+      alvoZ,
+      tocouSom: false,
+      poca: null,
     };
+  }
+
+  fazerXixiLivre(jogador, caoInst) {
+    if (!this.ativo || this.cena || jogador.veiculo || !caoInst) return;
+    // Se tiver um hidrante não marcado por perto, usa ele!
+    for (const h of this.hidrantes) {
+      if (!h.marcado && Math.hypot(h.x - jogador.x, h.z - jogador.z) < 2.8) {
+        this.iniciarMarcarTerritorio(jogador, caoInst, h);
+        return;
+      }
+    }
+    this.iniciarMarcarTerritorio(jogador, caoInst, null);
+  }
+
+  // ==================== CENA 5: CONQUISTAR PARCEIRA (LUNA) → GESTAÇÃO → FILHOTES ====================
+  iniciarConquistaParceira(jogador, caoInst, luna) {
+    if (this.cena || !luna || !caoInst) return;
+    this.som?.desbloquear?.();
+    this.som?.tocarFarejo?.();
+
+    const ang = Math.atan2(luna.x - jogador.x, luna.z - jogador.z);
+    luna.emCena = true;
+    luna.ry = ang + Math.PI; // frente a frente com o jogador!
+    const fx = Math.sin(ang), fz = Math.cos(ang);
+    jogador.x = luna.x - fx * 1.12;
+    jogador.z = luna.z - fz * 1.12;
+    jogador.ry = ang;
+    jogador.agachado = false;
+
+    this.cena = {
+      tipo: 'parceira',
+      t: 0,
+      dur: 4.8,
+      jogador,
+      caoInst,
+      luna,
+      angBase: ang,
+      chimeTocado: false,
+      latiuFinal: false,
+    };
+    this._mostrarCine(true, '💕 CUTSCENE · ENCONTRO ROMÂNTICO', `💕 ${luna.nome} adorou você! Os focinhos estão se encontrando…`);
+  }
+
+  async iniciarNascimentoFilhotes(jogador, caoInst) {
+    if (this._nascendo || this.filhotesNascidos || !this.parceira || !caoInst) return;
+    this._nascendo = true;
+    const luna = this.parceira;
+    const nomes = ['Biscoito', 'Pingo', 'Amora'];
+    const racaPai = caoInst.raca || 'caramelo';
+    const racasFilhotes = [racaPai, luna.raca || 'caramelo', racaPai === 'dalmata' ? 'pug' : 'dalmata'];
+
+    // Posiciona Luna ao lado do pai em terreno aberto
+    const ang = jogador.ry;
+    const dirX = Math.cos(ang), dirZ = -Math.sin(ang);
+    const fx = Math.sin(ang), fz = Math.cos(ang);
+    luna.emCena = true;
+    luna.x = jogador.x + dirX * 1.05;
+    luna.z = jogador.z + dirZ * 1.05;
+    luna.ry = ang;
+
+    const nascidos = [];
+    for (let i = 0; i < 3; i++) {
+      try {
+        const inst = await carregarCao(racasFilhotes[i]);
+        inst.obj.scale.setScalar(0.44);
+        const sombra = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.85, 0.85),
+          new THREE.MeshBasicMaterial({ map: this.texSombra, transparent: true, depthWrite: false })
+        );
+        sombra.rotation.x = -Math.PI / 2;
+        sombra.position.y = 0.02;
+        inst.obj.add(sombra);
+
+        const lat = (i - 1) * 0.52;
+        const px = (jogador.x + luna.x) * 0.5 + fx * 0.72 + dirX * lat;
+        const pz = (jogador.z + luna.z) * 0.5 + fz * 0.72 + dirZ * lat;
+        inst.obj.position.set(px, CALCADA, pz);
+        inst.obj.rotation.y = ang + Math.PI;
+        this.raiz.add(inst.obj);
+        nascidos.push({
+          nome: nomes[i],
+          raca: racasFilhotes[i],
+          inst,
+          x: px, y: CALCADA, z: pz,
+          ry: ang + Math.PI,
+        });
+      } catch (e) {
+        console.warn('Falha ao criar filhote:', e);
+      }
+    }
+    this.filhotes = nascidos;
+    this.filhotesNascidos = true;
+    this.gestacao = 0;
+    if (luna.inst.ossos.Coluna) luna.inst.ossos.Coluna.scale.set(1, 1, 1);
+
+    this.som?.desbloquear?.();
+    this.som?.tocarChimeFamilia?.();
+    this.cena = {
+      tipo: 'nascimento',
+      t: 0,
+      dur: 4.6,
+      jogador,
+      caoInst,
+      luna,
+      angBase: ang,
+      latidosFilhote: 0,
+    };
+    this._mostrarCine(true, '🍼 NASCIMENTO DOS FILHOTES!', `🐶 Parabéns! ${luna.nome} teve 3 filhotinhos: Biscoito, Pingo e Amora!`);
+  }
+
+  async acelerarNascimento(jogador, caoInst) {
+    if (!this.parceira) {
+      const luna = this.caesNpc.find(c => c.ehParceira);
+      if (luna) {
+        this.parceira = luna;
+        luna.socializado = true;
+        luna.naMatilha = true;
+        if (luna.coracaoTopo) luna.coracaoTopo.visible = false;
+      }
+    }
+    if (this.cena) {
+      if (this.cena.npc) this.cena.npc.emCena = false;
+      if (this.cena.luna) this.cena.luna.emCena = false;
+      this.cena = null;
+      this._mostrarCine(false);
+    }
+    await this.iniciarNascimentoFilhotes(jogador, caoInst);
   }
 
   // ==================== CENA 4: CAVAR OSSO ENTERRADO ====================
@@ -723,7 +985,7 @@ export class VidaCachorro {
       );
     }
 
-    // Outros cães próximos respondem o latido!
+    // Outros cães próximos e filhotes respondem o latido com sons reais!
     for (const npc of this.caesNpc) {
       const d = Math.hypot(npc.x - jogador.x, npc.z - jogador.z);
       if (d < 22) {
@@ -732,6 +994,13 @@ export class VidaCachorro {
           this.som?.tocarLatido?.((npc.inst.def?.freqLatido || 380) * 0.98, 0.55);
         }, 160 + Math.random() * 240);
       }
+    }
+    for (let i = 0; i < this.filhotes.length; i++) {
+      const f = this.filhotes[i];
+      setTimeout(() => {
+        f.inst.latir(0.32);
+        this.som?.tocarLatido?.('filhote', 0.62);
+      }, 210 + i * 130);
     }
 
     // Extra 1: Latir perto de um pedestre ganha carinho + petisco!
@@ -782,7 +1051,6 @@ export class VidaCachorro {
       const mid = this._pMidTmp.copy(pAnus).lerp(pFoc, 0.48);
 
       if (t < 1.0) {
-        // PLANO 1 (0.0 -> 1.0s): Plano médio lateral mostrando aproximação e o rabo erguendo
         const a = angBase + Math.PI * 0.56 - t * 0.14;
         const dist = 1.95 - t * 0.35;
         this._camP.set(mid.x + Math.sin(a) * dist, CALCADA + 0.72, mid.z + Math.cos(a) * dist);
@@ -790,7 +1058,6 @@ export class VidaCachorro {
         return { p: this._camP, a: this._camA, fov: 40, near: 0.12, foco: { x: mid.x, z: mid.z } };
       }
       if (t < 3.2) {
-        // PLANO 2 (1.0 -> 3.2s): MACRO CLOSE-UP EXTREMO — Focinho/olhos cheirando de perto + Orifício anal sob o rabo erguido!
         const u = (t - 1.0) / 2.2;
         const aMacro = angBase + Math.PI * 0.71 + Math.sin(u * Math.PI) * 0.12;
         const distMacro = 0.80 - Math.sin(u * Math.PI) * 0.06;
@@ -803,21 +1070,49 @@ export class VidaCachorro {
         return { p: this._camP, a: this._camA, fov: 34, near: 0.05, foco: { x: mid.x, z: mid.z } };
       }
       if (t < 4.15) {
-        // PLANO 3 (3.2 -> 4.15s): Close-up 3/4 de aprovação / cheiro reconhecido
         const u = (t - 3.2) / 0.95;
         const a = angBase + Math.PI * 0.42 + u * 0.55;
         this._camP.set(npc.x + Math.sin(a) * 1.35, CALCADA + 0.72, npc.z + Math.cos(a) * 1.35);
         this._camA.set((npc.x + jogador.x) * 0.5, CALCADA + 0.46, (npc.z + jogador.z) * 0.5);
         return { p: this._camP, a: this._camA, fov: 38, near: 0.10, foco: { x: npc.x, z: npc.z } };
       }
-      // PLANO 4 (4.15 -> 5.4s): Plano aberto com os dois cães na reverência de brincadeira!
       const mx = (npc.x + jogador.x) * 0.5, mz = (npc.z + jogador.z) * 0.5;
       const a = angBase + Math.PI * 0.50 + (t - 4.15) * 0.28;
       this._camP.set(mx + Math.sin(a) * 2.35, CALCADA + 0.88, mz + Math.cos(a) * 2.35);
       this._camA.set(mx, CALCADA + 0.42, mz);
       return { p: this._camP, a: this._camA, fov: 44, near: 0.15, foco: { x: mx, z: mz } };
     }
-    if (this.cena.tipo === 'lixo' || this.cena.tipo === 'marcar' || this.cena.tipo === 'cavar') {
+    if (this.cena.tipo === 'parceira') {
+      const { luna, jogador, t, angBase } = this.cena;
+      const mx = (luna.x + jogador.x) * 0.5, mz = (luna.z + jogador.z) * 0.5;
+      const a = angBase + Math.PI * 0.52 + Math.sin(t * 0.65) * 0.22;
+      const dist = t < 3.2 ? 1.55 : 2.15;
+      this._camP.set(mx + Math.sin(a) * dist, CALCADA + 0.76, mz + Math.cos(a) * dist);
+      this._camA.set(mx, CALCADA + 0.50, mz);
+      return { p: this._camP, a: this._camA, fov: t < 3.2 ? 36 : 44, near: 0.08, foco: { x: mx, z: mz } };
+    }
+    if (this.cena.tipo === 'nascimento') {
+      const { luna, jogador, t, angBase } = this.cena;
+      const fx = Math.sin(angBase), fz = Math.cos(angBase);
+      const mx = (luna.x + jogador.x) * 0.5 + fx * 0.42;
+      const mz = (luna.z + jogador.z) * 0.5 + fz * 0.42;
+      // Câmera frontal acolhedora mostrando Pai + Mãe Luna + 3 filhotinhos saltitando!
+      const a = angBase + Math.sin(t * 0.55) * 0.34;
+      const dist = 2.35 - Math.min(0.35, t * 0.12);
+      this._camP.set(mx + Math.sin(a) * dist, CALCADA + 0.86, mz + Math.cos(a) * dist);
+      this._camA.set(mx, CALCADA + 0.36, mz);
+      return { p: this._camP, a: this._camA, fov: 42, near: 0.10, foco: { x: mx, z: mz } };
+    }
+    if (this.cena.tipo === 'marcar') {
+      const { jogador, alvoX, alvoZ, t } = this.cena;
+      // Enquadramento lateral baixo perfeito para ver a pata levantada, o arco de xixi dourado e a poça!
+      const mx = (jogador.x + alvoX) * 0.5, mz = (jogador.z + alvoZ) * 0.5;
+      const a = jogador.ry + 0.55 + Math.sin(t * 0.8) * 0.12;
+      this._camP.set(mx + Math.sin(a) * 1.85, CALCADA + 0.68, mz + Math.cos(a) * 1.85);
+      this._camA.set(mx, CALCADA + 0.32, mz);
+      return { p: this._camP, a: this._camA, fov: 42, near: 0.10, foco: { x: mx, z: mz } };
+    }
+    if (this.cena.tipo === 'lixo' || this.cena.tipo === 'cavar') {
       const { jogador, t } = this.cena;
       const a = jogador.ry + 1.15 + Math.sin(t * 0.8) * 0.15;
       this._camP.set(jogador.x + Math.sin(a) * 2.4, CALCADA + 1.05, jogador.z + Math.cos(a) * 2.4);
@@ -831,8 +1126,22 @@ export class VidaCachorro {
     if (this._cdCarinho > 0) this._cdCarinho -= dt;
     if (this._cdPerseguir > 0) this._cdPerseguir -= dt;
 
-    // 1) Atualiza cães NPC (vagueiam ou seguem na matilha!)
+    // 1) Atualiza cães NPC (vagueiam ou seguem na matilha!) e filhotes
     this._atualizarNpcs(dt, tTotal, jogador);
+    this._atualizarFilhotes(dt, tTotal, jogador);
+
+    // Gestação da Parceira (Luna): depois do tempo, ganha 3 filhotinhos automaticamente!
+    if (this.ativo && this.parceira && !this.filhotesNascidos && this.gestacao > 0 && !this.cena && !jogador.veiculo) {
+      this.gestacao = Math.max(0, this.gestacao - dt);
+      // Barriguinha da Luna arredonda suavemente enquanto espera os filhotes!
+      if (this.parceira.inst.ossos.Coluna) {
+        const prog = 1 - this.gestacao / 25;
+        this.parceira.inst.ossos.Coluna.scale.set(1 + prog * 0.22, 1, 1 + prog * 0.14);
+      }
+      if (this.gestacao <= 0 && caoInst) {
+        this.iniciarNascimentoFilhotes(jogador, caoInst);
+      }
+    }
 
     // 2) Atualiza bolinha de tênis física
     this._atualizarBolinha(dt, jogador, caoInst);
@@ -1035,28 +1344,194 @@ export class VidaCachorro {
       return;
     }
 
-    if (c.tipo === 'marcar') {
-      const { hidrante } = c;
-      caoInst.tocar('marcar');
-      if (c.t > 0.45 && c.t < 1.85 && Math.random() < dt * 22) {
-        const dx = hidrante.x - jogador.x, dz = hidrante.z - jogador.z;
-        const n = Math.hypot(dx, dz) || 1;
-        this.emitirParticula(
-          jogador.x + (dx / n) * 0.22, CALCADA + 0.30, jogador.z + (dz / n) * 0.22,
-          (dx / n) * 2.1, 0.35 + Math.random() * 0.3, (dz / n) * 2.1,
-          0xfef08a, 0.14, 0.35
-        );
+    if (c.tipo === 'parceira') {
+      const { luna, angBase } = c;
+      const fx = Math.sin(angBase), fz = Math.cos(angBase);
+      if (c.t < 1.35) {
+        // Plano 1: Aproximação romântica — encostando os focinhos!
+        const k = Math.min(1, c.t / 1.35);
+        const dist = 1.12 - k * 0.24;
+        jogador.x = luna.x - fx * dist;
+        jogador.z = luna.z - fz * dist;
+        jogador.ry = angBase;
+        luna.ry = angBase + Math.PI;
+        caoInst.tocar(k < 0.7 ? 'andar' : 'parado');
+        luna.inst.tocar('parado');
+        caoInst.alegria = 1; luna.inst.alegria = 1;
+        this._mostrarCine(true, '💕 ENCONTRO ROMÂNTICO', `🐕 ${luna.nome} gostou de você! Chegando pertinho…`);
+      } else if (c.t < 3.25) {
+        // Plano 2: Beijinho de focinho + chuva de corações flutuando!
+        jogador.ry = angBase;
+        luna.ry = angBase + Math.PI;
+        caoInst.tocar('parado');
+        luna.inst.tocar('parado');
+        caoInst.alegria = 1; luna.inst.alegria = 1;
+        if (!c.chimeTocado) {
+          c.chimeTocado = true;
+          this.som?.tocarChimeFamilia?.();
+        }
+        if (Math.random() < dt * 12) {
+          const mx = (luna.x + jogador.x) * 0.5, mz = (luna.z + jogador.z) * 0.5;
+          this.emitirParticula(
+            mx + (Math.random() - 0.5) * 0.55, CALCADA + 0.58 + Math.random() * 0.18, mz + (Math.random() - 0.5) * 0.55,
+            (Math.random() - 0.5) * 0.35, 0.75 + Math.random() * 0.45, (Math.random() - 0.5) * 0.35,
+            0xf43f5e, 0.24, 1.15, true
+          );
+        }
+        this._mostrarCine(true, '❤️ AMOR CANINO!', `💕 Você conquistou ${luna.nome}! Logo ela terá filhotinhos!`);
+      } else {
+        // Plano 3: Reverência de brincadeira sincronizada + latidos reais felizes!
+        caoInst.tocar('reverencia');
+        luna.inst.tocar('reverencia');
+        if (!c.latiuFinal) {
+          c.latiuFinal = true;
+          caoInst.latir(0.36); luna.inst.latir(0.36);
+          this.som?.tocarLatido?.(caoInst.def?.freqLatido || 400);
+          setTimeout(() => this.som?.tocarLatido?.('medio', 0.82), 200);
+        }
+        this._mostrarCine(true, '🤰 FAMÍLIA A CAMINHO!', `💕 ${luna.nome} agora é sua parceira! Em breve nascerão filhotes!`);
       }
-      hidrante.marca.material.opacity = Math.min(0.62, c.t * 0.35);
+
+      luna.inst.obj.position.set(luna.x, luna.y, luna.z);
+      luna.inst.obj.rotation.y = luna.ry;
+      jogador.y = CALCADA;
       caoInst.obj.position.set(jogador.x, jogador.y, jogador.z);
       caoInst.obj.rotation.y = jogador.ry;
       caoInst.atualizar(dt);
+
       if (c.t >= c.dur) {
-        hidrante.marcado = true;
-        hidrante.marca.material.opacity = 0.58;
-        this.territoriosMarcados++;
-        this.darPontos?.(100);
-        this.mostrarToast('🚒 Território marcado com sucesso! (+100 pts)');
+        luna.emCena = false;
+        luna.socializado = true;
+        luna.naMatilha = true;
+        if (luna.coracaoTopo) luna.coracaoTopo.visible = false;
+        this.parceira = luna;
+        this.gestacao = 25; // 25 segundos explorando juntos até os filhotes nascerem!
+        this._mostrarCine(false);
+        this.darPontos?.(300);
+        this.mostrarToast(`💕 ${luna.nome} é sua parceira! Em ~25s ela ganhará filhotes! (+300 pts)`);
+        this.cena = null;
+        this._atualizarHud();
+      }
+      return;
+    }
+
+    if (c.tipo === 'nascimento') {
+      const { luna } = c;
+      caoInst.tocar(c.t > 2.2 ? 'reverencia' : 'parado');
+      luna.inst.tocar('parado');
+      caoInst.alegria = 1; luna.inst.alegria = 1;
+
+      // Filhotinhos saltitando alegres e latindo agudinho!
+      for (let i = 0; i < this.filhotes.length; i++) {
+        const f = this.filhotes[i];
+        f.inst.alegria = 1;
+        f.inst.tocar(Math.sin(tTotal * 4 + i * 2) > 0.25 ? 'reverencia' : 'parado');
+        const pulo = Math.abs(Math.sin(tTotal * 5.2 + i * 1.4)) * 0.12;
+        f.inst.obj.position.set(f.x, CALCADA + pulo, f.z);
+        f.inst.atualizar(dt);
+      }
+
+      if (c.latidosFilhote < 3 && c.t > 0.65 + c.latidosFilhote * 1.05) {
+        const f = this.filhotes[c.latidosFilhote % Math.max(1, this.filhotes.length)];
+        c.latidosFilhote++;
+        if (f) f.inst.latir(0.35);
+        this.som?.tocarLatido?.('filhote', 0.85);
+      }
+      if (Math.random() < dt * 11) {
+        const mx = (luna.x + jogador.x) * 0.5, mz = (luna.z + jogador.z) * 0.5;
+        this.emitirParticula(
+          mx + (Math.random() - 0.5) * 1.2, CALCADA + 0.55 + Math.random() * 0.25, mz + (Math.random() - 0.5) * 1.2,
+          (Math.random() - 0.5) * 0.4, 0.85 + Math.random() * 0.45, (Math.random() - 0.5) * 0.4,
+          0xf43f5e, 0.22, 1.1, true
+        );
+      }
+
+      luna.inst.obj.position.set(luna.x, luna.y, luna.z);
+      luna.inst.obj.rotation.y = luna.ry;
+      jogador.y = CALCADA;
+      caoInst.obj.position.set(jogador.x, jogador.y, jogador.z);
+      caoInst.obj.rotation.y = jogador.ry;
+      caoInst.atualizar(dt);
+
+      if (c.t >= c.dur) {
+        luna.emCena = false;
+        this._mostrarCine(false);
+        this.darPontos?.(500);
+        this.mostrarToast('🍼🐶 Nasceram 3 filhotes (Biscoito, Pingo e Amora)! Sua família te segue pela cidade! (+500 pts)');
+        this.cena = null;
+        this._verificarVitoria();
+        this._atualizarHud();
+      }
+      return;
+    }
+
+    if (c.tipo === 'marcar') {
+      const { hidrante, alvoX, alvoZ } = c;
+      caoInst.tocar('marcar');
+      const jorrando = c.t > 0.36 && c.t < 1.95;
+
+      if (jorrando && !c.tocouSom) {
+        c.tocouSom = true;
+        this.som?.tocarXixi?.(1.60);
+      }
+
+      // Jato parabólico 3D dourado saindo do cão até o hidrante / poça no chão!
+      if (jorrando) {
+        const dx = alvoX - jogador.x, dz = alvoZ - jogador.z;
+        const angAlvo = Math.atan2(dx, dz);
+        const distAlvo = Math.max(0.45, Math.min(0.85, Math.hypot(dx, dz)));
+        this.jatoXixi.visible = true;
+        this.jatoXixi.position.set(jogador.x, CALCADA + 0.02, jogador.z);
+        // Alinha o eixo +X do tubo para a direção (dx, dz)
+        this.jatoXixi.rotation.y = Math.atan2(-dz, dx);
+        const pulsar = 0.94 + Math.sin(tTotal * 26) * 0.06;
+        this.jatoXixi.scale.set((distAlvo / 0.58) * pulsar, 1.0, 1.0);
+
+        if (!c.poca) {
+          c.poca = criarPocaXixi(alvoX, alvoZ);
+          c.poca.poca.scale.setScalar(0.05);
+          this.raiz.add(c.poca.grp);
+          this.pocasXixi.push(c.poca);
+        }
+        const cresce = Math.min(1, (c.t - 0.36) / 1.45);
+        c.poca.poca.scale.set(1.18 * cresce, 0.88 * cresce, 1);
+
+        if (Math.random() < dt * 26) {
+          const n = Math.hypot(dx, dz) || 1;
+          this.emitirParticula(
+            alvoX + (Math.random() - 0.5) * 0.14, CALCADA + 0.08 + (hidrante ? 0.16 : 0), alvoZ + (Math.random() - 0.5) * 0.14,
+            (Math.random() - 0.5) * 0.9 + (dx / n) * 0.3, 0.55 + Math.random() * 0.45, (Math.random() - 0.5) * 0.9 + (dz / n) * 0.3,
+            0xfde047, 0.11, 0.32
+          );
+        }
+      } else {
+        this.jatoXixi.visible = false;
+      }
+
+      if (hidrante) hidrante.marca.material.opacity = Math.min(0.62, c.t * 0.35);
+      caoInst.obj.position.set(jogador.x, jogador.y, jogador.z);
+      caoInst.obj.rotation.y = jogador.ry;
+      caoInst.atualizar(dt);
+
+      if (c.t >= c.dur) {
+        this.jatoXixi.visible = false;
+        let contouNovo = false;
+        if (hidrante && !hidrante.marcado) {
+          hidrante.marcado = true;
+          hidrante.marca.material.opacity = 0.58;
+          contouNovo = true;
+        } else if (!hidrante) {
+          // Marcação livre conta se estiver longe (>4m) de outra poça antiga
+          const pertoAntiga = this.pocasXixi.some(p => p !== c.poca && Math.hypot(p.x - alvoX, p.z - alvoZ) < 4.0);
+          if (!pertoAntiga) contouNovo = true;
+        }
+        if (contouNovo) {
+          this.territoriosMarcados++;
+          this.darPontos?.(100);
+          this.mostrarToast(hidrante ? '💦 Território marcado no hidrante! (+100 pts)' : '💦 Território marcado com xixi! (+100 pts)');
+        } else {
+          this.mostrarToast('💦 Xixi feito! Território reforçado!');
+        }
         this.cena = null;
         this._verificarVitoria();
         this._atualizarHud();
@@ -1112,6 +1587,11 @@ export class VidaCachorro {
   _atualizarNpcs(dt, tTotal, jogador) {
     let idxMatilha = 0;
     for (const npc of this.caesNpc) {
+      if (npc.coracaoTopo && npc.coracaoTopo.visible) {
+        npc.coracaoTopo.position.y = 0.96 + Math.sin(tTotal * 3.8) * 0.06;
+        const sc = 0.23 + Math.sin(tTotal * 5.2) * 0.03;
+        npc.coracaoTopo.scale.setScalar(sc);
+      }
       if (npc.emCena) {
         npc.inst.atualizar(dt);
         continue;
@@ -1125,7 +1605,6 @@ export class VidaCachorro {
         const tz = jogador.z + Math.cos(angForm) * 2.1;
         const dx = tx - npc.x, dz = tz - npc.z, d = Math.hypot(dx, dz);
         if (d > 24) {
-          // Teleporta pertinho se ficou muito para trás
           npc.x = tx; npc.z = tz;
         } else if (d > 0.75) {
           const vel = d > 5 ? 6.2 : (d > 2.2 ? 3.8 : 2.1);
@@ -1139,7 +1618,6 @@ export class VidaCachorro {
         }
         npc.inst.alegria = 0.95;
       } else {
-        // Vagueio autônomo tranquilo pelo bairro/praça
         const dx = npc.alvoX - npc.x, dz = npc.alvoZ - npc.z, d = Math.hypot(dx, dz);
         if (d < 0.6) {
           npc.espera -= dt;
@@ -1159,13 +1637,43 @@ export class VidaCachorro {
           npc.z += (dz / d) * vel * dt;
           npc.inst.tocar('andar');
         }
-        npc.inst.alegria = 0.55;
+        npc.inst.alegria = npc.ehParceira ? 0.9 : 0.55;
       }
 
       npc.y = this.alturaChao ? (this.alturaChao(npc.x, npc.z) ?? CALCADA) : CALCADA;
       npc.inst.obj.position.set(npc.x, npc.y, npc.z);
       npc.inst.obj.rotation.y = npc.ry;
       npc.inst.atualizar(dt);
+    }
+  }
+
+  _atualizarFilhotes(dt, tTotal, jogador) {
+    if (!this.filhotes.length || this.cena?.tipo === 'nascimento') return;
+    const lider = this.parceira || jogador;
+    for (let i = 0; i < this.filhotes.length; i++) {
+      const f = this.filhotes[i];
+      const angForm = (lider.ry || 0) + Math.PI + (i - 1) * 0.62;
+      const distForm = 1.25 + (i % 2) * 0.35;
+      const tx = lider.x + Math.sin(angForm) * distForm;
+      const tz = lider.z + Math.cos(angForm) * distForm;
+      const dx = tx - f.x, dz = tz - f.z, d = Math.hypot(dx, dz);
+      if (d > 22) {
+        f.x = tx; f.z = tz;
+      } else if (d > 0.48) {
+        const vel = d > 4 ? 5.8 : (d > 1.6 ? 3.5 : 1.95);
+        const ang = Math.atan2(dx, dz);
+        f.ry += angDiff(f.ry, ang) * Math.min(1, dt * 9);
+        f.x += (dx / d) * vel * dt;
+        f.z += (dz / d) * vel * dt;
+        f.inst.tocar(d > 3.5 ? 'correr' : 'trotar', { velocidade: 1.35 });
+      } else {
+        f.inst.tocar(jogador.agachado ? 'sentar' : 'parado');
+      }
+      f.inst.alegria = 1.0;
+      f.y = this.alturaChao ? (this.alturaChao(f.x, f.z) ?? CALCADA) : CALCADA;
+      f.inst.obj.position.set(f.x, f.y, f.z);
+      f.inst.obj.rotation.y = f.ry;
+      f.inst.atualizar(dt);
     }
   }
 
@@ -1188,7 +1696,6 @@ export class VidaCachorro {
       b.grp.rotation.x += b.vz * dt * 4;
       b.grp.rotation.z -= b.vx * dt * 4;
     }
-    // Se o jogador canino correr em cima da bolinha quicando devagar, pega automático ou quica!
     if (this.ativo && !jogador.veiculo && !this.cena && caoInst && Math.hypot(b.x - jogador.x, b.z - jogador.z) < 0.72) {
       if (Math.hypot(b.vx, b.vz) < 2.2) this.pegarBolinha(caoInst);
     }
@@ -1202,7 +1709,6 @@ export class VidaCachorro {
 
     const alvo = this._objetivoMaisProximo(jogador.x, jogador.z);
 
-    // 1) Trilha de cheiro 3D guiando o focinho até o objetivo mais próximo quando Modo Faro está ligado!
     if (this.faroAtivo && alvo) {
       const dx = alvo.x - jogador.x, dz = alvo.z - jogador.z;
       const dist = Math.min(28, Math.hypot(dx, dz));
@@ -1227,23 +1733,25 @@ export class VidaCachorro {
       for (const sp of this.faroRastro) sp.visible = false;
     }
 
-    // 2) Fumaças perfumadas subindo das lixeiras, cães, hidrantes e ossos próximos!
     this._tParticula += dt;
     const freq = this.faroAtivo ? 0.14 : 0.42;
     if (this._tParticula >= freq) {
       this._tParticula = 0;
       const raio = this.faroAtivo ? 42 : 16;
-      const emitirSePerto = (x, y, z, cor) => {
+      const emitirSePerto = (x, y, z, cor, coracao = false) => {
         if (Math.hypot(x - jogador.x, z - jogador.z) < raio) {
           this.emitirParticula(
             x + (Math.random() - 0.5) * 0.35, y, z + (Math.random() - 0.5) * 0.35,
             (Math.random() - 0.5) * 0.35, 0.75 + Math.random() * 0.45, (Math.random() - 0.5) * 0.35,
-            cor, this.faroAtivo ? 0.42 : 0.26, 1.35
+            cor, this.faroAtivo ? 0.38 : 0.24, 1.35, coracao
           );
         }
       };
       for (const l of this.lixeiras) if (!l.revirada) emitirSePerto(l.x, CALCADA + 0.85, l.z, COR_CHEIRO.lixo);
-      for (const c of this.caesNpc) if (!c.socializado) emitirSePerto(c.x, CALCADA + 0.65, c.z, COR_CHEIRO.cao);
+      for (const c of this.caesNpc) {
+        if (c.ehParceira && !this.parceira) emitirSePerto(c.x, CALCADA + 0.78, c.z, COR_CHEIRO.parceira, true);
+        else if (!c.socializado) emitirSePerto(c.x, CALCADA + 0.65, c.z, COR_CHEIRO.cao);
+      }
       if (this.faroAtivo) {
         for (const h of this.hidrantes) if (!h.marcado) emitirSePerto(h.x, CALCADA + 0.72, h.z, COR_CHEIRO.hidrante);
         for (const o of this.ossos) if (!o.cavado) emitirSePerto(o.x, CALCADA + 0.25, o.z, COR_CHEIRO.osso);
@@ -1257,6 +1765,7 @@ export class VidaCachorro {
       this.lixoRevirado >= 3 &&
       this.caesSocializados >= 2 &&
       this.territoriosMarcados >= 3 &&
+      this.filhotesNascidos &&
       this.ossosCavados >= 2 &&
       this.carinhosEBolinha >= 1
     ) {
@@ -1273,7 +1782,20 @@ export class VidaCachorro {
       this.elFomeBarra.style.background = this.fome > 40 ? '#22c55e' : (this.fome > 20 ? '#facc15' : '#ef4444');
     }
     if (this.elFomeVal) this.elFomeVal.textContent = `${Math.round(this.fome)}%`;
-    if (this.elMatilha) this.elMatilha.textContent = `${this.caesNpc.filter(c => c.naMatilha).length}/${this._definicoesNpc.length}`;
+    const totalMatilha = this.caesNpc.filter(c => c.naMatilha).length + this.filhotes.length;
+    if (this.elMatilha) this.elMatilha.textContent = `${totalMatilha}/${this._definicoesNpc.length + this.filhotes.length}`;
+
+    if (this.elFamilia) {
+      if (this.filhotesNascidos) {
+        this.elFamilia.classList.remove('oculto');
+        this.elFamilia.textContent = `🐶 Família: ${this.parceira?.nome || 'Luna'} + ${this.filhotes.length} filhotes!`;
+      } else if (this.parceira && this.gestacao > 0) {
+        this.elFamilia.classList.remove('oculto');
+        this.elFamilia.textContent = `🤰 ${this.parceira.nome} esperando filhotes: ${Math.ceil(this.gestacao)}s…`;
+      } else {
+        this.elFamilia.classList.add('oculto');
+      }
+    }
 
     const setObj = (el, atual, meta, texto) => {
       if (!el) return;
@@ -1283,7 +1805,14 @@ export class VidaCachorro {
     };
     setObj(this.elObjLixo, this.lixoRevirado, 3, '🗑️ Comida no lixo (faro)');
     setObj(this.elObjSocial, this.caesSocializados, 2, '🐕 Cheirar cães (socializar)');
-    setObj(this.elObjTerr, this.territoriosMarcados, 3, '🚒 Marcar hidrantes');
+    setObj(this.elObjTerr, this.territoriosMarcados, 3, '💦 Marcar território c/ xixi');
+    if (this.elObjParceira) {
+      const ok = this.filhotesNascidos;
+      this.elObjParceira.classList.toggle('feito', ok);
+      this.elObjParceira.textContent = ok
+        ? '✅ 💕 Parceira e 3 filhotes! (1/1)'
+        : (this.parceira ? `⏳ 🤰 ${this.parceira.nome} esperando filhotes (${Math.ceil(this.gestacao)}s)` : '⬜ 💕 Encontrar parceira Luna (0/1)');
+    }
     setObj(this.elObjOsso, this.ossosCavados, 2, '🦴 Desenterrar ossos');
     setObj(this.elObjExtra, this.carinhosEBolinha, 1, '🎾 Bolinha / Carinho');
   }
@@ -1303,14 +1832,27 @@ export class VidaCachorro {
       ctx.stroke();
     };
     for (const l of this.lixeiras) if (!l.revirada) ponto(l.x, l.z, '#4ade80', 3.4);
-    for (const c of this.caesNpc) ponto(c.x, c.z, c.naMatilha ? '#38bdf8' : '#f472b6', 4.0);
+    for (const c of this.caesNpc) {
+      if (c.ehParceira) {
+        const [x, y] = toMM(c.x, c.z);
+        if (x > 6 && x < W - 6 && y > 6 && y < H - 6) {
+          ctx.font = `${Math.round(11 * s)}px system-ui`;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('❤️', x, y);
+        }
+      } else {
+        ponto(c.x, c.z, c.naMatilha ? '#38bdf8' : '#f472b6', 4.0);
+      }
+    }
+    for (const f of this.filhotes) ponto(f.x, f.z, '#fda4af', 2.6);
     for (const h of this.hidrantes) if (!h.marcado) ponto(h.x, h.z, '#facc15', 2.8);
     for (const o of this.ossos) if (!o.cavado) ponto(o.x, o.z, '#fb923c', 3.2);
   }
 
   // Helpers para testes automatizados
   obterAlvo(tipo) {
-    if (tipo === 'cao') return this.caesNpc.find(c => !c.socializado) || this.caesNpc[0];
+    if (tipo === 'parceira') return this.caesNpc.find(c => c.ehParceira);
+    if (tipo === 'cao') return this.caesNpc.find(c => !c.socializado && !c.ehParceira) || this.caesNpc[0];
     if (tipo === 'lixo') return this.lixeiras.find(l => !l.revirada) || this.lixeiras[0];
     if (tipo === 'hidrante') return this.hidrantes.find(h => !h.marcado) || this.hidrantes[0];
     if (tipo === 'osso') return this.ossos.find(o => !o.cavado) || this.ossos[0];
@@ -1325,6 +1867,10 @@ export class VidaCachorro {
       fome: Math.round(this.fome),
       emCena: this.cena?.tipo || null,
       matilha: this.caesNpc.filter(c => c.naMatilha).map(c => c.nome),
+      parceira: this.parceira?.nome || null,
+      gestacao: Math.ceil(this.gestacao),
+      filhotes: this.filhotes.map(f => f.nome),
+      pocasXixi: this.pocasXixi.length,
       npcsCarregados: this.caesNpc.length,
       lixoRevirado: this.lixoRevirado,
       caesSocializados: this.caesSocializados,
@@ -1334,3 +1880,4 @@ export class VidaCachorro {
     };
   }
 }
+

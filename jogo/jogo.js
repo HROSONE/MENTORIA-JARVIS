@@ -103,6 +103,7 @@ class SomJogo {
     this.sireneOsc = this.ctx.createOscillator(); this.sireneOsc.type = 'triangle'; this.sireneOsc.frequency.value = 700;
     this.sireneOsc.connect(sFilt); sFilt.connect(this.sireneGain); this.sireneGain.connect(this.ctx.destination);
     this.sireneOsc.start();
+    this._carregarLatidos();
   }
   atualizar(t, { dirigindo, velAbs, sireneAtiva }) {
     if (!this.ctx) return;
@@ -202,8 +203,53 @@ class SomJogo {
     o.connect(g); g.connect(this.ctx.destination);
     o.start(now); o.stop(now + 0.21);
   }
-  tocarLatido(freq = 400, vol = 1) {
+  _carregarLatidos() {
+    if (this._latidosProm || !this.ctx) return;
+    this._latidos = {};
+    const arq = {
+      grande:  ['./jogo/sons/latido_grande.mp3', './jogo/sons/latido_grande2.mp3'],
+      medio:   ['./jogo/sons/latido_medio.mp3',  './jogo/sons/latido_medio2.mp3'],
+      pequeno: ['./jogo/sons/latido_pequeno.mp3'],
+      filhote: ['./jogo/sons/latido_filhote.mp3'],
+    };
+    this._latidosProm = Promise.all(Object.entries(arq).map(async ([k, urls]) => {
+      const bufs = [];
+      for (const u of urls) {
+        try {
+          const r = await fetch(u);
+          if (!r.ok) continue;
+          const ab = await r.arrayBuffer();
+          bufs.push(await this.ctx.decodeAudioData(ab));
+        } catch (_) {}
+      }
+      if (bufs.length) this._latidos[k] = bufs;
+    }));
+  }
+  tocarLatido(freqOuPorte = 400, vol = 1) {
     if (!this.ctx || this.mudo) return;
+    this._carregarLatidos();
+    let porte = 'medio';
+    if (typeof freqOuPorte === 'string') porte = freqOuPorte;
+    else if (freqOuPorte < 310) porte = 'grande';
+    else if (freqOuPorte < 480) porte = 'medio';
+    else if (freqOuPorte < 660) porte = 'pequeno';
+    else porte = 'filhote';
+
+    const lista = this._latidos?.[porte];
+    if (lista && lista.length) {
+      const buf = lista[Math.floor(Math.random() * lista.length)];
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf;
+      src.playbackRate.value = 0.95 + Math.random() * 0.10;
+      const g = this.ctx.createGain();
+      g.gain.value = Math.max(0.05, Math.min(1.2, vol)) * 0.65;
+      src.connect(g); g.connect(this.ctx.destination);
+      src.start();
+      return;
+    }
+
+    // Fallback sintético caso o MP3 ainda esteja decodificando no 1º milissegundo
+    const freq = typeof freqOuPorte === 'number' ? freqOuPorte : ({ grande: 255, medio: 390, pequeno: 540, filhote: 760 }[porte] || 400);
     const now = this.ctx.currentTime;
     const o1 = this.ctx.createOscillator(), o2 = this.ctx.createOscillator();
     const filt = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
@@ -219,6 +265,31 @@ class SomJogo {
     g.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
     o1.connect(filt); o2.connect(filt); filt.connect(g); g.connect(this.ctx.destination);
     o1.start(now); o2.start(now); o1.stop(now + 0.19); o2.stop(now + 0.19);
+  }
+  tocarXixi(dur = 1.65) {
+    if (!this.ctx || this.mudo) return;
+    const now = this.ctx.currentTime;
+    const len = Math.floor(this.ctx.sampleRate * dur);
+    const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      const u = i / len;
+      const env = Math.min(1, u / 0.12) * Math.min(1, (1 - u) / 0.18);
+      d[i] = (Math.random() * 2 - 1) * env * (0.85 + 0.15 * Math.sin(u * 48));
+    }
+    const src = this.ctx.createBufferSource(); src.buffer = buf;
+    const bp = this.ctx.createBiquadFilter(); bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(2400, now);
+    bp.frequency.linearRampToValueAtTime(1750, now + dur);
+    bp.Q.value = 1.5;
+    const g = this.ctx.createGain(); g.gain.setValueAtTime(0.11, now);
+    src.connect(bp); bp.connect(g); g.connect(this.ctx.destination);
+    src.start(now);
+  }
+  tocarChimeFamilia() {
+    if (!this.ctx || this.mudo) return;
+    const notas = [523.25, 659.25, 783.99, 1046.5];
+    notas.forEach((f, i) => setTimeout(() => this.tocarBeep(f, 0.18, 0.07), i * 95));
   }
   tocarFarejo() {
     if (!this.ctx || this.mudo) return;
@@ -1457,6 +1528,7 @@ export async function iniciarJogo() {
   };
   ativarVidaCao();
   $('touch-faro').onclick = () => { som.desbloquear(); vidaCao.alternarFaro(); };
+  $('touch-xixi').onclick = () => { som.desbloquear(); vidaCao.fazerXixiLivre(jogador, persAtual?.inst); };
 
   armas.aoSemMunicao = id => mostrarToast(id === 'sniper' ? 'Sniper sem balas! Compre na Loja de Munição ($ no minimapa).' : 'Sem munição de reserva: compre na Loja ($ no minimapa).');
   const missaoEmCurso = () => ['ativa', 'percebeu', 'falha', 'vitoria'].includes(missao.estado);
@@ -2163,6 +2235,7 @@ export async function iniciarJogo() {
       else if (code === 'Digit1') trocarArma('pistola');
       else if (code === 'Digit2') trocarArma('metralhadora');
       else if (code === 'Digit3') trocarArma('sniper');
+      else if (code === 'KeyT' && !jogador.veiculo && ehCao()) { som.desbloquear(); vidaCao.fazerXixiLivre(jogador, persAtual?.inst); }
       else if (code === 'KeyT' && poderes?.ativo) poderes.forca();
       else if (code === 'KeyG') trocarArma(null);
       else if (code === 'KeyX') armas.recarregar();
@@ -3254,6 +3327,8 @@ export async function iniciarJogo() {
       },
       interagir: () => { const it = interacaoAtual(); if (it) { it.fazer(); return it.texto; } return null; },
       latir: () => vidaCao.latir(jogador, persAtual?.inst, { npcsPedestres: cidade.npcs || [], veiculos, trafego: cidade.trafego || [] }),
+      fazerXixi: () => vidaCao.fazerXixiLivre(jogador, persAtual?.inst),
+      acelerarFilhotes: () => vidaCao.acelerarNascimento(jogador, persAtual?.inst),
     },
     abertura: { duracao: abertura.duracao, marcos: () => abertura.linha.map(s => [s.t0, s.t1, s.loc.id]), irPara: t => abertura.irPara(t), pular: () => abertura.pular(), iniciar: () => iniciarAbertura() },
     sala: { escolher: (campo, id) => sala.escolher(campo, id), jogar: () => document.getElementById('sala-jogar').click(), abrir: () => entrarSala() },
