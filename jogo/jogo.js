@@ -37,12 +37,18 @@ import { PoderesKael } from './poderes.js';
 import { PilotoMoto } from './pilotar.js';
 import * as MotoGLB from '../videos/biblioteca3d/veiculos/moto/motoGLB.js';
 import * as MotoProc from '../videos/biblioteca3d/veiculos/moto/moto.js';
+import { carregarCao, RACAS_CAES } from '../videos/biblioteca3d/animais/caes/cao.js';
+import { VidaCachorro } from './caes.js';
 
 const BASE_BIB = './videos/biblioteca3d';
 const clamp01 = x => Math.min(1, Math.max(0, x));
 
 const PERSONAGENS_DEF = [
   { id: 'ciber_heroi', nome: 'Ciber-Herói',   tipo: 'realista', url: `${BASE_BIB}/personagens/ciber_heroi/ciber_heroi_jogo.glb`, velMult: 1.38, puloVy: 8.2, clipPulo: 'PuloNinja' },
+  { id: 'caramelo',    nome: 'Caramelo',      tipo: 'cao',      velMult: RACAS_CAES.caramelo.velMult, puloVy: RACAS_CAES.caramelo.puloVy },
+  { id: 'pastor',      nome: 'Pastor Alemão', tipo: 'cao',      velMult: RACAS_CAES.pastor.velMult,   puloVy: RACAS_CAES.pastor.puloVy },
+  { id: 'dalmata',     nome: 'Dálmata',       tipo: 'cao',      velMult: RACAS_CAES.dalmata.velMult,  puloVy: RACAS_CAES.dalmata.puloVy },
+  { id: 'pug',         nome: 'Pug',           tipo: 'cao',      velMult: RACAS_CAES.pug.velMult,      puloVy: RACAS_CAES.pug.puloVy },
   { id: 'policial',    nome: 'Policial',      tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/policial.glb` },
   { id: 'kael',        nome: 'Kael',          tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/kael.glb`, anime: true },
   { id: 'jovem_a',     nome: 'Jovem A',       tipo: 'elenco',   url: `${BASE_BIB}/personagens/elenco/jovem_a.glb` },
@@ -195,6 +201,39 @@ class SomJogo {
     g.gain.exponentialRampToValueAtTime(0.001, now + 0.20);
     o.connect(g); g.connect(this.ctx.destination);
     o.start(now); o.stop(now + 0.21);
+  }
+  tocarLatido(freq = 400, vol = 1) {
+    if (!this.ctx || this.mudo) return;
+    const now = this.ctx.currentTime;
+    const o1 = this.ctx.createOscillator(), o2 = this.ctx.createOscillator();
+    const filt = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
+    o1.type = 'sawtooth'; o2.type = 'triangle';
+    o1.frequency.setValueAtTime(freq * 1.18, now);
+    o1.frequency.exponentialRampToValueAtTime(freq * 0.62, now + 0.16);
+    o2.frequency.setValueAtTime(freq * 0.58, now);
+    o2.frequency.exponentialRampToValueAtTime(freq * 0.34, now + 0.16);
+    filt.type = 'bandpass'; filt.frequency.setValueAtTime(freq * 1.9, now); filt.Q.value = 1.8;
+    const amp = Math.max(0.02, Math.min(1, vol)) * 0.18;
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(amp, now + 0.022);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
+    o1.connect(filt); o2.connect(filt); filt.connect(g); g.connect(this.ctx.destination);
+    o1.start(now); o2.start(now); o1.stop(now + 0.19); o2.stop(now + 0.19);
+  }
+  tocarFarejo() {
+    if (!this.ctx || this.mudo) return;
+    const now = this.ctx.currentTime;
+    for (const off of [0, 0.13]) {
+      const len = Math.floor(this.ctx.sampleRate * 0.08);
+      const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.sin((i / len) * Math.PI);
+      const src = this.ctx.createBufferSource(); src.buffer = buf;
+      const filt = this.ctx.createBiquadFilter(); filt.type = 'bandpass'; filt.frequency.value = 1650; filt.Q.value = 2.4;
+      const g = this.ctx.createGain(); g.gain.setValueAtTime(0.09, now + off);
+      src.connect(filt); filt.connect(g); g.connect(this.ctx.destination);
+      src.start(now + off);
+    }
   }
 }
 
@@ -1158,12 +1197,23 @@ export async function iniciarJogo() {
   }
 
   let poderes = null, ativarPoderes = () => {};
+  let vidaCao = null, ativarVidaCao = () => {};
+  const ehCao = () => persAtual?.def?.tipo === 'cao';
   async function carregarPersonagem(idx) {
     usandoPersLeve = false;
     const def = PERSONAGENS_DEF[idx % PERSONAGENS_DEF.length];
     if (!cachePers.has(def.id)) {
       let inst;
-      if (def.tipo === 'realista') {
+      if (def.tipo === 'cao') {
+        inst = await carregarCao(def.id);
+        const sombraContato = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.95, 0.95),
+          new THREE.MeshBasicMaterial({ map: obterTexSombraBlob(), transparent: true, depthWrite: false })
+        );
+        sombraContato.rotation.x = -Math.PI / 2;
+        sombraContato.position.y = 0.015;
+        inst.obj.add(sombraContato);
+      } else if (def.tipo === 'realista') {
         const gltf = await new GLTFLoader().loadAsync(def.url);
         const sombraContato = new THREE.Mesh(
           new THREE.PlaneGeometry(0.92, 0.92),
@@ -1194,10 +1244,12 @@ export async function iniciarJogo() {
         inst = await Corredor.carregar(def.url);
         if (def.tipo === 'silhueta') inst.silhueta();
       }
-      try {
-        await instalarAnimacoesUniversal(inst, { preCarregar: CLIPES_JOGADOR });
-      } catch (e) {
-        console.warn('Animações universais fallback:', e);
+      if (def.tipo !== 'cao') {
+        try {
+          await instalarAnimacoesUniversal(inst, { preCarregar: CLIPES_JOGADOR });
+        } catch (e) {
+          console.warn('Animações universais fallback:', e);
+        }
       }
       inst.obj.traverse(m => { if (m.isMesh && m.geometry?.type !== 'PlaneGeometry') { m.castShadow = qualAtual.sombraDetalhe; m.receiveShadow = true; } });
       inst.obj.visible = false;
@@ -1208,6 +1260,7 @@ export async function iniciarJogo() {
     persIdx = idx % PERSONAGENS_DEF.length;
     persAtual = cachePers.get(def.id);
     if (poderes) ativarPoderes();
+    if (vidaCao) ativarVidaCao();
     persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
     persAtual.inst.obj.rotation.y = jogador.ry;
     persAtual.inst.obj.visible = !jogador.veiculo;
@@ -1238,20 +1291,23 @@ export async function iniciarJogo() {
   try { await armas.carregar(BASE_BIB); } catch (e) { console.warn('armas não carregaram', e); }
   window.__armas = armas;                                                            // (para testes automáticos)
   const elMira = $('mira'), elArma = $('hud-arma'), elCarga = $('hud-carga'), elCargaBarra = elCarga.querySelector('i');
-  const elPataCentral = $('touch-atirar'), elPataIcone = $('pata-icone'), elPataRotulo = $('pata-rotulo');
+  const elPataCentral = $('touch-atirar'), elPataIcone = $('pata-icone'), elPataRotulo = $('pata-rotulo'), elAgacharRotulo = $('agachar-rotulo');
   const elBtnRecarregar = $('touch-recarregar'), elBtnMirar = $('touch-mirar');
   function atualizarHudArma() {
-    const inf = armas.info, armado = !!inf && !jogador.veiculo;
+    const cao = ehCao();
+    const inf = cao ? null : armas.info, armado = !!inf && !jogador.veiculo;
     elMira.classList.toggle('oculto', !armado || camModo === 2); elArma.classList.toggle('oculto', !inf);
     if (inf) elArma.textContent = `${{ pistola: '🔫', metralhadora: '🔫🔫', sniper: '🎯' }[inf.id]} ${inf.nome} · ${inf.recarregando ? 'recarregando…' : `${inf.municao}/${inf.pente}`} · reserva ${inf.reserva}`;
     if (elPataCentral) elPataCentral.classList.toggle('armado', armado);
-    if (elPataIcone) elPataIcone.textContent = armado ? '🔥' : '👊';
-    if (elPataRotulo) elPataRotulo.textContent = armado ? 'Atirar' : 'Soco';
+    if (elPataIcone) elPataIcone.textContent = cao ? '🐾' : (armado ? '🔥' : '👊');
+    if (elPataRotulo) elPataRotulo.textContent = cao ? 'Latir' : (armado ? 'Atirar' : 'Soco');
+    if (elAgacharRotulo) elAgacharRotulo.textContent = cao ? 'Sentar' : 'Agachar';
     if (elBtnRecarregar) elBtnRecarregar.classList.toggle('oculto', !armado);
     if (elBtnMirar) elBtnMirar.classList.toggle('oculto', !armado);
   }
   const NOMES_ARMA = { pistola: 'pistola', metralhadora: 'metralhadora', sniper: 'sniper' };
   function trocarArma(id) {
+    if (ehCao()) { if (id) mostrarToast('🐾 Cães usam o faro (F) e o latido (clique/🐾)!'); return; }
     if (jogador.veiculo) { mostrarToast('Saia do veículo para usar armas'); return; }
     if (id && !armas.possui.has(id)) { mostrarToast(`Você ainda não tem a ${NOMES_ARMA[id]}: procure o ícone dela no minimapa.`); return; }
     if (mira.ativa) sairMira(true);
@@ -1387,10 +1443,26 @@ export async function iniciarJogo() {
   ativarPoderes();
   $('touch-rajada').onclick = () => poderes.rajada();
   $('touch-forca').onclick = () => poderes.forca();
+
+  vidaCao = new VidaCachorro({
+    scene, som, efeitos, mostrarToast,
+    darPontos: pts => { score += pts; elScore.textContent = `${score} pts`; salvarProgresso(); },
+    resolverColisoes, alturaChao, baloesEl: $('baloes'),
+  });
+  ativarVidaCao = () => {
+    const on = ehCao();
+    if (on && armas.ativa) armas.equipar(null);
+    vidaCao.definirAtivo(on, persAtual?.def?.nome || '');
+    atualizarHudArma();
+  };
+  ativarVidaCao();
+  $('touch-faro').onclick = () => { som.desbloquear(); vidaCao.alternarFaro(); };
+
   armas.aoSemMunicao = id => mostrarToast(id === 'sniper' ? 'Sniper sem balas! Compre na Loja de Munição ($ no minimapa).' : 'Sem munição de reserva: compre na Loja ($ no minimapa).');
   const missaoEmCurso = () => ['ativa', 'percebeu', 'falha', 'vitoria'].includes(missao.estado);
   function interacaoAtual() {
     if (modo !== 'jogo' || travado || balacam.ativa) return null;
+    if (ehCao()) { const ic = vidaCao.interacao(jogador, persAtual?.inst); if (ic) return ic; }
     return loja.interacao() || missao.interacao() || interacaoFoguete();
   }
   function interacaoFoguete() {
@@ -2043,6 +2115,12 @@ export async function iniciarJogo() {
 
   function desferirGolpe() {
     if (modo !== 'jogo' || travado || balacam.ativa || jogador.veiculo || mira.ativa || armas.ativa) return;
+    if (ehCao()) {
+      if (vidaCao.emCena()) return;
+      som.desbloquear();
+      vidaCao.latir(jogador, persAtual?.inst, { npcsPedestres: cidade.npcs || [], veiculos, trafego: cidade.trafego || [] });
+      return;
+    }
     if (!jogador.noChao || jogador.rolando > 0 || jogador.golpeando > 0.14) return;
     som.desbloquear();
     if (jogador.agachado) {
@@ -2097,6 +2175,7 @@ export async function iniciarJogo() {
         $('btn-sirene').classList.toggle('ativo', jogador.veiculo.sirene);
         mostrarToast(jogador.veiculo.sirene ? 'Sirene e Giroflex LIGADOS' : 'Sirene desligada');
       }
+      else if (code === 'KeyF' && !jogador.veiculo && ehCao()) { som.desbloquear(); vidaCao.alternarFaro(); }
       else if (code === 'KeyF' && !jogador.veiculo && poderes?.ativo) poderes.rajada();
       else if (code === 'KeyF' && jogador.veiculo?.api?.farois) {
         jogador.veiculo.farois = !jogador.veiculo.farois;
@@ -2351,6 +2430,7 @@ export async function iniciarJogo() {
     ctx.restore();
     if (ehNoite) { ctx.fillStyle = 'rgba(2,6,23,0.35)'; ctx.fillRect(0, 0, W, H); }
     marcadoresMapa(ctx, toMM, W, H, esc, true);
+    vidaCao?.desenharMinimapa(ctx, toMM, W, H, W / 150);
     // jogador no centro, apontando para onde ele (ou o veículo) olha em relação à câmera
     const ang = (jogador.veiculo ? jogador.veiculo.ry : jogador.ry) - yaw;
     ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(-ang); const s = W / 150;
@@ -2472,11 +2552,12 @@ export async function iniciarJogo() {
     persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
     persAtual.inst.obj.rotation.y = jogador.ry;
     if (pt.id === 'selva') garantirTrex(false);
-    salaCentro.set(v ? (jogador.x + v.x) / 2 : jogador.x, 0, v ? (jogador.z + v.z) / 2 : jogador.z);
-    salaRaio = v ? Math.max(7.5, v.raio * 2.4 + 3.5) : 5.2;
-    salaAltura = v ? 2.2 + v.raio * 0.55 : 1.7;
-    salaAlvoY = v ? 1.0 + v.raio * 0.1 : 1.0;
-    salaBase = pt.ang - (v ? 0.62 : 0.25); tSala = 0;
+    const caoSala = ehCao();
+    salaCentro.set(v && !caoSala ? (jogador.x + v.x) / 2 : jogador.x, 0, v && !caoSala ? (jogador.z + v.z) / 2 : jogador.z);
+    salaRaio = caoSala ? 2.85 : (v ? Math.max(7.5, v.raio * 2.4 + 3.5) : 5.2);
+    salaAltura = caoSala ? 1.15 : (v ? 2.2 + v.raio * 0.55 : 1.7);
+    salaAlvoY = caoSala ? 0.50 : (v ? 1.0 + v.raio * 0.1 : 1.0);
+    salaBase = pt.ang - (v && !caoSala ? 0.62 : 0.25); tSala = 0;
   }
 
   let tokenSala = 0;
@@ -2512,8 +2593,18 @@ export async function iniciarJogo() {
   }
 
   const MINI = './jogo/sala/miniaturas';
-  const ICONE_PERS = { ciber_heroi: '⚡', kael: '✋', policial: '👮', jovem_a: '🧑', bombeiro: '🧑‍🚒', astronauta: '👩‍🚀', operador: '👷', corredor: '🏃', silhueta: '👤' };
-  const DESC_PERS = { ciber_heroi: 'Super-corrida e pulo ninja', kael: 'Herói: rajada, super força e super pulo', policial: 'Patrulha da cidade', jovem_a: 'Morador de Hryz', bombeiro: 'Corpo de bombeiros', astronauta: 'Visitante espacial', operador: 'Operador de obras', corredor: 'Rápido e colorido', silhueta: 'O vulto do canal' };
+  const ICONE_PERS = {
+    ciber_heroi: '⚡', caramelo: '🐕', pastor: '🐕‍🦺', dalmata: '🐾', pug: '🐶',
+    kael: '✋', policial: '👮', jovem_a: '🧑', bombeiro: '🧑‍🚒', astronauta: '👩‍🚀', operador: '👷', corredor: '🏃', silhueta: '👤',
+  };
+  const DESC_PERS = {
+    ciber_heroi: 'Super-corrida e pulo ninja',
+    caramelo: 'Vida de Cachorro: faro, lixo e matilha',
+    pastor: 'Cão farejador rápido e forte',
+    dalmata: 'Cão ágil, simpático e pintado',
+    pug: 'Cão baixinho, fofo e bom de faro',
+    kael: 'Herói: rajada, super força e super pulo', policial: 'Patrulha da cidade', jovem_a: 'Morador de Hryz', bombeiro: 'Corpo de bombeiros', astronauta: 'Visitante espacial', operador: 'Operador de obras', corredor: 'Rápido e colorido', silhueta: 'O vulto do canal',
+  };
   const sala = new Sala({
     pers: PERSONAGENS_DEF.map(d => ({ id: d.id, nome: d.nome, desc: DESC_PERS[d.id] || '', icone: ICONE_PERS[d.id] || '🧍', img: `${MINI}/pers-${d.id}.webp` })),
     veic: [{ id: 'nenhum', nome: 'A pé', desc: 'Começar andando', icone: '🚶' },
@@ -2526,15 +2617,17 @@ export async function iniciarJogo() {
       await aplicarEscolha(esc);
       sala.fechar();
       modo = 'jogo';
-      const v = veiculos.find(o => o.id === esc.veic);
+      const v = ehCao() ? null : veiculos.find(o => o.id === esc.veic);
       if (v) { jogador.veiculo = v; persAtual.inst.obj.visible = !!v.moto; if (v.moto) { v.api?.descanso?.(false); v.incl = 0; v.obj.rotation.set(0, v.ry, 0, 'YXZ'); } jogador.x = v.x; jogador.z = v.z; }
       camYaw = v ? v.ry : jogador.ry; camPitch = 0.32; snapCam = true; minimapTimer = 99;
       atualizarHudModo();
       som.desbloquear();
       const pt = PONTOS_TELEPORTE.find(p => p.id === esc.local);
       if (esc.local === 'lua') { if (jogador.veiculo) jogador.veiculo = null; await irParaLua(); return; }
-      if (missao.estado === 'inativa') missao.iniciar();
-      mostrarToast(v ? `Bem-vindo a Hryz City! ${v.nome} · ${pt?.nome ?? ''}${v.temSirene ? ' · L = sirene' : ''}` : `Bem-vindo a Hryz City! ${pt?.nome ?? ''}`);
+      if (!ehCao() && !Q.has('semmissao') && missao.estado === 'inativa') missao.iniciar();
+      mostrarToast(ehCao()
+        ? `🐾 Vida de Cachorro (${persAtual.def.nome})! F = Modo Faro · E = Cheirar cães, lixo e hidrantes`
+        : (v ? `Bem-vindo a Hryz City! ${v.nome} · ${pt?.nome ?? ''}${v.temSirene ? ' · L = sirene' : ''}` : `Bem-vindo a Hryz City! ${pt?.nome ?? ''}`));
     },
     aoRever: () => { sala.fechar(); iniciarAbertura(); },
   });
@@ -2622,7 +2715,7 @@ export async function iniciarJogo() {
 
     const tFrente = (touch.acel ? 1 : 0) - (touch.freio ? 1 : 0) - touch.mz;
     const tLado = (touch.dir ? 1 : 0) - (touch.esq ? 1 : 0) + touch.mx;
-    const jogando = modo === 'jogo' && !travado && !balacam.ativa && !['percebeu', 'intro'].includes(missao.estado);
+    const jogando = modo === 'jogo' && !travado && !balacam.ativa && !vidaCao.emCena() && !['percebeu', 'intro'].includes(missao.estado);
     // abertura e sala: a câmera é da cena (cine.foco guia o que a cidade mostra); o jogador não se move
     let cine = null;
     if (modo === 'abertura') cine = abertura.atualizar(dt);
@@ -2632,6 +2725,8 @@ export async function iniciarJogo() {
     if (rLoja) cine = { foco: rLoja.foco, trexAlvo: [1e5, 0, 1e5] };
     const rMis = modo === 'jogo' ? missao.camCena() : null;
     if (rMis) { if (mira.ativa) sairMira(); camera.position.copy(rMis.p); camera.lookAt(rMis.a); const fv = rMis.fov || 46; if (camera.fov !== fv) { camera.fov = fv; camera.updateProjectionMatrix(); } cine = { foco: { x: rMis.a.x, z: rMis.a.z }, trexAlvo: [jogador.x, jogador.y, jogador.z] }; }
+    const rCao = modo === 'jogo' ? vidaCao.camCena() : null;
+    if (rCao) { if (mira.ativa) sairMira(); camera.position.copy(rCao.p); camera.lookAt(rCao.a); const fv = rCao.fov || 44; if (camera.fov !== fv) { camera.fov = fv; camera.updateProjectionMatrix(); } cine = { foco: rCao.foco, trexAlvo: [jogador.x, jogador.y, jogador.z] }; }
     const rLua = lua.cineAtiva ? lua.atualizarCine(dt) : null;
     if (rLua) { camera.position.copy(rLua.p); camera.lookAt(rLua.a); if (camera.fov !== rLua.fov) { camera.fov = rLua.fov; camera.updateProjectionMatrix(); } cine = { foco: { x: rLua.a.x, z: rLua.a.z }, trexAlvo: [1e5, 0, 1e5] }; }
     if (camFixa) { camera.position.copy(camFixa.p); camera.lookAt(camFixa.a); cine = { foco: { x: camFixa.a.x, z: camFixa.a.z }, trexAlvo: [1e5, 0, 1e5] }; }
@@ -2905,7 +3000,7 @@ export async function iniciarJogo() {
           jogador.y = chao; jogador.vy = 0; jogador.noChao = true; jogador.yPico = chao;
         }
       }
-      if (jogador.noChao) {
+      if (jogador.noChao && !vidaCao.emCena()) {
         if (jogador.rolando > 0) { /* mantém AcrobaciaRolar */ }
         else if (jogador.golpeando > 0) { /* mantém Soco atual */ }
         else if (jogador.agachado) tocarAcao(movendo ? 'AgacharAndar' : 'AgacharParado', 0.16);
@@ -2923,17 +3018,19 @@ export async function iniciarJogo() {
       if (lua.ativa) lua.atualizarJogador(dt, jogador, movendo, jogador.noChao, 0);
       if (mira.ativa) jogador.ry = mira.yaw;
       else if (armas.ativa && jogador.rolando <= 0) jogador.ry += anguloDiff(jogador.ry, camYaw) * Math.min(1, dt * 14);   // armado: o corpo vira para onde a câmera mira
-      persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
-      persAtual.inst.obj.rotation.y = jogador.ry;
-      persAtual.inst.atualizar(dt);
+      if (!vidaCao.emCena()) {
+        persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
+        persAtual.inst.obj.rotation.y = jogador.ry;
+        persAtual.inst.atualizar(dt);
+      }
       armas.atualizar(dt, tTotal, persAtual.inst.obj, jogador.rolando <= 0);
 
-      const altAlvo = jogador.rolando > 0 ? 0.95 : (jogador.agachado ? 1.04 : 1.45);
+      const altAlvo = ehCao() ? 0.58 : (jogador.rolando > 0 ? 0.95 : (jogador.agachado ? 1.04 : 1.45));
       jogador.focoAlt += (altAlvo - jogador.focoAlt) * Math.min(1, dt * 10);
       focoX = jogador.x; focoY = jogador.y + jogador.focoAlt; focoZ = jogador.z; focoYaw = jogador.ry;
 
       const inter = jogando ? interacaoAtual() : null;
-      const perto = jogando && !inter ? acharVeiculoPerto() : null;
+      const perto = jogando && !inter && !ehCao() ? acharVeiculoPerto() : null;
       $('touch-entrar')?.classList.toggle('tbtn-destaque', !!perto || !!inter);
       if (inter) { elPrompt.textContent = inter.texto; elPrompt.classList.remove('oculto'); }
       else if (perto) {
@@ -2950,6 +3047,7 @@ export async function iniciarJogo() {
     balacam.atualizarEfeitos(dt);
     lua.atualizar(dt);
     efeitos.atualizar(dt); vida.atualizar(dt); terreno?.atualizar(dt); poderes.atualizar(dt);
+    vidaCao.atualizar(dt, tTotal, jogador, ehCao() ? persAtual?.inst : null, camera);
     for (const v of veiculos) v.atualizarDano?.(dt);
 
     // Atualiza setores visíveis, trânsito, frota distante, T. rex da Selva, fumaça de drift, rastro ciber e NPCs próximos
@@ -3030,11 +3128,11 @@ export async function iniciarJogo() {
       if (camera.fov !== mira.fov || camera.near !== 2.5) { camera.fov = mira.fov; camera.near = 2.5; camera.updateProjectionMatrix(); }
       snapCam = true;
     } else if (camModo === 0) {
-      let d = jogador.veiculo ? Math.max(camDist, jogador.veiculo.camDist) : camDist;
+      let d = jogador.veiculo ? Math.max(camDist, jogador.veiculo.camDist) : (ehCao() ? Math.min(camDist, 3.8) : camDist);
       if (jogador.plataforma?.interior) d = Math.min(d, 3.0);                   // dentro da loja a câmera fica perto (paredes)
-      const h = (jogador.veiculo ? jogador.veiculo.camAlt : 1.7) + Math.sin(camPitch) * d * 0.72;
+      const h = (jogador.veiculo ? jogador.veiculo.camAlt : (ehCao() ? 1.28 : 1.7)) + Math.sin(camPitch) * d * 0.72;
       const hDist = Math.cos(camPitch) * d;
-      posCamDesejada.set(focoX - Math.sin(camYaw) * hDist, Math.max(0.8, focoY + h - 1.1), focoZ - Math.cos(camYaw) * hDist);
+      posCamDesejada.set(focoX - Math.sin(camYaw) * hDist, Math.max(ehCao() ? 0.55 : 0.8, focoY + h - 1.1), focoZ - Math.cos(camYaw) * hDist);
       const ombro = armas.ativa && !jogador.veiculo ? 0.62 : 0;                       // armado: câmera sobre o ombro direito
       if (ombro) posCamDesejada.add(new THREE.Vector3(-Math.cos(camYaw) * ombro, 0, Math.sin(camYaw) * ombro));
       if (snapCam) { camera.position.copy(posCamDesejada); snapCam = false; }
@@ -3137,6 +3235,25 @@ export async function iniciarJogo() {
       golpear: () => desferirGolpe(),
       trocarPers: idx => carregarPersonagem(idx),
       equipar: id => trocarArma(id),
+    },
+    caes: {
+      estado: () => vidaCao.estado(),
+      faro: v => vidaCao.alternarFaro(v),
+      carregarNpcs: () => vidaCao.carregarNpcs(),
+      irPertoDe: tipo => {
+        const a = vidaCao.obterAlvo(tipo);
+        if (!a) return null;
+        jogador.veiculo = null;
+        jogador.x = a.x - 1.05;
+        jogador.z = a.z + 0.35;
+        jogador.y = CALCADA;
+        jogador.ry = Math.atan2(a.x - jogador.x, a.z - jogador.z);
+        camYaw = jogador.ry + 0.35;
+        snapCam = true;
+        return { x: a.x, z: a.z, nome: a.nome || tipo };
+      },
+      interagir: () => { const it = interacaoAtual(); if (it) { it.fazer(); return it.texto; } return null; },
+      latir: () => vidaCao.latir(jogador, persAtual?.inst, { npcsPedestres: cidade.npcs || [], veiculos, trafego: cidade.trafego || [] }),
     },
     abertura: { duracao: abertura.duracao, marcos: () => abertura.linha.map(s => [s.t0, s.t1, s.loc.id]), irPara: t => abertura.irPara(t), pular: () => abertura.pular(), iniciar: () => iniciarAbertura() },
     sala: { escolher: (campo, id) => sala.escolher(campo, id), jogar: () => document.getElementById('sala-jogar').click(), abrir: () => entrarSala() },

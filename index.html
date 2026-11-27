@@ -529,6 +529,38 @@
   #mi-pular { position: absolute; right: max(18px, 3vw); top: calc(9vh + 14px); pointer-events: auto; padding: 9px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.5); color: #fff; font-weight: 800; font-size: 13px; cursor: pointer; }
   #mi-pular small { opacity: .65; margin-left: 6px; }
   body.respiracao #luneta { background: radial-gradient(circle at 50% 50%, transparent 0, transparent calc(min(40vw, 40vh) - 2px), rgba(0,0,0,.95) calc(min(40vw, 40vh)), #000 calc(min(40vw, 40vh) + 30px)); }
+
+  /* ---------- Vida de Cachorro (HUD, Modo Faro e controles caninos) ---------- */
+  .cao-btn { display: none !important; pointer-events: auto; }
+  body.pers-cao .cao-btn { display: inline-flex !important; background: rgba(16, 185, 129, 0.82); border-color: #6ee7b7; }
+  body.pers-cao #touch-arma { display: none !important; }
+  #hud-cao {
+    display: none;
+    padding: 8px 10px;
+    width: 215px;
+    font-size: 11px;
+    pointer-events: auto;
+    border-color: rgba(250, 204, 21, 0.42);
+  }
+  body.pers-cao #hud-cao { display: flex; flex-direction: column; gap: 5px; }
+  body.em-cine #hud-cao, body.na-balacam #hud-cao { display: none !important; }
+  .cao-topo { display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: 11.5px; color: var(--gold); letter-spacing: 0.4px; }
+  .cao-fome-row { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11px; }
+  .cao-fome-wrap { flex: 1; height: 7px; border-radius: 4px; background: rgba(255,255,255,0.14); overflow: hidden; }
+  #cao-fome-barra { display: block; height: 100%; background: #22c55e; transform-origin: 0 0; transition: transform .2s, background .3s; }
+  .cao-objs { display: flex; flex-direction: column; gap: 2px; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 4px; }
+  .cao-obj { font-size: 10.5px; color: #e2e8f0; line-height: 1.25; }
+  .cao-obj.feito { color: #86efac; text-decoration: line-through; opacity: 0.78; }
+  #faro-vinheta {
+    display: none; position: fixed; inset: 0; z-index: 12; pointer-events: none;
+    background: radial-gradient(circle at 50% 55%, transparent 56%, rgba(16, 185, 129, 0.16) 86%, rgba(250, 204, 21, 0.24) 100%);
+  }
+  body.pers-cao.modo-faro #faro-vinheta { display: block; }
+  @media (pointer: coarse), (max-height: 540px) {
+    #hud-cao { width: 175px; padding: 6px 8px; gap: 3px; }
+    .cao-topo { font-size: 10px; }
+    .cao-obj { font-size: 9.5px; }
+  }
 </style>
 </head>
 <body>
@@ -576,6 +608,7 @@
   </div>
 
   <!-- HUD Topo Esquerdo: Minimapa e Objetivos -->
+  <div id="faro-vinheta"></div>
   <div id="hud-esq">
     <div class="glass mm-box">
       <canvas id="minimap" width="300" height="300" title="Abrir o mapa (Tab)"></canvas>
@@ -584,6 +617,17 @@
     <div class="glass" id="hud-alvo-box">
       <div class="rot" id="hud-alvo-rot">Próximo Checkpoint</div>
       <div id="hud-alvo">Praça Central</div>
+    </div>
+    <div class="glass" id="hud-cao">
+      <div class="cao-topo"><span>🐾 VIDA DE CACHORRO</span><span>Matilha <b id="cao-matilha">0/5</b></span></div>
+      <div class="cao-fome-row"><span>🍖</span><div class="cao-fome-wrap"><i id="cao-fome-barra"></i></div><span id="cao-fome-val">82%</span></div>
+      <div class="cao-objs">
+        <div class="cao-obj" id="obj-cao-lixo">⬜ 🗑️ Comida no lixo (faro) (0/3)</div>
+        <div class="cao-obj" id="obj-cao-social">⬜ 🐕 Cheirar cães (socializar) (0/2)</div>
+        <div class="cao-obj" id="obj-cao-terr">⬜ 🚒 Marcar hidrantes (0/3)</div>
+        <div class="cao-obj" id="obj-cao-osso">⬜ 🦴 Desenterrar ossos (0/2)</div>
+        <div class="cao-obj" id="obj-cao-extra">⬜ 🎾 Bolinha / Carinho (0/1)</div>
+      </div>
     </div>
     <div class="stats-row">
       <div id="hud-carga" class="oculto"><span>SUPER PULO</span><b><i></i></b></div>
@@ -662,12 +706,13 @@
         <button class="tbtn-aux oculto" id="touch-mirar" title="Mirar / Luneta (Z)">🎯 Mirar</button>
         <button class="tbtn-aux kael-btn" id="touch-forca" title="Super força: levantar / arremessar carro (T)">💪 Força</button>
         <button class="tbtn-aux kael-btn" id="touch-rajada" title="Rajada vermelha (F)">✋ Rajada</button>
+        <button class="tbtn-aux cao-btn" id="touch-faro" title="Modo Faro: ver cheiros 3D de comida, cães, hidrantes e ossos (F)">👃 Faro</button>
       </div>
       <button class="tbtn pata-dedo" id="touch-pular" title="Pular (Espaço)"><span class="d-ico">🦘</span><span class="d-txt">Pular</span></button>
       <button class="tbtn pata-dedo" id="touch-correr" title="Correr (segure ou toque para travar)"><span class="d-ico">🏃</span><span class="d-txt">Correr</span></button>
-      <button class="tbtn pata-dedo" id="touch-agachar" title="Agachar furtivo (Ctrl / B)"><span class="d-ico">🧎</span><span class="d-txt">Agachar</span></button>
+      <button class="tbtn pata-dedo" id="touch-agachar" title="Agachar / Sentar (Ctrl / B)"><span class="d-ico">🧎</span><span class="d-txt" id="agachar-rotulo">Agachar</span></button>
       <button class="tbtn pata-dedo" id="touch-rolar" title="Rolar / Esquivar (Alt)"><span class="d-ico">🌀</span><span class="d-txt">Rolar</span></button>
-      <button class="pata-central" id="touch-atirar" title="Habilidade Principal: Soco / Atirar">
+      <button class="pata-central" id="touch-atirar" title="Habilidade Principal: Soco / Atirar / Latir">
         <span class="pata-ico" id="pata-icone">👊</span>
         <span class="pata-txt" id="pata-rotulo">Soco</span>
       </button>
@@ -701,13 +746,14 @@
       <div class="ajuda-grid">
         <kbd>W A S D</kbd><span>Andar / Dirigir (ou Setas)</span>
         <kbd>Shift</kbd><span>Correr Sprint a pé</span>
-        <kbd>Ctrl / B</kbd><span>Agachar / Andar furtivo</span>
+        <kbd>Ctrl / B</kbd><span>Agachar / Andar furtivo (com cães: Sentar / Farejar)</span>
         <kbd>Alt</kbd><span>Rolar / Esquiva acrobática</span>
         <kbd>Espaço</kbd><span>Pular a pé / Freio de mão (drift) no carro</span>
-        <kbd>E</kbd><span>Entrar/sair do veículo · subir no terraço · entrar na loja</span>
+        <kbd>E</kbd><span>Entrar/sair do veículo · subir no terraço · entrar na loja · Cães: cheirar cão, revirar lixo, marcar hidrante, cavar osso, pegar bolinha</span>
+        <kbd>F</kbd><span>Faróis do carro · Kael: rajada vermelha ✋ · Cães: Modo Faro 3D 👃 (cheiros de comida e amigos)</span>
         <kbd>1 / 2 / 3</kbd><span>Pistola / Metralhadora / Sniper (G guarda) · só depois de pegar no mapa</span>
         <kbd>Botão direito</kbd><span>Luneta da sniper (segure) · Z liga/desliga · roda = zoom</span>
-        <kbd>Clique</kbd><span>Combo de Soco (desarmado) ou Atirar (armado)</span>
+        <kbd>Clique</kbd><span>Combo de Soco (desarmado), Atirar (armado) ou Latir / Lançar bolinha (cães)</span>
         <kbd>X</kbd><span>Recarregar (usa a munição de reserva; compre mais na Loja $)</span>
         <kbd>L</kbd><span>Giroflex e sirene (viatura, ambulância e bombeiros)</span>
         <kbd>P</kbd><span>Voltar para a sala (trocar personagem, carro e local)</span>
