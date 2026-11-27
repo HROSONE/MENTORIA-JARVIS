@@ -39,6 +39,7 @@ import * as MotoGLB from '../videos/biblioteca3d/veiculos/moto/motoGLB.js';
 import * as MotoProc from '../videos/biblioteca3d/veiculos/moto/moto.js';
 import { carregarCao, RACAS_CAES } from '../videos/biblioteca3d/animais/caes/cao.js';
 import { VidaCachorro } from './caes.js';
+import { GerenciadorFases, FASES_PERSONAGEM, obterFaseDef } from './fases.js';
 
 const BASE_BIB = './videos/biblioteca3d';
 const clamp01 = x => Math.min(1, Math.max(0, x));
@@ -342,35 +343,35 @@ const COMBO_SOCOS = ['SocoJab', 'SocoDireto', 'SocoGancho'];
 const QUALIDADES = {
   leve: {
     id: 'leve', rotulo: 'Leve',
-    pixelRatio: 0.75,
-    pbr: false, mostrarDecor: false,
+    pixelRatio: 0.8, anisotropy: 2,
+    pbr: false, mostrarDecor: false, fillLight: false,
     viaturaCompleta: false, personagemCompleto: true,
-    sombras: false, sombraRaio: 36,
+    sombras: false, sombraRes: 0, sombraRaio: 36,
     sombraPrincipal: false, sombraDetalhe: false,
-    viewDist: 120, camFar: 165, fogNear: 55, fogFar: 155,
+    viewDist: 135, camFar: 180, fogNear: 60, fogFar: 170,
     npcsMax: 3, npcDist: 45, trafegoMax: 8,
     rainN: 220, minimapInterval: 0.16,
   },
   medio: {
     id: 'medio', rotulo: 'Médio',
-    pixelRatio: 1.0,
-    pbr: false, mostrarDecor: true,
+    pixelRatio: 1.15, anisotropy: 4,
+    pbr: true, mostrarDecor: true, fillLight: true,
     viaturaCompleta: true, personagemCompleto: true,
-    sombras: true, sombraRaio: 44,
+    sombras: true, sombraRes: 1024, sombraRaio: 46,
     sombraPrincipal: true, sombraDetalhe: false,
-    viewDist: 210, camFar: 270, fogNear: 110, fogFar: 255,
-    npcsMax: 2, npcDist: 50, trafegoMax: 14,
-    rainN: 500, minimapInterval: 0.083,
+    viewDist: 220, camFar: 290, fogNear: 120, fogFar: 275,
+    npcsMax: 4, npcDist: 58, trafegoMax: 14,
+    rainN: 520, minimapInterval: 0.083,
   },
   alto: {
     id: 'alto', rotulo: 'Alto',
-    pixelRatio: 1.25,                                                               // (era 1,5: no celular de tela densa pesava e travava)
-    pbr: true, mostrarDecor: true,
+    pixelRatio: 1.4, anisotropy: 8,
+    pbr: true, mostrarDecor: true, fillLight: true,
     viaturaCompleta: true, personagemCompleto: true,
-    sombras: true, sombraRaio: 65,
+    sombras: true, sombraRes: 2048, sombraRaio: 68,
     sombraPrincipal: true, sombraDetalhe: true,
-    viewDist: 280, camFar: 360, fogNear: 150, fogFar: 330,                      // (era 420 m: a cidade inteira; esquentava o celular)
-    npcsMax: 5, npcDist: 75, trafegoMax: 16,
+    viewDist: 295, camFar: 380, fogNear: 165, fogFar: 360,
+    npcsMax: 6, npcDist: 80, trafegoMax: 18,
     rainN: 900, minimapInterval: 0.05,
   },
 };
@@ -391,9 +392,7 @@ function obterTexSombraBlob() {
   return _texSombraBlob;
 }
 
-// Céu leve com gradiente, sol/lua e horizonte suave (1 draw call, < 0,1 ms!)
-// Panorama pintado uma vez num canvas (azimute x elevação de -0,05 a +0,60): R = nuvens, G = serra distante, B = morros mais perto.
-// No céu é só uma leitura de textura por pixel (barato), e fica fora da neblina: a cidade não "acaba" num branco liso.
+// Céu leve com gradiente atmosférico, dispersão solar, nuvens volumétricas e serra distante (1 draw call, < 0,1 ms!)
 function criarPanoramaCeu() {
   const W = 2048, H = 512, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
   let sem = 7; const rnd = () => ((sem = (sem * 16807) % 2147483647) / 2147483647);
@@ -429,15 +428,15 @@ function criarCeuLeve() {
     depthWrite: false,
     fog: false,
     uniforms: {
-      uTopo: { value: new THREE.Color(0x2867c7) },
-      uHor:  { value: new THREE.Color(0xb9d4ea) },
-      uChao: { value: new THREE.Color(0x526b5c) },
-      uSolDir: { value: new THREE.Vector3(-0.55, 0.58, 0.45).normalize() },
-      uSolCor: { value: new THREE.Color(0xfff5d6) },
+      uTopo: { value: new THREE.Color(0x1b5ec2) },
+      uHor:  { value: new THREE.Color(0xc5dff4) },
+      uChao: { value: new THREE.Color(0x4b6855) },
+      uSolDir: { value: new THREE.Vector3(-0.55, 0.56, 0.45).normalize() },
+      uSolCor: { value: new THREE.Color(0xfff1cc) },
       uSolForca: { value: 1.0 },
       tPan: { value: panorama },
-      uNuvem: { value: new THREE.Color(0xffffff) }, uNuvemSombra: { value: new THREE.Color(0xb8c4d4) }, uNuvemK: { value: 0.9 },
-      uSerra: { value: new THREE.Color(0x8fa9c4) }, uMorro: { value: new THREE.Color(0x6f8a86) },
+      uNuvem: { value: new THREE.Color(0xfffdf8) }, uNuvemSombra: { value: new THREE.Color(0x9cb3cc) }, uNuvemK: { value: 0.92 },
+      uSerra: { value: new THREE.Color(0x7c9ec2) }, uMorro: { value: new THREE.Color(0x5d7e6b) },
     },
     vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
     fragmentShader: `
@@ -449,55 +448,59 @@ function criarCeuLeve() {
         vec3 d = normalize(vD);
         float h = d.y;
         vec3 c = h >= 0.0
-          ? mix(uHor, uTopo, pow(clamp(h, 0.0, 1.0), 0.58))
+          ? mix(uHor, uTopo, pow(clamp(h, 0.0, 1.0), 0.54))
           : mix(uHor, uChao, clamp(-h * 4.0, 0.0, 1.0));
+        // Brilho atmosférico suave no horizonte (scattering quente perto do sol)
+        if (h > -0.02 && uSolForca > 0.01) {
+          float s = max(dot(d, uSolDir), 0.0);
+          float hGlow = exp(-max(h, 0.0) * 5.2) * pow(s, 3.0) * 0.24;
+          c += uSolCor * (hGlow + pow(s, 22.0) * 0.28 + pow(s, 420.0) * 2.1) * uSolForca;
+        }
         float v = (h + 0.05) / 0.65;
         if (v > 0.0 && v < 1.0) {
           vec4 p = texture2D(tPan, vec2(atan(d.z, d.x) / 6.2831853 + 0.5, v));
-          c = mix(c, mix(uHor, uSerra, 0.75), p.g);                                 // serra distante (some na névoa)
-          c = mix(c, mix(uHor, uMorro, 0.6), p.b);                                  // morros mais perto (também com névoa)
+          c = mix(c, mix(uHor, uSerra, 0.72), p.g);
+          c = mix(c, mix(uHor, uMorro, 0.58), p.b);
           float n = smoothstep(0.05, 0.75, p.r) * uNuvemK;
-          c = mix(c, mix(uNuvemSombra, uNuvem, smoothstep(0.2, 0.9, p.r)), n);      // nuvens com base mais escura
-        }
-        if (h > -0.02 && uSolForca > 0.01) {
-          float s = max(dot(d, uSolDir), 0.0);
-          c += uSolCor * (pow(s, 18.0) * 0.25 + pow(s, 360.0) * 1.8) * uSolForca;
+          float rimSol = pow(max(dot(d, uSolDir), 0.0), 4.0) * 0.16 * uSolForca;
+          vec3 corNuvem = mix(uNuvemSombra, uNuvem + uSolCor * rimSol, smoothstep(0.18, 0.88, p.r));
+          c = mix(c, corNuvem, n);
         }
         gl_FragColor = vec4(c, 1.0);
       }
     `,
   });
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 10), mat);
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), mat);
   mesh.frustumCulled = false;
   mesh.renderOrder = -10;
   return {
     mesh,
     definir({ noite, chuva }) {
       if (noite) {
-        mat.uniforms.uTopo.value.setHex(0x060b1c);
-        mat.uniforms.uHor.value.setHex(0x162447);
-        mat.uniforms.uChao.value.setHex(0x080d1a);
+        mat.uniforms.uTopo.value.setHex(0x050a1a);
+        mat.uniforms.uHor.value.setHex(0x16264a);
+        mat.uniforms.uChao.value.setHex(0x070c18);
         mat.uniforms.uSolDir.value.set(0.45, 0.52, -0.55).normalize();
         mat.uniforms.uSolCor.value.setHex(0xcbdcff);
-        mat.uniforms.uSolForca.value = 0.55;
-        mat.uniforms.uNuvem.value.setHex(0x2c3a5e); mat.uniforms.uNuvemSombra.value.setHex(0x141c33); mat.uniforms.uNuvemK.value = 0.55;
+        mat.uniforms.uSolForca.value = 0.58;
+        mat.uniforms.uNuvem.value.setHex(0x2d3c63); mat.uniforms.uNuvemSombra.value.setHex(0x131b32); mat.uniforms.uNuvemK.value = 0.55;
         mat.uniforms.uSerra.value.setHex(0x0f1830); mat.uniforms.uMorro.value.setHex(0x0a1020);
       } else if (chuva) {
-        mat.uniforms.uTopo.value.setHex(0x4c6073);
-        mat.uniforms.uHor.value.setHex(0x8fa3b5);
-        mat.uniforms.uChao.value.setHex(0x4a5966);
+        mat.uniforms.uTopo.value.setHex(0x4a5e72);
+        mat.uniforms.uHor.value.setHex(0x8da1b4);
+        mat.uniforms.uChao.value.setHex(0x475764);
         mat.uniforms.uSolForca.value = 0.08;
-        mat.uniforms.uNuvem.value.setHex(0x9aa8b6); mat.uniforms.uNuvemSombra.value.setHex(0x5d6b79); mat.uniforms.uNuvemK.value = 1.0;
-        mat.uniforms.uSerra.value.setHex(0x7a8d9e); mat.uniforms.uMorro.value.setHex(0x5f6f74);
+        mat.uniforms.uNuvem.value.setHex(0x98a6b5); mat.uniforms.uNuvemSombra.value.setHex(0x5a6876); mat.uniforms.uNuvemK.value = 1.0;
+        mat.uniforms.uSerra.value.setHex(0x788b9c); mat.uniforms.uMorro.value.setHex(0x5c6d72);
       } else {
-        mat.uniforms.uTopo.value.setHex(0x2867c7);
-        mat.uniforms.uHor.value.setHex(0xb9d4ea);
-        mat.uniforms.uChao.value.setHex(0x526b5c);
-        mat.uniforms.uSolDir.value.set(-0.55, 0.58, 0.45).normalize();
-        mat.uniforms.uSolCor.value.setHex(0xfff5d6);
+        mat.uniforms.uTopo.value.setHex(0x1b5ec2);
+        mat.uniforms.uHor.value.setHex(0xc5dff4);
+        mat.uniforms.uChao.value.setHex(0x4b6855);
+        mat.uniforms.uSolDir.value.set(-0.55, 0.56, 0.45).normalize();
+        mat.uniforms.uSolCor.value.setHex(0xfff1cc);
         mat.uniforms.uSolForca.value = 1.0;
-        mat.uniforms.uNuvem.value.setHex(0xffffff); mat.uniforms.uNuvemSombra.value.setHex(0xb4c1d2); mat.uniforms.uNuvemK.value = 0.9;
-        mat.uniforms.uSerra.value.setHex(0x86a3c2); mat.uniforms.uMorro.value.setHex(0x64806f);
+        mat.uniforms.uNuvem.value.setHex(0xfffdf8); mat.uniforms.uNuvemSombra.value.setHex(0x9cb3cc); mat.uniforms.uNuvemK.value = 0.92;
+        mat.uniforms.uSerra.value.setHex(0x7c9ec2); mat.uniforms.uMorro.value.setHex(0x5d7e6b);
       }
     },
   };
@@ -996,14 +999,14 @@ export async function iniciarJogo() {
   let ehChuva = Q.has('chuva');
   if (Q.has('touch')) document.body.classList.add('modo-touch');
 
-  const qParam = (Q.get('qualidade') || '').toLowerCase();
+  const qParam = (Q.get('qualidade') || Q.get('qual') || '').toLowerCase();
   let qSalva = '';
-  try { qSalva = localStorage.getItem('hryz_qualidade_v2') || ''; } catch (_) {}
-  let qualAtual = QUALIDADES[qParam] || QUALIDADES[qSalva] || QUALIDADES.leve;
+  try { qSalva = localStorage.getItem('hryz_qualidade_v3') || ''; } catch (_) {}
+  let qualAtual = QUALIDADES[qParam] || QUALIDADES[qSalva] || QUALIDADES.medio;
 
   const renderer = new THREE.WebGLRenderer({
-    antialias: qualAtual.id !== 'leve' && devicePixelRatio < 2,            // em telas densas (celular) o MSAA custa caro e quase não aparece
-    powerPreference: 'default',                                               // 'high-performance' força o modo de maior consumo (esquenta)
+    antialias: qualAtual.id !== 'leve' && devicePixelRatio < 2,
+    powerPreference: 'default',
   });
   renderer.setPixelRatio(Math.min(devicePixelRatio, qualAtual.pixelRatio));
   let prAtual = renderer.getPixelRatio(), snapSombra = true;                  // resolução dinâmica e sombra (ver o laço)
@@ -1011,7 +1014,7 @@ export async function iniciarJogo() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = qualAtual.pbr ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
-  renderer.toneMappingExposure = ehNoite ? 1.15 : 1.04;
+  renderer.toneMappingExposure = ehNoite ? 1.15 : 1.06;
   document.body.prepend(renderer.domElement);
 
   const scene = new THREE.Scene();
@@ -1025,16 +1028,22 @@ export async function iniciarJogo() {
   const fumacaDrift = criarFumacaDrift(scene);
   const rastroCiber = criarRastroCiber(scene);
 
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x8fa3b5, 1.45);
+  const hemi = new THREE.HemisphereLight(0xdcecff, 0x7b725e, 1.15);
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xfff4e0, 2.2);
+  const sun = new THREE.DirectionalLight(0xffebd0, 2.8);
   sun.castShadow = qualAtual.sombras;
-  sun.shadow.mapSize.set(1024, 1024);
-  sun.shadow.bias = -0.0005;
-  sun.shadow.normalBias = 0.05;
+  const initSombraRes = qualAtual.sombraRes || 1024;
+  sun.shadow.mapSize.set(initSombraRes, initSombraRes);
+  sun.shadow.bias = -0.00045;
+  sun.shadow.normalBias = 0.045;
   const SR = qualAtual.sombraRaio;
-  Object.assign(sun.shadow.camera, { left: -SR, right: SR, top: SR, bottom: -SR, near: 1, far: 240 });
+  Object.assign(sun.shadow.camera, { left: -SR, right: SR, top: SR, bottom: -SR, near: 1, far: 250 });
   scene.add(sun, sun.target);
+
+  // Luz de preenchimento fria (rim/fill do céu oposta ao sol): dá volume 3D nas faces sombreadas sem pesar (sem shadowMap!)
+  const fillSun = new THREE.DirectionalLight(0x8ec5fc, qualAtual.fillLight ? 0.55 : 0);
+  fillSun.position.set(85, 52, -75);
+  scene.add(fillSun);
 
   let envDia = null;
   let envNoite = null;
@@ -1053,7 +1062,7 @@ export async function iniciarJogo() {
     }
     if (!envDia) {
       envDia = criarAmbiente(renderer, {
-        sol: [-0.55, 0.72, 0.45], zenite: [0.22, 0.48, 0.88], horizonte: [0.76, 0.89, 0.96], chao: [0.28, 0.34, 0.26],
+        sol: [-0.55, 0.72, 0.45], zenite: [0.18, 0.46, 0.90], horizonte: [0.78, 0.90, 0.98], chao: [0.28, 0.35, 0.26],
       });
     }
     return envDia;
@@ -1064,7 +1073,7 @@ export async function iniciarJogo() {
     elTextoCarga.textContent = texto;
   }
 
-  // ---- Construir Cidade Hryz (ultra-leve: Lambert texturizado + malhas mescladas + culling por setor)
+  // ---- Construir Cidade Hryz (chunks de 64 m + Frustum Culling + PBR/Bump em Médio/Alto)
   atualizarProgresso(0.05, 'Carregando Cidade Hryz…');
   const cidade = await construirCidade({
     scene,
@@ -1075,22 +1084,23 @@ export async function iniciarJogo() {
 
   function aplicarClima() {
     if (lua.ativa) return;                                                          // na Lua não há clima (ver ambienteLua)
-    const fundo = ehNoite ? 0x0e1833 : (ehChuva ? 0x7c92a6 : 0xb9d4ea);                   // névoa um pouco mais azulada (ar ao longe)
+    const fundo = ehNoite ? 0x0e1833 : (ehChuva ? 0x7c92a6 : 0xc5dff4);             // névoa sincronizada com o horizonte do céu
     scene.background = new THREE.Color(fundo);
     ceu.definir({ noite: ehNoite, chuva: ehChuva });
     const fNear = ehChuva ? Math.min(qualAtual.fogNear, 65) : qualAtual.fogNear;
     const fFar = ehChuva ? Math.min(qualAtual.fogFar, 220) : qualAtual.fogFar;
     scene.fog = new THREE.Fog(fundo, fNear, fFar);
     scene.environment = qualAtual.pbr ? obterAmbiente(ehNoite) : null;
-    // cor: tone mapping cinematográfico (também no Médio), sol mais quente e forte e luz ambiente mais fraca → contraste e volume
     renderer.toneMapping = qualAtual.id !== 'leve' ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
-    renderer.toneMappingExposure = ehNoite ? 1.18 : (ehChuva ? 0.98 : (qualAtual.pbr ? 1.0 : 1.12));
+    renderer.toneMappingExposure = ehNoite ? 1.18 : (ehChuva ? 0.98 : (qualAtual.pbr ? 1.06 : 1.10));
 
-    hemi.color.setHex(ehNoite ? 0x5c77b8 : (ehChuva ? 0x9fb2c4 : 0xdfeaff));
-    hemi.groundColor.setHex(ehNoite ? 0x182136 : (ehChuva ? 0x6b7680 : 0x8a7d62));        // luz que volta do chão: quente
-    hemi.intensity = ehNoite ? 1.05 : (ehChuva ? 1.15 : (qualAtual.pbr ? 1.05 : 1.0));
-    sun.color.setHex(ehNoite ? 0x9db4ea : 0xffe6c4);
-    sun.intensity = ehNoite ? 0.85 : (ehChuva ? 1.2 : (qualAtual.pbr ? 3.1 : 2.25));
+    hemi.color.setHex(ehNoite ? 0x5c77b8 : (ehChuva ? 0x9fb2c4 : 0xdcecff));
+    hemi.groundColor.setHex(ehNoite ? 0x182136 : (ehChuva ? 0x6b7680 : 0x7c705a));
+    hemi.intensity = ehNoite ? 1.0 : (ehChuva ? 1.12 : (qualAtual.pbr ? 0.98 : 1.0));
+    sun.color.setHex(ehNoite ? 0x9db4ea : 0xffe8c6);
+    sun.intensity = ehNoite ? 0.85 : (ehChuva ? 1.25 : (qualAtual.pbr ? 3.25 : 2.3));
+    fillSun.color.setHex(ehNoite ? 0x3b5998 : (ehChuva ? 0x8ea3b8 : 0x93c5fd));
+    fillSun.intensity = qualAtual.fillLight ? (ehNoite ? 0.32 : (ehChuva ? 0.35 : 0.58)) : 0;
 
     cidade.alternarNoite(ehNoite);
     cidade.alternarChuva(ehChuva);
@@ -1587,17 +1597,37 @@ export async function iniciarJogo() {
   $('touch-faro').onclick = () => { som.desbloquear(); vidaCao.alternarFaro(); };
   $('touch-xixi').onclick = () => { som.desbloquear(); vidaCao.fazerXixiLivre(jogador, persAtual?.inst); };
 
+  const fases = new GerenciadorFases({
+    scene,
+    lua,
+    som,
+    toast: mostrarToast,
+    onPontos: pts => {
+      score += pts;
+      elScore.textContent = `${score} pts`;
+      salvarProgresso();
+    },
+  });
+
   armas.aoSemMunicao = id => mostrarToast(id === 'sniper' ? 'Sniper sem balas! Compre na Loja de Munição ($ no minimapa).' : 'Sem munição de reserva: compre na Loja ($ no minimapa).');
   const missaoEmCurso = () => ['ativa', 'percebeu', 'falha', 'vitoria'].includes(missao.estado);
   function interacaoAtual() {
     if (modo !== 'jogo' || travado || balacam.ativa) return null;
     if (ehCao()) { const ic = vidaCao.interacao(jogador, persAtual?.inst); if (ic) return ic; }
+    const jx = jogador.veiculo ? jogador.veiculo.x : jogador.x;
+    const jz = jogador.veiculo ? jogador.veiculo.z : jogador.z;
+    const iFase = fases.obterInteracao(jx, jz);
+    if (iFase) return iFase;
     return loja.interacao() || missao.interacao() || interacaoFoguete();
   }
   function interacaoFoguete() {
     if (jogador.veiculo || lua.cineAtiva || !lua.perto(jogador.x, jogador.z, lua.ativa)) return null;
     if (!lua.ativa && !lua.fogTerra()) return null;
-    return lua.ativa ? { texto: '[E] 🚀 Voltar para a Terra', fazer: () => viajar('terra') } : { texto: '[E] 🚀 Embarcar no foguete para a Lua', fazer: () => viajar('lua') };
+    if (lua.ativa) return { texto: '[E] 🚀 Voltar para a Sala de Fases', fazer: () => entrarSala() };
+    if (persAtual?.def?.id !== 'astronauta') {
+      return { texto: '[E] 🌙 Missão na Lua (exclusiva do Astronauta · P)', fazer: () => mostrarToast('👩‍🚀 A Missão na Lua é exclusiva do Astronauta! Volte à Sala de Fases (P) para jogar na Lua.') };
+    }
+    return { texto: '[E] 🚀 Embarcar no foguete para a Lua', fazer: () => viajar('lua') };
   }
   // ambiente da Lua: céu preto, sem névoa, sol branco e rasante, só a luz que volta do chão (regolito)
   let camFarTerra = null;
@@ -1605,7 +1635,7 @@ export async function iniciarJogo() {
   function ambienteLua(on) {
     lua.ativa = on;
     if (on) {
-      const manter = new Set([lua.raiz, sun, sun.target, hemi, persAtual.inst.obj, camera]);
+      const manter = new Set([lua.raiz, fases.grupo, sun, sun.target, hemi, fillSun, persAtual.inst.obj, camera]);
       for (const o of scene.children) if (o.visible && !manter.has(o) && !o.isLight && !o.isPoints) { o.visible = false; escondidosNaLua.push(o); }
     } else { for (const o of escondidosNaLua) o.visible = true; escondidosNaLua.length = 0; }
     if (on) {
@@ -1613,18 +1643,19 @@ export async function iniciarJogo() {
       ceu.mesh.visible = false; scene.background = new THREE.Color(0x000000); scene.fog = null; scene.environment = null;
       hemi.color.setHex(0x1a1d24); hemi.groundColor.setHex(0x6d6a66); hemi.intensity = 0.55;
       sun.color.setHex(0xfffaf2); sun.intensity = qualAtual.pbr ? 3.4 : 2.6;
+      fillSun.intensity = 0;
       renderer.toneMappingExposure = 1.2; sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.12;
       for (const el of [elMinimap.parentElement, $('hud-alvo-box')]) if (el) el.style.display = 'none';
     } else {
       if (camFarTerra) { camera.far = camFarTerra; camera.updateProjectionMatrix(); }
-      sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.05;
+      sun.shadow.bias = -0.00045; sun.shadow.normalBias = 0.045;
       ceu.mesh.visible = true; for (const el of [elMinimap.parentElement, $('hud-alvo-box')]) if (el) el.style.display = ''; aplicarClima();
     }
     snapCam = true;
   }
-  /** começa direto na Lua (sala ou teste), sem a viagem */
+  /** começa direto na Lua (exclusivo do Astronauta), sem a viagem */
   async function irParaLua() {
-    mostrarToast('🌙 Preparando a Lua…');
+    mostrarToast('🌙 Preparando a Fase Lunar…');
     await lua.carregar();
     if (persAtual.def.id !== 'astronauta') { const i = PERSONAGENS_DEF.findIndex(d => d.id === 'astronauta'); if (i >= 0) await carregarPersonagem(i); }
     ambienteLua(true);
@@ -1632,12 +1663,16 @@ export async function iniciarJogo() {
     jogador.y = alturaChao(jogador.x, jogador.z); jogador.vy = 0; jogador.noChao = true; jogador.yPico = jogador.y;
     persAtual.inst.obj.visible = true; snapCam = true; atualizarHudModo();
     lua.fogLua()?.escotilha(1);
-    mostrarToast('🌙 Você está na Lua! A gravidade é 1/6: pule e veja.');
+    fases.iniciar('astronauta');
+    mostrarToast('🌙 Fase Lunar HRYZ-1! Colete 4 cristais, ative 2 sensores e finque a bandeira (gravidade 1/6).');
   }
   async function viajar(destino) {
     if (lua.cineAtiva) return;
+    if (destino === 'lua' && persAtual?.def?.id !== 'astronauta') {
+      mostrarToast('👩‍🚀 A Missão na Lua é exclusiva do Astronauta! Volte à Sala de Fases (P).');
+      return;
+    }
     if (destino === 'lua' && !lua.carregado) { mostrarToast('🌙 Preparando a Lua…'); await lua.carregar(); }
-    if (persAtual.def.id !== 'astronauta') { mostrarToast('👩‍🚀 Vestindo o traje espacial…'); const i = PERSONAGENS_DEF.findIndex(d => d.id === 'astronauta'); if (i >= 0) await carregarPersonagem(i); }
     if (mira.ativa) sairMira();
     travado = true; persAtual.inst.obj.visible = false;
     lua.embarcar(destino, d => {                                                  // no meio da tela preta: troca de mundo
@@ -1647,7 +1682,8 @@ export async function iniciarJogo() {
       const p = lua.peEscada(d === 'lua'); jogador.x = p.x; jogador.z = p.z; jogador.ry = p.ang; camYaw = p.ang + Math.PI;   // a câmera fica de costas para o foguete
       jogador.y = alturaChao(p.x, p.z) ?? CALCADA; jogador.yPico = jogador.y;
       persAtual.inst.obj.visible = true; travado = false; snapCam = true;
-      mostrarToast(d === 'lua' ? '🌙 Você está na Lua! A gravidade é 1/6: pule e veja.' : '🏙️ De volta a Hryz City');
+      if (d === 'lua') fases.iniciar('astronauta');
+      mostrarToast(d === 'lua' ? '🌙 Você está na Lua! Gravidade 1/6 — complete a Expedição Lunar!' : '🏙️ De volta a Hryz City');
     });
   }
 
@@ -2125,9 +2161,9 @@ export async function iniciarJogo() {
   }
 
   function aplicarQualidade(id, avisar = false) {
-    const q = QUALIDADES[id] || QUALIDADES.leve;
+    const q = QUALIDADES[id] || QUALIDADES.medio;
     qualAtual = q;
-    try { localStorage.setItem('hryz_qualidade_v2', q.id); } catch (_) {}
+    try { localStorage.setItem('hryz_qualidade_v3', q.id); } catch (_) {}
 
     renderer.setPixelRatio(Math.min(devicePixelRatio, q.pixelRatio)); prAtual = renderer.getPixelRatio(); snapSombra = true;
     renderer.setSize(innerWidth, innerHeight);
@@ -2135,6 +2171,10 @@ export async function iniciarJogo() {
     camera.updateProjectionMatrix();
 
     sun.castShadow = q.sombras;
+    if (q.sombras && q.sombraRes && (sun.shadow.mapSize.x !== q.sombraRes || sun.shadow.mapSize.y !== q.sombraRes)) {
+      sun.shadow.mapSize.set(q.sombraRes, q.sombraRes);
+      if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+    }
     const sr = q.sombraRaio;
     sun.shadow.camera.left = -sr;
     sun.shadow.camera.right = sr;
@@ -2299,7 +2339,6 @@ export async function iniciarJogo() {
       else if (code === 'KeyN') { ehNoite = !ehNoite; aplicarClima(); mostrarToast(ehNoite ? 'Modo Noite ativado' : 'Modo Dia ativado'); }
       else if (code === 'KeyR') { ehChuva = !ehChuva; rainLines.visible = ehChuva; aplicarClima(); mostrarToast(ehChuva ? 'Chuva e pista molhada' : 'Tempo limpo'); }
       else if (code === 'KeyV') { camModo = (camModo + 1) % 3; mostrarToast(['Câmera: 3ª Pessoa', 'Câmera: Capô / 1ª Pessoa', 'Câmera: Aérea (Drone)'][camModo]); }
-      else if (code === 'KeyC') { carregarPersonagem(persIdx + 1).then(() => mostrarToast(`Personagem: ${PERSONAGENS_DEF[persIdx].nome}`)); }
       else if (code === 'KeyL' && jogador.veiculo?.temSirene) {
         jogador.veiculo.sirene = !jogador.veiculo.sirene;
         $('btn-sirene').classList.toggle('ativo', jogador.veiculo.sirene);
@@ -2376,7 +2415,6 @@ export async function iniciarJogo() {
   $('btn-noite').onclick = () => { ehNoite = !ehNoite; aplicarClima(); };
   $('btn-chuva').onclick = () => { ehChuva = !ehChuva; rainLines.visible = ehChuva; aplicarClima(); };
   $('btn-cam').onclick = () => { camModo = (camModo + 1) % 3; mostrarToast(['Câmera: 3ª Pessoa', 'Câmera: Capô / 1ª Pessoa', 'Câmera: Aérea'][camModo]); };
-  $('btn-pers').onclick = () => carregarPersonagem(persIdx + 1).then(() => mostrarToast(`Personagem: ${PERSONAGENS_DEF[persIdx].nome}`));
   $('btn-tela').onclick = alternarTelaCheiaHorizontal;
   $('btn-ativar-horizontal').onclick = () => { $('aviso-girar').classList.add('dispensado'); alternarTelaCheiaHorizontal(); };
   $('btn-fechar-girar').onclick = () => $('aviso-girar').classList.add('dispensado');
@@ -2539,6 +2577,7 @@ export async function iniciarJogo() {
     const [tx, tz] = toMM(trexState.x, trexState.z);                                // T. rex
     iconeMapa(ctx, tx, tz, '#ef4444', '', 4.5 + Math.sin(performance.now() / 200), W, H, false);
     missao.desenharMinimapa(ctx, toMM, W, H);
+    fases.desenharMinimapa(ctx, toMM, W, H);
     if (!missaoEmCurso()) {                                                          // checkpoint ativo, preso na borda quando longe
       const cp = CHECKPOINTS[cpIdx], [cx, cz] = toMM(cp.x, cp.z);
       iconeMapa(ctx, cx, cz, '#facc15', '★', 7, W, H, true);
@@ -2666,7 +2705,9 @@ export async function iniciarJogo() {
   // põe o veículo escolhido no ponto do local (os outros voltam às vagas; quem estiver no caminho troca de vaga com ele)
   // e o personagem ao lado da porta do motorista
   function posicionarEscolha(esc) {
-    const pt = PONTOS_TELEPORTE.find(p => p.id === esc.local) || PONTOS_TELEPORTE[0];
+    const pt = (esc.local === 'lua'
+      ? PONTOS_TELEPORTE.find(p => p.id === 'foguete')
+      : PONTOS_TELEPORTE.find(p => p.id === esc.local)) || PONTOS_TELEPORTE[0];
     sairSemAnimar();
     for (const v of veiculos) colocarVeiculo(v, v.vaga.x, v.vaga.z, v.vaga.ry);
     const v = veiculos.find(o => o.id === esc.veic) || null;
@@ -2727,37 +2768,61 @@ export async function iniciarJogo() {
     ciber_heroi: '⚡', caramelo: '🐕', pastor: '🐕‍🦺', dalmata: '🐾', pug: '🐶',
     kael: '✋', policial: '👮', jovem_a: '🧑', bombeiro: '🧑‍🚒', astronauta: '👩‍🚀', operador: '👷', corredor: '🏃', silhueta: '👤',
   };
-  const DESC_PERS = {
-    ciber_heroi: 'Velocista: 200 km/h em 1s · até 2.000 km/h',
-    caramelo: 'Vida de Cachorro: faro, lixo e matilha',
-    pastor: 'Cão farejador rápido e forte',
-    dalmata: 'Cão ágil, simpático e pintado',
-    pug: 'Cão baixinho, fofo e bom de faro',
-    kael: 'Herói: rajada, super força e super pulo', policial: 'Patrulha da cidade', jovem_a: 'Morador de Hryz', bombeiro: 'Corpo de bombeiros', astronauta: 'Visitante espacial', operador: 'Operador de obras', corredor: 'Rápido e colorido', silhueta: 'O vulto do canal',
-  };
   const sala = new Sala({
-    pers: PERSONAGENS_DEF.map(d => ({ id: d.id, nome: d.nome, desc: DESC_PERS[d.id] || '', icone: ICONE_PERS[d.id] || '🧍', img: `${MINI}/pers-${d.id}.webp` })),
+    pers: PERSONAGENS_DEF.map(d => {
+      const f = obterFaseDef(d.id);
+      return {
+        id: d.id, nome: d.nome, desc: f.desc, fase: f.badge,
+        localPadrao: f.localPadrao, veicPadrao: f.veicPadrao,
+        permiteVeic: f.permiteVeic, apenasLua: f.apenasLua,
+        icone: ICONE_PERS[d.id] || '🧍', img: `${MINI}/pers-${d.id}.webp`,
+      };
+    }),
     veic: [{ id: 'nenhum', nome: 'A pé', desc: 'Começar andando', icone: '🚶' },
       ...veiculos.map(v => ({ id: v.id, nome: v.nome, desc: v.temSirene ? 'Com sirene (L)' : '', icone: '🚗', img: `${MINI}/veic-${v.id}.webp` }))],
     local: [...PONTOS_TELEPORTE.map(p => ({ id: p.id, nome: p.nome.replace(/^\S+\s(?=Selva)/, ''), icone: '📍', img: `${MINI}/local-${p.id}.webp` })),
       { id: 'lua', nome: '🌙 Lua', icone: '🌙', img: `${MINI}/local-lua.webp` }],
-  }, { pers: 'ciber_heroi', veic: 'p71', local: 'delegacia' }, {
+  }, { pers: 'policial', veic: 'p71', local: 'delegacia' }, {
     aoMudar: esc => aplicarEscolha(esc),
     aoJogar: async esc => {
       await aplicarEscolha(esc);
       sala.fechar();
       modo = 'jogo';
-      const v = ehCao() ? null : veiculos.find(o => o.id === esc.veic);
+      // Reinicia estado de fases anteriores para garantir que cada personagem jogue APENAS a sua fase!
+      missao.desativar();
+      fases.limpar();
+      const persId = persAtual.def.id;
+      const faseDef = obterFaseDef(persId);
+
+      // 1) Astronauta → Fase exclusiva na Lua
+      if (persId === 'astronauta') {
+        jogador.veiculo = null;
+        som.desbloquear();
+        await irParaLua();
+        return;
+      }
+
+      if (lua.ativa) ambienteLua(false);
+      const v = (ehCao() || faseDef.permiteVeic === false) ? null : veiculos.find(o => o.id === esc.veic);
       if (v) { jogador.veiculo = v; persAtual.inst.obj.visible = !!v.moto; if (v.moto) { v.api?.descanso?.(false); v.incl = 0; v.obj.rotation.set(0, v.ry, 0, 'YXZ'); } jogador.x = v.x; jogador.z = v.z; }
       camYaw = v ? v.ry : jogador.ry; camPitch = 0.32; snapCam = true; minimapTimer = 99;
       atualizarHudModo();
       som.desbloquear();
       const pt = PONTOS_TELEPORTE.find(p => p.id === esc.local);
-      if (esc.local === 'lua') { if (jogador.veiculo) jogador.veiculo = null; await irParaLua(); return; }
-      if (!ehCao() && !Q.has('semmissao') && missao.estado === 'inativa') missao.iniciar();
-      mostrarToast(ehCao()
-        ? `🐾 Vida de Cachorro (${persAtual.def.nome})! F = Modo Faro · E = Cheirar cães, lixo e hidrantes`
-        : (v ? `Bem-vindo a Hryz City! ${v.nome} · ${pt?.nome ?? ''}${v.temSirene ? ' · L = sirene' : ''}` : `Bem-vindo a Hryz City! ${pt?.nome ?? ''}`));
+
+      // 2) Policial → ÚNICO personagem com a missão de salvar o refém!
+      if (persId === 'policial') {
+        if (!Q.has('semmissao')) missao.iniciar();
+        mostrarToast(`👮 Fase Policial: Resgate da Refém! ${v ? `${v.nome} · L = sirene` : pt?.nome ?? ''}`);
+      } else if (ehCao()) {
+        // 3) Cães → Fase exclusiva Vida de Cachorro
+        mostrarToast(`🐾 Vida de Cachorro (${persAtual.def.nome})! F = Modo Faro · E = Cheirar cães, lixo, hidrantes e Luna`);
+      } else {
+        // 4) Demais personagens → Cada um com sua fase exclusiva (Velocista, Caçada ao T. rex, Bombeiro, Canteiro, Tour)
+        fases.iniciar(persId);
+        if (persId === 'kael') garantirTrex(false);
+        mostrarToast(`${faseDef.badge} · ${faseDef.titulo}!`);
+      }
     },
     aoRever: () => { sala.fechar(); iniciarAbertura(); },
   });
@@ -2765,6 +2830,9 @@ export async function iniciarJogo() {
   function entrarSala() {
     sairMira(); jogador.plataforma = null; travado = false; persAtual.inst.obj.rotation.x = 0;
     if (loja.dentro) { loja.dentro = false; loja.grupo.visible = false; }
+    if (lua.ativa) ambienteLua(false);
+    missao.desativar();
+    fases.limpar();
     sairSemAnimar();
     armas.equipar(null); atualizarHudArma();
     modo = 'sala';
@@ -2786,7 +2854,12 @@ export async function iniciarJogo() {
   atualizarHudModo();
   atualizarProgresso(1, 'Cidade pronta!');
   setTimeout(() => elTelaCarga.classList.add('oculto'), 220);
-  if (Q.has('direto')) { modo = 'jogo'; if (!Q.has('semmissao')) missao.iniciar(); }   // (testes e desenvolvimento: pula abertura e sala)
+  if (Q.has('direto')) {
+    modo = 'jogo';
+    const pid = persAtual?.def?.id;
+    if (pid === 'policial' && !Q.has('semmissao')) missao.iniciar();
+    else if (pid && !ehCao() && pid !== 'policial') fases.iniciar(pid);
+  }
   else if (Q.has('sala')) entrarSala();
   else iniciarAbertura();
   // Baixa o T. rex em segundo plano logo após o jogo abrir para estar pronto ao visitar a Selva
@@ -2799,6 +2872,7 @@ export async function iniciarJogo() {
   const posCamDesejada = new THREE.Vector3();
   let tTotal = 0;
   const vSol = new THREE.Vector3(), vDirL = new THREE.Vector3(), vDirR = new THREE.Vector3(), vDirU = new THREE.Vector3(), vCima = new THREE.Vector3(0, 1, 0), vFoco = new THREE.Vector3();
+  const _sphCull = new THREE.Sphere(), _projCull = new THREE.Matrix4(), _frustumLua = new THREE.Frustum();
   let minimapTimer = 1, tMapaG = 0;
   let fpsQuadros = 0;
   let fpsAcum = 0;
@@ -3292,17 +3366,28 @@ export async function iniciarJogo() {
       sireneAtiva: missao.sireneProxima(focoX, focoZ) || !!jogador.veiculo?.sirene || veiculos.some(v => v.sirene && Math.hypot(v.x - focoX, v.z - focoZ) < 45),
     });
 
-    // ---- Checkpoint
+    // ---- Checkpoint (exclusivo da fase Explorador / Tour Hryz)
     cpAnel.rotation.z = tTotal * 1.4;
     cpFeixe.material.opacity = 0.13 + 0.06 * Math.sin(tTotal * 3.2);
     const cp = CHECKPOINTS[cpIdx];
-    cpGrupo.visible = jogando && !missaoEmCurso();
-    if (jogando && !missaoEmCurso() && Math.hypot(focoX - cp.x, focoZ - cp.z) < 5.8) {
+    const mostrarCp = jogando && !lua.ativa && !missaoEmCurso() && !ehCao() && (!fases.ativa || fases.ativa === 'explorador');
+    cpGrupo.visible = mostrarCp;
+    const elAlvoBox = $('hud-alvo-box');
+    if (elAlvoBox && !lua.ativa) {
+      const mostrarAlvo = missaoEmCurso() || mostrarCp;
+      elAlvoBox.style.display = mostrarAlvo ? '' : 'none';
+      if (mostrarCp && hudRot.textContent !== 'Próximo Checkpoint') {
+        hudRot.textContent = 'Próximo Checkpoint';
+        elAlvoNome.textContent = cp.nome;
+      }
+    }
+    if (mostrarCp && Math.hypot(focoX - cp.x, focoZ - cp.z) < 5.8) {
       score += 100;
       elScore.textContent = `${score} pts`;
       som.tocarBeep(660, 0.16, 0.09);
       setTimeout(() => som.tocarBeep(880, 0.18, 0.09), 90);
       mostrarToast(`⭐ Checkpoint: ${cp.nome} (+100 pts)`);
+      fases.registrarCheckpoint();
       cpIdx = (cpIdx + 1) % CHECKPOINTS.length;
       posicionarCheckpoint();
       salvarProgresso();
@@ -3379,6 +3464,40 @@ export async function iniciarJogo() {
       camera.lookAt(focoX, 0, focoZ);
     }
 
+    // ---- Culling exato pela Câmera (Frustum Culling): renderiza SOMENTE o que está no campo de visão!
+    let frustumAtivo = null;
+    if (!lua.ativa) {
+      frustumAtivo = cidade.cullarCamera(camera, focoX, focoZ);
+      if (frustumAtivo) {
+        for (let i = 0; i < veiculos.length; i++) {
+          const v = veiculos[i];
+          if (v === jogador.veiculo || !v.obj.visible) continue;
+          _sphCull.center.set(v.x, 1.5, v.z);
+          _sphCull.radius = Math.max(4.5, (v.raio || 2.5) * 1.8);
+          v.obj.visible = frustumAtivo.intersectsSphere(_sphCull);
+        }
+        if (trexState.carregado && trexState.inst?.grupo?.visible) {
+          _sphCull.center.set(trexState.x, 4.0, trexState.z);
+          _sphCull.radius = 12.0;
+          trexState.inst.grupo.visible = frustumAtivo.intersectsSphere(_sphCull);
+        }
+      }
+    } else {
+      camera.updateMatrixWorld();
+      _projCull.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+      _frustumLua.setFromProjectionMatrix(_projCull);
+      frustumAtivo = _frustumLua;
+    }
+    if (jogando) {
+      fases.atualizar(dt, {
+        jogador,
+        velCiberKmh: Math.round((jogador.velCiber || 0) * 3.6),
+        trexHp: trexState.hp,
+        maxVelKmh,
+        frustum: frustumAtivo,
+      });
+    }
+
     // ---- Sombra dinâmica segue o jogador (somente quando sombras estão ligadas)
     if (qualAtual.sombras) {
       // Lua: sol a ~23° do horizonte, de frente para a base, sombras compridas
@@ -3446,6 +3565,8 @@ export async function iniciarJogo() {
     danoTrex: n => danoTrex(n),
     veiculo: id => veiculos.find(v => v.id === id),
     missao, loja, balacam, mira: () => ({ ...mira }),
+    fases: () => fases.estado(),
+    qualidadeAtual: () => qualAtual.id,
     irParaPos: (x, z, ry = 0, terraco = false) => irPara({ x, z, ry }, terraco === 'manter' ? jogador.plataforma : terraco ? TORRE.terraco : null),
     mirar: (yaw, pitch, fov) => { if (!mira.ativa) entrarMira(true); mira.yaw = yaw; mira.pitch = pitch; if (fov) mira.fov = fov; },
     camFixa: (p, a) => { camFixa = p ? { p: new THREE.Vector3(...p), a: new THREE.Vector3(...a) } : null; },

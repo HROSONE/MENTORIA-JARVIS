@@ -63,18 +63,51 @@ export class Sala {
     this.aba = id;
     for (const b of this.elAbas.children) b.classList.toggle('ativa', b.dataset.aba === id);
     const atual = this.escolha[id];
-    this.elGrade.innerHTML = this.op[id].map(o => `
+    const lista = this._opcoesFiltradas(id);
+    this.elGrade.innerHTML = lista.map(o => `
       <button class="sala-cartao${o.id === atual ? ' ativo' : ''}" data-id="${o.id}">
         <div class="sala-img">${o.img ? `<img src="${o.img}" alt="" loading="lazy" onerror="this.remove()">` : ''}<span class="sala-icone">${o.icone || ''}</span></div>
+        ${o.fase ? `<div class="sala-fase">${o.fase}</div>` : ''}
         <div class="sala-nome">${o.nome}</div>
         ${o.desc ? `<div class="sala-desc">${o.desc}</div>` : ''}
       </button>`).join('');
     this.elGrade.querySelector('.ativo')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
+  _persAtual() {
+    return this.op.pers.find(o => o.id === this.escolha.pers) || this.op.pers[0];
+  }
+
+  _opcoesFiltradas(campo) {
+    const p = this._persAtual();
+    if (campo === 'local') {
+      if (p?.apenasLua) return this.op.local.filter(o => o.id === 'lua');
+      return this.op.local.filter(o => o.id !== 'lua');
+    }
+    if (campo === 'veic') {
+      if (p && p.permiteVeic === false) return this.op.veic.filter(o => o.id === 'nenhum');
+    }
+    return this.op[campo];
+  }
+
   escolher(campo, id) {
-    if (this.escolha[campo] === id) return;
+    const lista = this._opcoesFiltradas(campo);
+    if (!lista.some(o => o.id === id)) return;
+    const mudou = this.escolha[campo] !== id;
     this.escolha[campo] = id;
+    if (campo === 'pers') {
+      const p = this._persAtual();
+      if (p?.localPadrao && this._opcoesFiltradas('local').some(o => o.id === p.localPadrao)) {
+        this.escolha.local = p.localPadrao;
+      } else if (p?.apenasLua) {
+        this.escolha.local = 'lua';
+      } else if (this.escolha.local === 'lua') {
+        this.escolha.local = 'delegacia';
+      }
+      if (p?.permiteVeic === false) this.escolha.veic = 'nenhum';
+      else if (p?.veicPadrao && this.op.veic.some(o => o.id === p.veicPadrao)) this.escolha.veic = p.veicPadrao;
+    }
+    if (!mudou && campo !== 'pers') return;
     for (const c of this.elGrade.children) c.classList.toggle('ativo', c.dataset.id === id);
     this.elGrade.querySelector('.ativo')?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
     this._resumo();
@@ -82,8 +115,10 @@ export class Sala {
   }
 
   _resumo() {
+    const p = this._persAtual();
     const nome = (c) => this.op[c].find(o => o.id === this.escolha[c])?.nome ?? '';
-    this.elResumo.innerHTML = `<b>${nome('pers')}</b> · ${nome('veic')} · <span>${nome('local')}</span>`;
+    const faseTxt = p?.fase ? ` · <em class="res-fase">${p.fase}</em>` : '';
+    this.elResumo.innerHTML = `<b>${nome('pers')}</b>${faseTxt} · <span>${nome('local')}</span>`;
   }
 
   ocupado(sim) { this.elJogar.disabled = !!sim; this.elJogar.textContent = sim ? 'Carregando…' : 'JOGAR ▶'; }

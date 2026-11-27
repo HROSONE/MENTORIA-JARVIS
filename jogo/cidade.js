@@ -13,7 +13,7 @@ import { Personagem } from '../videos/biblioteca3d/personagens/elenco/elenco.js'
 import { instalarAnimacoesUniversal } from '../videos/biblioteca3d/animacoes/universal.js';
 
 const BASE_BIB = './videos/biblioteca3d';
-const CHUNK_TAM = 110;
+const CHUNK_TAM = 64;
 
 function aleatorio(semente) {
   let a = semente;
@@ -75,64 +75,85 @@ function nivelSombraPeca(nome) {
 const SEM_FORTE = { vermelho: new THREE.Color(0xff2a22), amarelo: new THREE.Color(0xffc61a), verde: new THREE.Color(0x27e05a) };
 const SEM_FRACA = { vermelho: new THREE.Color(0x4b1311), amarelo: new THREE.Color(0x4a3a0a), verde: new THREE.Color(0x0d3a1b) };
 
-// Texturas procedurais leves (256x256, geradas 1x na inicialização): dão granulação e profundidade real com custo ~0 de FPS!
+// Texturas procedurais HD (512x512, geradas 1x): albedo + mapa de relevo (bumpMap) com anisotropia p/ nitidez à distância
 function criarTexturaPadrao(tipo) {
-  const S = 256;
+  const S = 512;
   const c = document.createElement('canvas');
   c.width = c.height = S;
   const g = c.getContext('2d');
   const rng = aleatorio(tipo === 'asfalto' ? 101 : (tipo === 'grama' ? 202 : 303));
 
   if (tipo === 'asfalto') {
-    g.fillStyle = '#e8eaee';
+    g.fillStyle = '#dde0e6';
     g.fillRect(0, 0, S, S);
-    for (let i = 0; i < 4200; i++) {
-      const v = 192 + Math.floor(rng() * 58);
-      g.fillStyle = `rgb(${v},${v},${v + 2})`;
-      const sz = rng() < 0.78 ? 2 : 3;
+    for (let i = 0; i < 12000; i++) {
+      const v = 166 + Math.floor(rng() * 78);
+      g.fillStyle = `rgb(${v},${v},${v + 3})`;
+      const sz = rng() < 0.72 ? 2 : 3;
       g.fillRect(rng() * S, rng() * S, sz, sz);
     }
-    for (let i = 0; i < 5; i++) {                                                      // remendos e manchas de óleo
-      const x = rng() * S, y = rng() * S, r = 8 + rng() * 26;
-      const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(90,92,98,${0.18 + rng() * 0.2})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    for (let i = 0; i < 12; i++) {                                                     // remendos de asfalto e manchas sutis
+      const x = rng() * S, y = rng() * S, r = 16 + rng() * 52;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, `rgba(76,80,88,${0.18 + rng() * 0.18})`);
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
       g.fillStyle = gr; g.fillRect(x - r, y - r, 2 * r, 2 * r);
     }
-    // Faixas sutis de desgaste de pneu e micro-trincas leves
-    g.strokeStyle = 'rgba(110,116,126,0.30)';
-    g.lineWidth = 1;
-    for (let i = 0; i < 6; i++) {
+    // Micro-trincas e marcas leves de rodagem
+    g.strokeStyle = 'rgba(92,98,108,0.34)';
+    g.lineWidth = 1.3;
+    for (let i = 0; i < 11; i++) {
       g.beginPath();
       let x = rng() * S, y = rng() * S;
       g.moveTo(x, y);
-      for (let s = 0; s < 5; s++) { x += (rng() - 0.5) * 40; y += (rng() - 0.5) * 40; g.lineTo(x, y); }
+      for (let s = 0; s < 7; s++) { x += (rng() - 0.5) * 65; y += (rng() - 0.5) * 65; g.lineTo(x, y); }
       g.stroke();
     }
   } else if (tipo === 'grama') {
-    g.fillStyle = '#e6eedf';
+    g.fillStyle = '#dfe9d6';
     g.fillRect(0, 0, S, S);
-    for (let i = 0; i < 26; i++) {                                                     // manchas mais secas e mais verdes
-      const x = rng() * S, y = rng() * S, r = 10 + rng() * 34, seca = rng() < 0.5;
-      const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, seca ? 'rgba(255,240,190,0.35)' : 'rgba(150,190,120,0.30)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    for (let i = 0; i < 42; i++) {                                                     // variação orgânica de solo/capim
+      const x = rng() * S, y = rng() * S, r = 20 + rng() * 68, seca = rng() < 0.45;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, seca ? 'rgba(246,232,174,0.34)' : 'rgba(132,184,104,0.32)');
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
       g.fillStyle = gr; g.fillRect(x - r, y - r, 2 * r, 2 * r);
     }
-    for (let i = 0; i < 5200; i++) {                                                   // folhas de capim (traços claros e sombras)
-      const v = 170 + Math.floor(rng() * 85), x = rng() * S, y = rng() * S;
-      g.strokeStyle = `rgba(${v - 20},${v},${v - 40},0.8)`; g.lineWidth = 1;
-      g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rng() - 0.5) * 3, y - 2 - rng() * 4); g.stroke();
+    for (let i = 0; i < 14000; i++) {                                                  // folhas de capim com luz e sombra
+      const v = 158 + Math.floor(rng() * 94), x = rng() * S, y = rng() * S;
+      g.strokeStyle = `rgba(${v - 24},${v},${v - 42},0.78)`;
+      g.lineWidth = rng() < 0.7 ? 1 : 1.5;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rng() - 0.5) * 4.5, y - 3 - rng() * 6); g.stroke();
     }
-    for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(150,120,80,${0.25 + rng() * 0.25})`; g.fillRect(rng() * S, rng() * S, 1 + rng() * 2, 1 + rng() * 2); }   // pontinhos de terra
+    for (let i = 0; i < 360; i++) {
+      g.fillStyle = `rgba(138,110,72,${0.24 + rng() * 0.25})`;
+      g.fillRect(rng() * S, rng() * S, 1.5 + rng() * 2.5, 1.5 + rng() * 2.5);
+    }
   } else {
-    // Superfície (calçada, concreto, reboco de paredes): granulação fina + juntas sutis
-    g.fillStyle = '#f2f3f5';
+    // Superfície (calçada, concreto arquitetônico, reboco de fachadas): juntas nítidas + granulação realista
+    g.fillStyle = '#eff1f4';
     g.fillRect(0, 0, S, S);
-    for (let i = 0; i < 2400; i++) {
-      const v = 224 + Math.floor(rng() * 30);
+    for (let i = 0; i < 7500; i++) {
+      const v = 212 + Math.floor(rng() * 40);
       g.fillStyle = `rgb(${v},${v},${v})`;
       g.fillRect(rng() * S, rng() * S, 2, 2);
     }
-    g.strokeStyle = 'rgba(155,162,172,0.20)';
+    for (let i = 0; i < 18; i++) {                                                     // leve envelhecimento de fachada
+      const x = rng() * S, y = rng() * S, r = 24 + rng() * 64;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, 'rgba(155,162,172,0.12)');
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr; g.fillRect(x - r, y - r, 2 * r, 2 * r);
+    }
+    g.strokeStyle = 'rgba(138,146,158,0.28)';
+    g.lineWidth = 1.5;
+    for (let p = 0; p < S; p += 128) {
+      g.beginPath(); g.moveTo(p, 0); g.lineTo(p, S); g.stroke();
+      g.beginPath(); g.moveTo(0, p); g.lineTo(S, p); g.stroke();
+    }
+    g.strokeStyle = 'rgba(255,255,255,0.26)';
     g.lineWidth = 1;
-    for (let p = 0; p < S; p += 64) {
+    for (let p = 2; p < S; p += 128) {
       g.beginPath(); g.moveTo(p, 0); g.lineTo(p, S); g.stroke();
       g.beginPath(); g.moveTo(0, p); g.lineTo(S, p); g.stroke();
     }
@@ -141,8 +162,14 @@ function criarTexturaPadrao(tipo) {
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.anisotropy = 4;
-  return tex;
+  tex.anisotropy = 8;
+
+  const bump = new THREE.CanvasTexture(c);
+  bump.colorSpace = THREE.NoColorSpace;
+  bump.wrapS = bump.wrapT = THREE.RepeatWrapping;
+  bump.anisotropy = 4;
+
+  return { map: tex, bump };
 }
 
 // Prepara cópia não-indexada de `geo` com (position, normal, uv, color) em espaço de mundo
@@ -246,9 +273,10 @@ export async function construirCidade({
 
   const colisores = [];
 
-  const texAsfalto = criarTexturaPadrao('asfalto');
-  const texSuperficie = criarTexturaPadrao('superficie');
-  const texGrama = criarTexturaPadrao('grama');
+  const { map: texAsfalto, bump: bumpAsfalto } = criarTexturaPadrao('asfalto');
+  const { map: texSuperficie, bump: bumpSuperficie } = criarTexturaPadrao('superficie');
+  const { map: texGrama, bump: bumpGrama } = criarTexturaPadrao('grama');
+  const { map: texSelva } = criarTexturaPadrao('grama');
   // ruído suave de baixa frequência para quebrar a repetição das texturas no chão (grama, calçada e asfalto)
   const texMacro = (() => {
     const S = 256, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'); const rng = aleatorio(909);
@@ -259,15 +287,23 @@ export async function construirCidade({
     }
     const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.NoColorSpace; return t;
   })();
-  function variacaoNoChao(mat, forca = 1) {
+  function variacaoNoChao(mat, forca = 1, aoVertical = true) {
     const antigo = mat.onBeforeCompile;
-    const chave = 'macro' + forca + (antigo ? antigo.toString().length + antigo.toString().slice(0, 60) : '');
+    const chave = 'macro2_' + forca + '_' + (aoVertical ? 1 : 0) + (antigo ? antigo.toString().length + antigo.toString().slice(0, 60) : '');
     mat.customProgramCacheKey = () => chave;                                          // (senão o Three reaproveita o shader de outro material)
     mat.onBeforeCompile = (sh, r) => {
       antigo?.call(mat, sh, r);
       sh.uniforms.tMacro = { value: texMacro };
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vMacroP; varying float vMacroN;')
         .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvMacroP = (modelMatrix * vec4(transformed, 1.0)).xyz; vMacroN = normalize(mat3(modelMatrix) * objectNormal).y;');
+      const blocoAO = aoVertical ? `
+  else if (abs(vMacroN) < 0.72) {
+    // Oclusão de contato com o solo (base dos prédios/muros) + ganho suave de luz do céu no topo
+    float aoBase = mix(0.74, 1.0, smoothstep(0.0, 2.6, vMacroP.y));
+    float luzTopo = mix(0.95, 1.08, smoothstep(2.5, 28.0, vMacroP.y));
+    float macW = texture2D(tMacro, vec2((vMacroP.x + vMacroP.z) * 0.018, vMacroP.y * 0.032)).r;
+    diffuseColor.rgb *= aoBase * luzTopo * mix(0.93, 1.05, macW);
+  }` : '';
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D tMacro; varying vec3 vMacroP; varying float vMacroN;')
         .replace('#include <color_fragment>', `#include <color_fragment>
   if (vMacroN > 0.85 && vMacroP.y < 0.6) {
@@ -275,38 +311,36 @@ export async function construirCidade({
     diffuseColor.rgb *= mix(1.0, mix(0.70, 1.20, mac), ${forca.toFixed(2)});
     float lumC = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
     diffuseColor.rgb *= mix(1.0, 0.84, smoothstep(0.62, 0.92, lumC));               // concreto claro envelhecido (sem ofuscar)
-  }`);
+  }${blocoAO}`);
     };
   }
-  const texSelva = criarTexturaPadrao('grama');
-  texGrama.repeat.set(320, 320);
 
-  // Materiais Lambert texturizados (5x mais rápidos por pixel em Leve/Médio) e PBR (Alto)
+  // Materiais Lambert (Leve) e PBR com bumpMap + reflexo IBL real (Médio / Alto)
   const MAT_LAMBERT = {
     fosco:     new THREE.MeshLambertMaterial({ vertexColors: true, map: texSuperficie }),
-    metal:     new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 65, specular: 0x556677 }),
+    metal:     new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 75, specular: 0x66788c }),
     asfalto:   new THREE.MeshLambertMaterial({ vertexColors: true, map: texAsfalto, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
     luz:       new THREE.MeshLambertMaterial({ vertexColors: true }),
-    vidro:     new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 90, specular: 0x7799bb }),
+    vidro:     new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 110, specular: 0x88b0d8 }),
     semaforoLuz: new THREE.MeshBasicMaterial({ vertexColors: true }),
     selvaChao: new THREE.MeshLambertMaterial({ vertexColors: true, map: texSelva, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
     selvaVeg:  new THREE.MeshLambertMaterial({ vertexColors: true, map: texSelva }),
-    agua:      new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 110, specular: 0x78d8d0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
+    agua:      new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 120, specular: 0x8ae6e0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
   };
   const MAT_PBR = {
-    fosco:     new THREE.MeshStandardMaterial({ vertexColors: true, map: texSuperficie, roughness: 0.84, metalness: 0.04 }),
-    metal:     new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.34, metalness: 0.62 }),
-    asfalto:   new THREE.MeshStandardMaterial({ vertexColors: true, map: texAsfalto, roughness: 0.88, metalness: 0.02, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
-    luz:       new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4,  metalness: 0.0 }),
-    vidro:     new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.22, metalness: 0.25 }),
+    fosco:     new THREE.MeshStandardMaterial({ vertexColors: true, map: texSuperficie, bumpMap: bumpSuperficie, bumpScale: 0.045, roughness: 0.82, metalness: 0.04, envMapIntensity: 0.95 }),
+    metal:     new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.26, metalness: 0.78, envMapIntensity: 1.45 }),
+    asfalto:   new THREE.MeshStandardMaterial({ vertexColors: true, map: texAsfalto, bumpMap: bumpAsfalto, bumpScale: 0.06, roughness: 0.82, metalness: 0.04, envMapIntensity: 0.9, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
+    luz:       new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, metalness: 0.05 }),
+    vidro:     new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.08, metalness: 0.74, envMapIntensity: 1.85 }),
     semaforoLuz: new THREE.MeshBasicMaterial({ vertexColors: true }),
-    selvaChao: new THREE.MeshStandardMaterial({ vertexColors: true, map: texSelva, roughness: 0.92, metalness: 0.0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
-    selvaVeg:  new THREE.MeshStandardMaterial({ vertexColors: true, map: texSelva, roughness: 0.86, metalness: 0.0 }),
-    agua:      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.16, metalness: 0.18, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
+    selvaChao: new THREE.MeshStandardMaterial({ vertexColors: true, map: texSelva, bumpMap: bumpGrama, bumpScale: 0.05, roughness: 0.90, metalness: 0.0, envMapIntensity: 0.8, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
+    selvaVeg:  new THREE.MeshStandardMaterial({ vertexColors: true, map: texSelva, roughness: 0.82, metalness: 0.0, envMapIntensity: 0.85 }),
+    agua:      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.08, metalness: 0.32, envMapIntensity: 1.75, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
   };
 
-  for (const m of [MAT_LAMBERT.fosco, MAT_LAMBERT.asfalto, MAT_PBR.fosco, MAT_PBR.asfalto]) variacaoNoChao(m, 1);
-  for (const m of [MAT_LAMBERT.selvaChao, MAT_PBR.selvaChao]) variacaoNoChao(m, 0.8);
+  for (const m of [MAT_LAMBERT.fosco, MAT_LAMBERT.asfalto, MAT_PBR.fosco, MAT_PBR.asfalto]) variacaoNoChao(m, 1, true);
+  for (const m of [MAT_LAMBERT.selvaChao, MAT_PBR.selvaChao]) variacaoNoChao(m, 0.8, false);
   const matsLetreiro = new Set();
   let estadoNoite = noiteInicial;
   let estadoChuva = false;
@@ -328,32 +362,59 @@ export async function construirCidade({
   function alternarChuva(molhado) {
     estadoChuva = molhado;
     MAT_LAMBERT.asfalto.color.setHex(molhado ? 0x9aa4b0 : 0xffffff);
-    MAT_PBR.asfalto.color.setHex(molhado ? 0xa6aeb8 : 0xffffff);
-    MAT_PBR.asfalto.roughness = molhado ? 0.24 : 0.88;
+    MAT_PBR.asfalto.color.setHex(molhado ? 0x9ca6b2 : 0xffffff);
+    MAT_PBR.asfalto.roughness = molhado ? 0.16 : 0.82;
+    MAT_PBR.asfalto.metalness = molhado ? 0.22 : 0.04;
+    MAT_PBR.asfalto.envMapIntensity = molhado ? 1.55 : 0.9;
   }
 
-  // Chão base de grama texturizado (subdividido + polygonOffset positivo: zero z-fighting em GPUs mobile 16-bit!)
-  const chaoMat = new THREE.MeshLambertMaterial({
-    color: noiteInicial ? 0x2c4a2a : 0x6fa94c,
-    map: texGrama,
-    polygonOffset: true,
-    polygonOffsetFactor: 2,
-    polygonOffsetUnits: 2,
-  });
-  texGrama.repeat.set(140, 140);
-  // recorte no chão da cidade sobre o terreno cavável do canteiro (jogo/terreno.js), para os buracos aparecerem
-  chaoMat.onBeforeCompile = sh => {
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vMundoXZ;').replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvMundoXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vMundoXZ;').replace('void main() {', 'void main() {\n  if (vMundoXZ.x > 140.7 && vMundoXZ.x < 219.3 && vMundoXZ.y > -29.3 && vMundoXZ.y < 14.3) discard;');
+  // Chão base de grama dividido em grade espacial (tiles de 128 m) p/ frustum culling real pela câmera!
+  texGrama.repeat.set(12, 12);
+  bumpGrama.repeat.set(12, 12);
+  const aplicarRecorteCanteiro = mat => {
+    mat.onBeforeCompile = sh => {
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vMundoXZ;').replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvMundoXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vMundoXZ;').replace('void main() {', 'void main() {\n  if (vMundoXZ.x > 140.7 && vMundoXZ.x < 219.3 && vMundoXZ.y > -29.3 && vMundoXZ.y < 14.3) discard;');
+    };
+    variacaoNoChao(mat, 1.2, false);
   };
-  variacaoNoChao(chaoMat, 1.2);
-  const chao = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600, 32, 32), chaoMat);
-  chao.rotation.x = -Math.PI / 2;
-  chao.position.set(300, -0.18, 300);
-  chao.receiveShadow = true;
-  chao.matrixAutoUpdate = false;
-  chao.updateMatrix();
-  scene.add(chao);
+  const chaoMatLeve = new THREE.MeshLambertMaterial({
+    color: noiteInicial ? 0x2c4a2a : 0x6ca64a,
+    map: texGrama,
+    polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2,
+  });
+  const chaoMatPbr = new THREE.MeshStandardMaterial({
+    color: noiteInicial ? 0x2c4a2a : 0x6ba649,
+    map: texGrama,
+    bumpMap: bumpGrama, bumpScale: 0.055,
+    roughness: 0.90, metalness: 0.0, envMapIntensity: 0.72,
+    polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2,
+  });
+  aplicarRecorteCanteiro(chaoMatLeve);
+  aplicarRecorteCanteiro(chaoMatPbr);
+
+  const chaoTiles = [];
+  const TILE_CHAO = 128;
+  const geoTileChao = new THREE.PlaneGeometry(TILE_CHAO + 0.2, TILE_CHAO + 0.2, 2, 2);
+  geoTileChao.rotateX(-Math.PI / 2);
+  for (let gx = -468; gx <= 1068; gx += TILE_CHAO) {
+    for (let gz = -468; gz <= 1068; gz += TILE_CHAO) {
+      const m = new THREE.Mesh(geoTileChao, chaoMatLeve);
+      m.position.set(gx, -0.18, gz);
+      m.receiveShadow = true;
+      m.matrixAutoUpdate = false;
+      m.updateMatrix();
+      mundo.add(m);
+      const half = TILE_CHAO * 0.5 + 1;
+      chaoTiles.push({
+        mesh: m,
+        cx: gx, cz: gz,
+        minX: gx - half, maxX: gx + half,
+        minZ: gz - half, maxZ: gz + half,
+        box: new THREE.Box3(new THREE.Vector3(gx - half, -2, gz - half), new THREE.Vector3(gx + half, 2, gz + half)),
+      });
+    }
+  }
 
   // ---- Carregador e cache de templates (cada GLB baixado 1 vez)
   const loader = new GLTFLoader();
@@ -1309,15 +1370,18 @@ export async function construirCidade({
   const jatoVoando = montarAviaoObj({ x: 120, y: YA, z: PISTA - 4, ang: Math.PI / 2, rodas: false });
   mundo.add(jatoVoando);
 
-  // Materializa malhas mescladas e InstancedMeshes de cada setor
+  // Materializa malhas mescladas e InstancedMeshes de cada setor com AABB 3D exata p/ Frustum Culling
   const chunks = [];
   for (const ch of chunksMap.values()) {
+    const box = new THREE.Box3();
     for (const bucket of ch.mesclas.values()) {
       if (!bucket.geos.length) continue;
       const merged = mergeGeometries(bucket.geos, false);
       for (let i = 0; i < bucket.geos.length; i++) bucket.geos[i].dispose();
       if (!merged) continue;
       merged.computeBoundingSphere();
+      merged.computeBoundingBox();
+      if (merged.boundingBox) box.union(merged.boundingBox);
       const mesh = new THREE.Mesh(merged, MAT_LAMBERT[bucket.balde]);
       mesh.receiveShadow = true;
       mesh.castShadow = false;
@@ -1337,6 +1401,8 @@ export async function construirCidade({
       for (let i = 0; i < count; i++) inst.setMatrixAt(i, batch.matrices[i]);
       inst.instanceMatrix.needsUpdate = true;
       inst.computeBoundingSphere();
+      inst.computeBoundingBox();
+      if (inst.boundingBox) box.union(inst.boundingBox);
       inst.frustumCulled = true;
       inst.receiveShadow = batch.recebeSombra;
       inst.castShadow = false;
@@ -1350,11 +1416,20 @@ export async function construirCidade({
     }
     ch.instancias.clear();
 
+    if (box.isEmpty()) {
+      box.set(new THREE.Vector3(ch.minX - 6, -2, ch.minZ - 6), new THREE.Vector3(ch.maxX + 6, 18, ch.maxZ + 6));
+    } else {
+      box.expandByScalar(1.8);
+      box.min.y = Math.min(box.min.y, -1.5);
+      box.max.y = Math.max(box.max.y, 4.0);
+    }
+
     chunks.push({
       group: ch.group,
       decorGroup: ch.decorGroup,
-      minX: ch.minX - 14, maxX: ch.maxX + 14,
-      minZ: ch.minZ - 14, maxZ: ch.maxZ + 14,
+      minX: box.min.x, maxX: box.max.x,
+      minZ: box.min.z, maxZ: box.max.z,
+      box,
     });
   }
 
@@ -1441,8 +1516,99 @@ export async function construirCidade({
 
   let ultCullX = 1e9, ultCullZ = 1e9;
   let chunksVisiveis = chunks.length;
+  let chaoVisiveis = chaoTiles.length;
+  let trafegoVisivel = 0;
+  let npcsVisiveis = 0;
+
+  const _frustum = new THREE.Frustum();
+  const _projScreen = new THREE.Matrix4();
+  const _sph = new THREE.Sphere();
+  let frustumValido = false;
+
+  /** Culling exato pelo cone de visão (Frustum) da câmera + distância: renderiza SOMENTE o que está visível na câmera! */
+  function cullarCamera(camera, fx, fz) {
+    if (!camera) return null;
+    camera.updateMatrixWorld();
+    _projScreen.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    _frustum.setFromProjectionMatrix(_projScreen);
+    frustumValido = true;
+
+    const cx = camera.position.x, cz = camera.position.z;
+    const vd = cfgQual.viewDist;
+    const vd2 = vd * vd;
+    const vdChao2 = (vd + 110) * (vd + 110);
+    const showDec = !!cfgQual.mostrarDecor;
+
+    let vis = 0;
+    for (let i = 0; i < chunks.length; i++) {
+      const ch = chunks[i];
+      const dx = cx < ch.minX ? ch.minX - cx : (cx > ch.maxX ? cx - ch.maxX : 0);
+      const dz = cz < ch.minZ ? ch.minZ - cz : (cz > ch.maxZ ? cz - ch.maxZ : 0);
+      const mostrar = (dx * dx + dz * dz) <= vd2 && _frustum.intersectsBox(ch.box);
+      ch.group.visible = mostrar;
+      ch.decorGroup.visible = mostrar && showDec;
+      if (mostrar) vis++;
+    }
+    chunksVisiveis = vis;
+
+    let visChao = 0;
+    for (let i = 0; i < chaoTiles.length; i++) {
+      const t = chaoTiles[i];
+      const dx = cx < t.minX ? t.minX - cx : (cx > t.maxX ? cx - t.maxX : 0);
+      const dz = cz < t.minZ ? t.minZ - cz : (cz > t.maxZ ? cz - t.maxZ : 0);
+      const mostrar = (dx * dx + dz * dz) <= vdChao2 && _frustum.intersectsBox(t.box);
+      t.mesh.visible = mostrar;
+      if (mostrar) visChao++;
+    }
+    chaoVisiveis = visChao;
+
+    const maxT = Math.min(cfgQual.trafegoMax, trafego.length);
+    let visT = 0;
+    for (let i = 0; i < trafego.length; i++) {
+      const c = trafego[i];
+      if (i >= maxT) { c.o.visible = false; continue; }
+      const dx = c.x - cx, dz = c.o.position.z - cz;
+      let mostrar = (dx * dx + dz * dz) <= vd2;
+      if (mostrar) {
+        _sph.center.set(c.x, 1.2, c.o.position.z);
+        _sph.radius = 4.2;
+        mostrar = _frustum.intersectsSphere(_sph);
+      }
+      c.o.visible = mostrar;
+      if (mostrar) visT++;
+    }
+    trafegoVisivel = visT;
+
+    const npcDist2 = cfgQual.npcDist * cfgQual.npcDist;
+    let visN = 0;
+    for (let i = 0; i < npcs.length; i++) {
+      const n = npcs[i];
+      if (n.idx >= cfgQual.npcsMax) { n.p.obj.visible = false; continue; }
+      const px = n.p.obj.position.x, pz = n.p.obj.position.z;
+      const dx = px - fx, dz = pz - fz;
+      let mostrar = (dx * dx + dz * dz) <= npcDist2;
+      if (mostrar) {
+        _sph.center.set(px, CALCADA + 1.0, pz);
+        _sph.radius = 1.8;
+        mostrar = _frustum.intersectsSphere(_sph);
+      }
+      n.p.obj.visible = mostrar;
+      if (mostrar) visN++;
+    }
+    npcsVisiveis = visN;
+
+    if (jatoVoando) {
+      _sph.center.copy(jatoVoando.position);
+      _sph.radius = 24;
+      jatoVoando.visible = _frustum.intersectsSphere(_sph);
+    }
+
+    ultCullX = fx; ultCullZ = fz;
+    return _frustum;
+  }
 
   function atualizarChunks(fx, fz, forcar = false) {
+    if (frustumValido && !forcar) return;
     if (!forcar && (fx - ultCullX) * (fx - ultCullX) + (fz - ultCullZ) * (fz - ultCullZ) < 64) return;
     ultCullX = fx;
     ultCullZ = fz;
@@ -1472,6 +1638,15 @@ export async function construirCidade({
       const it = malhasInstanciadas[i];
       it.inst.material = cfgQual.pbr ? it.matPbr : it.matLeve;
     }
+    const matChao = cfgQual.pbr ? chaoMatPbr : chaoMatLeve;
+    for (let i = 0; i < chaoTiles.length; i++) chaoTiles[i].mesh.material = matChao;
+
+    const aniso = cfgQual.anisotropy || (cfgQual.pbr ? 8 : 2);
+    for (const tx of [texAsfalto, texSuperficie, texGrama, texSelva]) {
+      tx.anisotropy = aniso;
+      tx.needsUpdate = true;
+    }
+
     for (let i = 0; i < malhasSombraPrincipal.length; i++) malhasSombraPrincipal[i].castShadow = !!cfgQual.sombraPrincipal;
     for (let i = 0; i < malhasSombraDetalhe.length; i++) malhasSombraDetalhe[i].castShadow = !!cfgQual.sombraDetalhe;
     for (let i = 0; i < trafego.length; i++) trafego[i].o.visible = i < cfgQual.trafegoMax;
@@ -1486,7 +1661,9 @@ export async function construirCidade({
   onProgresso(1, 'Cidade pronta!');
 
   function alternarNoite(ligada) {
-    chaoMat.color.setHex(ligada ? 0x2c4a2a : 0x6fa94c);
+    const cor = ligada ? 0x2c4a2a : 0x6ba649;
+    chaoMatLeve.color.setHex(cor);
+    chaoMatPbr.color.setHex(cor);
     aplicarEstadoLuzes(ligada);
     if (halosPoints) halosPoints.visible = ligada;
   }
@@ -1514,7 +1691,6 @@ export async function construirCidade({
     atualizarChunks(focoX, focoZ, false);
 
     const maxT = Math.min(cfgQual.trafegoMax, trafego.length);
-    const tDist2 = cfgQual.viewDist * cfgQual.viewDist;
     for (let i = 0; i < trafego.length; i++) {
       const c = trafego[i];
       if (i >= maxT) { c.o.visible = false; continue; }
@@ -1538,8 +1714,6 @@ export async function construirCidade({
       c.o.position.z += c.sent * c.va * dt;
       if (c.sent > 0 && c.o.position.z > c.max) c.o.position.z = c.min;
       if (c.sent < 0 && c.o.position.z < c.min) c.o.position.z = c.max;
-      const dx = c.x - focoX, dz = c.o.position.z - focoZ;
-      c.o.visible = (dx * dx + dz * dz) <= tDist2;
     }
 
     const npcDist2 = cfgQual.npcDist * cfgQual.npcDist;
@@ -1559,22 +1733,23 @@ export async function construirCidade({
         const k = Math.min(1, n.tMorto * 1.8), e = k * k * (3 - 2 * k);
         n.p.obj.rotation.x = -e * (Math.PI / 2 - 0.08); n.p.obj.position.y = CALCADA + 0.12 * e;
         if (n.tMorto < 0.6) n.p.atualizar(dt);
-        n.p.obj.visible = (n.mx - focoX) ** 2 + (n.mz - focoZ) ** 2 <= npcDist2;
         if (n.tMorto > 30) reviverNpc(n);
         continue;
       }
       if (n.susto > 0) n.susto = Math.max(0, n.susto - dt);
       const dx = nx - focoX, dz = nz - focoZ;
       const perto = (dx * dx + dz * dz) <= npcDist2;
-      n.p.obj.visible = perto;
       if (perto) {
-        if (n.susto > 0) n.p.obj.rotation.x = -0.35 * Math.sin(Math.PI * n.susto / 0.5);
-        else if (n.p.obj.rotation.x) n.p.obj.rotation.x = 0;
         if (!n.estatico) {
           n.p.obj.position.set(nx, CALCADA, nz);
           n.p.obj.rotation.y = -ang;
         }
-        n.p.atualizar(dt);
+        if (n.susto > 0) n.p.obj.rotation.x = -0.35 * Math.sin(Math.PI * n.susto / 0.5);
+        else if (n.p.obj.rotation.x) n.p.obj.rotation.x = 0;
+        // Só anima esqueleto se estiver visível na câmera!
+        if (!frustumValido || n.p.obj.visible) n.p.atualizar(dt);
+      } else {
+        n.p.obj.visible = false;
       }
     }
 
@@ -1606,10 +1781,19 @@ export async function construirCidade({
     alternarChuva,
     aplicarQualidade,
     atualizar,
+    cullarCamera,
     npcs,
     trafego,
     atingirNpc,
-    getStats: () => ({ chunksVisiveis, chunksTotal: chunks.length, npcsCarregados: npcs.length }),
+    getStats: () => ({
+      chunksVisiveis,
+      chunksTotal: chunks.length,
+      chaoVisiveis,
+      chaoTotal: chaoTiles.length,
+      npcsCarregados: npcs.length,
+      npcsVisiveis,
+      trafegoVisivel,
+    }),
     mapaInfo: { RUA, VX, HZ, ROT, RX, TX, TZ, PISTA, selva: SELVA_INFO },
   };
 }

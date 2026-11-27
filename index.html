@@ -612,6 +612,25 @@
   #vc-tag { font-size: 10px; font-weight: 900; letter-spacing: 1px; color: #bae6fd; text-transform: uppercase; }
   #hud-velocista.mach #vc-tag { color: #fca5a5; }
   body.em-cine #hud-velocista, body.em-cine #speed-lines { display: none !important; }
+
+  /* Fases exclusivas por personagem (Sala + HUD de objetivos da fase) */
+  .sala-fase {
+    font-size: 9.5px; font-weight: 900; letter-spacing: .4px; color: #fde68a;
+    background: rgba(245, 158, 11, 0.16); border: 1px solid rgba(251, 191, 36, 0.35);
+    border-radius: 6px; padding: 2px 6px; margin-bottom: 4px; display: inline-block;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #sala-resumo .res-fase { font-style: normal; color: #7dd3fc; font-weight: 800; }
+  #hud-fase {
+    padding: 8px 11px; max-width: 268px; font-size: 11px; color: #f1f5f9;
+    border-left: 3px solid #38bdf8;
+  }
+  .fase-topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 900; font-size: 11px; color: #bae6fd; margin-bottom: 5px; }
+  #fase-prog { color: #fde047; font-size: 10.5px; }
+  #fase-objs { display: flex; flex-direction: column; gap: 3px; }
+  .fase-obj { font-size: 10.5px; color: #e2e8f0; line-height: 1.25; }
+  .fase-obj.feito { color: #86efac; text-decoration: line-through; opacity: 0.85; }
+  body.em-cine #hud-fase { display: none !important; }
 </style>
 </head>
 <body>
@@ -647,7 +666,7 @@
 
   <!-- Sala de entrada: personagem, veículo e local -->
   <div id="sala" class="oculto">
-    <header class="sala-topo"><div class="logo-jogo">HRYZ <span>CITY</span></div><div class="sala-titulo">Escolha quem você é, o que vai dirigir e onde começar</div></header>
+    <header class="sala-topo"><div class="logo-jogo">HRYZ <span>CITY</span></div><div class="sala-titulo">Escolha seu personagem — cada um tem uma fase e missão exclusivas</div></header>
     <div id="sala-acoes"><button id="sala-tela" title="Tela cheia / modo horizontal">⛶<span> Horizontal</span></button><button id="sala-rever">↺ Ver a abertura</button></div>
     <div class="sala-painel glass">
       <nav id="sala-abas"></nav>
@@ -689,6 +708,10 @@
         <div class="cao-obj" id="obj-cao-extra">⬜ 🎾 Bolinha / Carinho (0/1)</div>
       </div>
     </div>
+    <div class="glass oculto" id="hud-fase">
+      <div class="fase-topo"><span id="fase-titulo">FASE</span><span id="fase-prog">0/0</span></div>
+      <div id="fase-objs"></div>
+    </div>
     <div class="stats-row">
       <div id="hud-carga" class="oculto"><span>SUPER PULO</span><b><i></i></b></div>
       <div class="glass pill" id="hud-vida" title="Vida">❤️ <span class="vida-barra"><i></i></span><b>100</b></div>
@@ -704,14 +727,13 @@
       <option value="">🗺️ Ir para…</option>
     </select>
     <button class="btn-hud oculto" id="btn-sirene" title="Sirene / Giroflex (L)">🚨 Sirene</button>
-    <button class="btn-hud" id="btn-qualidade" title="Qualidade gráfica: Leve / Médio / Alto (Q)">⚡ Leve</button>
+    <button class="btn-hud" id="btn-qualidade" title="Qualidade gráfica: Leve / Médio / Alto (Q)">⚡ Médio</button>
     <button class="btn-hud" id="btn-noite" title="Alternar Dia/Noite (N)">🌙 Noite</button>
     <button class="btn-hud" id="btn-chuva" title="Alternar Chuva (R)">🌧️ Chuva</button>
     <button class="btn-hud" id="btn-cam" title="Trocar Câmera (V)">🎥 Câmera</button>
-    <button class="btn-hud" id="btn-pers" title="Trocar Personagem (C)">🧍 Personagem</button>
     <button class="btn-hud" id="btn-tela" title="Tela cheia / Modo Horizontal no celular">⛶ Horizontal</button>
     <button class="btn-hud" id="btn-som" title="Ligar/Silenciar som (M)">🔊</button>
-    <button class="btn-hud" id="btn-sala" title="Voltar para a sala: trocar personagem, carro e local (P)">🏠 Sala</button>
+    <button class="btn-hud" id="btn-sala" title="Voltar à Sala para escolher outro personagem e fase (P)">🏠 Fases</button>
     <button class="btn-hud" id="btn-ajuda" title="Controles (H)">?</button>
   </div>
 
@@ -823,7 +845,7 @@
         <kbd>Clique</kbd><span>Combo de Soco (desarmado), Atirar (armado) ou Latir / Lançar bolinha (cães)</span>
         <kbd>X</kbd><span>Recarregar (usa a munição de reserva; compre mais na Loja $)</span>
         <kbd>L</kbd><span>Giroflex e sirene (viatura, ambulância e bombeiros)</span>
-        <kbd>P</kbd><span>Voltar para a sala (trocar personagem, carro e local)</span>
+        <kbd>P</kbd><span>Voltar à Sala de Fases (escolher outro personagem/fase antes de iniciar)</span>
         <kbd>Tab</kbd><span>Mapa da cidade (ou toque no minimapa): toque num lugar para viajar até lá</span>
         <kbd>F</kbd><span>Faróis do carro · com o Kael a pé: rajada vermelha ✋</span>
         <kbd>T</kbd><span>Kael: levantar o carro mais perto / arremessar 💪</span>
@@ -832,7 +854,6 @@
         <kbd>❤️</kbd><span>Vida: tiro, queda (de mais de 3,5 m), mordida do T. rex, batida e explosão machucam; sem vida você acorda no hospital</span>
         <kbd>1 a 8</kbd><span>Máquinas de obra: mexem a ferramenta (1/2 lança ou pá · 3/4 braço ou caçamba · 5/6 · 7/8); no rolo, 1 liga a vibração · com a ponta da caçamba no chão do canteiro ela cava; abrindo a caçamba, despeja (no basculante, se estiver embaixo)</span>
         <kbd>V</kbd><span>Alternar câmera (3ª pessoa / Capô / Aérea)</span>
-        <kbd>C</kbd><span>Trocar personagem jogável</span>
         <kbd>Q</kbd><span>Alternar qualidade gráfica (Leve / Médio / Alto)</span>
         <kbd>N / R</kbd><span>Alternar Dia/Noite e Chuva/Pista molhada</span>
         <kbd>Mouse</kbd><span>Arrastar para girar câmera · Roda para zoom</span>

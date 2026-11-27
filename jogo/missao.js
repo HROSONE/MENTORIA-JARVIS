@@ -189,6 +189,22 @@ export class Missao {
     this._cardInicio();
   }
 
+  /** Encerra e oculta completamente a missão do refém (usada quando o jogador escolhe outro personagem na Sala). */
+  desativar() {
+    if (this.estado === 'intro' && this._pularIntro) {
+      removeEventListener('keydown', this._pularIntro, true);
+      document.body.classList.remove('em-cine');
+      document.getElementById('mi-intro')?.classList.add('oculto');
+    }
+    this.estado = 'inativa';
+    this.acoes = [];
+    this._limparFalas?.();
+    this._fecharCard();
+    this.el.dano?.classList.remove('visivel');
+    if (this.bandido) this._mostrar(false);
+    this.jogo?.hud?.('', '');
+  }
+
   // abertura da missão: noticiário de urgência com cortes para o cerco, o bandido, a refém e o negociador
   _intro() {
     this.estado = 'intro'; this.tIntro = 0; this.iPlanoIntro = -1;
@@ -288,14 +304,15 @@ export class Missao {
 
   // ------------------------------------------------------------------------------------------- laço
   atualizar(dt, t) {
+    if (!this.bandido) return;
     this.t += dt;
-    for (const s of this.giros) { const k = (Math.sin(t * 9 + s.position.x) > 0) ? 1 : 0.15; s.material.opacity = k; }
-    for (const p of this.pegaveis) {
+    for (const s of (this.giros || [])) { const k = (Math.sin(t * 9 + s.position.x) > 0) ? 1 : 0.15; s.material.opacity = k; }
+    for (const p of (this.pegaveis || [])) {
       if (!p.g.visible) continue;
       p.g.userData.giro.rotation.y += dt * 1.6; p.g.userData.giro.position.y = Math.sin(t * 2.4) * 0.15;
       p.g.userData.anel.rotation.z += dt;
     }
-    for (const m of [this.marcTorre, this.marcAlcapao, this.marcLoja]) m.userData.anel.rotation.z += dt * 0.8;
+    for (const m of [this.marcTorre, this.marcAlcapao, this.marcLoja]) if (m) m.userData.anel.rotation.z += dt * 0.8;
     this._efeitos(dt);
     if (this.estado === 'inativa') return;
     const j = this.jogo.jogador();
@@ -523,9 +540,9 @@ export class Missao {
       ctx.fillStyle = '#0b1220'; ctx.font = `900 ${r + 3}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(letra, x, y + 0.5);
     };
     if (this.estado === 'ativa' || this.estado === 'percebeu') {
-      const [cx, cy] = toMM(CENA.x, CENA.z), esc = toMM(CENA.x + 1, CENA.z)[0] - cx;
+      const [cx, cy] = toMM(CENA.x, CENA.z), [x1, y1] = toMM(CENA.x + 1, CENA.z), esc = Math.hypot(x1 - cx, y1 - cy);
       ctx.fillStyle = 'rgba(239,68,68,0.18)'; ctx.strokeStyle = 'rgba(239,68,68,0.8)'; ctx.setLineDash([3, 3]); ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.arc(cx, cy, RAIO_ALERTA * esc, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(cx, cy, Math.max(2, RAIO_ALERTA * esc), 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
     }
     for (const p of this.pegaveis) if (p.g.visible) icone(p.x, p.z, p.cor, p.letra);
     icone(LOJA_PORTA.x, LOJA_PORTA.z, '#facc15', '$');
