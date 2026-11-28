@@ -89,7 +89,7 @@ export function criarFaseLua({ scene, base, padX, padZ, padRy = 0 }) {
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('alfa', new THREE.BufferAttribute(alfa, 1)); geo.setAttribute('tam', new THREE.BufferAttribute(tam, 1));
     const mat = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, uniforms: { cor: { value: new THREE.Color(cor) }, escala: { value: 600 } },
-      vertexShader: 'attribute float alfa; attribute float tam; varying float vA; uniform float escala; void main(){ vA = alfa; vec4 mv = modelViewMatrix * vec4(position,1.0); gl_PointSize = tam * escala / max(0.5, -mv.z); gl_Position = projectionMatrix * mv; }',
+      vertexShader: 'attribute float alfa; attribute float tam; varying float vA; uniform float escala; void main(){ vA = alfa; vec4 mv = modelViewMatrix * vec4(position,1.0); gl_PointSize = min(64.0, tam * escala / max(1.2, -mv.z)); gl_Position = projectionMatrix * mv; }',
       fragmentShader: 'uniform vec3 cor; varying float vA; void main(){ vec2 p = gl_PointCoord * 2.0 - 1.0; float d = dot(p,p); if (d > 1.0) discard; gl_FragColor = vec4(cor, vA * (1.0 - d) * (1.0 - d)); }',
     });
     const pts = new THREE.Points(geo, mat); pts.frustumCulled = false;
@@ -318,12 +318,23 @@ export function criarFaseLua({ scene, base, padX, padZ, padRy = 0 }) {
   contagem.style.cssText = 'position:fixed;left:50%;top:28%;transform:translate(-50%,-50%);font:900 min(22vw,160px)/1 Inter,system-ui,sans-serif;color:#fff;text-shadow:0 4px 30px rgba(0,0,0,.6);pointer-events:none;z-index:41;opacity:0';
   const legenda = document.createElement('div');
   legenda.style.cssText = 'position:fixed;left:50%;bottom:16%;transform:translateX(-50%);font:800 clamp(14px,3.4vw,22px) Inter,system-ui,sans-serif;color:#fff;letter-spacing:.06em;text-shadow:0 2px 12px rgba(0,0,0,.7);pointer-events:none;z-index:41;opacity:0;white-space:nowrap';
-  document.body.append(fundo, contagem, legenda);
+  const btnPular = document.createElement('button');
+  btnPular.type = 'button';
+  btnPular.textContent = '⏭️ PULAR [Enter]';
+  btnPular.style.cssText = 'position:fixed;right:max(16px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));z-index:72;display:none;padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.32);background:rgba(15,23,42,.8);color:#f8fafc;font:800 12px Inter,system-ui,sans-serif;cursor:pointer';
+  document.body.append(fundo, contagem, legenda, btnPular);
 
   // som do motor: ruído marrom filtrado (o ronco grave) gerado na hora, sem arquivo
   let ac = null, ruidoNo = null, ganho = null, filtro = null;
   function som(k, brilho = 1) {
     try {
+      if (k <= 0.001) {
+        if (ac && ganho) {
+          ganho.gain.setValueAtTime(0, ac.currentTime);
+          if (ac.state === 'running') ac.suspend().catch(() => {});
+        }
+        return;
+      }
       if (!ac) {
         ac = new (window.AudioContext || window.webkitAudioContext)();
         const len = ac.sampleRate * 2, buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0); let ult = 0;
@@ -332,13 +343,45 @@ export function criarFaseLua({ scene, base, padX, padZ, padRy = 0 }) {
         filtro = ac.createBiquadFilter(); filtro.type = 'lowpass'; filtro.frequency.value = 300;
         ganho = ac.createGain(); ganho.gain.value = 0; ruidoNo.connect(filtro).connect(ganho).connect(ac.destination); ruidoNo.start();
       }
+      if (ac.state === 'suspended') ac.resume().catch(() => {});
       ganho.gain.setTargetAtTime(0.9 * k, ac.currentTime, 0.08); filtro.frequency.setTargetAtTime(180 + 900 * k * brilho, ac.currentTime, 0.1);
     } catch (_) {}
   }
 
+  function finalizarCine(c) {
+    if (!c) return;
+    const ida = c.destino === 'lua';
+    const origem = ida ? fogTerra : fogLua, chegada = ida ? fogLua : fogTerra;
+    const baseO = ida ? new THREE.Vector3(padX, 0.6, padZ) : new THREE.Vector3(ORIGEM.x, altura(ORIGEM.x, ORIGEM.z), ORIGEM.z);
+    const baseC = ida ? new THREE.Vector3(ORIGEM.x, altura(ORIGEM.x, ORIGEM.z), ORIGEM.z) : new THREE.Vector3(padX, 0.6, padZ);
+    if (!c.trocou) {
+      c.trocou = true;
+      if (origem) { origem.chama.definir(0, 0); origem.obj.position.y = ida ? 0.6 : baseO.y; origem.pernas(0); origem.escotilha(0); }
+      c.aoTrocar?.(c.destino);
+    }
+    if (chegada) {
+      chegada.chama.definir(0, 0);
+      chegada.obj.position.y = baseC.y;
+      chegada.pernas(0);
+      chegada.escotilha(1);
+    }
+    contagem.style.opacity = 0; legenda.style.opacity = 0; fundo.style.opacity = 0; btnPular.style.display = 'none';
+    document.body.classList.remove('em-cine');
+    som(0);
+    estado.cine = null;
+    c.aoFim?.(c.destino);
+  }
+
+  function pularCine() {
+    if (estado.cine) finalizarCine(estado.cine);
+  }
+  btnPular.addEventListener('click', pularCine);
+
   /** começa a viagem; destino 'lua' ou 'terra'. aoTrocar(destino) muda o ambiente (luz/céu) no meio da tela preta */
   function embarcar(destino, aoTrocar, aoFim) {
     estado.cine = { destino, t: 0, aoTrocar, aoFim, trocou: false };
+    document.body.classList.add('em-cine');
+    btnPular.style.display = 'block';
   }
   const P = new THREE.Vector3(), A = new THREE.Vector3();
   function atualizarCine(dt) {
@@ -371,7 +414,7 @@ export function criarFaseLua({ scene, base, padX, padZ, padRy = 0 }) {
       // câmera: de baixo, de longe, inclinando para acompanhar a subida
       const ry = ida ? padRy : 0;
       P.set(baseO.x + Math.sin(ry + 0.9) * 34, baseO.y + 3 + Math.min(20, y * 0.25), baseO.z + Math.cos(ry + 0.9) * 34);
-      A.set(baseO.x, origem.obj.position.y + (ida ? 0 : baseO.y) * 0 + 9, baseO.z);
+      A.set(baseO.x, origem.obj.position.y + 9, baseO.z);
       fundo.style.opacity = suave((t - 8.4) / 1.0);
       return { p: P.clone(), a: A.clone(), fov: 50 };
     }
@@ -396,8 +439,7 @@ export function criarFaseLua({ scene, base, padX, padZ, padRy = 0 }) {
     P.set(baseC.x + Math.sin(ryC) * 30, baseC.y + 4 + alt * 0.35, baseC.z + Math.cos(ryC) * 30);
     A.set(baseC.x, chegada.obj.position.y + 8, baseC.z);
     if (t > 16.6) {
-      contagem.style.opacity = 0; legenda.style.opacity = 0; fundo.style.opacity = 0; som(0);
-      estado.cine = null; c.aoFim?.(c.destino);
+      finalizarCine(c);
       return null;
     }
     return { p: P.clone(), a: A.clone(), fov: 50 };
@@ -406,7 +448,7 @@ export function criarFaseLua({ scene, base, padX, padZ, padRy = 0 }) {
   return {
     ORIGEM, G_LUA, raiz, pad,
     carregar, carregarFoguete, altura, alturaPad, colidir, colidirPad, perto, peEscada, atualizarJogador, atualizar,
-    embarcar, atualizarCine,
+    embarcar, atualizarCine, pularCine,
     get cineAtiva() { return !!estado.cine; },
     get ativa() { return estado.ativa; },
     set ativa(v) { estado.ativa = v; raiz.visible = v; },

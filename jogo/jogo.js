@@ -1267,7 +1267,8 @@ export async function iniciarJogo() {
   // ---- Fase da Lua: plataforma de lançamento com o foguete HRYZ-1 na cidade; a Lua fica longe (lua.ORIGEM), na mesma cena
   const PAD = { x: 590, z: 520, ry: -Math.PI / 2 };
   const lua = criarFaseLua({ scene, base: BASE_BIB, padX: PAD.x, padZ: PAD.z, padRy: PAD.ry });
-  const alturaChao = (x, z) => lua.ativa ? lua.altura(x, z) : (lua.alturaPad(x, z) ?? terreno?.altura(x, z) ?? null);
+  let marte = null;
+  const alturaChao = (x, z) => lua.ativa ? (marte?.alturaPadMarte(x, z) ?? lua.altura(x, z)) : (lua.alturaPad(x, z) ?? terreno?.altura(x, z) ?? null);
   const efeitos = new Efeitos(scene);
   let entulho = 0;                                                                 // terra despejada fora do canteiro (vira monte a cada 3 m³)
   function despejarTerra(x, z, m3, r = 1.2) {
@@ -1610,7 +1611,7 @@ export async function iniciarJogo() {
     },
   });
 
-  const marte = new MissaoMarte({
+  marte = new MissaoMarte({
     scene,
     camera,
     lua,
@@ -1663,6 +1664,8 @@ export async function iniciarJogo() {
   const escondidosNaLua = [];
   function ambienteLua(on) {
     lua.ativa = on;
+    document.body.classList.toggle('modo-lua', on);
+    rainLines.visible = !on && ehChuva;
     if (!on) marte.encerrar();
     if (on) {
       const manter = new Set([lua.raiz, fases.grupo, marte.raiz, sun, sun.target, hemi, fillSun, persAtual.inst.obj, camera]);
@@ -1672,9 +1675,9 @@ export async function iniciarJogo() {
       camFarTerra = camera.far; camera.far = 9000; camera.updateProjectionMatrix();
       ceu.mesh.visible = false; scene.background = new THREE.Color(0x000000); scene.fog = null; scene.environment = null;
       hemi.color.setHex(0x1a1d24); hemi.groundColor.setHex(0x6d6a66); hemi.intensity = 0.55;
-      sun.color.setHex(0xfffaf2); sun.intensity = qualAtual.pbr ? 3.4 : 2.6;
+      sun.color.setHex(0xfffaf2); sun.intensity = qualAtual.pbr ? 3.2 : 2.5;
       fillSun.intensity = 0;
-      renderer.toneMappingExposure = 1.2; sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.12;
+      renderer.toneMappingExposure = 1.12; sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.12;
       for (const el of [elMinimap.parentElement, $('hud-alvo-box')]) if (el) el.style.display = 'none';
     } else {
       if (camFarTerra) { camera.far = camFarTerra; camera.updateProjectionMatrix(); }
@@ -1686,11 +1689,21 @@ export async function iniciarJogo() {
   /** atalho direto para a Lua (testes / replay) */
   async function irParaLua() {
     mostrarToast('🌙 Preparando a Fase Lunar e a Nave Marte…');
-    await Promise.all([lua.carregar(), marte.carregar()]);
+    await lua.carregar();
+    await marte.carregar();
     if (persAtual.def.id !== 'astronauta') { const i = PERSONAGENS_DEF.findIndex(d => d.id === 'astronauta'); if (i >= 0) await carregarPersonagem(i); }
     ambienteLua(true);
-    const p = lua.peEscada(true); jogador.veiculo = null; jogador.x = p.x; jogador.z = p.z + 1.5; jogador.ry = 0; camYaw = Math.PI;
-    jogador.y = alturaChao(jogador.x, jogador.z); jogador.vy = 0; jogador.noChao = true; jogador.yPico = jogador.y;
+    const p = lua.peEscada(true);
+    jogador.veiculo = null;
+    // Posiciona o astronauta fora da sombra das pernas do HRYZ-1, olhando direto p/ a Nave Marte na Plataforma Lunar,
+    // com a câmera ATRÁS dos ombros (camYaw === jogador.ry)!
+    jogador.x = p.x + 2.6;
+    jogador.z = p.z + 1.8;
+    jogador.ry = 1.15;
+    camYaw = 1.15;
+    camPitch = 0.24;
+    jogador.y = alturaChao(jogador.x, jogador.z);
+    jogador.vy = 0; jogador.noChao = true; jogador.yPico = jogador.y;
     persAtual.inst.obj.visible = true; snapCam = true; atualizarHudModo();
     lua.fogLua()?.escotilha(1);
     fases.iniciar('astronauta');
@@ -1704,16 +1717,28 @@ export async function iniciarJogo() {
     }
     if (destino === 'lua') {
       mostrarToast('🌙 Preparando a Lua e a Nave Espacial Marte…');
-      await Promise.all([lua.carregar(), marte.carregar()]);
+      await lua.carregar();
+      await marte.carregar();
     }
     if (mira.ativa) sairMira();
     travado = true; persAtual.inst.obj.visible = false;
     lua.embarcar(destino, d => {
       ambienteLua(d === 'lua');
-      const p = lua.peEscada(d === 'lua'); jogador.x = p.x; jogador.z = p.z; jogador.y = alturaChao(p.x, p.z) ?? CALCADA; jogador.vy = 0; jogador.noChao = true;
+      const p = lua.peEscada(d === 'lua');
+      jogador.x = d === 'lua' ? p.x + 2.6 : p.x;
+      jogador.z = d === 'lua' ? p.z + 1.8 : p.z;
+      jogador.y = alturaChao(jogador.x, jogador.z) ?? CALCADA;
+      jogador.vy = 0; jogador.noChao = true;
     }, d => {
-      const p = lua.peEscada(d === 'lua'); jogador.x = p.x; jogador.z = p.z; jogador.ry = p.ang; camYaw = p.ang + Math.PI;
-      jogador.y = alturaChao(p.x, p.z) ?? CALCADA; jogador.yPico = jogador.y;
+      const p = lua.peEscada(d === 'lua');
+      if (d === 'lua') {
+        jogador.x = p.x + 2.6; jogador.z = p.z + 1.8;
+        jogador.ry = 1.15; camYaw = 1.15; camPitch = 0.24;
+      } else {
+        jogador.x = p.x; jogador.z = p.z;
+        jogador.ry = p.ang; camYaw = p.ang;
+      }
+      jogador.y = alturaChao(jogador.x, jogador.z) ?? CALCADA; jogador.yPico = jogador.y;
       persAtual.inst.obj.visible = true; travado = false; snapCam = true;
       if (d === 'lua') fases.iniciar('astronauta');
       mostrarToast(d === 'lua' ? '🌙 Você pousou na Lua! Explore ou embarque na Nave ao lado [E] rumo a Marte!' : '🏙️ De volta a Hryz City');
@@ -2370,6 +2395,9 @@ export async function iniciarJogo() {
         }
         else if (code === 'KeyH') $('modal-ajuda').classList.toggle('oculto');
       }
+      else if (lua.cineAtiva) {
+        if (code === 'Enter') lua.pularCine();
+      }
       else if (code === 'KeyE') { const it = interacaoAtual(); if (it) it.fazer(); else entrarOuSairVeiculo(); }
       else if ((code === 'KeyB' || code === 'ControlLeft' || code === 'ControlRight') && !jogador.veiculo) alternarAgachar();
       else if (code === 'AltLeft' || code === 'AltRight') iniciarRolamento();
@@ -2554,7 +2582,9 @@ export async function iniciarJogo() {
     el.addEventListener('pointercancel', soltar);
   }
 
-  $('touch-entrar').onclick = () => { const it = interacaoAtual(); if (it) it.fazer(); else entrarOuSairVeiculo(); };
+  const acionarInteracaoOuEntrar = () => { const it = interacaoAtual(); if (it) it.fazer(); else entrarOuSairVeiculo(); };
+  $('touch-entrar').onclick = acionarInteracaoOuEntrar;
+  elPrompt?.addEventListener('click', e => { e.stopPropagation(); acionarInteracaoOuEntrar(); });
   $('touch-mirar').onclick = () => { if (mira.ativa) sairMira(true); else entrarMira(true); };
   $('touch-recarregar').onclick = () => { som.desbloquear(); armas.recarregar(); };
   $('touch-sair').onclick = entrarOuSairVeiculo;
@@ -3555,7 +3585,9 @@ export async function iniciarJogo() {
       if (jogador.plataforma?.interior) d = Math.min(d, 3.0);                   // dentro da loja a câmera fica perto (paredes)
       const h = (jogador.veiculo ? jogador.veiculo.camAlt : (ehCao() ? 1.28 : 1.7)) + Math.sin(camPitch) * d * 0.72;
       const hDist = Math.cos(camPitch) * d;
-      posCamDesejada.set(focoX - Math.sin(camYaw) * hDist, Math.max(ehCao() ? 0.55 : 0.8, focoY + h - 1.1), focoZ - Math.cos(camYaw) * hDist);
+      const cxCam = focoX - Math.sin(camYaw) * hDist, czCam = focoZ - Math.cos(camYaw) * hDist;
+      const chaoCam = alturaChao(cxCam, czCam) ?? 0;
+      posCamDesejada.set(cxCam, Math.max(chaoCam + (ehCao() ? 0.55 : 0.85), focoY + h - 1.1), czCam);
       const ombro = armas.ativa && !jogador.veiculo ? 0.62 : 0;                       // armado: câmera sobre o ombro direito
       if (ombro) posCamDesejada.add(new THREE.Vector3(-Math.cos(camYaw) * ombro, 0, Math.sin(camYaw) * ombro));
       if (snapCam) { camera.position.copy(posCamDesejada); snapCam = false; }
@@ -3691,7 +3723,11 @@ export async function iniciarJogo() {
     irParaPos: (x, z, ry = 0, terraco = false) => irPara({ x, z, ry }, terraco === 'manter' ? jogador.plataforma : terraco ? TORRE.terraco : null),
     mirar: (yaw, pitch, fov) => { if (!mira.ativa) entrarMira(true); mira.yaw = yaw; mira.pitch = pitch; if (fov) mira.fov = fov; },
     camFixa: (p, a) => { camFixa = p ? { p: new THREE.Vector3(...p), a: new THREE.Vector3(...a) } : null; },
-    pose: () => ({ jogador: { x: jogador.x, y: jogador.y, z: jogador.z, ry: jogador.ry, acao: persAcao, agachado: jogador.agachado, rolando: jogador.rolando, golpeando: jogador.golpeando, sprintTravado: jogador.sprintTravado, velCiberKmh: Math.round((jogador.velCiber || 0) * 3.6), machQuebrado: !!jogador.machQuebrado }, veiculos: veiculos.map(v => ({ id: v.id, x: v.x, z: v.z, ry: v.ry, raio: v.raio })) }),
+    pose: () => ({
+      jogador: { x: jogador.x, y: jogador.y, z: jogador.z, ry: jogador.ry, acao: persAcao, agachado: jogador.agachado, rolando: jogador.rolando, golpeando: jogador.golpeando, sprintTravado: jogador.sprintTravado, velCiberKmh: Math.round((jogador.velCiber || 0) * 3.6), machQuebrado: !!jogador.machQuebrado },
+      cam: { x: +camera.position.x.toFixed(2), y: +camera.position.y.toFixed(2), z: +camera.position.z.toFixed(2), fov: +camera.fov.toFixed(2) },
+      veiculos: veiculos.map(v => ({ id: v.id, x: v.x, z: v.z, ry: v.ry, raio: v.raio })),
+    }),
     tecla: (code, on) => { if (on) teclas.add(code); else teclas.delete(code); },
     acoes: {
       agachar: v => alternarAgachar(v),

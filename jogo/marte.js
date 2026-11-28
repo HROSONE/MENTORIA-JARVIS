@@ -17,12 +17,12 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 export const ORIGEM_MARTE = new THREE.Vector3(60000, 0, 60000);
 const DURACAO_TRAVESSIA = 180; // 3 minutos (180 s) voando pelo Cinturão de Asteroides!
 const DIST_INICIAL = 100;      // 100% (225M km) -> 0%
-const CHEFE_HP_MAX = 180;
+const CHEFE_HP_MAX = 360;      // Nave Inimiga 2x mais resistente e forte (360 de vida)!
 const MAX_MISSEIS = 3;         // Até 3 mísseis pesados disponíveis!
 const DURACAO_RAJADA = 2.4;    // Duração da rajada ultra-rápida (s)
 const RECARGA_RAJADA = 15.0;   // 15 segundos exatos para a rajada voltar!
 const RAIO_EXPLOSAO_MISSIL = 52; // Explosão colossal que limpa muitos asteroides na frente!
-const DANO_MISSIL_CHEFE = 50;  // Dano pesado direto na Nave Inimiga!
+const DANO_MISSIL_CHEFE = 75;  // Dano pesado direto na Nave Inimiga (360 HP)!
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const suave = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
@@ -621,13 +621,16 @@ export class MissaoMarte {
     this.som.laser(1.25);
   }
 
-  /** Carrega nave_marte.glb (V2 HD), nave_inimiga.glb, marte.glb e os 3 asteroides esculpidos em Blender. */
+  /** Carrega a Lua (heightmap H!) + nave_marte.glb, nave_inimiga.glb, marte.glb e os 3 asteroides esculpidos em Blender. */
   async carregar() {
     if (this.carregado) return;
     if (this.carregando) return this.carregando;
     this.carregando = (async () => {
       const B = this.base;
-      const [gNave, gInimiga, gMarte, gA1, gA2, gA3] = await Promise.all([
+      // IMPORTANTE: aguarda this.lua.carregar() ANTES de _colocarNaveNaLua() para que lua.altura()
+      // retorne a altitude real do terreno lunar (e nunca 0, que enterrava a nave no regolito!).
+      const [, gNave, gInimiga, gMarte, gA1, gA2, gA3] = await Promise.all([
+        this.lua.carregar(),
         this.loader.loadAsync(`${B}/veiculos/nave_marte/nave_marte.glb`),
         this.loader.loadAsync(`${B}/cenarios/marte/nave_inimiga.glb`),
         this.loader.loadAsync(`${B}/cenarios/marte/marte.glb`),
@@ -654,6 +657,31 @@ export class MissaoMarte {
         o.receiveShadow = true;
         if (o.name === 'TelaPainel') {
           o.material = new THREE.MeshBasicMaterial({ map: this.painelCanvas.tex, side: THREE.DoubleSide });
+        } else if (o.material && !Array.isArray(o.material)) {
+          // Calibra PBR para vácuo espacial / lunar (sem envMap): preserva contraste rico do casco escuro,
+          // faixas laranja, dutos de cobre e emissivos de sensores/motores tanto no Leve quanto no Alto!
+          const m = o.material.clone();
+          if (m.isMeshStandardMaterial) {
+            m.metalness = Math.min(m.metalness ?? 0.3, 0.34);
+            m.roughness = clamp(m.roughness ?? 0.42, 0.25, 0.68);
+            if (m.name === 'Motor_PlasmaCore') {
+              m.emissive = new THREE.Color(0x38bdf8);
+              m.emissiveIntensity = 1.6;
+            } else if (m.name === 'Canhao_Emissor') {
+              m.emissive = new THREE.Color(0xf97316);
+              m.emissiveIntensity = 1.1;
+            } else if (m.name === 'Sensor_Ciano') {
+              m.emissive = new THREE.Color(0x0ea5e9);
+              m.emissiveIntensity = 1.25;
+            } else if (m.name === 'Led_Verde') {
+              m.emissive = new THREE.Color(0x22c55e);
+              m.emissiveIntensity = 1.5;
+            } else if (m.name === 'Led_Vermelho') {
+              m.emissive = new THREE.Color(0xef4444);
+              m.emissiveIntensity = 1.5;
+            }
+          }
+          o.material = m;
         }
       }
     });
@@ -689,29 +717,141 @@ export class MissaoMarte {
   }
 
   _colocarNaveNaLua() {
-    if (this.naveLua || !this.tplNave) return;
     const O = this.lua.ORIGEM;
     const lx = this.naveLuaPos.x, lz = this.naveLuaPos.z;
-    const y = this.lua.altura(O.x + lx, O.z + lz);
-    this.naveLuaPos.y = y;
+
+    // Amostra grade 9x9 sob toda a envergadura ([-5.6..5.6] m) para achar o ponto mais alto e o mais baixo do terreno lunar!
+    let yMax = -Infinity, yMin = Infinity;
+    for (let ix = -4; ix <= 4; ix++) {
+      for (let iz = -4; iz <= 4; iz++) {
+        const ax = lx + ix * 1.4;
+        const az = lz + iz * 1.4;
+        const h = this.lua.altura(O.x + ax, O.z + az);
+        if (h > yMax) yMax = h;
+        if (h < yMin) yMin = h;
+      }
+    }
+    if (!Number.isFinite(yMax)) { yMax = 1.65; yMin = 1.1; }
+
+    // Plataforma de Pouso Lunar HRYZ-MARS: convés 100% plano acima do ponto mais alto do regolito,
+    // com fundação metálica profunda ancorada abaixo de yMin para NUNCA flutuar nem enterrar a nave!
+    const yDeck = yMax + 0.24;
+    this.padDeckY = yDeck;
+    this.naveLuaRy = -0.78; // ângulo 3/4 heroico mostrando proa, cabine, asas, canhões e faixas laranjas!
+
+    if (!this.padMarteLua) {
+      const padG = new THREE.Group();
+      padG.name = 'PlataformaPousoMarteLua';
+      const altFund = Math.max(1.6, (yDeck - yMin) + 1.4);
+      const fund = new THREE.Mesh(
+        new THREE.CylinderGeometry(5.55, 6.25, altFund, 24),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.72, metalness: 0.32 })
+      );
+      fund.position.set(lx, yDeck - altFund / 2 - 0.08, lz);
+      fund.receiveShadow = true;
+      fund.castShadow = true;
+
+      const conv = new THREE.Mesh(
+        new THREE.CylinderGeometry(5.35, 5.55, 0.18, 24),
+        new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.55, metalness: 0.35 })
+      );
+      conv.position.set(lx, yDeck - 0.09, lz);
+      conv.receiveShadow = true;
+
+      const borda = new THREE.Mesh(
+        new THREE.RingGeometry(4.75, 5.18, 32),
+        new THREE.MeshBasicMaterial({ color: 0xf97316, side: THREE.DoubleSide })
+      );
+      borda.rotation.x = -Math.PI / 2;
+      borda.position.set(lx, yDeck + 0.012, lz);
+
+      const centroH = new THREE.Mesh(
+        new THREE.RingGeometry(1.8, 2.05, 28),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })
+      );
+      centroH.rotation.x = -Math.PI / 2;
+      centroH.position.set(lx, yDeck + 0.014, lz);
+
+      // 4 balizas luminosas nos cantos da plataforma lunar
+      for (let k = 0; k < 4; k++) {
+        const ang = (k * Math.PI) / 2 + Math.PI / 4;
+        const bx = lx + Math.cos(ang) * 5.05;
+        const bz = lz + Math.sin(ang) * 5.05;
+        const poste = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.10, 0.14, 0.36, 8),
+          new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 })
+        );
+        poste.position.set(bx, yDeck + 0.18, bz);
+        const luzB = new THREE.Mesh(
+          new THREE.SphereGeometry(0.13, 10, 8),
+          new THREE.MeshBasicMaterial({ color: k % 2 === 0 ? 0x38bdf8 : 0xf97316 })
+        );
+        luzB.position.set(bx, yDeck + 0.40, bz);
+        padG.add(poste, luzB);
+      }
+
+      // Rampa maciça apontando na direção do foguete HRYZ-1 (enterrada na base p/ nunca sobrar fresta no declive!)
+      const dirRampa = Math.atan2(-lx, -lz);
+      const rampa = new THREE.Mesh(
+        new THREE.BoxGeometry(2.5, 0.78, 4.1),
+        new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.65, metalness: 0.3 })
+      );
+      rampa.position.set(lx + Math.sin(dirRampa) * 6.0, yDeck - 0.74, lz + Math.cos(dirRampa) * 6.0);
+      rampa.rotation.order = 'YXZ';
+      rampa.rotation.y = dirRampa;
+      rampa.rotation.x = 0.25;
+      rampa.receiveShadow = true;
+
+      padG.add(fund, conv, borda, centroH, rampa);
+      this.lua.raiz.add(padG);
+      this.padMarteLua = padG;
+    }
+
+    if (this.naveLua || !this.tplNave) return;
 
     const prep = this._prepararNave(this.tplNave.clone(true));
-    prep.obj.position.set(lx, y, lz);
-    prep.obj.rotation.y = -0.65;
     if (prep.trem) prep.trem.visible = true;
+    prep.obj.position.set(0, 0, 0);
+    prep.obj.rotation.set(0, 0, 0);
+    prep.obj.updateMatrixWorld(true);
+    const bbox = new THREE.Box3().setFromObject(prep.obj);
+    const minY = Number.isFinite(bbox.min.y) ? bbox.min.y : 0;
+
+    // Assenta os esquis do Trem de Pouso EXATAMENTE em cima do convés plano (yDeck)!
+    const yNave = yDeck - minY + 0.015;
+    this.naveLuaPos.y = yNave;
+
+    prep.obj.position.set(lx, yNave, lz);
+    prep.obj.rotation.set(0, this.naveLuaRy, 0);
     this.lua.raiz.add(prep.obj);
     this.naveLua = prep;
 
     const g = new THREE.Group();
-    g.position.set(lx, y + 0.08, lz);
+    g.position.set(lx, yDeck + 0.04, lz);
     const anel = new THREE.Mesh(
-      new THREE.RingGeometry(4.6, 5.1, 40),
-      new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.72, side: THREE.DoubleSide, depthWrite: false })
+      new THREE.RingGeometry(5.55, 6.05, 44),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.72, side: THREE.DoubleSide, depthWrite: false })
     );
     anel.rotation.x = -Math.PI / 2;
     g.add(anel);
     this.lua.raiz.add(g);
     this.marcNave = g;
+  }
+
+  /** Retorna a altura do convés/rampa da Plataforma Lunar da Nave Marte (ou null se fora dela). */
+  alturaPadMarte(wx, wz) {
+    if (!this.lua.ativa || !this.padMarteLua || this.padDeckY === undefined) return null;
+    const O = this.lua.ORIGEM;
+    const dx = wx - (O.x + this.naveLuaPos.x);
+    const dz = wz - (O.z + this.naveLuaPos.z);
+    const d = Math.hypot(dx, dz);
+    if (d <= 5.45) return this.padDeckY;
+    if (d <= 7.8) {
+      const hChao = this.lua.altura(wx, wz);
+      const k = 1 - (d - 5.45) / (7.8 - 5.45);
+      return hChao + (this.padDeckY - hChao) * clamp(k, 0, 1);
+    }
+    return null;
   }
 
   _montarArenaEspacial() {
@@ -1101,7 +1241,7 @@ export class MissaoMarte {
   interacaoLua(jx, jz) {
     if (!this.lua.ativa || this.ativa || !this.naveLua) return null;
     const p = this.posNaveNaLuaMundo();
-    if (Math.hypot(jx - p.x, jz - p.z) < 6.4) {
+    if (Math.hypot(jx - p.x, jz - p.z) < 7.6) {
       return {
         texto: '[E] 🚀 Embarcar na Nave · Missão Marte',
         fazer: () => this.iniciarDaLua(true),
@@ -1112,11 +1252,10 @@ export class MissaoMarte {
 
   /** Inicia a Missão Marte — esconde imediatamente o Astronauta na Lua para não ficar duplicado na decolagem! */
   async iniciarDaLua(comDecolagem = true) {
-    await this.carregar();
-    this._limparEntidades();
-
-    // Esconde o modelo do astronauta na Lua assim que ele entra na nave!
+    // Esconde imediatamente o modelo do astronauta na Lua no mesmo quadro do clique [E]!
     this.definirVisibilidadeJogador?.(false);
+    if (!this.carregado) await this.carregar();
+    this._limparEntidades();
 
     this.t = 0;
     this.tempoVoo = 0;
@@ -1172,7 +1311,7 @@ export class MissaoMarte {
       this.estado = 'cine_decolagem';
       this.raiz.visible = false;
       this.naveLua.obj.position.set(this.naveLuaPos.x, this.naveLuaPos.y, this.naveLuaPos.z);
-      this.naveLua.obj.rotation.set(0, -0.65, 0);
+      this.naveLua.obj.rotation.set(0, this.naveLuaRy ?? -0.78, 0);
       if (this.naveLua.trem) this.naveLua.trem.visible = true;
       for (const c of this.naveLua.chamas) c.visible = true;
       if (this.marcNave) this.marcNave.visible = false;
@@ -1259,7 +1398,7 @@ export class MissaoMarte {
     this.t = 0;
     this.chefeHp = CHEFE_HP_MAX;
     this.chefePos.set(0, 3.5, 74);
-    this.chefeCoolTiro = 0.85;
+    this.chefeCoolTiro = 0.65;
     this.chefePadrao = 0;
     // Reabastece o compartimento para até 3 mísseis pesados no início do duelo contra o Chefe!
     this.misseis = MAX_MISSEIS;
@@ -1289,7 +1428,7 @@ export class MissaoMarte {
     this.elBossBox?.classList.remove('oculto');
     this.elTouchMarte?.classList.remove('oculto');
     this._atualizarHud();
-    this.toast?.('👾 NAVE INIMIGA BLOQUEANDO MARTE! Use Tiro (1x), Rajada Rápida (15s) e seus 3 Mísseis Pesados!');
+    this.toast?.('👾 NAVE INIMIGA 2X MAIS FORTE (360 HP)! Use Tiro (1x), Rajada (15s) e seus 3 Mísseis Pesados!');
   }
 
   _iniciarDestruicaoChefe() {
@@ -1323,9 +1462,6 @@ export class MissaoMarte {
     if (this.naveInimiga) this.naveInimiga.visible = false;
     this.barraChefe3D.sprite.visible = false;
 
-    // ENQUADRAMENTO 100% DE MARTE NA TELA:
-    // Em z=265 com escala 0.70 (raio=73.5, halo=82.6) e câmera em z=-36 (dist=301, fov=46),
-    // o globo inteiro de Marte + atmosfera ficam 100% visíveis na tela com margem estrelada!
     this.marteGrupo.position.set(0, 4, 265);
     this.marteGrupo.scale.setScalar(0.70);
 
@@ -1337,7 +1473,7 @@ export class MissaoMarte {
       c.visible = true;
       c.userData.matExt?.color.setHex(0x38bdf8);
     }
-    this._mostrarCine(true, '🪐 CAMINHO LIVRE · ÓRBITA DE MARTE ALCANÇADA');
+    this._mostrarCine(true, '🪐 CAMINHO LIVRE · RUMO À ATMOSFERA DE MARTE');
   }
 
   pularCutscene() {
@@ -1356,6 +1492,7 @@ export class MissaoMarte {
 
   _mostrarFinal() {
     this.estado = 'fim';
+    this.t = 0;
     if (this.naveVoo) this.naveVoo.visible = false;
     this._mostrarCine(true, '');
     if (this.elCinePular) this.elCinePular.classList.add('oculto');
@@ -1382,7 +1519,7 @@ export class MissaoMarte {
 
     if (this.naveLua) {
       this.naveLua.obj.position.set(this.naveLuaPos.x, this.naveLuaPos.y, this.naveLuaPos.z);
-      this.naveLua.obj.rotation.set(0, -0.65, 0);
+      this.naveLua.obj.rotation.set(0, this.naveLuaRy ?? -0.78, 0);
       if (this.naveLua.trem) this.naveLua.trem.visible = true;
       for (const c of this.naveLua.chamas) c.visible = false;
       if (this.marcNave) this.marcNave.visible = true;
@@ -1733,30 +1870,30 @@ export class MissaoMarte {
     }
   }
 
-  // ---- Disparos da Nave Inimiga Interdimensional ---------------------------------------------------
+  // ---- Disparos da Nave Inimiga Interdimensional (2X MAIS FORTE!) -----------------------------------
   _dispararAtaqueChefe() {
-    const furia = this.chefeHp < CHEFE_HP_MAX * 0.52;
+    const furia = this.chefeHp < CHEFE_HP_MAX * 0.55;
     this.chefePadrao = (this.chefePadrao + 1) % 3;
     this.som.tiroInimigo();
 
     const origem = this.chefePos.clone().add(new THREE.Vector3(0, -0.3, -4.5));
-    // Predição suave da posição da nossa nave
+    // Predição afiada da trajetória da nossa nave
     const alvo = new THREE.Vector3(
-      this.shipPos.x + this.shipVel.x * 0.35,
-      this.shipPos.y + 1.1 + this.shipVel.y * 0.35,
+      this.shipPos.x + this.shipVel.x * 0.42,
+      this.shipPos.y + 1.1 + this.shipVel.y * 0.42,
       this.shipPos.z
     );
 
     const criarTiroInimigo = (pos, dir, vel, raio, dano, roxo = false) => {
       const g = new THREE.Group();
       const m = new THREE.Mesh(
-        new THREE.SphereGeometry(raio * 0.52, 10, 8),
+        new THREE.SphereGeometry(raio * 0.56, 10, 8),
         new THREE.MeshBasicMaterial({ color: roxo ? 0xe879f9 : 0xfb7185 })
       );
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({
         map: roxo ? this.texRoxo : this.texInimigo, blending: THREE.AdditiveBlending, depthWrite: false,
       }));
-      sp.scale.setScalar(raio * 3.4);
+      sp.scale.setScalar(raio * 3.6);
       g.add(m, sp);
       g.position.copy(pos);
       this.raiz.add(g);
@@ -1764,28 +1901,32 @@ export class MissaoMarte {
     };
 
     if (this.chefePadrao === 0) {
-      // Rajada dupla de canhões das asas mirando no jogador
-      for (const sx of [-5.2, 5.2]) {
+      // Salva tripla/quádrupla veloz dos canhões das asas mirando no jogador
+      for (const sx of [-5.8, -2.6, 2.6, 5.8]) {
+        if (!furia && Math.abs(sx) < 3) continue;
         const p = origem.clone().add(new THREE.Vector3(sx, 0, 1.5));
         const dir = alvo.clone().sub(p);
-        criarTiroInimigo(p, dir, furia ? 112 : 96, 0.95, furia ? 16 : 12, false);
+        criarTiroInimigo(p, dir, furia ? 124 : 108, 1.05, furia ? 22 : 18, false);
       }
-      this.chefeCoolTiro = furia ? 0.62 : 0.88;
+      this.chefeCoolTiro = furia ? 0.50 : 0.70;
     } else if (this.chefePadrao === 1) {
-      // Leque interdimensional de 5 esferas púrpura/rubras (obriga desvio espacial!)
+      // Leque interdimensional amplo de 7 esferas púrpura/rubras!
       const baseDir = alvo.clone().sub(origem).normalize();
-      for (let k = -2; k <= 2; k++) {
+      for (let k = -3; k <= 3; k++) {
         const d = baseDir.clone();
-        d.x += k * 0.13;
-        d.y += (Math.abs(k) === 1 ? 0.05 : -0.03);
-        criarTiroInimigo(origem, d, furia ? 92 : 80, 0.85, 11, true);
+        d.x += k * 0.115;
+        d.y += (Math.abs(k) % 2 === 1 ? 0.055 : -0.035);
+        criarTiroInimigo(origem, d, furia ? 104 : 92, 0.92, furia ? 18 : 15, true);
       }
-      this.chefeCoolTiro = furia ? 0.95 : 1.25;
+      this.chefeCoolTiro = furia ? 0.78 : 1.02;
     } else {
-      // Torpedo pesado de Plasma Rubro do olho central
-      const dir = alvo.clone().sub(origem);
-      criarTiroInimigo(origem, dir, furia ? 88 : 76, 1.55, 22, false);
-      this.chefeCoolTiro = furia ? 0.78 : 1.05;
+      // Par de Torpedos Pesados de Plasma Rubro do núcleo central!
+      for (const ox of [-1.8, 1.8]) {
+        const p = origem.clone().add(new THREE.Vector3(ox, 0, 0));
+        const dir = alvo.clone().sub(p);
+        criarTiroInimigo(p, dir, furia ? 98 : 86, 1.65, furia ? 30 : 25, false);
+      }
+      this.chefeCoolTiro = furia ? 0.65 : 0.88;
     }
   }
 
@@ -2592,46 +2733,63 @@ export class MissaoMarte {
       return { p: pCam, a: aCam, fov: 48 };
     }
 
-    // -------------------------------------------------------- CUTSCENE FINAL: MARTE 100% NA TELA + CÂMERA MEXENDO POUCO PRO LADO
+    // -------------------------------------------------------- CUTSCENE FINAL: VOO RUMO A MARTE + APROXIMAÇÃO LENTA DE 3 SEGUNDOS FINALIZANDO!
     if (this.estado === 'cine_chegada') {
-      this._atualizarWarp(dt, 0.28);
-      const dur = 9.0;
-      const u = clamp(this.t / dur, 0, 1);
+      // Duração total: 4.5s (nave mergulhando em Marte) + 3.0s EXATOS de aproximação lenta da câmera rumo a Marte!
+      const tMergulho = 4.5;
+      const tAproxFinal = 3.0;
+      const dur = tMergulho + tAproxFinal; // 7.5s
+      this._atualizarWarp(dt, this.t < tMergulho ? 0.62 : 0.38);
+      if (this.marteMalha) this.marteMalha.rotation.y += dt * 0.045; // rotação viva extra das nuvens/cânions de Marte!
 
-      // A nave voa direto para dentro de Marte e diminui suavemente até sumir na atmosfera!
-      const kVoo = suave(clamp((this.t - 0.8) / 7.4, 0, 1));
-      const sx = -6.5 * (1 - kVoo) + Math.sin(kVoo * Math.PI) * 2.2;
-      const sy = -2.2 * (1 - kVoo) + 4.0 * kVoo;
-      const sz = -14 + kVoo * 204; // de z=-14 até z=190 (superfície frontal de Marte em 265 - 73.5 = 191.5!)
+      // Etapa 1 (0 .. 4.5s): a nave acelera da câmera direto para dentro da atmosfera de Marte!
+      const kVoo = suave(clamp(this.t / tMergulho, 0, 1));
+      const sx = -7.2 * (1 - kVoo) + Math.sin(kVoo * Math.PI) * 2.8;
+      const sy = -2.4 * (1 - kVoo) + 4.0 * kVoo;
+      const sz = -12 + kVoo * 204; // mergulha até a atmosfera frontal de Marte (z ≈ 192)
       this.naveVoo.position.set(sx, sy, sz);
-      this.naveVoo.rotation.set(-0.035, 0.05 * (1 - kVoo), -0.14 * Math.sin(kVoo * Math.PI));
-      const escNave = Math.max(0.02, 1.0 - Math.pow(kVoo, 2.1) * 0.97);
+      this.naveVoo.rotation.set(-0.045, 0.08 * (1 - kVoo), -0.18 * Math.sin(kVoo * Math.PI));
+      const escNave = Math.max(0.015, 1.0 - Math.pow(kVoo, 2.0) * 0.985);
       this.naveVoo.scale.setScalar(escNave);
-      this.naveVoo.visible = kVoo < 0.96;
+      this.naveVoo.visible = this.t < tMergulho * 0.98;
       for (const c of this.chamasVoo) {
-        c.visible = true;
-        c.scale.set(1, 1, 1.2 + 0.2 * Math.sin(this.t * 45));
+        c.visible = this.naveVoo.visible;
+        c.scale.set(1, 1, 1.3 + 0.25 * Math.sin(this.t * 48));
       }
 
-      // Câmera mexe POUCO para o lado (-4.2 -> +4.2), mantendo o Planeta Marte 100% inteiro no quadro!
-      const panX = -4.2 + suave(u) * 8.4;
-      const panY = 4.2 - suave(u) * 0.3;
-      const panZ = -36 + suave(u) * 3.0;
+      // Etapa 2 (4.5s .. 7.5s -> 3 SEGUNDOS FINALIZANDO!): a câmera se aproxima lentamente de Marte!
+      const kFase1 = suave(clamp(this.t / tMergulho, 0, 1));
+      const kAprox3s = suave(clamp((this.t - tMergulho) / tAproxFinal, 0, 1));
+
+      const panX = -6.5 * (1 - kFase1) + Math.sin(kAprox3s * Math.PI * 0.5) * 1.4;
+      const panY = 4.8 - kFase1 * 0.5 - kAprox3s * 0.3;
+      // Avança suavemente (-108 -> -86) acompanhando o mergulho da nave, e nos 3s finais aproxima lentamente (-86 -> -16) deixando Marte imenso e 100% visível na tela!
+      const panZ = -108 + kFase1 * 22 + kAprox3s * 70;
+      const fovDin = 48 - kAprox3s * 3.0;
+
       const pCam = ORIGEM_MARTE.clone().add(new THREE.Vector3(panX, panY, panZ));
       const aCam = ORIGEM_MARTE.clone().add(new THREE.Vector3(0, 4, 265));
 
-      if (this.t > 4.0 && this.elCineLeg) {
-        this.elCineLeg.textContent = '🚀 ENTRANDO NA ATMOSFERA DE MARTE…';
+      if (this.elCineLeg) {
+        if (this.t >= tMergulho) {
+          this.elCineLeg.textContent = '🪐 APROXIMANDO DE MARTE…';
+        } else if (this.t > 2.2) {
+          this.elCineLeg.textContent = '🚀 ENTRANDO NA ATMOSFERA DE MARTE…';
+        }
       }
       if (this.t >= dur) this._mostrarFinal();
-      return { p: pCam, a: aCam, fov: 46 };
+      return { p: pCam, a: aCam, fov: fovDin };
     }
 
-    // -------------------------------------------------------- TELA FINAL: "Nos veremos lá" (Marte 100% na tela!)
+    // -------------------------------------------------------- TELA FINAL: "Nos veremos lá" (deriva orbital suave com Marte 100% na tela!)
     if (this.estado === 'fim') {
-      const pCam = ORIGEM_MARTE.clone().add(new THREE.Vector3(4.2, 3.9, -33));
+      this._atualizarWarp(dt, 0.18);
+      if (this.marteMalha) this.marteMalha.rotation.y += dt * 0.035;
+      const driftZ = Math.min(8, this.t * 1.1);
+      const driftX = 1.4 + Math.sin(this.t * 0.35) * 1.6;
+      const pCam = ORIGEM_MARTE.clone().add(new THREE.Vector3(driftX, 4.0, -16 + driftZ));
       const aCam = ORIGEM_MARTE.clone().add(new THREE.Vector3(0, 4, 265));
-      return { p: pCam, a: aCam, fov: 46 };
+      return { p: pCam, a: aCam, fov: 45 };
     }
 
     return null;
@@ -2642,7 +2800,7 @@ export class MissaoMarte {
     if (this.ativa) this._iniciarCutscenePortal();
   }
 
-  causarDanoChefe(valor = 200) {
+  causarDanoChefe(valor = 400) {
     if (this.estado !== 'chefe') return;
     this.chefeHp = Math.max(0, this.chefeHp - valor);
     this._atualizarHud();
@@ -2673,6 +2831,8 @@ export class MissaoMarte {
       tirosInimigosAtivos: this.tirosInimigos.length,
       explosoesAtivas: this.explosoes.length,
       naveNaLua: !!this.naveLua,
+      naveLuaY: +(this.naveLuaPos?.y ?? 0).toFixed(3),
+      padDeckY: +(this.padDeckY ?? 0).toFixed(3),
     };
   }
 }

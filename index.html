@@ -122,7 +122,7 @@
     border: 1px solid rgba(56, 189, 248, 0.7);
     background: rgba(15, 23, 42, 0.88);
     box-shadow: 0 0 22px rgba(56, 189, 248, 0.28);
-    pointer-events: none;
+    pointer-events: auto; cursor: pointer;
   }
 
   /* Toast de notificações */
@@ -632,6 +632,9 @@
   .fase-obj.feito { color: #86efac; text-decoration: line-through; opacity: 0.85; }
   body.em-cine #hud-fase { display: none !important; }
 
+  /* Fase Lunar: sem chuva, sem alternância dia/noite terrestre e sem teleporte de ruas */
+  body.modo-lua #select-teleporte, body.modo-lua #btn-noite, body.modo-lua #btn-chuva, body.modo-lua #btn-sirene { display: none !important; }
+
   /* Missão Marte: Cutscenes, Combate Espacial (Laser & Plasma), Chefe Interdimensional e Final "Nos veremos lá" */
   body.modo-marte #hud-esq, body.modo-marte #hud-base-dir, body.modo-marte #hud-velocista,
   body.modo-marte #touch-pe-dir, body.modo-marte #touch-carro-dir, body.modo-marte #touch-carro-esq,
@@ -885,7 +888,7 @@
     <div id="marte-boss-box" class="oculto">
       <div class="marte-boss-top">
         <span>👾 VIDA DA NAVE INIMIGA</span>
-        <span id="marte-boss-txt">180/180 (100%)</span>
+        <span id="marte-boss-txt">360/360 (100%)</span>
       </div>
       <div class="marte-boss-wrap"><i id="marte-boss-barra"></i></div>
     </div>

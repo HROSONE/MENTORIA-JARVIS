@@ -238,76 +238,82 @@ export class GerenciadorFases {
       { id: 'embarcar_lua', icone: '🚀', texto: 'Embarcar no Foguete rumo à Lua [E]', atual: 0, meta: 1 },
     ];
 
-    // 2 células de combustível criogênico brilhantes ao redor da plataforma (PAD em x=590, z=520)
-    const posCelulas = [[568, 509], [568, 531]];
+    // 2 células de combustível criogênico brilhantes assentadas no chão (y=0) na frente da rampa (PAD em x=590, z=520)
+    const posCelulas = [[570.5, 513.5], [570.5, 526.5]];
     for (const [cx, cz] of posCelulas) {
       const g = new THREE.Group();
-      g.position.set(cx, 0.22, cz);
+      g.position.set(cx, 0, cz);
+
+      const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.52, 0.62, 0.16, 16),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.45, metalness: 0.65 })
+      );
+      base.position.y = 0.08;
 
       const corpo = new THREE.Mesh(
         new THREE.CylinderGeometry(0.36, 0.36, 1.25, 14),
-        new THREE.MeshStandardMaterial({ color: 0x0ea5e9, emissive: 0x0284c7, emissiveIntensity: 1.25, roughness: 0.2, metalness: 0.55 })
+        new THREE.MeshStandardMaterial({ color: 0x0ea5e9, emissive: 0x0284c7, emissiveIntensity: 1.25, roughness: 0.2, metalness: 0.45 })
       );
-      corpo.position.y = 0.85;
+      corpo.position.y = 0.92;
       const tampa1 = new THREE.Mesh(
         new THREE.CylinderGeometry(0.40, 0.40, 0.16, 14),
-        new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.35, metalness: 0.65 })
+        new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.35, metalness: 0.55 })
       );
-      tampa1.position.y = 1.48;
+      tampa1.position.y = 1.55;
       const tampa2 = tampa1.clone();
-      tampa2.position.y = 0.24;
+      tampa2.position.y = 0.31;
 
       const anel = new THREE.Mesh(
         new THREE.RingGeometry(1.05, 1.38, 28),
-        new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.82 })
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })
       );
       anel.rotation.x = -Math.PI / 2;
-      anel.position.y = 0.05;
+      anel.position.y = 0.04;
 
       const feixe = new THREE.Mesh(
         new THREE.CylinderGeometry(0.45, 0.75, 9, 14, 1, true),
-        new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })
       );
       feixe.position.y = 4.5;
 
       const tanque = new THREE.Group();
       tanque.add(corpo, tampa1, tampa2);
-      g.add(tanque, anel, feixe);
+      g.add(base, tanque, anel, feixe);
       this.grupo.add(g);
       this.itens.push({ tipo: 'celula_foguete', x: cx, z: cz, g, anim: tanque, feito: false, raio: 3.1 });
     }
 
-    // 1 Terminal de Controle da Base ao lado da rampa de embarque do foguete
-    const tx = 579.5, tz = 513.0;
+    // 1 Terminal de Controle da Base assentado no chão (y=0) bem ao pé da rampa de embarque do foguete
+    const tx = 574.8, tz = 516.2;
     const gt = new THREE.Group();
-    gt.position.set(tx, 0.22, tz);
+    gt.position.set(tx, 0, tz);
     const ped = new THREE.Mesh(
-      new THREE.BoxGeometry(0.95, 1.22, 0.62),
-      new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.65 })
+      new THREE.BoxGeometry(0.95, 1.26, 0.62),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.55 })
     );
-    ped.position.y = 0.61;
+    ped.position.y = 0.63;
     const tela = new THREE.Mesh(
       new THREE.BoxGeometry(0.84, 0.52, 0.08),
-      new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x38bdf8, emissiveIntensity: 1.1, roughness: 0.2 })
+      new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x38bdf8, emissiveIntensity: 1.15, roughness: 0.2 })
     );
-    tela.position.set(0, 1.36, 0.12);
+    tela.position.set(0, 1.38, 0.12);
     tela.rotation.x = -0.32;
     const haste = new THREE.Mesh(
       new THREE.CylinderGeometry(0.04, 0.04, 1.2, 8),
-      new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.25 })
+      new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.7, roughness: 0.25 })
     );
-    haste.position.set(0.34, 1.82, -0.18);
+    haste.position.set(0.34, 1.84, -0.18);
     const led = new THREE.Mesh(
       new THREE.SphereGeometry(0.16, 12, 10),
       new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 1.6 })
     );
-    led.position.set(0.34, 2.46, -0.18);
+    led.position.set(0.34, 2.48, -0.18);
     const anelT = new THREE.Mesh(
       new THREE.RingGeometry(1.25, 1.60, 28),
-      new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })
+      new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })
     );
     anelT.rotation.x = -Math.PI / 2;
-    anelT.position.y = 0.05;
+    anelT.position.y = 0.04;
     gt.add(ped, tela, haste, led, anelT);
     this.grupo.add(gt);
     this.itens.push({
@@ -328,43 +334,55 @@ export class GerenciadorFases {
       { id: 'marte', icone: '🚀', texto: 'Embarcar na Nave rumo a Marte [E]', atual: 0, meta: 1 },
     ];
 
-    // 4 cristais brilhantes em crateras ao redor do foguete
-    const posCristais = [[18, 22], [-26, 16], [34, -24], [-18, -32]];
+    // 4 cristais brilhantes em crateras ao redor do foguete (com feixe vertical sutil p/ visualização clara na Lua)
+    const posCristais = [[22, 24], [-26, 16], [34, -24], [-18, -32]];
     const geoC = new THREE.OctahedronGeometry(0.55, 0);
     const matC = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0ea5e9, emissiveIntensity: 1.4, roughness: 0.15, metalness: 0.35 });
     const geoAnel = new THREE.RingGeometry(0.95, 1.25, 28);
-    const matAnel = new THREE.MeshBasicMaterial({ color: 0x7dd3fc, side: THREE.DoubleSide, transparent: true, opacity: 0.75 });
+    const matAnel = new THREE.MeshBasicMaterial({ color: 0x7dd3fc, side: THREE.DoubleSide, transparent: true, opacity: 0.78 });
     for (const [lx, lz] of posCristais) {
       const g = new THREE.Group();
       const y = alt(lx, lz);
       g.position.set(O.x + lx, y, O.z + lz);
       const cr = new THREE.Mesh(geoC.clone(), matC.clone());
-      cr.position.y = 0.9;
+      cr.position.y = 0.95;
       const an = new THREE.Mesh(geoAnel.clone(), matAnel.clone());
       an.rotation.x = -Math.PI / 2; an.position.y = 0.08;
-      g.add(cr, an);
+      const feixe = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.32, 0.55, 10, 12, 1, true),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.13, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })
+      );
+      feixe.position.y = 5.0;
+      g.add(cr, an, feixe);
       this.grupo.add(g);
-      this.itens.push({ tipo: 'cristal', x: O.x + lx, z: O.z + lz, g, anim: cr, feito: false, raio: 2.8 });
+      this.itens.push({ tipo: 'cristal', x: O.x + lx, z: O.z + lz, g, anim: cr, feito: false, raio: 2.9 });
     }
     geoC.dispose(); matC.dispose(); geoAnel.dispose(); matAnel.dispose();
 
-    // 2 sensores sísmicos para ativar com [E]
+    // 2 sensores sísmicos para ativar com [E] (assentados com base funda p/ nunca flutuar em encostas!)
     const posSensores = [[46, 8], [-44, -8]];
     for (const [lx, lz] of posSensores) {
       const g = new THREE.Group();
       const y = alt(lx, lz);
       g.position.set(O.x + lx, y, O.z + lz);
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.55, 0.65, 10), new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.6, roughness: 0.3 }));
+      const sapata = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.68, 0.9, 12), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.45, roughness: 0.5 }));
+      sapata.position.y = -0.25;
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.55, 0.65, 10), new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.4, roughness: 0.35 }));
       base.position.y = 0.32;
-      const haste = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.7, 8), new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.7, roughness: 0.25 }));
+      const haste = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.7, 8), new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.5, roughness: 0.3 }));
       haste.position.y = 1.4;
-      const led = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 1.5 }));
+      const led = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 1.6 }));
       led.position.y = 2.3;
-      const an = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.4, 28), new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide, transparent: true, opacity: 0.7 }));
-      an.rotation.x = -Math.PI / 2; an.position.y = 0.08;
-      g.add(base, haste, led, an);
+      const an = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.4, 28), new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide, transparent: true, opacity: 0.78 }));
+      an.rotation.x = -Math.PI / 2; an.position.y = 0.10;
+      const feixeS = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.35, 0.6, 11, 12, 1, true),
+        new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })
+      );
+      feixeS.position.y = 5.5;
+      g.add(sapata, base, haste, led, an, feixeS);
       this.grupo.add(g);
-      this.itens.push({ tipo: 'sensor', x: O.x + lx, z: O.z + lz, g, led, anel: an, feito: false, raio: 3.4, prompt: '[E] 📡 Ativar Sensor Sísmico Lunar' });
+      this.itens.push({ tipo: 'sensor', x: O.x + lx, z: O.z + lz, g, led, anel: an, feixe: feixeS, feito: false, raio: 3.5, prompt: '[E] 📡 Ativar Sensor Sísmico Lunar' });
     }
 
     // 1 ponto de Bandeira Hryz no mirante da cratera
@@ -561,6 +579,7 @@ export class GerenciadorFases {
       it.led.material.color.setHex(0x22c55e);
       it.led.material.emissive.setHex(0x22c55e);
       it.anel.material.color.setHex(0x22c55e);
+      if (it.feixe) it.feixe.visible = false;
       this.som?.tocarBeep?.(780, 0.18, 0.08);
       this.toast?.('📡 Sensor Sísmico Lunar ativado! Dados enviados à Terra.');
       this._progresso('sensores', 1, true);
