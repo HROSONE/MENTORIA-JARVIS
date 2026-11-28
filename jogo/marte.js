@@ -18,6 +18,11 @@ export const ORIGEM_MARTE = new THREE.Vector3(60000, 0, 60000);
 const DURACAO_TRAVESSIA = 180; // 3 minutos (180 s) voando pelo Cinturão de Asteroides!
 const DIST_INICIAL = 100;      // 100% (225M km) -> 0%
 const CHEFE_HP_MAX = 180;
+const MAX_MISSEIS = 3;         // Até 3 mísseis pesados disponíveis!
+const DURACAO_RAJADA = 2.4;    // Duração da rajada ultra-rápida (s)
+const RECARGA_RAJADA = 15.0;   // 15 segundos exatos para a rajada voltar!
+const RAIO_EXPLOSAO_MISSIL = 52; // Explosão colossal que limpa muitos asteroides na frente!
+const DANO_MISSIL_CHEFE = 50;  // Dano pesado direto na Nave Inimiga!
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const suave = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
@@ -178,7 +183,70 @@ function criarTelaPainelDinamica() {
   return { tex, desenhar };
 }
 
-/** Áudio sci-fi procedural (WebAudio): laser, plasma, tiro inimigo, portal interdimensional, explosão e reparo. */
+/** Cria uma barra de vida flutuante 3D (Sprite CanvasTexture) para exibir a vida restante da Nave Inimiga acima dela! */
+function criarBarraVida3D() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 96;
+  const g = c.getContext('2d');
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(22, 4.1, 1);
+  sprite.visible = false;
+  sprite.renderOrder = 15;
+  let ultimoValor = -1;
+
+  function atualizar(hp, hpMax) {
+    const h = Math.max(0, Math.ceil(hp));
+    if (h === ultimoValor) return;
+    ultimoValor = h;
+    const k = clamp(hp / hpMax, 0, 1);
+
+    g.clearRect(0, 0, 512, 96);
+    // Moldura escura translúcida
+    g.fillStyle = 'rgba(15, 7, 26, 0.88)';
+    g.strokeStyle = 'rgba(232, 121, 249, 0.92)';
+    g.lineWidth = 4;
+    g.beginPath();
+    g.roundRect(12, 10, 488, 76, 16);
+    g.fill();
+    g.stroke();
+
+    // Título e valor numérico do que ela ainda tem de vida
+    g.font = '900 22px system-ui, sans-serif';
+    g.fillStyle = '#fae8ff';
+    g.textAlign = 'left';
+    g.fillText('👾 VIDA INIMIGA', 28, 39);
+    g.textAlign = 'right';
+    g.fillStyle = k < 0.35 ? '#fda4af' : '#f0abfc';
+    g.fillText(`${h}/${hpMax} (${Math.ceil(k * 100)}%)`, 484, 39);
+
+    // Trilho da barra
+    g.fillStyle = 'rgba(0, 0, 0, 0.72)';
+    g.beginPath();
+    g.roundRect(26, 50, 460, 22, 10);
+    g.fill();
+
+    // Preenchimento colorido da vida restante
+    if (k > 0) {
+      const grad = g.createLinearGradient(26, 0, 486, 0);
+      grad.addColorStop(0, '#a855f7');
+      grad.addColorStop(0.5, '#ec4899');
+      grad.addColorStop(1, '#ef4444');
+      g.fillStyle = grad;
+      g.beginPath();
+      g.roundRect(26, 50, Math.max(12, 460 * k), 22, 10);
+      g.fill();
+    }
+    tex.needsUpdate = true;
+  }
+
+  atualizar(CHEFE_HP_MAX, CHEFE_HP_MAX);
+  return { sprite, atualizar };
+}
+
+/** Áudio sci-fi procedural (WebAudio): tiro único, rajada ultra-rápida, lançamento/explosão de míssil, tiro inimigo e portal. */
 class SomEspacial {
   constructor() { this.ctx = null; this.mudo = false; }
   _garantir() {
@@ -196,12 +264,66 @@ class SomEspacial {
     const now = ctx.currentTime;
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = 'sawtooth';
-    o.frequency.setValueAtTime(980 + 260 * fraco, now);
-    o.frequency.exponentialRampToValueAtTime(210, now + 0.11);
-    g.gain.setValueAtTime(0.075, now);
+    o.frequency.setValueAtTime(1040 + 260 * fraco, now);
+    o.frequency.exponentialRampToValueAtTime(220, now + 0.11);
+    g.gain.setValueAtTime(0.085, now);
     g.gain.exponentialRampToValueAtTime(0.0008, now + 0.12);
     o.connect(g); g.connect(ctx.destination);
     o.start(now); o.stop(now + 0.13);
+  }
+  tiroRapido() {
+    const ctx = this._garantir(); if (!ctx) return;
+    const now = ctx.currentTime;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(1450 + Math.random() * 260, now);
+    o.frequency.exponentialRampToValueAtTime(340, now + 0.055);
+    g.gain.setValueAtTime(0.055, now);
+    g.gain.exponentialRampToValueAtTime(0.0008, now + 0.06);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(now); o.stop(now + 0.065);
+  }
+  missilLancamento() {
+    const ctx = this._garantir(); if (!ctx) return;
+    const now = ctx.currentTime;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(140, now);
+    o.frequency.exponentialRampToValueAtTime(620, now + 0.28);
+    g.gain.setValueAtTime(0.14, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(now); o.stop(now + 0.38);
+  }
+  explosaoMissil() {
+    const ctx = this._garantir(); if (!ctx) return;
+    const now = ctx.currentTime;
+    const dur = 0.95;
+    const len = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      const k = 1 - i / len;
+      d[i] = (Math.random() * 2 - 1) * Math.pow(k, 1.4);
+    }
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass';
+    f.frequency.setValueAtTime(880, now);
+    f.frequency.exponentialRampToValueAtTime(48, now + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.34, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    src.connect(f); f.connect(g); g.connect(ctx.destination);
+    src.start(now);
+
+    const sub = ctx.createOscillator(), gs = ctx.createGain();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(115, now);
+    sub.frequency.exponentialRampToValueAtTime(28, now + 0.75);
+    gs.gain.setValueAtTime(0.26, now);
+    gs.gain.exponentialRampToValueAtTime(0.001, now + 0.78);
+    sub.connect(gs); gs.connect(ctx.destination);
+    sub.start(now); sub.stop(now + 0.8);
   }
   plasma() {
     const ctx = this._garantir(); if (!ctx) return;
@@ -334,27 +456,33 @@ export class MissaoMarte {
     this.portalMat = null;
     this.portalAneis = [];
     this.naveInimiga = null;
+    this.barraChefe3D = criarBarraVida3D();
     this.estrelasWarp = null;
     this.luzSolMarte = null;
     this.luzAmbMarte = null;
 
-    // Estado de voo, degradação mecânica e câmeras 360°
+    // Estado de voo, vida da nave, degradação mecânica e 3 armas táticas:
+    // 1) Tiro Normal (1 clique = 1 tiro) | 2) Rajada Ultra-Rápida (15s recarga) | 3) Míssil Pesado (até 3x)
     this.shipPos = new THREE.Vector3(0, 0, 0);
     this.shipVel = new THREE.Vector2(0, 0);
-    this.escudo = 100;
+    this.escudo = 100;         // Vida da nossa nave (0..100)
     this.forcaNave = 100;      // 100% -> 25%: reduz velocidade, manobrabilidade, propulsão e armas ao bater!
     this.batidas = 0;
     this.tempoSemDano = 0;
     this.destruidos = 0;
     this.distancia = DIST_INICIAL;
     this.coolLaser = 0;
-    this.coolPlasma = 0;
+    this.ladoCanhao = 1;       // Alterna canhão esquerdo/direito a cada clique!
+    this.rajadaTempo = 0;      // >0 enquanto dispara a rajada ultra-rápida!
+    this.coolRajada = 0;       // 15.0s -> 0s de recarga após a rajada!
+    this.stepRajada = 0;
+    this.misseis = MAX_MISSEIS; // Até 3 mísseis pesados!
+    this.coolMissil = 0;
+    this.timerRecargaMissil = 0;
     this.spawnTimer = 0;
     this.faiscaTimer = 0;
     this.tremor = 0;
     this.danoFlash = 0;
-    this.laserAtivo = false;
-    this.plasmaAtivo = false;
 
     // Manobra evasiva 360° (barrel roll) + 4 ângulos de câmera + visão 360° livre
     this.giro360 = 0;          // >0 em rotação 360°
@@ -375,6 +503,7 @@ export class MissaoMarte {
 
     // Listas dinâmicas
     this.tiros = [];
+    this.misseisAtivos = [];
     this.tirosInimigos = [];
     this.asteroides = [];
     this.reparos = [];
@@ -382,7 +511,7 @@ export class MissaoMarte {
     this.faiscasMotor = [];
 
     this.texLaser = criarTexBrilho('rgba(224,242,254,1)', 'rgba(56,189,248,0.85)');
-    this.texPlasma = criarTexBrilho('rgba(255,240,255,1)', 'rgba(217,70,239,0.85)');
+    this.texPlasma = criarTexBrilho('rgba(255,245,255,1)', 'rgba(232,121,249,0.92)');
     this.texInimigo = criarTexBrilho('rgba(255,228,235,1)', 'rgba(244,63,94,0.90)');
     this.texFogo = criarTexBrilho('rgba(255,248,200,1)', 'rgba(249,115,22,0.85)');
     this.texRoxo = criarTexBrilho('rgba(250,232,255,1)', 'rgba(168,85,247,0.88)');
@@ -392,6 +521,7 @@ export class MissaoMarte {
     this.elHud = document.getElementById('hud-marte');
     this.elDist = document.getElementById('marte-dist');
     this.elTempo = document.getElementById('marte-tempo');
+    this.elMisseisHud = document.getElementById('marte-misseis-hud');
     this.elAst = document.getElementById('marte-ast');
     this.elEscudo = document.getElementById('marte-escudo-barra');
     this.elEscudoTxt = document.getElementById('marte-escudo-txt');
@@ -407,6 +537,13 @@ export class MissaoMarte {
     this.elFinal = document.getElementById('marte-final');
     this.elTouchMarte = document.getElementById('touch-marte');
     this.elTouchCamTxt = document.getElementById('touch-cam-txt');
+    this.elBtnLaser = document.getElementById('touch-laser');
+    this.elBtnRajada = document.getElementById('touch-plasma');
+    this.elRajadaIco = document.getElementById('touch-rajada-ico');
+    this.elRajadaTxt = document.getElementById('touch-rajada-txt');
+    this.elBtnMissil = document.getElementById('touch-missil');
+    this.elMissilIco = document.getElementById('touch-missil-ico');
+    this.elMissilTxt = document.getElementById('touch-missil-txt');
     this.elDanoMarte = document.getElementById('marte-flash');
 
     this._vincularUI();
@@ -430,16 +567,21 @@ export class MissaoMarte {
       this.iniciarGiro360(1);
     });
 
-    const bindHold = (id, fn) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.addEventListener('pointerdown', e => { e.preventDefault(); fn(true); });
-      el.addEventListener('pointerup', () => fn(false));
-      el.addEventListener('pointercancel', () => fn(false));
-      el.addEventListener('pointerleave', () => fn(false));
-    };
-    bindHold('touch-laser', on => { this.laserAtivo = on; });
-    bindHold('touch-plasma', on => { this.plasmaAtivo = on; });
+    // 1) Botão Grande Principal: 1 CLIQUE = 1 TIRO (sem auto-repetir ao segurar!)
+    this.elBtnLaser?.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      this.dispararTiroUnico();
+    });
+    // 2) Botão de Rajada Ultra-Rápida (dispara rajada velocíssima e entra em recarga de 15s!)
+    this.elBtnRajada?.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      this.ativarRajadaRapida();
+    });
+    // 3) Botão de Mísseis Explosivos Pesados (até 3 mísseis!)
+    this.elBtnMissil?.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      this.lancarMissil();
+    });
   }
 
   get ativa() { return this.estado !== 'inativa'; }
@@ -813,7 +955,7 @@ export class MissaoMarte {
     }
     this.raiz.add(this.portalGrupo);
 
-    // Nave Inimiga Interdimensional (Chefe modelado no Blender!)
+    // Nave Inimiga Interdimensional (Chefe modelado no Blender!) + Barra de Vida 3D acima dela!
     this.naveInimiga = this.tplNaveInimiga.clone(true);
     this.naveInimiga.scale.setScalar(2.25);
     this.naveInimiga.visible = false;
@@ -821,6 +963,7 @@ export class MissaoMarte {
       if (m.isMesh && m.material) m.material = m.material.clone();
     });
     this.raiz.add(this.naveInimiga);
+    this.raiz.add(this.barraChefe3D.sprite);
   }
 
   _construirCabineInterior() {
@@ -986,18 +1129,24 @@ export class MissaoMarte {
     this.shipPos.set(0, 0, 0);
     this.shipVel.set(0, 0);
     this.coolLaser = 0;
-    this.coolPlasma = 0;
+    this.ladoCanhao = 1;
+    this.rajadaTempo = 0;
+    this.coolRajada = 0;
+    this.stepRajada = 0;
+    this.misseis = MAX_MISSEIS;
+    this.coolMissil = 0;
+    this.timerRecargaMissil = 0;
     this.spawnTimer = 0.25;
     this.tremor = 0;
     this.danoFlash = 0;
-    this.laserAtivo = false;
-    this.plasmaAtivo = false;
     this.giro360 = 0;
     this.coolGiro = 0;
     this.orbitYaw = 0;
     this.orbitPitch = 0.16;
     this.tempoSemOlhar = 99;
     this.chefeHp = CHEFE_HP_MAX;
+    this.barraChefe3D.atualizar(CHEFE_HP_MAX, CHEFE_HP_MAX);
+    this.barraChefe3D.sprite.visible = false;
 
     this.naveVoo.visible = true;
     this.naveVoo.position.set(0, 0, 0);
@@ -1060,6 +1209,7 @@ export class MissaoMarte {
     if (this.cabineGrupo) this.cabineGrupo.visible = false;
     if (this.portalGrupo) this.portalGrupo.visible = false;
     if (this.naveInimiga) this.naveInimiga.visible = false;
+    this.barraChefe3D.sprite.visible = false;
     this.marteGrupo.position.set(0, 8, 560);
     this.marteGrupo.scale.setScalar(0.50);
     this._mostrarCine(false);
@@ -1068,7 +1218,7 @@ export class MissaoMarte {
     this.elTouchMarte?.classList.remove('oculto');
     this._atualizarHud();
     for (let i = 0; i < 9; i++) this._spawnAsteroide(95 + i * 24);
-    this.toast?.('☄️ CINTURÃO DE ASTEROIDES (3 MIN)! Cuidado: bater reduz a FORÇA, VELOCIDADE e ARMAS da nave!');
+    this.toast?.('☄️ ASTEROIDES (3 MIN)! Clique = 1 Tiro · Rajada Rápida (15s) · Até 3 Mísseis Pesados!');
   }
 
   /** Cutscene do Portal Interdimensional abrindo na frente de Marte e liberando a Nave Inimiga! */
@@ -1080,6 +1230,7 @@ export class MissaoMarte {
     this.elTouchMarte?.classList.add('oculto');
     this.elDanoMarte && (this.elDanoMarte.style.opacity = '0');
     if (this.cabineGrupo) this.cabineGrupo.visible = false;
+    this.barraChefe3D.sprite.visible = false;
 
     this.naveVoo.visible = true;
     this.naveVoo.position.set(0, -1.5, 0);
@@ -1110,6 +1261,9 @@ export class MissaoMarte {
     this.chefePos.set(0, 3.5, 74);
     this.chefeCoolTiro = 0.85;
     this.chefePadrao = 0;
+    // Reabastece o compartimento para até 3 mísseis pesados no início do duelo contra o Chefe!
+    this.misseis = MAX_MISSEIS;
+    this.timerRecargaMissil = 0;
 
     this._mostrarCine(false);
     this.naveVoo.visible = true;
@@ -1127,11 +1281,15 @@ export class MissaoMarte {
     this.naveInimiga.position.copy(this.chefePos);
     this.naveInimiga.rotation.set(0, Math.PI, 0);
 
+    this.barraChefe3D.atualizar(this.chefeHp, CHEFE_HP_MAX);
+    this.barraChefe3D.sprite.position.set(this.chefePos.x, this.chefePos.y + 7.2, this.chefePos.z);
+    this.barraChefe3D.sprite.visible = true;
+
     this.elHud?.classList.remove('oculto');
     this.elBossBox?.classList.remove('oculto');
     this.elTouchMarte?.classList.remove('oculto');
     this._atualizarHud();
-    this.toast?.('👾 NAVE INIMIGA BLOQUEANDO MARTE! Desvie dos tiros (WASD / Q·E 360°) e destrua-a com Laser e Plasma!');
+    this.toast?.('👾 NAVE INIMIGA BLOQUEANDO MARTE! Use Tiro (1x), Rajada Rápida (15s) e seus 3 Mísseis Pesados!');
   }
 
   _iniciarDestruicaoChefe() {
@@ -1139,6 +1297,10 @@ export class MissaoMarte {
     this.t = 0;
     for (const ti of this.tirosInimigos) this.raiz.remove(ti.obj);
     this.tirosInimigos.length = 0;
+    for (const m of this.misseisAtivos) this.raiz.remove(m.obj);
+    this.misseisAtivos.length = 0;
+    this.rajadaTempo = 0;
+    this.barraChefe3D.sprite.visible = false;
     this.elHud?.classList.add('oculto');
     this.elBossBox?.classList.add('oculto');
     this.elTouchMarte?.classList.add('oculto');
@@ -1159,6 +1321,7 @@ export class MissaoMarte {
     if (this.cabineGrupo) this.cabineGrupo.visible = false;
     if (this.portalGrupo) this.portalGrupo.visible = false;
     if (this.naveInimiga) this.naveInimiga.visible = false;
+    this.barraChefe3D.sprite.visible = false;
 
     // ENQUADRAMENTO 100% DE MARTE NA TELA:
     // Em z=265 com escala 0.70 (raio=73.5, halo=82.6) e câmera em z=-36 (dist=301, fov=46),
@@ -1206,6 +1369,7 @@ export class MissaoMarte {
     if (this.cabineGrupo) this.cabineGrupo.visible = false;
     if (this.portalGrupo) this.portalGrupo.visible = false;
     if (this.naveInimiga) this.naveInimiga.visible = false;
+    this.barraChefe3D.sprite.visible = false;
     this._mostrarCine(false);
     if (this.elCinePular) this.elCinePular.classList.remove('oculto');
     this.elHud?.classList.add('oculto');
@@ -1227,12 +1391,14 @@ export class MissaoMarte {
 
   _limparEntidades() {
     for (const t of this.tiros) this.raiz.remove(t.obj);
+    for (const m of this.misseisAtivos) this.raiz.remove(m.obj);
     for (const ti of this.tirosInimigos) this.raiz.remove(ti.obj);
     for (const a of this.asteroides) this.raiz.remove(a.obj);
     for (const r of this.reparos) this.raiz.remove(r.obj);
     for (const e of this.explosoes) this.raiz.remove(e.grupo);
     for (const f of this.faiscasMotor) this.raiz.remove(f.m);
     this.tiros.length = 0;
+    this.misseisAtivos.length = 0;
     this.tirosInimigos.length = 0;
     this.asteroides.length = 0;
     this.reparos.length = 0;
@@ -1240,48 +1406,331 @@ export class MissaoMarte {
     this.faiscasMotor.length = 0;
   }
 
-  // ---- Armas do Jogador (escalam com a FORÇA atual da nave!) ---------------------------------------
-  dispararLaser() {
-    if (!this.emVoo || this.coolLaser > 0) return;
+  // ==================================================================================================
+  // ARMAMENTO TÁTICO DA NAVE:
+  // 1) Tiro Normal no Botão Grande: estritamente 1 CLIQUE = 1 TIRO (não repete segurando!)
+  // 2) Rajada Ultra-Rápida: dispara uma enxurrada velocíssima de tiros, mas demora 15s para voltar!
+  // 3) Lançador de até 3 Mísseis Pesados: explosão gigante que limpa muitos asteroides na frente
+  //    e causa dano pesado direto na Nave Inimiga!
+  // ==================================================================================================
+  dispararTiroUnico() {
+    if (!this.emVoo || this.coolLaser > 0) return false;
     const fK = this.forcaNave / 100;
-    this.coolLaser = 0.13 + (1 - fK) * 0.17; // nave avariada atira mais devagar!
+    this.coolLaser = 0.04; // anti-duplo-evento mínimo; cada clique dispara exatamente 1 tiro!
+    this.ladoCanhao = -this.ladoCanhao;
+    const sx = this.ladoCanhao * 2.12;
     this.som.laser(fK);
-    const dano = 0.55 + 0.55 * fK;
-    for (const sx of [-2.12, 2.12]) {
-      const g = new THREE.Group();
-      const feixe = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.11, 0.11, 4.6, 8),
-        new THREE.MeshBasicMaterial({ color: fK < 0.5 ? 0xfb923c : 0x38bdf8 })
-      );
-      feixe.rotation.x = Math.PI / 2;
-      const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.texLaser, blending: THREE.AdditiveBlending, depthWrite: false }));
-      halo.scale.set(1.65, 1.65, 1);
-      g.add(feixe, halo);
-      g.position.set(this.shipPos.x + sx, this.shipPos.y + 1.14, this.shipPos.z + 1.6);
-      this.raiz.add(g);
-      this.tiros.push({ tipo: 'laser', obj: g, vel: 140 + 40 * fK, dano, raio: 1.55, vida: 2.2 });
+
+    const g = new THREE.Group();
+    const feixe = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.14, 0.14, 5.4, 8),
+      new THREE.MeshBasicMaterial({ color: fK < 0.5 ? 0xfb923c : 0x38bdf8 })
+    );
+    feixe.rotation.x = Math.PI / 2;
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: this.texLaser, blending: THREE.AdditiveBlending, depthWrite: false,
+    }));
+    halo.scale.set(2.15, 2.15, 1);
+    g.add(feixe, halo);
+    g.position.set(this.shipPos.x + sx, this.shipPos.y + 1.14, this.shipPos.z + 1.9);
+    this.raiz.add(g);
+
+    const dano = 1.65 * (0.6 + 0.4 * fK);
+    this.tiros.push({ tipo: 'laser', obj: g, vel: 185 + 35 * fK, dano, raio: 1.75, vida: 2.2 });
+    return true;
+  }
+
+  dispararLaser() {
+    return this.dispararTiroUnico();
+  }
+
+  ativarRajadaRapida() {
+    if (!this.emVoo) return false;
+    if (this.rajadaTempo > 0) return false;
+    if (this.coolRajada > 0) {
+      this.toast?.(`⏳ Rajada ultra-rápida recarregando: aguarde ${Math.ceil(this.coolRajada)}s!`);
+      return false;
     }
+    this.rajadaTempo = DURACAO_RAJADA;
+    this.coolRajada = RECARGA_RAJADA; // ao terminar a rajada, conta 15s exatos até voltar!
+    this.stepRajada = 0;
+    this.som.plasma();
+    this.tremor = Math.max(this.tremor, 0.24);
+    this._dispararPassoRajada();
+    this._atualizarHud();
+    return true;
   }
 
   dispararPlasma() {
-    if (!this.emVoo || this.coolPlasma > 0) return;
-    const fK = this.forcaNave / 100;
-    this.coolPlasma = 0.48 + (1 - fK) * 0.62;
-    this.som.plasma();
-    this.tremor = Math.max(this.tremor, 0.22);
+    return this.ativarRajadaRapida();
+  }
 
+  _dispararPassoRajada() {
+    const fK = this.forcaNave / 100;
+    this.som.tiroRapido();
+    const dano = 0.95 * (0.62 + 0.38 * fK);
+    const jitterY = (Math.random() - 0.5) * 0.26;
+    for (const sx of [-2.14, 2.14]) {
+      const g = new THREE.Group();
+      const feixe = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.13, 0.13, 6.2, 8),
+        new THREE.MeshBasicMaterial({ color: sx > 0 ? 0xf0abfc : 0x67e8f9 })
+      );
+      feixe.rotation.x = Math.PI / 2;
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: this.texPlasma, blending: THREE.AdditiveBlending, depthWrite: false,
+      }));
+      halo.scale.set(2.35, 2.35, 1);
+      g.add(feixe, halo);
+      g.position.set(this.shipPos.x + sx + (Math.random() - 0.5) * 0.18, this.shipPos.y + 1.14 + jitterY, this.shipPos.z + 2.4);
+      this.raiz.add(g);
+      this.tiros.push({ tipo: 'rajada', obj: g, vel: 245 + 35 * fK, dano, raio: 1.9, vida: 1.9 });
+    }
+  }
+
+  lancarMissil() {
+    if (!this.emVoo || this.coolMissil > 0) return false;
+    if (this.misseis <= 0) {
+      this.toast?.('🚀 Sem mísseis disponíveis (0/3)! Colete Nano-Reparo ou aguarde fabricação.');
+      return false;
+    }
+    this.misseis = Math.max(0, this.misseis - 1);
+    this.coolMissil = 0.32;
+    this.som.missilLancamento();
+    this.tremor = Math.max(this.tremor, 0.34);
+
+    // Modelo 3D detalhado do Míssil Termonuclear Pesado (corpo branco/laranja + ogiva rubra + 4 aletas + chama!)
     const g = new THREE.Group();
-    const esc = 0.72 + 0.35 * fK;
-    const core = new THREE.Mesh(
-      new THREE.SphereGeometry(0.68 * esc, 14, 12),
-      new THREE.MeshBasicMaterial({ color: 0xf5d0fe })
+    const corpo = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.24, 0.26, 2.5, 12),
+      new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.32, metalness: 0.45 })
     );
-    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.texPlasma, blending: THREE.AdditiveBlending, depthWrite: false }));
-    halo.scale.setScalar(4.8 * esc);
-    g.add(core, halo);
-    g.position.set(this.shipPos.x, this.shipPos.y + 1.1, this.shipPos.z + 4.4);
+    corpo.rotation.x = Math.PI / 2;
+    const faixa = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.255, 0.255, 0.48, 12),
+      new THREE.MeshBasicMaterial({ color: 0xf97316 })
+    );
+    faixa.rotation.x = Math.PI / 2;
+    faixa.position.z = 0.35;
+    const ogiva = new THREE.Mesh(
+      new THREE.ConeGeometry(0.25, 0.85, 12),
+      new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xdc2626, emissiveIntensity: 0.45, roughness: 0.28 })
+    );
+    ogiva.rotation.x = Math.PI / 2;
+    ogiva.position.z = 1.66;
+
+    const matAleta = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.6, roughness: 0.4 });
+    for (let k = 0; k < 4; k++) {
+      const al = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.72, 0.65), matAleta);
+      al.rotation.z = (k * Math.PI) / 2;
+      al.position.set(Math.sin((k * Math.PI) / 2) * 0.28, Math.cos((k * Math.PI) / 2) * 0.28, -0.95);
+      g.add(al);
+    }
+
+    const chama = new THREE.Mesh(
+      new THREE.ConeGeometry(0.32, 2.2, 10),
+      new THREE.MeshBasicMaterial({ color: 0xfb923c, transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+    chama.rotation.x = -Math.PI / 2;
+    chama.position.z = -2.2;
+
+    const brilho = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: this.texFogo, blending: THREE.AdditiveBlending, depthWrite: false,
+    }));
+    brilho.scale.setScalar(3.6);
+    brilho.position.z = -1.35;
+
+    g.add(corpo, faixa, ogiva, chama, brilho);
+    const sx = (this.misseis % 2 === 0 ? 1 : -1) * 1.15;
+    g.position.set(this.shipPos.x + sx, this.shipPos.y + 0.65, this.shipPos.z + 2.6);
     this.raiz.add(g);
-    this.tiros.push({ tipo: 'plasma', obj: g, vel: 105 + 25 * fK, dano: 2.4 + 2.2 * fK, raio: 3.4 + 1.4 * fK, vida: 2.8 });
+
+    this.misseisAtivos.push({
+      obj: g,
+      chama,
+      vel: 62,
+      vx: 0,
+      vy: 0,
+      vida: 2.6,
+      rastroTimer: 0,
+    });
+    this._atualizarHud();
+    return true;
+  }
+
+  /** Explosão colossal do Míssil Pesado: limpa muitos asteroides na frente e causa dano massivo na Nave Inimiga! */
+  _explodirMissil(pos) {
+    this.som.explosaoMissil();
+    this.tremor = Math.max(this.tremor, 1.15);
+
+    const grupo = new THREE.Group();
+    grupo.position.copy(pos);
+
+    const bola = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: this.texFogo, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true,
+    }));
+    bola.scale.setScalar(46);
+
+    const nucleo = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: this.texPlasma, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true,
+    }));
+    nucleo.scale.setScalar(28);
+
+    const anel = new THREE.Mesh(
+      new THREE.RingGeometry(1.4, 3.2, 40),
+      new THREE.MeshBasicMaterial({
+        color: 0xf97316, transparent: true, opacity: 0.96,
+        side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false,
+      })
+    );
+    const anel2 = new THREE.Mesh(
+      new THREE.RingGeometry(1.0, 2.4, 36),
+      new THREE.MeshBasicMaterial({
+        color: 0xfef08a, transparent: true, opacity: 0.92,
+        side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false,
+      })
+    );
+    anel2.rotation.x = Math.PI * 0.36;
+    grupo.add(bola, nucleo, anel, anel2);
+
+    const pedacos = [];
+    const geoP = new THREE.DodecahedronGeometry(1.05, 0);
+    const matP = new THREE.MeshStandardMaterial({
+      color: 0x7c2d12, emissive: 0xf97316, emissiveIntensity: 1.35, roughness: 0.65,
+    });
+    for (let i = 0; i < 28; i++) {
+      const m = new THREE.Mesh(geoP, matP);
+      const dir = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+      const v = dir.multiplyScalar(32 + Math.random() * 28);
+      grupo.add(m);
+      pedacos.push({ m, v });
+    }
+    this.raiz.add(grupo);
+    this.explosoes.push({ grupo, bola, nucleo, anel, anel2, pedacos, idade: 0, dur: 1.35, grande: true, colossal: true });
+
+    // 1) Varre uma enorme área frontal de asteroides!
+    let limpos = 0;
+    for (let i = this.asteroides.length - 1; i >= 0; i--) {
+      const a = this.asteroides[i];
+      const d = a.obj.position.distanceTo(pos);
+      if (d <= RAIO_EXPLOSAO_MISSIL + a.raio) {
+        const pAst = a.obj.position.clone();
+        this._explodir(pAst, a.grande, false);
+        if (a.colosso && Math.random() < 0.55) this._spawnCapsulaReparo(pAst);
+        this.raiz.remove(a.obj);
+        this.asteroides.splice(i, 1);
+        this.destruidos++;
+        limpos++;
+        this.distancia = Math.max(0, this.distancia - (a.colosso ? 0.32 : 0.15));
+      } else if (d <= RAIO_EXPLOSAO_MISSIL * 1.38 + a.raio) {
+        a.hp -= 5.5;
+        a.flash = 0.25;
+      }
+    }
+    if (limpos >= 2 && this.estado === 'voo') {
+      this.toast?.(`💥 MÍSSIL DETONADO! ${limpos} asteroides pulverizados na frente!`);
+    }
+
+    // 2) Vaporiza projéteis inimigos próximos à onda de choque!
+    for (let i = this.tirosInimigos.length - 1; i >= 0; i--) {
+      if (this.tirosInimigos[i].obj.position.distanceTo(pos) < RAIO_EXPLOSAO_MISSIL * 0.85) {
+        this.raiz.remove(this.tirosInimigos[i].obj);
+        this.tirosInimigos.splice(i, 1);
+      }
+    }
+
+    // 3) Causa DANO PESADO na Nave Inimiga Interdimensional!
+    if (this.estado === 'chefe' && this.naveInimiga?.visible) {
+      const dChefe = pos.distanceTo(this.chefePos);
+      if (dChefe <= RAIO_EXPLOSAO_MISSIL + 14) {
+        const mult = dChefe < 24 ? 1.0 : 0.75;
+        const danoReal = Math.round(DANO_MISSIL_CHEFE * mult);
+        this.chefeHp = Math.max(0, this.chefeHp - danoReal);
+        this.chefeFlash = 0.28;
+        this.barraChefe3D.atualizar(this.chefeHp, CHEFE_HP_MAX);
+        this._atualizarHud();
+        this.toast?.(`🚀 IMPACTO DIRETO DE MÍSSIL! -${danoReal} de vida na Nave Inimiga!`);
+        if (this.chefeHp <= 0) {
+          this._iniciarDestruicaoChefe();
+        }
+      }
+    } else {
+      this._atualizarHud();
+    }
+  }
+
+  _atualizarMisseis(dt) {
+    for (let i = this.misseisAtivos.length - 1; i >= 0; i--) {
+      const ms = this.misseisAtivos[i];
+      ms.vida -= dt;
+      ms.vel = Math.min(172, ms.vel + 135 * dt);
+
+      // Guiagem inteligente suave: mira na Nave Inimiga (fase 'chefe') ou no asteroide frontal mais próximo!
+      let alvo = null;
+      if (this.estado === 'chefe' && this.naveInimiga?.visible) {
+        alvo = this.chefePos;
+      } else if (this.asteroides.length > 0) {
+        let melhorD = Infinity;
+        for (const a of this.asteroides) {
+          if (a.obj.position.z > ms.obj.position.z + 4 && a.obj.position.z < ms.obj.position.z + 135) {
+            const d = a.obj.position.distanceTo(ms.obj.position);
+            if (d < melhorD) { melhorD = d; alvo = a.obj.position; }
+          }
+        }
+      }
+      if (alvo) {
+        const dx = clamp(alvo.x - ms.obj.position.x, -26, 26);
+        const dy = clamp(alvo.y - ms.obj.position.y, -18, 18);
+        ms.vx += (dx * 2.4 - ms.vx) * Math.min(1, dt * 6);
+        ms.vy += (dy * 2.4 - ms.vy) * Math.min(1, dt * 6);
+      }
+
+      ms.obj.position.x += ms.vx * dt;
+      ms.obj.position.y += ms.vy * dt;
+      ms.obj.position.z += ms.vel * dt;
+      ms.obj.rotation.z += dt * 7.5;
+      if (ms.chama) ms.chama.scale.set(1, 1 + 0.3 * Math.sin(this.t * 60), 1);
+
+      // Rastro luminoso de propulsão do míssil
+      ms.rastroTimer -= dt;
+      if (ms.rastroTimer <= 0) {
+        ms.rastroTimer = 0.032;
+        const rM = new THREE.Mesh(
+          new THREE.SphereGeometry(0.32, 6, 5),
+          new THREE.MeshBasicMaterial({ color: Math.random() < 0.5 ? 0xfb923c : 0xfef08a })
+        );
+        rM.position.copy(ms.obj.position).add(new THREE.Vector3(0, 0, -1.6));
+        this.raiz.add(rM);
+        this.faiscasMotor.push({ m: rM, v: new THREE.Vector3((Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4, -18), vida: 0.34 });
+      }
+
+      let detonar = false;
+      if (this.estado === 'chefe' && this.naveInimiga?.visible) {
+        const dx = Math.abs(ms.obj.position.x - this.chefePos.x);
+        const dy = Math.abs(ms.obj.position.y - this.chefePos.y);
+        const dz = Math.abs(ms.obj.position.z - this.chefePos.z);
+        if ((dx < 13.5 && dy < 6.0 && dz < 10.0) || ms.obj.position.z >= this.chefePos.z + 2) {
+          detonar = true;
+        }
+      } else {
+        for (const a of this.asteroides) {
+          if (ms.obj.position.distanceTo(a.obj.position) < a.raio + 2.8) {
+            detonar = true;
+            break;
+          }
+        }
+        // Se não bateu antes, detona automaticamente a ~108m na frente para abrir um clarão enorme no cinturão!
+        if (ms.obj.position.z >= this.shipPos.z + 108) detonar = true;
+      }
+
+      if (detonar || ms.vida <= 0) {
+        const pDet = ms.obj.position.clone();
+        this.raiz.remove(ms.obj);
+        this.misseisAtivos.splice(i, 1);
+        this._explodirMissil(pDet);
+        if (this.estado !== 'voo' && this.estado !== 'chefe') return;
+      }
+    }
   }
 
   // ---- Disparos da Nave Inimiga Interdimensional ---------------------------------------------------
@@ -1496,18 +1945,59 @@ export class MissaoMarte {
         this.elTempo.textContent = `${mm}:${ss}`;
       }
     }
+    if (this.elMisseisHud) this.elMisseisHud.textContent = `${this.misseis}/${MAX_MISSEIS}`;
     if (this.elAst) this.elAst.textContent = `${this.destruidos}`;
-    if (this.elEscudo) this.elEscudo.style.transform = `scaleX(${clamp(this.escudo / 100, 0, 1).toFixed(3)})`;
-    if (this.elEscudoTxt) this.elEscudoTxt.textContent = `${Math.max(0, Math.round(this.escudo))}%`;
+
+    // Barra de VIDA DA NOSSA NAVE (0..100) com cor dinâmica verde -> amarelo -> vermelho
+    const kVida = clamp(this.escudo / 100, 0, 1);
+    if (this.elEscudo) {
+      this.elEscudo.style.transform = `scaleX(${kVida.toFixed(3)})`;
+      this.elEscudo.style.background = kVida < 0.32
+        ? 'linear-gradient(90deg, #dc2626, #f87171)'
+        : (kVida < 0.62 ? 'linear-gradient(90deg, #d97706, #facc15)' : 'linear-gradient(90deg, #16a34a, #4ade80, #38bdf8)');
+    }
+    if (this.elEscudoTxt) this.elEscudoTxt.textContent = `${Math.max(0, Math.round(this.escudo))}/100`;
+
+    // Barra de FORÇA mecânica da nave
     if (this.elForca) this.elForca.style.transform = `scaleX(${clamp(this.forcaNave / 100, 0, 1).toFixed(3)})`;
     if (this.elForcaTxt) this.elForcaTxt.textContent = `${Math.round(this.forcaNave)}%`;
     if (this.elForcaRot) {
-      this.elForcaRot.style.color = this.forcaNave < 50 ? '#f87171' : (this.forcaNave < 80 ? '#fde047' : '#86efac');
+      this.elForcaRot.style.color = this.forcaNave < 50 ? '#f87171' : (this.forcaNave < 80 ? '#fde047' : '#7dd3fc');
     }
+
+    // Barra de VIDA DA NAVE INIMIGA (HUD superior + Barra 3D flutuante sobre a nave inimiga!)
     if (this.estado === 'chefe') {
       const kB = clamp(this.chefeHp / CHEFE_HP_MAX, 0, 1);
+      const hpRest = Math.max(0, Math.ceil(this.chefeHp));
       if (this.elBossBarra) this.elBossBarra.style.transform = `scaleX(${kB.toFixed(3)})`;
-      if (this.elBossTxt) this.elBossTxt.textContent = `${Math.ceil(kB * 100)}%`;
+      if (this.elBossTxt) this.elBossTxt.textContent = `${hpRest}/${CHEFE_HP_MAX} (${Math.ceil(kB * 100)}%)`;
+      this.barraChefe3D.atualizar(this.chefeHp, CHEFE_HP_MAX);
+    }
+
+    // Botão de Rajada Ultra-Rápida: mostra ativo ("RAJADA!") ou contagem regressiva de 15s ("15s".."1s")!
+    if (this.elBtnRajada) {
+      if (this.rajadaTempo > 0) {
+        this.elBtnRajada.classList.add('ativa');
+        this.elBtnRajada.classList.remove('recarga');
+        if (this.elRajadaIco) this.elRajadaIco.textContent = '⚡';
+        if (this.elRajadaTxt) this.elRajadaTxt.textContent = 'RAJADA!';
+      } else if (this.coolRajada > 0) {
+        this.elBtnRajada.classList.remove('ativa');
+        this.elBtnRajada.classList.add('recarga');
+        if (this.elRajadaIco) this.elRajadaIco.textContent = '⏳';
+        if (this.elRajadaTxt) this.elRajadaTxt.textContent = `${Math.ceil(this.coolRajada)}s`;
+      } else {
+        this.elBtnRajada.classList.remove('ativa', 'recarga');
+        if (this.elRajadaIco) this.elRajadaIco.textContent = '🔥';
+        if (this.elRajadaTxt) this.elRajadaTxt.textContent = 'RAJADA';
+      }
+    }
+
+    // Botão de Mísseis Pesados (até 3x)
+    if (this.elBtnMissil) {
+      this.elBtnMissil.classList.toggle('recarga', this.misseis <= 0);
+      if (this.elMissilIco) this.elMissilIco.textContent = this.misseis > 0 ? '🚀' : '⏳';
+      if (this.elMissilTxt) this.elMissilTxt.textContent = `MÍSSIL ${this.misseis}/${MAX_MISSEIS}`;
     }
   }
 
@@ -1536,9 +2026,18 @@ export class MissaoMarte {
       const k = e.idade / e.dur;
       if (k >= 1) { this.raiz.remove(e.grupo); this.explosoes.splice(i, 1); continue; }
       e.bola.material.opacity = (1 - k) * (1 - k);
-      e.bola.scale.setScalar((e.grande ? 16 : 8.0) * (0.7 + k * 1.45));
-      e.anel.scale.setScalar(1 + k * (e.grande ? 15 : 8.5));
-      e.anel.material.opacity = (1 - k) * 0.85;
+      const baseBola = e.colossal ? 46 : (e.grande ? 16 : 8.0);
+      e.bola.scale.setScalar(baseBola * (0.72 + k * 1.55));
+      if (e.nucleo) {
+        e.nucleo.material.opacity = Math.max(0, 1 - k * 1.35);
+        e.nucleo.scale.setScalar(28 * (0.8 + k * 1.9));
+      }
+      e.anel.scale.setScalar(1 + k * (e.colossal ? 24 : (e.grande ? 15 : 8.5)));
+      e.anel.material.opacity = (1 - k) * 0.88;
+      if (e.anel2) {
+        e.anel2.scale.setScalar(1 + k * 28);
+        e.anel2.material.opacity = (1 - k) * 0.85;
+      }
       for (const p of e.pedacos) {
         p.m.position.addScaledVector(p.v, dt);
         p.m.rotation.x += dt * 4; p.m.rotation.y += dt * 3;
@@ -1654,11 +2153,42 @@ export class MissaoMarte {
     const acelMult = 0.32 + 0.68 * fK;
 
     this.coolLaser = Math.max(0, this.coolLaser - dt);
-    this.coolPlasma = Math.max(0, this.coolPlasma - dt);
+    this.coolMissil = Math.max(0, this.coolMissil - dt);
     this.coolGiro = Math.max(0, this.coolGiro - dt);
     this.tempoSemDano += dt;
 
-    // Regeneração bem sutil de escudo após 6 s sem bater (mas a perda de FORÇA exige cápsula de reparo!)
+    // Rajada Ultra-Rápida ativa -> dispara tiros velocíssimos a cada 0.042s; ao acabar, conta 15s exatos para voltar!
+    if (this.rajadaTempo > 0) {
+      this.rajadaTempo = Math.max(0, this.rajadaTempo - dt);
+      this.stepRajada -= dt;
+      while (this.stepRajada <= 0 && this.rajadaTempo > 0) {
+        this._dispararPassoRajada();
+        this.stepRajada += 0.042;
+      }
+      if (this.rajadaTempo <= 0) {
+        this.coolRajada = RECARGA_RAJADA; // 15 segundos para voltar!
+      }
+    } else if (this.coolRajada > 0) {
+      const antes = Math.ceil(this.coolRajada);
+      this.coolRajada = Math.max(0, this.coolRajada - dt);
+      if (this.coolRajada <= 0 && antes > 0) {
+        this.toast?.('🔥 Rajada Ultra-Rápida PRONTA novamente!');
+      }
+    }
+
+    // Fabricação lenta de míssil reserva a cada 35s caso esteja abaixo do limite máximo de 3 mísseis
+    if (this.misseis < MAX_MISSEIS) {
+      this.timerRecargaMissil += dt;
+      if (this.timerRecargaMissil >= 35) {
+        this.timerRecargaMissil = 0;
+        this.misseis = Math.min(MAX_MISSEIS, this.misseis + 1);
+        this.toast?.(`🚀 Míssil pesado recarregado (${this.misseis}/${MAX_MISSEIS})!`);
+      }
+    } else {
+      this.timerRecargaMissil = 0;
+    }
+
+    // Regeneração bem sutil de vida após 6 s sem bater (mas a perda de FORÇA exige cápsula de reparo!)
     if (this.tempoSemDano > 6.0 && this.escudo < 100) {
       this.escudo = Math.min(100, this.escudo + dt * 2.5);
     }
@@ -1709,9 +2239,6 @@ export class MissaoMarte {
         this.faiscaTimer = 0.06 + (fK * 0.22);
       }
     }
-
-    if (entrada.laser || this.laserAtivo) this.dispararLaser();
-    if (entrada.plasma || this.plasmaAtivo) this.dispararPlasma();
   }
 
   /** Atualização principal chamada a cada quadro. */
@@ -1789,6 +2316,7 @@ export class MissaoMarte {
 
       this._atualizarWarp(dt, (1.2 + prog * 0.7) * propMult);
       this._atualizarControleNave(dt, entrada);
+      this._atualizarMisseis(dt);
 
       // Spawn intenso e escalonado em 3 ondas ao longo dos 3 minutos!
       this.spawnTimer -= dt;
@@ -1811,16 +2339,6 @@ export class MissaoMarte {
             a.hp -= ti.dano;
             a.flash = 0.14;
             acertou = true;
-            if (ti.tipo === 'plasma') {
-              for (let k = this.asteroides.length - 1; k >= 0; k--) {
-                if (k === j) continue;
-                const a2 = this.asteroides[k];
-                if (a2.obj.position.distanceTo(ti.obj.position) < a2.raio + ti.raio * 2.4) {
-                  a2.hp -= ti.dano * 0.75;
-                  a2.flash = 0.15;
-                }
-              }
-            }
             break;
           }
         }
@@ -1877,17 +2395,18 @@ export class MissaoMarte {
         }
       }
 
-      // Cápsulas de Nano-Reparo (recuperam parte da força/velocidade perdida!)
+      // Cápsulas de Nano-Reparo (recuperam vida, força e +1 míssil até o limite de 3!)
       for (let i = this.reparos.length - 1; i >= 0; i--) {
         const r = this.reparos[i];
         r.obj.position.z -= r.vel * dt;
         r.oct.rotation.y += dt * 3.2;
         const d = Math.hypot(r.obj.position.x - this.shipPos.x, r.obj.position.y - (this.shipPos.y + 1.2), r.obj.position.z - this.shipPos.z);
         if (d < 4.2) {
-          this.escudo = Math.min(100, this.escudo + 18);
-          this.forcaNave = Math.min(100, this.forcaNave + 12);
+          this.escudo = Math.min(100, this.escudo + 20);
+          this.forcaNave = Math.min(100, this.forcaNave + 14);
+          this.misseis = Math.min(MAX_MISSEIS, this.misseis + 1);
           this.som.reparo();
-          this.toast?.(`🔧 Nano-Reparo coletado! Força da nave subiu para ${Math.round(this.forcaNave)}%!`);
+          this.toast?.(`🔧 Nano-Reparo! Vida ${Math.round(this.escudo)}/100 · Mísseis ${this.misseis}/${MAX_MISSEIS}!`);
           this.raiz.remove(r.obj);
           this.reparos.splice(i, 1);
           this._atualizarHud();
@@ -1961,6 +2480,10 @@ export class MissaoMarte {
       this.chefePos.z += (alvoBz - this.chefePos.z) * 3.0 * dt;
 
       this.naveInimiga.position.copy(this.chefePos);
+      // Mantém a Barra de Vida 3D sempre visível acima da Nave Inimiga!
+      this.barraChefe3D.sprite.visible = true;
+      this.barraChefe3D.sprite.position.set(this.chefePos.x, this.chefePos.y + 7.2, this.chefePos.z);
+
       // Aponta a frente da nave inimiga para o jogador com inclinação dinâmica nas curvas!
       const dxJ = this.shipPos.x - this.chefePos.x;
       const dyJ = (this.shipPos.y + 1.2) - this.chefePos.y;
@@ -1969,6 +2492,10 @@ export class MissaoMarte {
       this.naveInimiga.rotation.y = Math.atan2(dxJ, dzJ);
       this.naveInimiga.rotation.x = -Math.atan2(dyJ, Math.abs(dzJ)) * 0.65;
       this.naveInimiga.rotation.z = clamp(-vxB * 0.022, -0.48, 0.48);
+
+      // Atualiza mísseis pesados guiados rumo à Nave Inimiga!
+      this._atualizarMisseis(dt);
+      if (this.estado !== 'chefe') return this._calcularCameraVoo(dt);
 
       if (this.chefeFlash > 0) {
         this.chefeFlash -= dt;
@@ -1997,7 +2524,7 @@ export class MissaoMarte {
         if (dx < 11.5 + ti.raio && dy < 4.5 + ti.raio && dz < 8.5 + ti.raio) {
           this.chefeHp = Math.max(0, this.chefeHp - ti.dano);
           this.chefeFlash = 0.10;
-          this._explodir(ti.obj.position, ti.tipo === 'plasma', true);
+          this._explodir(ti.obj.position, ti.tipo === 'rajada', true);
           this.raiz.remove(ti.obj);
           this.tiros.splice(i, 1);
           this._atualizarHud();
@@ -2134,6 +2661,13 @@ export class MissaoMarte {
       tempoVoo: +this.tempoVoo.toFixed(1),
       camModoEspaco: this.camModoEspaco,
       chefeHp: Math.round(this.chefeHp),
+      chefeHpMax: CHEFE_HP_MAX,
+      barraChefe3DVisivel: !!this.barraChefe3D?.sprite?.visible,
+      misseis: this.misseis,
+      misseisMax: MAX_MISSEIS,
+      misseisAtivos: this.misseisAtivos.length,
+      rajadaAtiva: this.rajadaTempo > 0,
+      coolRajada: +this.coolRajada.toFixed(2),
       asteroidesAtivos: this.asteroides.length,
       tirosAtivos: this.tiros.length,
       tirosInimigosAtivos: this.tirosInimigos.length,

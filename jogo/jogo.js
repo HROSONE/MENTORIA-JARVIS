@@ -2354,7 +2354,10 @@ export async function iniciarJogo() {
     if (!teclas.has(code)) {
       if (modo !== 'jogo') { /* abertura e sala tratam as próprias teclas */ }
       else if (marte.ativa) {
-        if (code === 'KeyV') marte.ciclarCamera();
+        if (code === 'Space') marte.dispararTiroUnico();
+        else if (code === 'KeyF' || code === 'ShiftLeft' || code === 'ShiftRight') marte.ativarRajadaRapida();
+        else if (code === 'KeyR' || code === 'KeyG' || code === 'Digit1' || code === 'Digit2' || code === 'Digit3') marte.lancarMissil();
+        else if (code === 'KeyV') marte.ciclarCamera();
         else if (code === 'KeyQ') marte.iniciarGiro360(-1);
         else if (code === 'KeyE' || code === 'AltLeft' || code === 'AltRight') marte.iniciarGiro360(1);
         else if (code === 'Enter' && marte.emCutscene) marte.pularCutscene();
@@ -2427,8 +2430,9 @@ export async function iniciarJogo() {
   renderer.domElement.addEventListener('mousedown', e => {
     if (modo !== 'jogo' || travado || balacam.ativa) return;
     if (marte.emVoo) {
-      if (e.button === 0) marte.laserAtivo = true;
-      if (e.button === 2) marte.plasmaAtivo = true;
+      if (e.button === 0) marte.dispararTiroUnico();
+      else if (e.button === 2) marte.ativarRajadaRapida();
+      else if (e.button === 1) { e.preventDefault(); marte.lancarMissil(); }
       return;
     }
     if (e.button === 2) entrarMira(false);
@@ -2438,10 +2442,6 @@ export async function iniciarJogo() {
     }
   });
   addEventListener('mouseup', e => {
-    if (marte.ativa) {
-      if (e.button === 0) marte.laserAtivo = false;
-      if (e.button === 2) marte.plasmaAtivo = false;
-    }
     if (e.button === 2 && mira.ativa && !mira.fixa) sairMira(false);
     if (e.button === 0) armas.gatilho(false);
   });
@@ -3008,13 +3008,9 @@ export async function iniciarJogo() {
     if (marte.ativa) {
       const mFrente = (teclas.has('KeyW') || teclas.has('ArrowUp') ? 1 : 0) - (teclas.has('KeyS') || teclas.has('ArrowDown') ? 1 : 0) + tFrente;
       const mLado = (teclas.has('KeyD') || teclas.has('ArrowRight') ? 1 : 0) - (teclas.has('KeyA') || teclas.has('ArrowLeft') ? 1 : 0) + tLado;
-      const mLaser = teclas.has('Space');
-      const mPlasma = teclas.has('KeyF') || teclas.has('ShiftLeft') || teclas.has('ShiftRight');
       const camM = marte.atualizar(dt, {
         frente: mFrente,
         lado: mLado,
-        laser: mLaser,
-        plasma: mPlasma,
         giroEsq: teclas.has('KeyQ'),
         giroDir: teclas.has('KeyE') || teclas.has('AltLeft') || teclas.has('AltRight'),
       });

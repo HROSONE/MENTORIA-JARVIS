@@ -639,25 +639,25 @@
   body.modo-marte #btn-sirene, body.modo-marte #prompt-acao { display: none !important; }
   body.modo-marte #toast { top: 146px; }
   #hud-marte {
-    position: fixed; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
-    z-index: 24; padding: 9px 16px; min-width: 360px; max-width: 92vw;
+    position: fixed; top: max(10px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left));
+    z-index: 24; padding: 9px 16px; width: min(555px, calc(100vw - 28px));
     border: 1.5px solid rgba(249, 115, 22, 0.55);
     box-shadow: 0 8px 28px rgba(15, 23, 42, 0.65), inset 0 0 18px rgba(249, 115, 22, 0.14);
   }
   .marte-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-size: 11.5px; font-weight: 800; color: #f8fafc; }
   .marte-row b { color: #fdba74; font-variant-numeric: tabular-nums; }
-  .marte-barras-duplas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
-  .marte-escudo-row { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 800; color: #bae6fd; }
-  .marte-escudo-wrap { flex: 1; height: 7px; border-radius: 999px; background: rgba(255,255,255,0.14); overflow: hidden; }
-  #marte-escudo-barra { display: block; height: 100%; background: linear-gradient(90deg, #ef4444, #f59e0b, #38bdf8); transform-origin: 0 0; }
-  #marte-forca-barra { display: block; height: 100%; background: linear-gradient(90deg, #ef4444, #eab308, #22c55e); transform-origin: 0 0; }
+  .marte-barras-duplas { display: grid; grid-template-columns: 1.25fr 0.95fr; gap: 12px; margin-top: 6px; }
+  .marte-escudo-row { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 900; color: #fecdd3; }
+  .marte-escudo-wrap { flex: 1; height: 9px; border-radius: 999px; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.22); overflow: hidden; }
+  #marte-escudo-barra { display: block; height: 100%; background: linear-gradient(90deg, #ef4444, #f59e0b, #22c55e); transform-origin: 0 0; }
+  #marte-forca-barra { display: block; height: 100%; background: linear-gradient(90deg, #ef4444, #eab308, #38bdf8); transform-origin: 0 0; }
   #marte-boss-box {
-    margin-top: 7px; padding-top: 6px; border-top: 1px solid rgba(217, 70, 239, 0.38);
+    margin-top: 7px; padding-top: 6px; border-top: 1px solid rgba(244, 63, 94, 0.45);
   }
-  .marte-boss-top { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 900; color: #f5d0fe; letter-spacing: 0.6px; margin-bottom: 4px; }
-  .marte-boss-wrap { height: 9px; border-radius: 999px; background: rgba(30, 10, 46, 0.85); border: 1px solid rgba(217, 70, 239, 0.55); overflow: hidden; }
-  #marte-boss-barra { display: block; height: 100%; background: linear-gradient(90deg, #dc2626, #db2777, #a855f7); transform-origin: 0 0; }
-  .marte-dica { margin-top: 5px; font-size: 9.8px; color: #cbd5e1; text-align: center; opacity: 0.92; }
+  .marte-boss-top { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 900; color: #ffe4e6; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .marte-boss-wrap { height: 10px; border-radius: 999px; background: rgba(30, 10, 26, 0.9); border: 1.5px solid rgba(244, 63, 94, 0.72); overflow: hidden; }
+  #marte-boss-barra { display: block; height: 100%; background: linear-gradient(90deg, #dc2626, #f43f5e, #d946ef); transform-origin: 0 0; }
+  .marte-dica { margin-top: 5px; font-size: 9.6px; color: #cbd5e1; text-align: center; opacity: 0.94; }
   #marte-flash { position: fixed; inset: 0; z-index: 23; pointer-events: none; background: radial-gradient(circle, transparent 35%, rgba(239, 68, 68, 0.85) 100%); opacity: 0; }
   #cine-marte { position: fixed; inset: 0; z-index: 36; pointer-events: none; }
   #cine-marte .faixa { position: fixed; left: 0; right: 0; height: clamp(38px, 8.5vh, 74px); background: #000; }
@@ -692,30 +692,55 @@
   }
   .marte-final-acoes button.prim { background: linear-gradient(90deg, #ea580c, #f97316); border: 0; }
   #touch-marte {
-    position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom));
+    position: fixed; right: max(14px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
     z-index: 28; display: flex; gap: 10px; align-items: flex-end; pointer-events: auto;
   }
   .touch-marte-aux { display: flex; flex-direction: column; gap: 8px; align-items: center; }
   .tbtn-marte-mini {
-    width: 54px; height: 54px; border-radius: 50%; border: 1.8px solid rgba(148, 163, 184, 0.6);
-    background: rgba(15, 23, 42, 0.86); color: #e2e8f0; font-weight: 800; font-size: 9.5px;
+    width: 50px; height: 50px; border-radius: 50%; border: 1.8px solid rgba(148, 163, 184, 0.6);
+    background: rgba(15, 23, 42, 0.86); color: #e2e8f0; font-weight: 800; font-size: 9px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
   }
-  .tbtn-marte-mini span:first-child { font-size: 16px; line-height: 1; }
+  .tbtn-marte-mini span:first-child { font-size: 15px; line-height: 1; }
   .tbtn-arma {
-    width: 76px; height: 76px; border-radius: 50%; border: 2px solid rgba(56, 189, 248, 0.85);
-    background: radial-gradient(circle at 35% 30%, rgba(56, 189, 248, 0.42), rgba(15, 23, 42, 0.88));
-    color: #e0f2fe; font-weight: 900; font-size: 11px; display: flex; flex-direction: column;
+    width: 72px; height: 72px; border-radius: 50%; border: 2px solid rgba(56, 189, 248, 0.85);
+    background: radial-gradient(circle at 35% 30%, rgba(56, 189, 248, 0.44), rgba(15, 23, 42, 0.90));
+    color: #e0f2fe; font-weight: 900; font-size: 10px; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 2px; cursor: pointer;
     box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45);
+    transition: transform 0.08s ease, opacity 0.15s ease, box-shadow 0.15s ease;
   }
-  .tbtn-arma.plasma {
-    width: 84px; height: 84px; border-color: rgba(217, 70, 239, 0.9);
-    background: radial-gradient(circle at 35% 30%, rgba(217, 70, 239, 0.48), rgba(30, 10, 46, 0.9));
-    color: #fae8ff; box-shadow: 0 6px 22px rgba(192, 38, 211, 0.5);
+  .tbtn-arma:active { transform: scale(0.92); }
+  /* Botão Grande Principal: 1 Clique = 1 Tiro */
+  .tbtn-arma.tiro-principal {
+    width: 92px; height: 92px; border-width: 2.5px; border-color: rgba(56, 189, 248, 0.95);
+    background: radial-gradient(circle at 35% 30%, rgba(56, 189, 248, 0.56), rgba(12, 24, 48, 0.94));
+    font-size: 11.5px; box-shadow: 0 8px 26px rgba(2, 132, 199, 0.58), inset 0 0 14px rgba(125, 211, 252, 0.25);
   }
-  .tbtn-arma span:first-child { font-size: 22px; line-height: 1; }
+  .tbtn-arma.tiro-principal span:first-child { font-size: 27px; }
+  /* Botão de Rajada Ultra-Rápida (15s cooldown) */
+  .tbtn-arma.rajada {
+    border-color: rgba(217, 70, 239, 0.92);
+    background: radial-gradient(circle at 35% 30%, rgba(217, 70, 239, 0.50), rgba(30, 10, 46, 0.92));
+    color: #fae8ff; box-shadow: 0 6px 22px rgba(192, 38, 211, 0.50);
+  }
+  .tbtn-arma.rajada.ativa {
+    border-color: #fde047;
+    box-shadow: 0 0 28px rgba(250, 204, 21, 0.95), 0 0 14px rgba(217, 70, 239, 0.9);
+    transform: scale(1.05);
+  }
+  .tbtn-arma.recarga {
+    opacity: 0.52; border-color: rgba(148, 163, 184, 0.45);
+    background: rgba(15, 23, 42, 0.88); box-shadow: none; color: #cbd5e1;
+  }
+  /* Botão de Mísseis Pesados (até 3x) */
+  .tbtn-arma.missil {
+    border-color: rgba(249, 115, 22, 0.92);
+    background: radial-gradient(circle at 35% 30%, rgba(249, 115, 22, 0.55), rgba(42, 14, 10, 0.92));
+    color: #ffedd5; box-shadow: 0 6px 22px rgba(234, 88, 12, 0.52);
+  }
+  .tbtn-arma span:first-child { font-size: 20px; line-height: 1; }
 </style>
 </head>
 <body>
@@ -836,34 +861,35 @@
     <div id="vc-barra-wrap"><i id="vc-barra"></i></div>
     <div id="vc-tag">⚡ SUPER-VELOCIDADE</div>
   </div>
-  <!-- Missão Marte: HUD Espacial, Cutscenes, Chefe Interdimensional, Touch Laser/Plasma/360° e Tela Final -->
+  <!-- Missão Marte: HUD Espacial (Vida da Nave + Vida da Nave Inimiga), Míssil (3x), Rajada (15s) e Tiro (1x) -->
   <div id="marte-flash"></div>
   <div id="hud-marte" class="glass oculto">
     <div class="marte-row">
       <span>🪐 MARTE: <b id="marte-dist">225M km</b></span>
       <span>⏱️ VOO: <b id="marte-tempo">03:00</b></span>
-      <span>☄️ DESTRUÍDOS: <b id="marte-ast">0</b></span>
+      <span>🚀 MÍSSEIS: <b id="marte-misseis-hud">3/3</b></span>
+      <span>☄️ <b id="marte-ast">0</b></span>
     </div>
     <div class="marte-barras-duplas">
       <div class="marte-escudo-row">
-        <span>🛡️ ESCUDO</span>
+        <span style="color:#86efac">❤️ VIDA DA NAVE</span>
         <div class="marte-escudo-wrap"><i id="marte-escudo-barra"></i></div>
-        <span id="marte-escudo-txt">100%</span>
+        <span id="marte-escudo-txt">100/100</span>
       </div>
       <div class="marte-escudo-row">
-        <span id="marte-forca-rot" style="color:#86efac">⚙️ FORÇA</span>
+        <span id="marte-forca-rot" style="color:#7dd3fc">⚙️ FORÇA</span>
         <div class="marte-escudo-wrap"><i id="marte-forca-barra"></i></div>
         <span id="marte-forca-txt">100%</span>
       </div>
     </div>
     <div id="marte-boss-box" class="oculto">
       <div class="marte-boss-top">
-        <span>🌀 NAVE INIMIGA INTERDIMENSIONAL · BLOQUEIO DE MARTE</span>
-        <span id="marte-boss-txt">100%</span>
+        <span>👾 VIDA DA NAVE INIMIGA</span>
+        <span id="marte-boss-txt">180/180 (100%)</span>
       </div>
       <div class="marte-boss-wrap"><i id="marte-boss-barra"></i></div>
     </div>
-    <div class="marte-dica">WASD Desviar · Q/E Giro 360° · V Câmera (4 ângulos + 360° c/ mouse) · Clique/Espaço LASER · Dir/F PLASMA</div>
+    <div class="marte-dica">Clique/Espaço = ⚡ TIRO (1x) · Dir/F = 🔥 RAJADA RÁPIDA (15s) · R = 🚀 MÍSSIL (3x) · WASD Desviar · Q/E 360° · V Câmera</div>
   </div>
   <div id="cine-marte" class="oculto">
     <div class="faixa cima"></div>
@@ -884,8 +910,18 @@
       <button class="tbtn-marte-mini" id="touch-cam-marte" title="Trocar Ângulo de Câmera / 360° (V)"><span>🎥</span><span id="touch-cam-txt">3ª PESS</span></button>
       <button class="tbtn-marte-mini" id="touch-giro360" title="Manobra Evasiva 360° (Q/E)"><span>🌀</span><span>360°</span></button>
     </div>
-    <button class="tbtn-arma" id="touch-laser"><span>⚡</span><span>LASER</span></button>
-    <button class="tbtn-arma plasma" id="touch-plasma"><span>🔥</span><span>PLASMA</span></button>
+    <button class="tbtn-arma missil" id="touch-missil" title="Lançar Míssil Explosivo Pesado — até 3 mísseis (R)">
+      <span id="touch-missil-ico">🚀</span>
+      <span id="touch-missil-txt">MÍSSIL 3/3</span>
+    </button>
+    <button class="tbtn-arma rajada" id="touch-plasma" title="Rajada Ultra-Rápida de Tiros — recarga de 15s (Botão Direito / F)">
+      <span id="touch-rajada-ico">🔥</span>
+      <span id="touch-rajada-txt">RAJADA</span>
+    </button>
+    <button class="tbtn-arma tiro-principal" id="touch-laser" title="Tiro Normal: 1 Clique = 1 Tiro (Clique Esquerdo / Espaço)">
+      <span>⚡</span>
+      <span>TIRO</span>
+    </button>
   </div>
   <div id="prompt-acao" class="glass oculto">[E] Entrar no veículo</div>
   <div id="mira" class="oculto"></div>
