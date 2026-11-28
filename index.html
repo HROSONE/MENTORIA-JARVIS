@@ -631,6 +631,75 @@
   .fase-obj { font-size: 10.5px; color: #e2e8f0; line-height: 1.25; }
   .fase-obj.feito { color: #86efac; text-decoration: line-through; opacity: 0.85; }
   body.em-cine #hud-fase { display: none !important; }
+
+  /* Missão Marte: Cutscenes, Combate Espacial (Laser & Plasma) e Final "Nos veremos lá" */
+  body.modo-marte #hud-esq, body.modo-marte #hud-base-dir, body.modo-marte #hud-velocista,
+  body.modo-marte #touch-pe-dir, body.modo-marte #touch-carro-dir, body.modo-marte #touch-carro-esq,
+  body.modo-marte #select-teleporte, body.modo-marte #btn-noite, body.modo-marte #btn-chuva,
+  body.modo-marte #btn-cam, body.modo-marte #btn-sirene, body.modo-marte #prompt-acao { display: none !important; }
+  body.modo-marte #toast { top: 118px; }
+  #hud-marte {
+    position: fixed; top: max(12px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+    z-index: 24; padding: 9px 18px; min-width: 320px; max-width: 92vw;
+    border: 1.5px solid rgba(249, 115, 22, 0.55);
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.65), inset 0 0 18px rgba(249, 115, 22, 0.14);
+  }
+  .marte-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 12px; font-weight: 800; color: #f8fafc; }
+  .marte-row b { color: #fdba74; font-variant-numeric: tabular-nums; }
+  .marte-escudo-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 11px; font-weight: 800; color: #bae6fd; }
+  .marte-escudo-wrap { flex: 1; height: 7px; border-radius: 999px; background: rgba(255,255,255,0.14); overflow: hidden; }
+  #marte-escudo-barra { display: block; height: 100%; background: linear-gradient(90deg, #ef4444, #f59e0b, #38bdf8); transform-origin: 0 0; }
+  .marte-dica { margin-top: 5px; font-size: 10px; color: #cbd5e1; text-align: center; opacity: 0.9; }
+  #marte-flash { position: fixed; inset: 0; z-index: 23; pointer-events: none; background: radial-gradient(circle, transparent 35%, rgba(239, 68, 68, 0.85) 100%); opacity: 0; }
+  #cine-marte { position: fixed; inset: 0; z-index: 36; pointer-events: none; }
+  #cine-marte .faixa { position: fixed; left: 0; right: 0; height: clamp(38px, 8.5vh, 74px); background: #000; }
+  #cine-marte .faixa.cima { top: 0; }
+  #cine-marte .faixa.baixo { bottom: 0; }
+  #cine-marte-legenda {
+    position: fixed; left: 50%; bottom: max(18px, 2.2vh); transform: translateX(-50%); z-index: 38;
+    font-size: clamp(12px, 2.2vw, 17px); font-weight: 900; letter-spacing: 1.2px; color: #fed7aa;
+    text-shadow: 0 2px 14px rgba(0,0,0,0.95); text-align: center; white-space: nowrap;
+  }
+  #cine-marte-pular {
+    position: fixed; right: max(16px, env(safe-area-inset-right)); top: max(14px, env(safe-area-inset-top)); z-index: 39;
+    pointer-events: auto; padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.28);
+    background: rgba(15, 23, 42, 0.78); color: #f8fafc; font-weight: 800; font-size: 12px; cursor: pointer;
+  }
+  #marte-final {
+    position: fixed; inset: 0; z-index: 42;
+    background: radial-gradient(circle at 50% 48%, rgba(15, 8, 6, 0.16) 0%, rgba(2, 4, 10, 0.72) 78%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+    opacity: 1;
+  }
+  .marte-final-frase {
+    font-size: clamp(34px, 7vw, 72px); font-weight: 900; letter-spacing: 3px; color: #fff7ed;
+    text-shadow: 0 4px 34px rgba(249, 115, 22, 0.75), 0 0 80px rgba(234, 88, 12, 0.45);
+    text-align: center; padding: 0 20px;
+  }
+  .marte-final-sub { font-size: clamp(12px, 2vw, 15px); letter-spacing: 4px; text-transform: uppercase; color: #fdba74; opacity: 0.9; }
+  .marte-final-acoes { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+  .marte-final-acoes button {
+    padding: 12px 22px; border-radius: 10px; border: 1px solid rgba(253, 186, 116, 0.45);
+    background: rgba(15, 23, 42, 0.82); color: #fff; font-weight: 800; font-size: 14px; cursor: pointer;
+  }
+  .marte-final-acoes button.prim { background: linear-gradient(90deg, #ea580c, #f97316); border: 0; }
+  #touch-marte {
+    position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom));
+    z-index: 28; display: flex; gap: 12px; align-items: flex-end; pointer-events: auto;
+  }
+  .tbtn-arma {
+    width: 78px; height: 78px; border-radius: 50%; border: 2px solid rgba(56, 189, 248, 0.85);
+    background: radial-gradient(circle at 35% 30%, rgba(56, 189, 248, 0.42), rgba(15, 23, 42, 0.88));
+    color: #e0f2fe; font-weight: 900; font-size: 11px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px; cursor: pointer;
+    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45);
+  }
+  .tbtn-arma.plasma {
+    width: 86px; height: 86px; border-color: rgba(217, 70, 239, 0.9);
+    background: radial-gradient(circle at 35% 30%, rgba(217, 70, 239, 0.48), rgba(30, 10, 46, 0.9));
+    color: #fae8ff; box-shadow: 0 6px 22px rgba(192, 38, 211, 0.5);
+  }
+  .tbtn-arma span:first-child { font-size: 22px; line-height: 1; }
 </style>
 </head>
 <body>
@@ -750,6 +819,38 @@
     <div class="vc-top"><span id="vc-num">0</span><span class="vc-unit">km/h</span></div>
     <div id="vc-barra-wrap"><i id="vc-barra"></i></div>
     <div id="vc-tag">⚡ SUPER-VELOCIDADE</div>
+  </div>
+  <!-- Missão Marte: HUD Espacial, Cutscenes, Touch Laser/Plasma e Tela Final -->
+  <div id="marte-flash"></div>
+  <div id="hud-marte" class="glass oculto">
+    <div class="marte-row">
+      <span>🪐 MARTE: <b id="marte-dist">225M km</b></span>
+      <span>☄️ ASTEROIDES: <b id="marte-ast">0/12</b></span>
+    </div>
+    <div class="marte-escudo-row">
+      <span>🛡️ ESCUDO</span>
+      <div class="marte-escudo-wrap"><i id="marte-escudo-barra"></i></div>
+      <span id="marte-escudo-txt">100%</span>
+    </div>
+    <div class="marte-dica">WASD / Setas Desviar · Clique / Espaço = ⚡ LASER · Botão Dir / F / Shift = 🔥 PLASMA</div>
+  </div>
+  <div id="cine-marte" class="oculto">
+    <div class="faixa cima"></div>
+    <div class="faixa baixo"></div>
+    <div id="cine-marte-legenda"></div>
+    <button id="cine-marte-pular">PULAR ⏭</button>
+  </div>
+  <div id="marte-final" class="oculto">
+    <div class="marte-final-sub">MISSÃO MARTE · HRYZ CITY</div>
+    <div class="marte-final-frase">Nos veremos lá</div>
+    <div class="marte-final-acoes">
+      <button class="prim" id="marte-btn-replay">↺ Jogar Missão Marte</button>
+      <button id="marte-btn-sala">🏠 Sala de Fases</button>
+    </div>
+  </div>
+  <div id="touch-marte" class="oculto">
+    <button class="tbtn-arma" id="touch-laser"><span>⚡</span><span>LASER</span></button>
+    <button class="tbtn-arma plasma" id="touch-plasma"><span>🔥</span><span>PLASMA</span></button>
   </div>
   <div id="prompt-acao" class="glass oculto">[E] Entrar no veículo</div>
   <div id="mira" class="oculto"></div>

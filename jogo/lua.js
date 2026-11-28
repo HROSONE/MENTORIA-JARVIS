@@ -173,6 +173,7 @@ export function criarFaseLua({ scene, base, padX, padZ, padRy = 0 }) {
       const [ter, roc] = await Promise.all([
         loader.loadAsync(`${base}/cenarios/lua/lua_terreno.glb`),
         loader.loadAsync(`${base}/cenarios/lua/lua_rochas.glb`),
+        carregarFoguete(),
       ]);
       // terreno: altura de cada vértice da malha de 321 × 321 (2,5 m) → grade para o chão e as colisões
       ter.scene.traverse(o => {

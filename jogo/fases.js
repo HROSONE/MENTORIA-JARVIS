@@ -223,6 +223,7 @@ export class GerenciadorFases {
       { id: 'cristais', icone: '💎', texto: 'Coletar amostras lunares', atual: 0, meta: 4 },
       { id: 'sensores', icone: '📡', texto: 'Ativar sensores sísmicos', atual: 0, meta: 2 },
       { id: 'bandeira', icone: '🚩', texto: 'Fincar Bandeira Hryz no cume', atual: 0, meta: 1 },
+      { id: 'marte', icone: '🚀', texto: 'Embarcar na Nave rumo a Marte [E]', atual: 0, meta: 1 },
     ];
 
     // 4 cristais brilhantes em crateras ao redor do foguete
