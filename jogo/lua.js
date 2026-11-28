@@ -223,13 +223,18 @@ export function criarFaseLua({ scene, base, padX, padZ, padRy = 0 }) {
     })();
     return carregando;
   }
+  let carregandoFog = null;
   async function carregarFoguete() {
     if (gltfFog) return;
-    const [f, p] = await Promise.all([loader.loadAsync(`${base}/veiculos/foguete/foguete_hryz.glb`), loader.loadAsync(`${base}/veiculos/foguete/plataforma_foguete.glb`)]);
-    gltfFog = f;
-    p.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    pad.add(p.scene);
-    fogTerra = prepararFoguete(f.scene); fogTerra.obj.position.y = 0.6; pad.add(fogTerra.obj);
+    if (carregandoFog) return carregandoFog;
+    carregandoFog = (async () => {
+      const [f, p] = await Promise.all([loader.loadAsync(`${base}/veiculos/foguete/foguete_hryz.glb`), loader.loadAsync(`${base}/veiculos/foguete/plataforma_foguete.glb`)]);
+      gltfFog = f;
+      p.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      pad.add(p.scene);
+      fogTerra = prepararFoguete(f.scene); fogTerra.obj.position.y = 0.6; pad.add(fogTerra.obj);
+    })();
+    return carregandoFog;
   }
 
   // ------------------------------------------------------------------ chão e colisões

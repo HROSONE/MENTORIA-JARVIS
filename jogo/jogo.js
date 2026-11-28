@@ -1617,6 +1617,9 @@ export async function iniciarJogo() {
     base: BASE_BIB,
     toast: mostrarToast,
     aoSairParaSala: () => entrarSala(),
+    definirVisibilidadeJogador: vis => {
+      if (persAtual?.inst?.obj && !jogador.veiculo) persAtual.inst.obj.visible = vis;
+    },
   });
 
   armas.aoSemMunicao = id => mostrarToast(id === 'sniper' ? 'Sniper sem balas! Compre na Loja de Munição ($ no minimapa).' : 'Sem munição de reserva: compre na Loja ($ no minimapa).');
@@ -1627,7 +1630,12 @@ export async function iniciarJogo() {
     const jx = jogador.veiculo ? jogador.veiculo.x : jogador.x;
     const jz = jogador.veiculo ? jogador.veiculo.z : jogador.z;
     const iMarte = marte.interacaoLua(jx, jz);
-    if (iMarte) return iMarte;
+    if (iMarte) {
+      return {
+        texto: iMarte.texto,
+        fazer: () => { fases._progresso?.('marte', 1); iMarte.fazer(); },
+      };
+    }
     const iFase = fases.obterInteracao(jx, jz);
     if (iFase) return iFase;
     return loja.interacao() || missao.interacao() || interacaoFoguete();
@@ -1639,7 +1647,16 @@ export async function iniciarJogo() {
     if (persAtual?.def?.id !== 'astronauta') {
       return { texto: '[E] 🌙 Missão na Lua (exclusiva do Astronauta · P)', fazer: () => mostrarToast('👩‍🚀 A Missão na Lua é exclusiva do Astronauta! Volte à Sala de Fases (P) para jogar na Lua.') };
     }
-    return { texto: '[E] 🚀 Embarcar no foguete para a Lua', fazer: () => viajar('lua') };
+    if (!fases.prontoParaDecolarTerra()) {
+      return {
+        texto: '[E] ⚠️ Preparar Foguete (2 células 🔋 + Terminal 🖥️)',
+        fazer: () => mostrarToast('⚠️ Complete a missão rápida na Terra antes de decolar: pegue as 2 células criogênicas (🔋) e ative o Terminal (🖥️) ao lado!'),
+      };
+    }
+    return {
+      texto: '[E] 🚀 Embarcar no Foguete HRYZ-1 rumo à Lua',
+      fazer: () => { fases._progresso?.('embarcar_lua', 1); viajar('lua'); },
+    };
   }
   // ambiente da Lua: céu preto, sem névoa, sol branco e rasante, só a luz que volta do chão (regolito)
   let camFarTerra = null;
@@ -1666,11 +1683,10 @@ export async function iniciarJogo() {
     }
     snapCam = true;
   }
-  /** começa direto na Lua (exclusivo do Astronauta), sem a viagem */
+  /** atalho direto para a Lua (testes / replay) */
   async function irParaLua() {
     mostrarToast('🌙 Preparando a Fase Lunar e a Nave Marte…');
-    await lua.carregar();
-    await marte.carregar();
+    await Promise.all([lua.carregar(), marte.carregar()]);
     if (persAtual.def.id !== 'astronauta') { const i = PERSONAGENS_DEF.findIndex(d => d.id === 'astronauta'); if (i >= 0) await carregarPersonagem(i); }
     ambienteLua(true);
     const p = lua.peEscada(true); jogador.veiculo = null; jogador.x = p.x; jogador.z = p.z + 1.5; jogador.ry = 0; camYaw = Math.PI;
@@ -1686,18 +1702,21 @@ export async function iniciarJogo() {
       mostrarToast('👩‍🚀 A Missão na Lua é exclusiva do Astronauta! Volte à Sala de Fases (P).');
       return;
     }
-    if (destino === 'lua' && !lua.carregado) { mostrarToast('🌙 Preparando a Lua…'); await lua.carregar(); }
+    if (destino === 'lua') {
+      mostrarToast('🌙 Preparando a Lua e a Nave Espacial Marte…');
+      await Promise.all([lua.carregar(), marte.carregar()]);
+    }
     if (mira.ativa) sairMira();
     travado = true; persAtual.inst.obj.visible = false;
-    lua.embarcar(destino, d => {                                                  // no meio da tela preta: troca de mundo
+    lua.embarcar(destino, d => {
       ambienteLua(d === 'lua');
       const p = lua.peEscada(d === 'lua'); jogador.x = p.x; jogador.z = p.z; jogador.y = alturaChao(p.x, p.z) ?? CALCADA; jogador.vy = 0; jogador.noChao = true;
     }, d => {
-      const p = lua.peEscada(d === 'lua'); jogador.x = p.x; jogador.z = p.z; jogador.ry = p.ang; camYaw = p.ang + Math.PI;   // a câmera fica de costas para o foguete
+      const p = lua.peEscada(d === 'lua'); jogador.x = p.x; jogador.z = p.z; jogador.ry = p.ang; camYaw = p.ang + Math.PI;
       jogador.y = alturaChao(p.x, p.z) ?? CALCADA; jogador.yPico = jogador.y;
       persAtual.inst.obj.visible = true; travado = false; snapCam = true;
       if (d === 'lua') fases.iniciar('astronauta');
-      mostrarToast(d === 'lua' ? '🌙 Você está na Lua! Gravidade 1/6 — complete a Expedição Lunar!' : '🏙️ De volta a Hryz City');
+      mostrarToast(d === 'lua' ? '🌙 Você pousou na Lua! Explore ou embarque na Nave ao lado [E] rumo a Marte!' : '🏙️ De volta a Hryz City');
     });
   }
 
@@ -2334,6 +2353,20 @@ export async function iniciarJogo() {
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'AltLeft', 'AltRight', 'Tab'].includes(code)) e.preventDefault();
     if (!teclas.has(code)) {
       if (modo !== 'jogo') { /* abertura e sala tratam as próprias teclas */ }
+      else if (marte.ativa) {
+        if (code === 'KeyV') marte.ciclarCamera();
+        else if (code === 'KeyQ') marte.iniciarGiro360(-1);
+        else if (code === 'KeyE' || code === 'AltLeft' || code === 'AltRight') marte.iniciarGiro360(1);
+        else if (code === 'Enter' && marte.emCutscene) marte.pularCutscene();
+        else if (code === 'KeyP') entrarSala();
+        else if (code === 'KeyM') {
+          som.mudo = !som.mudo;
+          marte.som.mudo = som.mudo;
+          $('btn-som').textContent = som.mudo ? '🔇' : '🔊';
+          mostrarToast(som.mudo ? 'Som silenciado' : 'Som ligado');
+        }
+        else if (code === 'KeyH') $('modal-ajuda').classList.toggle('oculto');
+      }
       else if (code === 'KeyE') { const it = interacaoAtual(); if (it) it.fazer(); else entrarOuSairVeiculo(); }
       else if ((code === 'KeyB' || code === 'ControlLeft' || code === 'ControlRight') && !jogador.veiculo) alternarAgachar();
       else if (code === 'AltLeft' || code === 'AltRight') iniciarRolamento();
@@ -2376,7 +2409,6 @@ export async function iniciarJogo() {
         $('btn-som').textContent = som.mudo ? '🔇' : '🔊';
         mostrarToast(som.mudo ? 'Som silenciado' : 'Som ligado');
       }
-      else if (code === 'Enter' && marte.emCutscene) marte.pularCutscene();
       else if (code === 'KeyH') $('modal-ajuda').classList.toggle('oculto');
       else if (code === 'Tab') alternarMapa();
       else if (code === 'Escape' && mapaAberto) fecharMapa();
@@ -2418,7 +2450,11 @@ export async function iniciarJogo() {
     if (!arrastando || e.pointerId !== camPointerId) return;
     const dx = e.clientX - ultimoX, dy = e.clientY - ultimoY;
     ultimoX = e.clientX; ultimoY = e.clientY;
-    if (mira.ativa) {                                                            // luneta: quanto mais zoom, mais fino o ajuste
+    if (marte.emVoo) {
+      marte.girarOlhar360(dx, dy);
+      return;
+    }
+    if (mira.ativa) {
       const k = mira.fov / 56 * 0.85;
       mira.yaw -= dx * 0.0055 * k; mira.pitch = Math.max(-1.2, Math.min(0.6, mira.pitch - dy * 0.0045 * k));
       return;
@@ -2436,6 +2472,7 @@ export async function iniciarJogo() {
   addEventListener('pointerup', soltarCam);
   addEventListener('pointercancel', soltarCam);
   renderer.domElement.addEventListener('wheel', e => {
+    if (marte.emVoo) { marte.zoomOlhar360(e.deltaY); return; }
     if (mira.ativa) { mira.fov = Math.max(3.5, Math.min(30, mira.fov * (1 + e.deltaY * 0.0012))); return; }
     camDist = Math.max(3.5, Math.min(18, camDist + e.deltaY * 0.006));
   }, { passive: true });
@@ -2444,7 +2481,11 @@ export async function iniciarJogo() {
   $('btn-qualidade').onclick = ciclarQualidade;
   $('btn-noite').onclick = () => { ehNoite = !ehNoite; aplicarClima(); };
   $('btn-chuva').onclick = () => { ehChuva = !ehChuva; rainLines.visible = ehChuva; aplicarClima(); };
-  $('btn-cam').onclick = () => { camModo = (camModo + 1) % 3; mostrarToast(['Câmera: 3ª Pessoa', 'Câmera: Capô / 1ª Pessoa', 'Câmera: Aérea'][camModo]); };
+  $('btn-cam').onclick = () => {
+    if (marte.ativa) { marte.ciclarCamera(); return; }
+    camModo = (camModo + 1) % 3;
+    mostrarToast(['Câmera: 3ª Pessoa', 'Câmera: Capô / 1ª Pessoa', 'Câmera: Aérea'][camModo]);
+  };
   $('btn-tela').onclick = alternarTelaCheiaHorizontal;
   $('btn-ativar-horizontal').onclick = () => { $('aviso-girar').classList.add('dispensado'); alternarTelaCheiaHorizontal(); };
   $('btn-fechar-girar').onclick = () => $('aviso-girar').classList.add('dispensado');
@@ -2753,6 +2794,7 @@ export async function iniciarJogo() {
     persAtual.inst.obj.position.set(jogador.x, jogador.y, jogador.z);
     persAtual.inst.obj.rotation.y = jogador.ry;
     if (pt.id === 'selva') garantirTrex(false);
+    if (pt.id === 'foguete') lua.carregarFoguete().catch(() => {});
     const caoSala = ehCao();
     salaCentro.set(v && !caoSala ? (jogador.x + v.x) / 2 : jogador.x, 0, v && !caoSala ? (jogador.z + v.z) / 2 : jogador.z);
     salaRaio = caoSala ? 2.85 : (v ? Math.max(7.5, v.raio * 2.4 + 3.5) : 5.2);
@@ -2824,8 +2866,8 @@ export async function iniciarJogo() {
       const persId = persAtual.def.id;
       const faseDef = obterFaseDef(persId);
 
-      // 1) Astronauta → Fase exclusiva na Lua
-      if (persId === 'astronauta') {
+      // 1) Astronauta → Começa na Terra (Base de Lançamento) com missão rápida antes de pegar o Foguete p/ a Lua!
+      if (persId === 'astronauta' && esc.local === 'lua') {
         jogador.veiculo = null;
         som.desbloquear();
         await irParaLua();
@@ -2833,12 +2875,19 @@ export async function iniciarJogo() {
       }
 
       if (lua.ativa) ambienteLua(false);
+      if (persId === 'astronauta') {
+        await lua.carregarFoguete().catch(e => console.warn('foguete', e));
+      }
       const v = (ehCao() || faseDef.permiteVeic === false) ? null : veiculos.find(o => o.id === esc.veic);
       if (v) { jogador.veiculo = v; persAtual.inst.obj.visible = !!v.moto; if (v.moto) { v.api?.descanso?.(false); v.incl = 0; v.obj.rotation.set(0, v.ry, 0, 'YXZ'); } jogador.x = v.x; jogador.z = v.z; }
-      camYaw = v ? v.ry : jogador.ry; camPitch = 0.32; snapCam = true; minimapTimer = 99;
+      const pt = PONTOS_TELEPORTE.find(p => p.id === esc.local);
+      if (!v && persId === 'astronauta' && pt) {
+        jogador.ry = pt.ang;
+        persAtual.inst.obj.rotation.y = jogador.ry;
+      }
+      camYaw = v ? v.ry : jogador.ry; camPitch = 0.28; snapCam = true; minimapTimer = 99;
       atualizarHudModo();
       som.desbloquear();
-      const pt = PONTOS_TELEPORTE.find(p => p.id === esc.local);
 
       // 2) Policial → ÚNICO personagem com a missão de salvar o refém!
       if (persId === 'policial') {
@@ -2847,8 +2896,12 @@ export async function iniciarJogo() {
       } else if (ehCao()) {
         // 3) Cães → Fase exclusiva Vida de Cachorro
         mostrarToast(`🐾 Vida de Cachorro (${persAtual.def.nome})! F = Modo Faro · E = Cheirar cães, lixo, hidrantes e Luna`);
+      } else if (persId === 'astronauta') {
+        // 4) Astronauta na Terra → Missão rápida de Pré-Lançamento antes de ir para a Lua!
+        fases.iniciar('astronauta');
+        mostrarToast('👩‍🚀 Pré-Lançamento na Terra: pegue as 2 células criogênicas (🔋) e ative o Terminal (🖥️) para embarcar no Foguete rumo à Lua!');
       } else {
-        // 4) Demais personagens → Cada um com sua fase exclusiva (Velocista, Caçada ao T. rex, Bombeiro, Canteiro, Tour)
+        // 5) Demais personagens → Cada um com sua fase exclusiva
         fases.iniciar(persId);
         if (persId === 'kael') garantirTrex(false);
         mostrarToast(`${faseDef.badge} · ${faseDef.titulo}!`);
@@ -2951,13 +3004,20 @@ export async function iniciarJogo() {
     const tFrente = (touch.acel ? 1 : 0) - (touch.freio ? 1 : 0) - touch.mz;
     const tLado = (touch.dir ? 1 : 0) - (touch.esq ? 1 : 0) + touch.mx;
 
-    // ---- MISSÃO MARTE (Decolagem -> Painel da Cabine -> Combate nos Asteroides -> Chegada em Marte -> "Nos veremos lá")
+    // ---- MISSÃO MARTE (Decolagem -> Painel -> 3min Asteroides -> Portal + Chefe -> Marte 100% -> "Nos veremos lá")
     if (marte.ativa) {
       const mFrente = (teclas.has('KeyW') || teclas.has('ArrowUp') ? 1 : 0) - (teclas.has('KeyS') || teclas.has('ArrowDown') ? 1 : 0) + tFrente;
       const mLado = (teclas.has('KeyD') || teclas.has('ArrowRight') ? 1 : 0) - (teclas.has('KeyA') || teclas.has('ArrowLeft') ? 1 : 0) + tLado;
       const mLaser = teclas.has('Space');
       const mPlasma = teclas.has('KeyF') || teclas.has('ShiftLeft') || teclas.has('ShiftRight');
-      const camM = marte.atualizar(dt, { frente: mFrente, lado: mLado, laser: mLaser, plasma: mPlasma });
+      const camM = marte.atualizar(dt, {
+        frente: mFrente,
+        lado: mLado,
+        laser: mLaser,
+        plasma: mPlasma,
+        giroEsq: teclas.has('KeyQ'),
+        giroDir: teclas.has('KeyE') || teclas.has('AltLeft') || teclas.has('AltRight'),
+      });
       if (camM) {
         camera.position.copy(camM.p);
         camera.lookAt(camM.a);
@@ -3628,7 +3688,8 @@ export async function iniciarJogo() {
       queimados: veiculos.filter(v => v.queimado).map(v => v.id), hp: veiculos.filter(v => v.hp < 100).map(v => [v.id, Math.round(v.hp)]), trex: trexState.hp }),
     danoTrex: n => danoTrex(n),
     veiculo: id => veiculos.find(v => v.id === id),
-    missao, loja, balacam, marte, mira: () => ({ ...mira }),
+    missao, loja, balacam, marte, fasesObj: fases, mira: () => ({ ...mira }),
+    persVisivel: () => !!persAtual?.inst?.obj?.visible,
     fases: () => fases.estado(),
     qualidadeAtual: () => qualAtual.id,
     irParaPos: (x, z, ry = 0, terraco = false) => irPara({ x, z, ry }, terraco === 'manter' ? jogador.plataforma : terraco ? TORRE.terraco : null),

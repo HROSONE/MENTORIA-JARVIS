@@ -25,13 +25,13 @@ export const FASES_PERSONAGEM = {
   },
   astronauta: {
     id: 'astronauta',
-    badge: '🌙 Missão na Lua',
-    titulo: 'Expedição Lunar HRYZ-1',
-    desc: 'Exclusiva na Lua (gravidade 1/6): colete cristais lunares, ative sensores e finque a bandeira.',
-    localPadrao: 'lua',
+    badge: '🚀 Terra → Lua → Marte',
+    titulo: 'Programa Espacial HRYZ',
+    desc: 'Prepare o foguete na Base de Lançamento na Terra, pouse na Lua e voe na Nave rumo a Marte!',
+    localPadrao: 'foguete',
     veicPadrao: 'nenhum',
-    permiteVeic: false,
-    apenasLua: true,
+    permiteVeic: true,
+    apenasLua: false,
   },
   caramelo: {
     id: 'cao',
@@ -202,19 +202,121 @@ export class GerenciadorFases {
     this.concluida = false;
     this.t = 0;
 
-    if (this.ativa === 'astronauta') this._montarFaseLua();
+    if (this.ativa === 'astronauta') {
+      if (this.lua.ativa) this._montarFaseLua();
+      else this._montarFaseTerraAstronauta();
+    }
     else if (this.ativa === 'velocista') this._montarFaseVelocista();
     else if (this.ativa === 'heroi') this._montarFaseHeroi();
     else if (this.ativa === 'bombeiro') this._montarFaseBombeiro();
     else if (this.ativa === 'operador') this._montarFaseOperador();
     else this._montarFaseExplorador();
 
-    if (this.elTitulo) this.elTitulo.textContent = def.badge;
+    if (this.elTitulo) {
+      this.elTitulo.textContent = (this.ativa === 'astronauta' && !this.lua.ativa)
+        ? '🚀 Pré-Lançamento (Terra)'
+        : (this.ativa === 'astronauta' ? '🌙 Expedição Lunar' : def.badge);
+    }
     if (this.elCard) this.elCard.classList.remove('oculto');
     this._renderHud();
   }
 
-  // ---- FASE LUNAR (Astronauta) ----------------------------------------------------------------------
+  /** Verifica se o Astronauta concluiu o checklist rápido na Terra antes de embarcar no Foguete HRYZ-1. */
+  prontoParaDecolarTerra() {
+    if (this.ativa !== 'astronauta' || this.lua.ativa) return true;
+    const comb = this.objs.find(o => o.id === 'combustivel');
+    const tel = this.objs.find(o => o.id === 'telemetria');
+    if (!comb || !tel) return true;
+    return comb.atual >= comb.meta && tel.atual >= tel.meta;
+  }
+
+  // ---- ETAPA 1 DO ASTRONAUTA: MISSÃO RÁPIDA NA TERRA (Base de Lançamento) ---------------------------
+  _montarFaseTerraAstronauta() {
+    this.objs = [
+      { id: 'combustivel', icone: '🔋', texto: 'Coletar células criogênicas p/ o foguete', atual: 0, meta: 2 },
+      { id: 'telemetria', icone: '🖥️', texto: 'Autorizar ignição no Terminal [E]', atual: 0, meta: 1 },
+      { id: 'embarcar_lua', icone: '🚀', texto: 'Embarcar no Foguete rumo à Lua [E]', atual: 0, meta: 1 },
+    ];
+
+    // 2 células de combustível criogênico brilhantes ao redor da plataforma (PAD em x=590, z=520)
+    const posCelulas = [[568, 509], [568, 531]];
+    for (const [cx, cz] of posCelulas) {
+      const g = new THREE.Group();
+      g.position.set(cx, 0.22, cz);
+
+      const corpo = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.36, 0.36, 1.25, 14),
+        new THREE.MeshStandardMaterial({ color: 0x0ea5e9, emissive: 0x0284c7, emissiveIntensity: 1.25, roughness: 0.2, metalness: 0.55 })
+      );
+      corpo.position.y = 0.85;
+      const tampa1 = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.40, 0.40, 0.16, 14),
+        new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.35, metalness: 0.65 })
+      );
+      tampa1.position.y = 1.48;
+      const tampa2 = tampa1.clone();
+      tampa2.position.y = 0.24;
+
+      const anel = new THREE.Mesh(
+        new THREE.RingGeometry(1.05, 1.38, 28),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.82 })
+      );
+      anel.rotation.x = -Math.PI / 2;
+      anel.position.y = 0.05;
+
+      const feixe = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.45, 0.75, 9, 14, 1, true),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })
+      );
+      feixe.position.y = 4.5;
+
+      const tanque = new THREE.Group();
+      tanque.add(corpo, tampa1, tampa2);
+      g.add(tanque, anel, feixe);
+      this.grupo.add(g);
+      this.itens.push({ tipo: 'celula_foguete', x: cx, z: cz, g, anim: tanque, feito: false, raio: 3.1 });
+    }
+
+    // 1 Terminal de Controle da Base ao lado da rampa de embarque do foguete
+    const tx = 579.5, tz = 513.0;
+    const gt = new THREE.Group();
+    gt.position.set(tx, 0.22, tz);
+    const ped = new THREE.Mesh(
+      new THREE.BoxGeometry(0.95, 1.22, 0.62),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.65 })
+    );
+    ped.position.y = 0.61;
+    const tela = new THREE.Mesh(
+      new THREE.BoxGeometry(0.84, 0.52, 0.08),
+      new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x38bdf8, emissiveIntensity: 1.1, roughness: 0.2 })
+    );
+    tela.position.set(0, 1.36, 0.12);
+    tela.rotation.x = -0.32;
+    const haste = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.04, 1.2, 8),
+      new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.25 })
+    );
+    haste.position.set(0.34, 1.82, -0.18);
+    const led = new THREE.Mesh(
+      new THREE.SphereGeometry(0.16, 12, 10),
+      new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 1.6 })
+    );
+    led.position.set(0.34, 2.46, -0.18);
+    const anelT = new THREE.Mesh(
+      new THREE.RingGeometry(1.25, 1.60, 28),
+      new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })
+    );
+    anelT.rotation.x = -Math.PI / 2;
+    anelT.position.y = 0.05;
+    gt.add(ped, tela, haste, led, anelT);
+    this.grupo.add(gt);
+    this.itens.push({
+      tipo: 'terminal_foguete', x: tx, z: tz, g: gt, led, tela, anel: anelT, feito: false, raio: 3.5,
+      prompt: '[E] 🖥️ Autorizar Ignição do Foguete HRYZ-1',
+    });
+  }
+
+  // ---- ETAPA 2 DO ASTRONAUTA: FASE LUNAR (Astronauta na Lua) ----------------------------------------
   _montarFaseLua() {
     const O = this.lua.ORIGEM;
     const alt = (lx, lz) => this.lua.altura(O.x + lx, O.z + lz);
@@ -442,7 +544,20 @@ export class GerenciadorFases {
   _executarInteracao(it) {
     if (it.feito) return;
     it.feito = true;
-    if (it.tipo === 'sensor') {
+    if (it.tipo === 'terminal_foguete') {
+      it.led.material.color.setHex(0x22c55e);
+      it.led.material.emissive.setHex(0x22c55e);
+      it.tela.material.color.setHex(0x16a34a);
+      it.tela.material.emissive.setHex(0x4ade80);
+      it.anel.material.color.setHex(0x22c55e);
+      this.som?.tocarBeep?.(860, 0.2, 0.09);
+      this._progresso('telemetria', 1, true);
+      if (this.prontoParaDecolarTerra()) {
+        this.toast?.('✅ Foguete HRYZ-1 pronto! Suba na plataforma à frente e aperte [E] para decolar rumo à Lua!');
+      } else {
+        this.toast?.('🖥️ Ignição autorizada! Falta coletar as células criogênicas (🔋) ao lado.');
+      }
+    } else if (it.tipo === 'sensor') {
       it.led.material.color.setHex(0x22c55e);
       it.led.material.emissive.setHex(0x22c55e);
       it.anel.material.color.setHex(0x22c55e);
@@ -474,7 +589,23 @@ export class GerenciadorFases {
     // Animação + frustum culling + coleta por proximidade dos itens 3D da fase
     const sph = _sphFase;
     for (const it of this.itens) {
-      if (it.tipo === 'cristal' && !it.feito) {
+      if (it.tipo === 'celula_foguete' && !it.feito) {
+        it.anim.rotation.y += dt * 2.1;
+        it.anim.position.y = Math.sin(this.t * 3.2 + it.z) * 0.14;
+        if (Math.hypot(jx - it.x, jz - it.z) < it.raio) {
+          it.feito = true;
+          it.g.visible = false;
+          this.som?.tocarBeep?.(840, 0.15, 0.09);
+          this._progresso('combustivel', 1, true);
+          if (this.prontoParaDecolarTerra()) {
+            this.toast?.('✅ Foguete HRYZ-1 abastecido e autorizado! Suba na plataforma e aperte [E] para ir à Lua!');
+          } else {
+            const cObj = this.objs.find(o => o.id === 'combustivel');
+            this.toast?.(`🔋 Célula criogênica carregada (${cObj?.atual || 1}/2)!`);
+          }
+          continue;
+        }
+      } else if (it.tipo === 'cristal' && !it.feito) {
         it.anim.rotation.y += dt * 1.8;
         it.anim.position.y = 0.9 + Math.sin(this.t * 3 + it.x) * 0.18;
         if (Math.hypot(jx - it.x, jz - it.z) < it.raio) {
@@ -531,13 +662,13 @@ export class GerenciadorFases {
   }
 
   desenharMinimapa(ctx, toMM, W, H) {
-    if (!this.ativa || this.ativa === 'astronauta') return;
+    if (!this.ativa || (this.ativa === 'astronauta' && this.lua.ativa)) return;
     for (const it of this.itens) {
       if (it.feito) continue;
       const [rx, ry] = toMM(it.x, it.z);
       const x = Math.max(8, Math.min(W - 8, rx));
       const y = Math.max(8, Math.min(H - 8, ry));
-      ctx.fillStyle = it.tipo === 'fogo' ? '#f97316' : '#38bdf8';
+      ctx.fillStyle = it.tipo === 'fogo' ? '#f97316' : (it.tipo === 'terminal_foguete' ? '#facc15' : '#38bdf8');
       ctx.beginPath(); ctx.arc(x, y, 5.5, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 1.5; ctx.stroke();
     }
